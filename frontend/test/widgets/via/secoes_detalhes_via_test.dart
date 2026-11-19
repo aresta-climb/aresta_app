@@ -6,10 +6,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
+import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import 'package:frontend/widgets/via/secoes_detalhes_via.dart';
+import '../../mocks/mock_telemetria.dart';
 
 void main() {
   Widget envolver(Widget filho) {
@@ -304,5 +312,152 @@ void main() {
     expect(find.byType(Divider), findsOneWidget);
     expect(find.text('⚠️'), findsOneWidget);
     expect(find.text('90m'), findsOneWidget);
+  });
+
+  testWidgets('SecaoMapaCroquiVia renderiza MapaThumbnail sem pico e navega ao tocar em VER NO CROQUI INTERATIVO (ida e retorno)', (tester) async {
+    final telemetria = MockTelemetryService();
+    TelemetryService.instance = telemetria;
+
+    // 1. Mapa próprio sem pico (usa mapasValidos diretamente)
+    final escaladaComMapa = Escalada(
+      uid: 'viaMapaProprio',
+      viaEsportiva: ViaEsportiva(nome: 'Via Foto Própria'),
+      mapas: [
+        Mapa(
+          caminhoImagemMapa: 'mapas/proprio.webp',
+          larguraMapa: 1000,
+          alturaMapa: 800,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      envolver(
+        SecaoMapaCroquiVia(
+          escalada: escaladaComMapa,
+          cragId: 'crag1',
+          setor: Setor(nome: 'Setor Sol'),
+          grupo: Grupo(nome: 'Grupo Leste'),
+        ),
+      ),
+    );
+    expect(find.byType(MapaThumbnail), findsOneWidget);
+
+    // 2. Referências em mapa do setor (fromMapaPage: false -> AppNav.toMapas)
+    final escaladaRef = Escalada(
+      uid: 'viaRefCroqui01',
+      viaEsportiva: ViaEsportiva(nome: 'Via Croqui'),
+    );
+    final setor = Setor(
+      uid: 'setorUid000001',
+      nome: 'Setor Croqui',
+      escaladas: [escaladaRef],
+      mapas: [
+        Mapa(
+          caminhoImagemMapa: 'mapas/setor_a.webp',
+          larguraMapa: 1200,
+          alturaMapa: 900,
+          referencias: [
+            Mapa_Referencia(alvoUid: 'viaRefCroqui01', pontosUids: ['pt1']),
+          ],
+        ),
+        Mapa(
+          caminhoImagemMapa: 'mapas/setor_b.webp',
+          larguraMapa: 1200,
+          alturaMapa: 900,
+          referencias: [
+            Mapa_Referencia(alvoUid: 'viaRefCroqui01'),
+          ],
+        ),
+      ],
+    );
+    final pico = Pico(
+      nome: 'Pico Croqui',
+      setoresOuGrupos: [
+        SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+      ],
+    );
+
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final navIda = TreeNavigationController(
+      estadoInicial: const ArvoreNavegacao(
+        noAtual: PicoNode(cragId: 'crag1', parent: HomeNode()),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: navIda,
+          child: Scaffold(
+            body: SecaoMapaCroquiVia(
+              escalada: escaladaRef,
+              cragId: 'crag1',
+              pico: pico,
+              setor: setor,
+              fromMapaPage: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('VER NO CROQUI INTERATIVO'));
+    await tester.pumpAndSettle();
+
+    expect(navIda.currentNode, isA<MapasCarrosselNode>());
+    final noMapas = navIda.currentNode as MapasCarrosselNode;
+    expect(noMapas.mapas, hasLength(2));
+    expect(noMapas.mapas[0].initialSelectedId, 'pt1');
+    expect(noMapas.mapas[1].initialSelectedId, isNull);
+
+    // 3. Aberta a partir do MapaPage (fromMapaPage: true -> AppNav.back)
+    const noPai = PicoNode(cragId: 'crag1', parent: HomeNode());
+    final navVolta = TreeNavigationController(
+      estadoInicial: const ArvoreNavegacao(
+        noAtual: ViaNode(
+          cragId: 'crag1',
+          escaladaNome: 'Via Croqui',
+          parent: noPai,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: TreeNavigationWrapper(
+          key: const Key('wrapper_nav_volta'),
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: navVolta,
+          child: Builder(
+            builder: (ctx) => Navigator(
+              pages: [
+                MaterialPage<void>(
+                  child: Scaffold(
+                    body: SecaoMapaCroquiVia(
+                      escalada: escaladaRef,
+                      cragId: 'crag1',
+                      pico: pico,
+                      setor: setor,
+                      fromMapaPage: true,
+                    ),
+                  ),
+                ),
+              ],
+              onDidRemovePage: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('VER NO CROQUI INTERATIVO'));
+    await tester.pumpAndSettle();
+    expect(navVolta.currentNode, isA<PicoNode>());
   });
 }
