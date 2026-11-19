@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
+import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
 import 'interacao_via.dart';
 import 'perfil_escalador.dart';
@@ -299,4 +300,91 @@ class ItemFilaInteracao {
     }
     return limpo.length > 50 ? limpo.substring(0, 50) : limpo;
   }
+}
+
+/// Redutor puro que projeta os eventos cronológicos de `fila_interacoes` em [DadosComunidadeVia].
+DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
+  Iterable<ItemFilaInteracao> itens, {
+  int? codigoGrauOficial,
+  required bool ehBoulder,
+}) {
+  final ordenados = itens.toList()
+    ..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
+
+  final votosPorAutor = <String, ({int? deltaGrau, int? grauSugerido})>{};
+  final comentarios = <ComentarioComunidadeVia>[];
+  final alertas = <AlertaSegurancaVia>[];
+
+  for (final item in ordenados) {
+    switch (item.tipo) {
+      case TipoFilaInteracao.votoGrau:
+        votosPorAutor[item.autorIdPublico] = (
+          deltaGrau: item.deltaGrau,
+          grauSugerido: item.grauSugerido,
+        );
+      case TipoFilaInteracao.comentario:
+        final texto = item.textoComentario?.trim();
+        if (texto != null && texto.isNotEmpty) {
+          comentarios.insert(
+            0,
+            ComentarioComunidadeVia(
+              uid: validarUid(item.id) ? item.id : gerarUid(),
+              autorIdPublico: item.autorIdPublico,
+              autorNomePublico: item.autorNomePublico,
+              criadoEm: item.criadoEm,
+              estiloAscensao: item.tipoAscensao,
+              texto: texto,
+            ),
+          );
+        }
+      case TipoFilaInteracao.alertaSeguranca:
+        final categoria = item.categoriaAlerta;
+        final uidAlerta = item.alertaAlvoUid;
+        if (categoria == null || uidAlerta == null) break;
+        final idxCat = alertas.indexWhere((a) => a.categoria == categoria);
+        if (idxCat >= 0) {
+          final existente = alertas[idxCat];
+          alertas[idxCat] = existente.copyWith(
+            confirmacoesAtivas: existente.confirmacoesAtivas + 1,
+            detalhe: item.textoComentario ?? existente.detalhe,
+          );
+        } else {
+          alertas.insert(
+            0,
+            AlertaSegurancaVia.criar(
+              uid: uidAlerta,
+              escaladaUid: item.escaladaUid,
+              categoria: categoria,
+              detalhe: item.textoComentario,
+              autorNomePublico: item.autorNomePublico,
+              criadoEm: item.criadoEm,
+            ),
+          );
+        }
+      case TipoFilaInteracao.confirmacaoAlerta:
+        final alvoUid = item.alertaAlvoUid;
+        final ativo = item.alertaAtivo;
+        if (alvoUid == null || ativo == null) break;
+        final idx = alertas.indexWhere((a) => a.uid == alvoUid);
+        if (idx >= 0) {
+          if (ativo) {
+            alertas[idx] = alertas[idx].copyWith(
+              confirmacoesAtivas: alertas[idx].confirmacoesAtivas + 1,
+            );
+          } else {
+            alertas.removeAt(idx);
+          }
+        }
+    }
+  }
+
+  return DadosComunidadeVia(
+    consensoGrau: consolidarConsensoDeVotos(
+      votos: votosPorAutor.values.toList(growable: false),
+      codigoGrauOficial: codigoGrauOficial,
+      ehBoulder: ehBoulder,
+    ),
+    alertasAtivos: List.unmodifiable(alertas),
+    comentarios: List.unmodifiable(comentarios),
+  );
 }
