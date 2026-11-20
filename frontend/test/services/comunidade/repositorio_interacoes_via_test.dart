@@ -9,8 +9,10 @@ import 'package:frontend/data/modelos/item_fila_interacao.dart';
 import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/comunidade/cliente_fila_interacoes_supabase.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../autenticacao/servico_autenticacao_fake.dart';
 import 'cliente_fila_interacoes_supabase_fake.dart';
 
 void main() {
@@ -224,7 +226,6 @@ void main() {
       codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
     );
     expect(clienteFake.itensInseridos, hasLength(5));
-    expect(clienteFake.ultimoAccessTokenInsercao, 'jwt-mariana');
 
     // 4. Erro operacional HTTP registra erro sem derrubar o app
     clienteFake.erroSimulado = const HttpException('HTTP 500');
@@ -232,5 +233,100 @@ void main() {
 
     // UID rascunho não-NanoID ignora rede sem erro
     await repoReaberto.sincronizarEscalada('rascunho_local');
+  });
+
+  test('garante votação confiável para contas registradas (renovação 401, reconciliação RLS 403 e deduplicação por autor)', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+    await repoCaderneta.inicializar();
+
+    // Conta registrada sem accessToken em cache (mas com refreshToken válido)
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana Silva',
+        userId: 'uuid-mariana',
+        refreshToken: 'refresh-mariana',
+      ),
+    );
+
+    final authFake = ServicoAutenticacaoFake(repositorio: repoCaderneta);
+    final clienteFake = ClienteFilaInteracoesFake();
+    final repo = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      servicoAutenticacao: authFake,
+      clienteFila: clienteFake,
+      preferencias: prefs,
+    );
+
+    // 1. Prepara sessão quando accessToken está ausente (mesmo se falhar na 1ª tentativa offline)
+    authFake.erroAoGarantirSessao = const SocketException('Sem rede inicial');
+    clienteFake.filaErrosInsercao.add(const SocketException('Sem rede inicial'));
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 1,
+      codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+    );
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.grauSugerido, '7b');
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.totalVotos, 1);
+
+    // 2. Mesma autora altera voto na mesma sessão -> atualiza voto sem duplicar contagem nem fila
+    authFake.erroAoGarantirSessao = null;
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 0,
+      codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+    );
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.grauSugerido, '7a');
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.totalVotos, 1);
+    expect(clienteFake.itensInseridos, hasLength(1));
+    expect(clienteFake.ultimoAccessTokenInsercao, 'jwt_renovado_1');
+
+    // 3. JWT expira após 1h (HTTP 401) -> renova automaticamente via refreshToken e reenvia com sucesso
+    clienteFake.filaErrosInsercao.add(
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 401,
+        message: 'JWT expired',
+      ),
+    );
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: -1,
+      codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+    );
+    expect(authFake.totalRenovacoesToken, 2);
+    expect(clienteFake.ultimoAccessTokenInsercao, 'jwt_renovado_2');
+    expect(clienteFake.itensInseridos.last.deltaGrau, -1);
+
+    // 4. Violação RLS 403 (autor_id_publico divergente em public.perfis) -> reconcilia autor canônico e reenvia
+    authFake.autorIdPublicoRemotoReconciliado = 'z9Yx8Wv7Ut6Sr5';
+    clienteFake.filaErrosInsercao.add(
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 403,
+        message: 'new row violates row-level security policy',
+      ),
+    );
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 2,
+      codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+    );
+    expect(clienteFake.itensInseridos.last.autorIdPublico, 'z9Yx8Wv7Ut6Sr5');
+    expect(clienteFake.itensInseridos.last.deltaGrau, 2);
+
+    // 5. Se a retentativa também falhar (ex.: desconexão durante refresh), retém na fila sem perder o voto
+    clienteFake.filaErrosInsercao.addAll([
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 401,
+        message: 'JWT expired',
+      ),
+      const SocketException('Queda durante retentativa'),
+    ]);
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 1,
+      codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+    );
+    expect(prefs.getString(RepositorioInteracoesViaMemoria.chaveFilaPendente), isNotNull);
   });
 }
