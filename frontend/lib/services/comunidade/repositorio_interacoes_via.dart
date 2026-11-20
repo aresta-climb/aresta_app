@@ -9,6 +9,7 @@ import '../../data/modelos/item_fila_interacao.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
+import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/repositorio_caderneta.dart';
 import '../firebase/app_logger.dart';
 import 'cliente_fila_interacoes_supabase.dart';
@@ -83,6 +84,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   final RepositorioCaderneta _repositorioCaderneta;
+  final ServicoAutenticacao _servicoAutenticacao;
   final ClienteFilaInteracoes? _clienteFila;
   SharedPreferences? _preferencias;
   bool _filaCarregada = false;
@@ -96,10 +98,13 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   /// Cria uma instância de [RepositorioInteracoesViaMemoria].
   RepositorioInteracoesViaMemoria({
     RepositorioCaderneta? repositorioCaderneta,
+    ServicoAutenticacao? servicoAutenticacao,
     ClienteFilaInteracoes? clienteFila,
     SharedPreferences? preferencias,
   }) : _repositorioCaderneta =
            repositorioCaderneta ?? RepositorioCadernetaLocal.instancia,
+       _servicoAutenticacao =
+           servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
        _clienteFila = clienteFila,
        _preferencias = preferencias;
 
@@ -250,7 +255,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
             criadoEm: novoComentario.criadoEm,
           ),
       ];
-      await _enfileirarEDespachar(cliente, itensParaEnviar, accessToken: perfil.accessToken);
+      await _enfileirarEDespachar(cliente, itensParaEnviar);
     }
   }
 
@@ -314,7 +319,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
           categoriaAlerta: categoria,
           detalhe: detalhe,
         ),
-      ], accessToken: perfil.accessToken);
+      ]);
     }
 
     return resultado;
@@ -360,7 +365,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
           alertaAlvoUid: alertaUid,
           alertaAtivo: aindaEstaLa,
         ),
-      ], accessToken: perfil.accessToken);
+      ]);
     }
   }
 
@@ -393,9 +398,8 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
 
   Future<void> _enfileirarEDespachar(
     ClienteFilaInteracoes cliente,
-    List<ItemFilaInteracao> novosItens, {
-    String? accessToken,
-  }) async {
+    List<ItemFilaInteracao> novosItens,
+  ) async {
     await _carregarFilaPendenteSeNecessario();
     for (final novo in novosItens) {
       if (novo.tipo == TipoFilaInteracao.votoGrau) {
@@ -407,27 +411,87 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       }
     }
     _filaPendente.addAll(novosItens);
-    await _drenarFilaPendente(cliente, accessToken: accessToken);
+    await _drenarFilaPendente(cliente);
   }
 
-  Future<void> _drenarFilaPendente(
-    ClienteFilaInteracoes cliente, {
-    String? accessToken,
-  }) async {
+  Future<void> _drenarFilaPendente(ClienteFilaInteracoes cliente) async {
     if (_filaPendente.isEmpty) return;
 
-    final restantes = <ItemFilaInteracao>[];
-    for (var i = 0; i < _filaPendente.length; i++) {
-      final item = _filaPendente[i];
+    var perfilAtual = _repositorioCaderneta.obterPerfil();
+    final exigeAuth = _filaPendente.any((i) => i.tipo.exigeContaAutenticada);
+    if (exigeAuth &&
+        perfilAtual.estaAutenticado &&
+        perfilAtual.accessToken == null) {
       try {
-        await cliente.inserirInteracao(item, accessToken: accessToken);
+        perfilAtual = await _servicoAutenticacao
+            .garantirSessaoEPerfilSincronizados();
       } catch (e, stackTrace) {
         _registrarFalhaRede(
-          'Interação retida na fila offline (${item.tipo.codigoBanco})',
+          'Não foi possível preparar sessão autenticada antes do envio comunitário',
           e,
           stackTrace,
         );
-        restantes.addAll(_filaPendente.sublist(i));
+      }
+    }
+
+    final restantes = <ItemFilaInteracao>[];
+    for (var i = 0; i < _filaPendente.length; i++) {
+      var item = _filaPendente[i];
+      if (item.tipo.exigeContaAutenticada &&
+          perfilAtual.estaAutenticado &&
+          validarUid(perfilAtual.autorIdPublico)) {
+        item = item.comAutor(
+          autorIdPublico: perfilAtual.autorIdPublico,
+          autorNomePublico: perfilAtual.autorNomePublico,
+        );
+      }
+      final tokenEnvio = item.tipo.exigeContaAutenticada
+          ? perfilAtual.accessToken
+          : null;
+
+      try {
+        await cliente.inserirInteracao(item, accessToken: tokenEnvio);
+      } catch (erroInicial, stackInicial) {
+        if (item.tipo.exigeContaAutenticada &&
+            perfilAtual.estaAutenticado &&
+            _ehFalhaSessaoOuRls(erroInicial)) {
+          try {
+            final eh401 =
+                (erroInicial as ExcecaoComStatusHttp).codigoStatusHttp == 401;
+            perfilAtual = await _servicoAutenticacao
+                .garantirSessaoEPerfilSincronizados(
+                  forcarRenovacaoToken: eh401,
+                );
+            item = item.comAutor(
+              autorIdPublico: perfilAtual.autorIdPublico,
+              autorNomePublico: perfilAtual.autorNomePublico,
+            );
+            await cliente.inserirInteracao(
+              item,
+              accessToken: perfilAtual.accessToken,
+            );
+            continue;
+          } catch (erroRetentativa, stackRetentativa) {
+            _registrarFalhaRede(
+              'Interação retida após reconciliar sessão/perfil (${item.tipo.codigoBanco})',
+              erroRetentativa,
+              stackRetentativa,
+            );
+            restantes
+              ..add(item)
+              ..addAll(_filaPendente.sublist(i + 1));
+            break;
+          }
+        }
+
+        _registrarFalhaRede(
+          'Interação retida na fila offline (${item.tipo.codigoBanco})',
+          erroInicial,
+          stackInicial,
+        );
+        restantes
+          ..add(item)
+          ..addAll(_filaPendente.sublist(i + 1));
         break;
       }
     }
@@ -436,6 +500,13 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       ..clear()
       ..addAll(restantes);
     await _persistirFilaPendente();
+  }
+
+  static bool _ehFalhaSessaoOuRls(Object erro) {
+    if (erro is ExcecaoComStatusHttp) {
+      return erro.codigoStatusHttp == 401 || erro.codigoStatusHttp == 403;
+    }
+    return false;
   }
 
   static void _registrarFalhaRede(
