@@ -28,11 +28,20 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
   /// Exceção determinística opcional lançada em [entrarComGoogle] e [entrarComApple].
   Object? erroNoLoginSocial;
 
+  /// Exceção determinística opcional lançada em [garantirSessaoEPerfilSincronizados].
+  Object? erroAoGarantirSessao;
+
+  /// Identificador público canônico opcional devolvido ao reconciliar `public.perfis`.
+  String? autorIdPublicoRemotoReconciliado;
+
   /// Último e-mail validado com sucesso em [solicitarCodigoOtpEmail].
   String? ultimoEmailOtpSolicitado;
 
   /// Contador de envios de código OTP realizados com sucesso.
   int totalEnviosOtp = 0;
+
+  /// Contador de renovações de token realizadas em [garantirSessaoEPerfilSincronizados].
+  int totalRenovacoesToken = 0;
 
   /// Cria uma instância configurável de [ServicoAutenticacaoFake].
   ServicoAutenticacaoFake({
@@ -42,6 +51,8 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
     this.erroAoSolicitarOtp,
     this.erroAoVerificarOtp,
     this.erroNoLoginSocial,
+    this.erroAoGarantirSessao,
+    this.autorIdPublicoRemotoReconciliado,
   }) : _repositorio = repositorio ?? RepositorioCadernetaLocal.instancia;
 
   @override
@@ -89,6 +100,7 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
         userId: 'usr_fake_otp',
         autorNomePublico: nomeFinal,
         accessToken: 'jwt_fake_otp',
+        refreshToken: 'refresh_fake_otp',
       ),
     );
     return _repositorio.obterPerfil();
@@ -125,6 +137,34 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
         userId: userId,
         autorNomePublico: nomeFinal,
         accessToken: 'jwt_$userId',
+        refreshToken: 'refresh_$userId',
+      ),
+    );
+    return _repositorio.obterPerfil();
+  }
+
+  @override
+  Future<PerfilEscalador> garantirSessaoEPerfilSincronizados({
+    bool forcarRenovacaoToken = false,
+  }) async {
+    final atual = _repositorio.obterPerfil();
+    if (!atual.estaAutenticado) return atual;
+    if (erroAoGarantirSessao != null) {
+      Error.throwWithStackTrace(erroAoGarantirSessao!, StackTrace.current);
+    }
+
+    var tokenFinal = atual.accessToken;
+    if ((forcarRenovacaoToken || tokenFinal == null) &&
+        atual.refreshToken != null) {
+      totalRenovacoesToken++;
+      tokenFinal = 'jwt_renovado_$totalRenovacoesToken';
+    }
+
+    await _repositorio.salvarPerfil(
+      atual.copyWith(
+        autorIdPublico:
+            autorIdPublicoRemotoReconciliado ?? atual.autorIdPublico,
+        accessToken: tokenFinal,
       ),
     );
     return _repositorio.obterPerfil();

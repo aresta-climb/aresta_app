@@ -107,6 +107,13 @@ abstract class ServicoAutenticacao {
   /// Autentica o escalador utilizando sua conta Apple (Apple ID) nativa via Supabase.
   Future<PerfilEscalador> entrarComApple();
 
+  /// Garante que a sessão autenticada possua JWT válido (renovando via `refreshToken`
+  /// quando ausente ou quando [forcarRenovacaoToken] for `true`) e que a linha do escalador
+  /// esteja sincronizada em `public.perfis` para escritas protegidas por RLS.
+  Future<PerfilEscalador> garantirSessaoEPerfilSincronizados({
+    bool forcarRenovacaoToken = false,
+  });
+
   /// Atualiza o nome e/ou a foto de perfil localmente e sincroniza com o Supabase (Auth, Storage e `public.perfis`).
   Future<PerfilEscalador> atualizarPerfilRemoto({
     String? novoNome,
@@ -249,6 +256,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       autorNomePublico: nomeFinal,
       fotoUrl: resultado.fotoUrl ?? perfilAtual.fotoUrl,
       accessToken: resultado.accessToken,
+      refreshToken: resultado.refreshToken ?? perfilAtual.refreshToken,
     );
     await _repositorio.salvarPerfil(novoPerfil);
     return _repositorio.obterPerfil();
@@ -317,6 +325,54 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       resultado: resultado,
       nomeFallbackGenerico: 'Escalador Apple',
     );
+  }
+
+  @override
+  Future<PerfilEscalador> garantirSessaoEPerfilSincronizados({
+    bool forcarRenovacaoToken = false,
+  }) async {
+    final atual = _repositorio.obterPerfil();
+    if (!atual.estaAutenticado) {
+      return atual;
+    }
+
+    final anonKey = _exigirAnonKey();
+    final precisaRenovar = forcarRenovacaoToken || atual.accessToken == null;
+    if (precisaRenovar && atual.refreshToken != null) {
+      final renovado = await _clienteSupabase.renovarSessaoComRefreshToken(
+        refreshToken: atual.refreshToken!,
+        autorIdPublicoLocal: atual.autorIdPublico,
+        nomeFallback: atual.autorNomePublico,
+        anonKey: anonKey,
+      );
+      return _salvarPerfilAutenticado(
+        perfilAtual: atual,
+        resultado: renovado,
+        nomeFallbackGenerico: atual.autorNomePublico,
+      );
+    }
+
+    if (atual.accessToken != null) {
+      final sincronizado = await _clienteSupabase
+          .garantirLinhaPerfisSincronizada(
+            anonKey: anonKey,
+            accessToken: atual.accessToken!,
+            userId: atual.userId!,
+            autorIdPublico: atual.autorIdPublico,
+            nomePublico: atual.autorNomePublico,
+            fotoUrl: atual.fotoUrl,
+          );
+      await _repositorio.salvarPerfil(
+        atual.copyWith(
+          autorIdPublico: sincronizado.autorIdPublico,
+          autorNomePublico: sincronizado.nomePublico,
+          fotoUrl: sincronizado.fotoUrl,
+        ),
+      );
+      return _repositorio.obterPerfil();
+    }
+
+    return atual;
   }
 
   @override
