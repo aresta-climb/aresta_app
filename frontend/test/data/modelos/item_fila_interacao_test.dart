@@ -66,6 +66,23 @@ void main() {
       expect(confirmacaoRestaurada.tipo, TipoFilaInteracao.confirmacaoAlerta);
       expect(confirmacaoRestaurada.alertaAtivo, isFalse);
 
+      expect(TipoFilaInteracao.votoGrau.exigeContaAutenticada, isTrue);
+      expect(TipoFilaInteracao.comentario.exigeContaAutenticada, isTrue);
+      expect(TipoFilaInteracao.alertaSeguranca.exigeContaAutenticada, isFalse);
+      expect(TipoFilaInteracao.confirmacaoAlerta.exigeContaAutenticada, isFalse);
+
+      final reconciliado = voto.comAutor(
+        autorIdPublico: 'z9Yx8Wv7Ut6Sr5',
+        autorNomePublico: '  Mariana Oficial  ',
+      );
+      expect(reconciliado.autorIdPublico, 'z9Yx8Wv7Ut6Sr5');
+      expect(reconciliado.autorNomePublico, 'Mariana Oficial');
+      expect(reconciliado.deltaGrau, voto.deltaGrau);
+      expect(
+        () => voto.comAutor(autorIdPublico: 'invalido', autorNomePublico: 'Ana'),
+        throwsArgumentError,
+      );
+
       expect(() => TipoFilaInteracao.deCodigoBanco('INVALIDO'), throwsArgumentError);
       expect(
         () => ItemFilaInteracao.votoGrau(

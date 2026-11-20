@@ -12,6 +12,7 @@ import '../../utils/gerador_uid.dart';
 /// * [userId]: Identificador UUID de autenticação do usuário (opcional em modo offline puro).
 /// * [fotoUrl]: URL remota (`https://...`) ou Data URI (`data:image/jpeg;base64,...`) da foto de perfil.
 /// * [accessToken]: Token JWT de sessão do Supabase Auth (quando autenticado).
+/// * [refreshToken]: Token de renovação da sessão GoTrue para revalidar JWTs expirados.
 class PerfilEscalador {
   /// Apelido esportivo padrão adotado quando o usuário não especificar um nome.
   static const String apelidoPadrao = 'Escalador Aresta';
@@ -31,6 +32,9 @@ class PerfilEscalador {
   /// Token de acesso JWT ativo da sessão do Supabase Auth.
   final String? accessToken;
 
+  /// Token opaco de renovação emitido pelo GoTrue (`/auth/v1/token?grant_type=refresh_token`).
+  final String? refreshToken;
+
   /// Indica se este perfil está atualmente vinculado a uma conta autenticada.
   bool get estaAutenticado => userId != null && userId!.trim().isNotEmpty;
 
@@ -41,9 +45,11 @@ class PerfilEscalador {
     this.userId,
     String? fotoUrl,
     String? accessToken,
+    String? refreshToken,
   }) : autorNomePublico = _sanitizarNome(autorNomePublico),
        fotoUrl = _sanitizarOpcional(fotoUrl),
-       accessToken = _sanitizarOpcional(accessToken);
+       accessToken = _sanitizarOpcional(accessToken),
+       refreshToken = _sanitizarOpcional(refreshToken);
 
   /// Cria uma nova identidade de perfil gerando um [autorIdPublico] NanoID 14c automaticamente.
   factory PerfilEscalador.criarPadrao({
@@ -51,6 +57,7 @@ class PerfilEscalador {
     String? userId,
     String? fotoUrl,
     String? accessToken,
+    String? refreshToken,
   }) {
     return PerfilEscalador(
       autorIdPublico: gerarUid(),
@@ -58,6 +65,7 @@ class PerfilEscalador {
       userId: userId,
       fotoUrl: fotoUrl,
       accessToken: accessToken,
+      refreshToken: refreshToken,
     );
   }
 
@@ -84,6 +92,7 @@ class PerfilEscalador {
       'user_id': userId,
       'foto_url': fotoUrl,
       'access_token': accessToken,
+      'refresh_token': refreshToken,
     };
   }
 
@@ -98,6 +107,7 @@ class PerfilEscalador {
       userId: map['user_id'] as String?,
       fotoUrl: (map['foto_url'] ?? map['avatar_url']) as String?,
       accessToken: map['access_token'] as String?,
+      refreshToken: map['refresh_token'] as String?,
     );
   }
 
@@ -110,17 +120,20 @@ class PerfilEscalador {
 
   /// Cria uma cópia da instância permitindo a substituição seletiva de campos.
   ///
-  /// Quando [limparUserId] é `true`, remove o vínculo de autenticação (`userId: null` e `accessToken: null`),
-  /// preservando o [autorIdPublico], [autorNomePublico] e [fotoUrl] locais.
+  /// Quando [limparUserId] é `true`, remove o vínculo de autenticação (`userId: null`,
+  /// `accessToken: null` e `refreshToken: null`), preservando [autorIdPublico],
+  /// [autorNomePublico] e [fotoUrl] locais.
   PerfilEscalador copyWith({
     String? autorIdPublico,
     String? autorNomePublico,
     String? userId,
     String? fotoUrl,
     String? accessToken,
+    String? refreshToken,
     bool limparUserId = false,
     bool limparFotoUrl = false,
     bool limparAccessToken = false,
+    bool limparRefreshToken = false,
   }) {
     return PerfilEscalador(
       autorIdPublico: autorIdPublico ?? this.autorIdPublico,
@@ -130,6 +143,9 @@ class PerfilEscalador {
       accessToken: (limparUserId || limparAccessToken)
           ? null
           : (accessToken ?? this.accessToken),
+      refreshToken: (limparUserId || limparRefreshToken)
+          ? null
+          : (refreshToken ?? this.refreshToken),
     );
   }
 
@@ -141,7 +157,8 @@ class PerfilEscalador {
         other.autorNomePublico == autorNomePublico &&
         other.userId == userId &&
         other.fotoUrl == fotoUrl &&
-        other.accessToken == accessToken;
+        other.accessToken == accessToken &&
+        other.refreshToken == refreshToken;
   }
 
   @override
@@ -151,6 +168,7 @@ class PerfilEscalador {
     userId,
     fotoUrl,
     accessToken,
+    refreshToken,
   );
 
   @override

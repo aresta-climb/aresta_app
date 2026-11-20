@@ -51,13 +51,14 @@ void main() {
       expect(perfil.userId, isNull);
     });
 
-    test('serialização toMap e fromMap preserva todos os campos, incluindo fotoUrl e accessToken', () {
+    test('serialização toMap e fromMap preserva todos os campos, incluindo fotoUrl, accessToken e refreshToken', () {
       final original = PerfilEscalador(
         autorIdPublico: autorIdValido,
         autorNomePublico: 'Tommy Caldwell',
         userId: 'uuid-supabase-777',
         fotoUrl: 'https://lh3.googleusercontent.com/a/tommy.jpg',
         accessToken: 'jwt-token-123',
+        refreshToken: 'refresh-token-456',
       );
 
       final map = original.toMap();
@@ -66,6 +67,7 @@ void main() {
       expect(map['user_id'], 'uuid-supabase-777');
       expect(map['foto_url'], 'https://lh3.googleusercontent.com/a/tommy.jpg');
       expect(map['access_token'], 'jwt-token-123');
+      expect(map['refresh_token'], 'refresh-token-456');
 
       final restaurado = PerfilEscalador.fromMap(map);
       expect(restaurado, equals(original));
@@ -92,21 +94,24 @@ void main() {
       expect(perfil.userId, isNull);
     });
 
-    test('copyWith clona e atualiza campos específicos, incluindo fotoUrl e accessToken', () {
+    test('copyWith clona e atualiza campos específicos, incluindo fotoUrl, accessToken e refreshToken', () {
       final original = PerfilEscalador(
         autorIdPublico: autorIdValido,
         autorNomePublico: 'Janja Garnbret',
         fotoUrl: '   ',
         accessToken: '   ',
+        refreshToken: '   ',
       );
       expect(original.fotoUrl, isNull);
       expect(original.accessToken, isNull);
+      expect(original.refreshToken, isNull);
 
       final clonado = original.copyWith(
         autorNomePublico: 'Janja G.',
         userId: 'usr-novo',
         fotoUrl: 'data:image/jpeg;base64,/9j/4AAQ',
         accessToken: 'token-abc',
+        refreshToken: 'refresh-xyz',
       );
 
       expect(clonado.autorIdPublico, original.autorIdPublico);
@@ -114,19 +119,22 @@ void main() {
       expect(clonado.userId, 'usr-novo');
       expect(clonado.fotoUrl, 'data:image/jpeg;base64,/9j/4AAQ');
       expect(clonado.accessToken, 'token-abc');
+      expect(clonado.refreshToken, 'refresh-xyz');
 
       final semFoto = clonado.copyWith(
         limparFotoUrl: true,
         limparAccessToken: true,
+        limparRefreshToken: true,
       );
       expect(semFoto.fotoUrl, isNull);
       expect(semFoto.accessToken, isNull);
+      expect(semFoto.refreshToken, isNull);
 
       final identico = original.copyWith();
       expect(identico, equals(original));
     });
 
-    test('estaAutenticado reflete presença de userId válido e copyWith(limparUserId: true) remove o vínculo e accessToken', () {
+    test('estaAutenticado reflete presença de userId válido e copyWith(limparUserId: true) remove o vínculo, accessToken e refreshToken', () {
       final anonimo = PerfilEscalador(
         autorIdPublico: autorIdValido,
         autorNomePublico: 'Escalador Offline',
@@ -140,15 +148,18 @@ void main() {
         userId: 'usr-google-999',
         fotoUrl: 'https://lh3.googleusercontent.com/a/foto.jpg',
         accessToken: 'jwt-999',
+        refreshToken: 'refresh-999',
       );
       expect(logado.estaAutenticado, isTrue);
       expect(logado.userId, 'usr-google-999');
       expect(logado.accessToken, 'jwt-999');
+      expect(logado.refreshToken, 'refresh-999');
 
       final deslogado = logado.copyWith(limparUserId: true);
       expect(deslogado.estaAutenticado, isFalse);
       expect(deslogado.userId, isNull);
       expect(deslogado.accessToken, isNull);
+      expect(deslogado.refreshToken, isNull);
       expect(deslogado.fotoUrl, 'https://lh3.googleusercontent.com/a/foto.jpg');
       expect(deslogado.autorIdPublico, autorIdValido);
       expect(deslogado.autorNomePublico, 'Escalador Offline');

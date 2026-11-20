@@ -27,6 +27,12 @@ enum TipoFilaInteracao {
 
   const TipoFilaInteracao(this.codigoBanco);
 
+  /// Indica se a política RLS (`fila_interacoes_insercao_autenticada`) exige JWT autenticado
+  /// e vínculo válido em `public.perfis` (`VOTO_GRAU` e `COMENTARIO`).
+  bool get exigeContaAutenticada =>
+      this == TipoFilaInteracao.votoGrau ||
+      this == TipoFilaInteracao.comentario;
+
   /// Resolve [codigo] proveniente do PostgREST/JSON para [TipoFilaInteracao].
   static TipoFilaInteracao deCodigoBanco(String codigo) {
     for (final item in TipoFilaInteracao.values) {
@@ -281,6 +287,30 @@ class ItemFilaInteracao {
       'status': 'PENDENTE',
       'criado_em': criadoEm.toUtc().toIso8601String(),
     };
+  }
+
+  /// Retorna uma cópia de [ItemFilaInteracao] reconciliando [autorIdPublico] e [autorNomePublico]
+  /// com a identidade canônica registrada em `public.perfis`.
+  ItemFilaInteracao comAutor({
+    required String autorIdPublico,
+    required String autorNomePublico,
+  }) {
+    _exigirUidValido(autorIdPublico, 'autorIdPublico');
+    return ItemFilaInteracao._(
+      id: id,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: _normalizarNome(autorNomePublico),
+      escaladaUid: escaladaUid,
+      tipo: tipo,
+      categoriaAlerta: categoriaAlerta,
+      alertaAlvoUid: alertaAlvoUid,
+      alertaAtivo: alertaAtivo,
+      grauSugerido: grauSugerido,
+      deltaGrau: deltaGrau,
+      tipoAscensao: tipoAscensao,
+      textoComentario: textoComentario,
+      criadoEm: criadoEm,
+    );
   }
 
   static void _exigirUidValido(String valor, String campo) {
