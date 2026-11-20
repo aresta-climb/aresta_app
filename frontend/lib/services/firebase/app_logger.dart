@@ -272,7 +272,7 @@ class AppLogger {
   /// Verifica se o erro ou mensagem descreve uma falha transitória de conectividade,
   /// timeout de socket, instabilidade de gateway/servidor (HTTP 408, 429, 502, 503, 504) ou
   /// falha de transporte nos SDKs nativos do Firebase (Installations, Remote Config e App Check)
-  /// quando o dispositivo encontra-se offline.
+  /// e na pilha `NSURLErrorDomain` / `CFNetwork` quando o dispositivo encontra-se offline.
   static bool isFalhaConexaoOuTimeout(dynamic error) {
     if (error == null) return false;
 
@@ -304,19 +304,20 @@ class AppLogger {
       return true;
     }
 
-    // 3. Códigos padronizados de indisponibilidade/rede em FirebaseException
+    // 5. Códigos padronizados de indisponibilidade/rede em FirebaseException
     if (error is FirebaseException) {
       final codigo = error.code.toLowerCase();
       if (codigo == 'unavailable' ||
           codigo == 'network-request-failed' ||
           codigo == 'network_error' ||
+          codigo == 'network-error' ||
           codigo == 'deadline-exceeded' ||
           codigo == 'throttled') {
         return true;
       }
     }
 
-    // 4. Análise por mensagem textual
+    // 6. Análise por mensagem textual
     final msg = error.toString().toLowerCase();
 
     // Códigos de erro HTTP transitórios (Gateway/CDN/Rate-limit)
@@ -333,12 +334,14 @@ class AppLogger {
 
     // Mensagens nativas de falha de transporte dos SDKs do Firebase (Android/iOS via Pigeon)
     if (msg.contains('firebase installations failed to get installation auth token') ||
+        msg.contains('failed to get installations token') ||
         msg.contains('error while calling the backend') ||
         msg.contains('unable to connect to the server') ||
         msg.contains('fetch failed') ||
         msg.contains('fetch throttled') ||
         msg.contains('network-request-failed') ||
         msg.contains('network_error') ||
+        msg.contains('network-error') ||
         msg.contains('network error') ||
         msg.contains('unavailable')) {
       return true;
@@ -349,6 +352,12 @@ class AppLogger {
         msg.contains('socketexception') ||
         msg.contains('failed host lookup') ||
         msg.contains('network is unreachable') ||
+        msg.contains('internet connection appears to be offline') ||
+        msg.contains('network connection was lost') ||
+        msg.contains('could not connect to the server') ||
+        msg.contains('specified hostname could not be found') ||
+        msg.contains('cannot find host') ||
+        msg.contains('data connection is not currently allowed') ||
         msg.contains('connection refused') ||
         msg.contains('connection reset') ||
         msg.contains('connection closed') ||

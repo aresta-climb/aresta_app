@@ -918,6 +918,122 @@ void main() {
         );
       },
     );
+
+    test(
+      'isFalhaConexaoOuTimeout reconhece falhas offline nativas do iOS no Firebase e NSURLErrorDomain sem rebaixar HTTP 4xx/5xx',
+      () {
+        // Exceção real emitida pelo Firebase Remote Config + Installations no iOS sem sinal (ARESTA-APP-K)
+        final excecaoOfflineIos = FirebaseException(
+          plugin: 'firebase_remote_config',
+          code: 'network-error',
+          message:
+              'Failed to get installations token. Error : Error Domain=com.firebase.installations Code=0 '
+              '"Underlying error: The Internet connection appears to be offline." '
+              'UserInfo={NSUnderlyingError={Error Domain=NSURLErrorDomain Code=-1009 '
+              '"The Internet connection appears to be offline."}}',
+        );
+        expect(AppLogger.isFalhaConexaoOuTimeout(excecaoOfflineIos), isTrue);
+
+        // Código 'network-error' com hífen isolado em FirebaseException
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            FirebaseException(
+              plugin: 'firebase_remote_config',
+              code: 'network-error',
+              message: 'Falha de transporte nativo',
+            ),
+          ),
+          isTrue,
+        );
+
+        // Mensagem nativa do SDK iOS do Firebase Installations isolada
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception('Failed to get installations token.'),
+          ),
+          isTrue,
+        );
+
+        // Substring 'network-error' com hífen em exceção textual
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception('[firebase_app_check/network-error] Falha temporária'),
+          ),
+          isTrue,
+        );
+
+        // Mensagens nativas de NSURLErrorDomain / CFNetwork (iOS e macOS)
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline."',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=NSURLErrorDomain Code=-1004 "Could not connect to the server."',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=NSURLErrorDomain Code=-1003 "A server with the specified hostname could not be found."',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=kCFErrorDomainCFNetwork Code=-1003 "Cannot find host"',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            Exception(
+              'Error Domain=NSURLErrorDomain Code=-1020 "A data connection is not currently allowed."',
+            ),
+          ),
+          isTrue,
+        );
+
+        // Códigos HTTP definitivos continuam nunca sendo rebaixados mesmo com palavras de rede no corpo
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException(
+              'Falha na API (400): {"error":"network-error","detail":"The Internet connection appears to be offline"}',
+            ),
+          ),
+          isFalse,
+        );
+
+        // logFalhaSyncOuDownload rebaixa a exceção iOS offline para logAviso sem acionar erro/crash
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+        AppLogger.instance.logFalhaSyncOuDownload(
+          'Falha ao buscar configurações no iOS offline',
+          error: excecaoOfflineIos,
+          stackTrace: StackTrace.fromString('stack ios offline'),
+        );
+        expect(mockLogger.recordedWarnings, hasLength(1));
+        expect(mockLogger.recordedErrors, isEmpty);
+      },
+    );
   });
 }
 

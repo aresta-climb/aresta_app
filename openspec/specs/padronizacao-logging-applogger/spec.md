@@ -56,15 +56,15 @@ Todas as alterações no serviço de log e no teste arquitetural SHALL seguir o 
 - **WHEN** a suíte de testes do `AppLogger` for executada via `flutter test test/services/firebase/app_logger_test.dart`
 - **THEN** todos os cenários de `logError`, `logCrash`, `logFalhaSyncOuDownload`, `logInfo` e `logAviso` DEVEM passar com 100% de cobertura.
 
-### Requirement: Reconhecimento de Falhas de Rede Nativas de SDKs do Firebase
-O método `AppLogger.isFalhaConexaoOuTimeout` SHALL reconhecer exceções e mensagens de erro originadas nos SDKs nativos do Firebase (`FirebaseException`, Firebase Installations, Firebase Remote Config e Firebase App Check) quando decorrentes de indisponibilidade de rede, falha ao obter token de instalação para busca ou falha de comunicação do cliente com o backend.
+### Requirement: Reconhecimento de Falhas de Rede Nativas de SDKs do Firebase e NSURLErrorDomain (iOS/Android)
+O método `AppLogger.isFalhaConexaoOuTimeout` SHALL reconhecer exceções e mensagens de erro originadas nos SDKs nativos do Firebase (`FirebaseException`, Firebase Installations, Firebase Remote Config e Firebase App Check) e na pilha de transporte nativa `NSURLErrorDomain` / `CFNetwork` do iOS/macOS quando decorrentes de indisponibilidade de rede, falha ao obter token de instalação para busca ou falha de comunicação do cliente com o backend.
 
-#### Scenario: Falha ao obter token do Firebase Installations durante fetch do Remote Config
-- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma exceção contendo `[firebase_remote_config/internal] Firebase Installations failed to get installation auth token for fetch.`
+#### Scenario: Falha ao obter token do Firebase Installations durante fetch do Remote Config (Android e iOS)
+- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma exceção contendo `[firebase_remote_config/internal] Firebase Installations failed to get installation auth token for fetch.` (Android) ou `[firebase_remote_config/network-error] Failed to get installations token.` com `NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline."` (iOS)
 - **THEN** o método DEVE retornar `true`.
 
-#### Scenario: Falha de comunicação do cliente nativo do Firebase com o backend
-- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma `FirebaseException` de código `unavailable` ou `network-request-failed`, ou mensagem contendo `the client had an error while calling the backend`, `unable to connect to the server` ou `fetch failed`
+#### Scenario: Falha de comunicação do cliente nativo do Firebase ou NSURLErrorDomain com o backend
+- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma `FirebaseException` de código `unavailable`, `network-request-failed`, `network_error` ou `network-error`, ou mensagem contendo `the client had an error while calling the backend`, `unable to connect to the server`, `fetch failed`, `the internet connection appears to be offline`, `the network connection was lost`, `could not connect to the server`, `specified hostname could not be found`, `cannot find host` ou `data connection is not currently allowed`
 - **THEN** o método DEVE retornar `true`.
 
 #### Scenario: Falha de rede ao obter token do App Check
