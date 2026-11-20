@@ -17,6 +17,7 @@ import '../../view/view_models/via_view_model.dart';
 import '../linha_localizacao_setor.dart';
 import '../mapa_thumbnail.dart';
 import 'bolha_alerta_seguranca_via.dart';
+import 'grafico_consenso_grau_via.dart';
 
 /// Cabeçalho de identidade da `ViaPage` apresentando o nome completo da via sem truncamento,
 /// pílulas de modalidade/`CLÁSSICA` e o atalho hierárquico `Grupo > Setor`.
@@ -174,6 +175,12 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
   /// Grau oficial formatado, ou `null` quando indefinido.
   final String? grauOficial;
 
+  /// Código numérico Protobuf do grau oficial para rotulagem do gráfico de consenso.
+  final int? codigoGrauOficial;
+
+  /// Indica se a escalada pertence à modalidade Boulder (escala V).
+  final bool ehBoulder;
+
   /// Subtítulo abaixo do grau oficial.
   final String complementoGrauOficial;
 
@@ -198,6 +205,8 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
     required this.exibirCartaoGrau,
     required this.rotuloGrauOficial,
     required this.grauOficial,
+    this.codigoGrauOficial,
+    this.ehBoulder = false,
     required this.complementoGrauOficial,
     required this.consensoGrau,
     required this.alertasAtivos,
@@ -221,6 +230,8 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
           child: CartaoGrauVia(
             rotuloGrauOficial: rotuloGrauOficial,
             grauOficial: grauOficial,
+            codigoGrauOficial: codigoGrauOficial,
+            ehBoulder: ehBoulder,
             complementoGrauOficial: complementoGrauOficial,
             consensoGrau: consensoGrau,
           ),
@@ -265,6 +276,12 @@ class CartaoGrauVia extends StatelessWidget {
   /// Valor textual do grau oficial, ou `null` quando indefinido.
   final String? grauOficial;
 
+  /// Código numérico Protobuf do grau oficial para o gráfico de consenso.
+  final int? codigoGrauOficial;
+
+  /// Indica se a escalada pertence à modalidade Boulder (escala V).
+  final bool ehBoulder;
+
   /// Subtítulo contextual do grau oficial.
   final String complementoGrauOficial;
 
@@ -276,6 +293,8 @@ class CartaoGrauVia extends StatelessWidget {
     super.key,
     required this.rotuloGrauOficial,
     required this.grauOficial,
+    this.codigoGrauOficial,
+    this.ehBoulder = false,
     required this.complementoGrauOficial,
     this.consensoGrau,
   });
@@ -323,37 +342,51 @@ class CartaoGrauVia extends StatelessWidget {
       ),
       child: consenso == null
           ? blocoOficial
-          : LayoutBuilder(
-              builder: (context, restricoes) {
-                final empilhar = restricoes.maxWidth < 260;
-                final blocoComunidade = _BlocoConsensoComunidade(
-                  consenso: consenso,
-                );
-                if (empilhar) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      blocoOficial,
-                      Divider(color: cores.graniteEdge, height: 24),
-                      blocoComunidade,
-                    ],
-                  );
-                }
-                return IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: blocoOficial),
-                      VerticalDivider(
-                        color: cores.graniteEdge,
-                        width: 24,
-                        thickness: 1,
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LayoutBuilder(
+                  builder: (context, restricoes) {
+                    final empilhar = restricoes.maxWidth < 260;
+                    final blocoComunidade = _BlocoConsensoComunidade(
+                      consenso: consenso,
+                    );
+                    if (empilhar) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          blocoOficial,
+                          Divider(color: cores.graniteEdge, height: 24),
+                          blocoComunidade,
+                        ],
+                      );
+                    }
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: blocoOficial),
+                          VerticalDivider(
+                            color: cores.graniteEdge,
+                            width: 24,
+                            thickness: 1,
+                          ),
+                          Expanded(child: blocoComunidade),
+                        ],
                       ),
-                      Expanded(child: blocoComunidade),
-                    ],
+                    );
+                  },
+                ),
+                if (consenso.possuiVotos &&
+                    consenso.distribuicaoDeltas.isNotEmpty) ...[
+                  Divider(color: cores.graniteEdge, height: 24),
+                  BarrasDistribuicaoGrauVia(
+                    consenso: consenso,
+                    codigoGrauOficial: codigoGrauOficial,
+                    ehBoulder: ehBoulder,
                   ),
-                );
-              },
+                ],
+              ],
             ),
     );
   }
@@ -382,14 +415,33 @@ class _BlocoConsensoComunidade extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          possuiVotos ? consenso.grauSugerido! : 'Sem votos',
-          style: TextStyle(
-            color: possuiVotos ? cores.chalkWhite : cores.ashGrey,
-            fontSize: possuiVotos ? 28 : 18,
-            fontWeight: FontWeight.w900,
+        if (possuiVotos)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnelConsensoGrauVia(consenso: consenso),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  consenso.grauSugerido!,
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            'Sem votos',
+            style: TextStyle(
+              color: cores.ashGrey,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        ),
         const SizedBox(height: 4),
         Text(
           possuiVotos
