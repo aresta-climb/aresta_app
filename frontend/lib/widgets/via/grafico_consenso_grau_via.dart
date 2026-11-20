@@ -158,6 +158,98 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return const SizedBox.shrink();
+    final cores = context.colors;
+    var maiorContagem = 1;
+    for (final delta in deltasOrdenados) {
+      final qtd = consenso.distribuicaoDeltas[delta] ?? 0;
+      if (qtd > maiorContagem) {
+        maiorContagem = qtd;
+      }
+    }
+
+    return Column(
+      key: const Key('grafico_distribuicao_grau_via'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'DISTRIBUIÇÃO DE VOTOS (${consenso.totalVotos})',
+          style: TextStyle(
+            color: cores.ashGrey,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...deltasOrdenados.map((delta) {
+          final contagem = consenso.distribuicaoDeltas[delta] ?? 0;
+          final ehModa = contagem == maiorContagem && contagem > 0;
+          final corBarra = delta < 0
+              ? cores.fernGreen
+              : (delta == 0 ? cores.beastHide : cores.rustIron);
+          final rotulo = _formatarRotuloFaixa(
+            delta,
+            codigoGrauOficial: codigoGrauOficial,
+            ehBoulder: ehBoulder,
+          );
+
+          return Padding(
+            key: Key('barra_delta_grau_$delta'),
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    rotulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: ehModa ? cores.chalkWhite : cores.ashGrey,
+                      fontSize: 11,
+                      fontWeight: ehModa ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 6,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: cores.graniteEdge,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: contagem / maiorContagem,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: corBarra,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  child: Text(
+                    '$contagem',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: ehModa ? cores.chalkWhite : cores.ashGrey,
+                      fontSize: 11,
+                      fontWeight: ehModa ? FontWeight.w800 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
   }
 }
