@@ -66,6 +66,26 @@ void main() {
       );
       expect(atualizado.autorNomePublico, equals('Clara Escaladora'));
       expect(atualizado.fotoUrl, equals('https://exemplo.com/clara.webp'));
+
+      // Reconciliação e renovação de sessão no Fake
+      fake.autorIdPublicoRemotoReconciliado = 'z9Yx8Wv7Ut6Sr5';
+      final reconciliado = await fake.garantirSessaoEPerfilSincronizados(
+        forcarRenovacaoToken: true,
+      );
+      expect(reconciliado.autorIdPublico, equals('z9Yx8Wv7Ut6Sr5'));
+      expect(reconciliado.accessToken, equals('jwt_renovado_1'));
+      expect(fake.totalRenovacoesToken, equals(1));
+
+      fake.erroAoGarantirSessao = StateError('Falha ao renovar');
+      await expectLater(
+        () => fake.garantirSessaoEPerfilSincronizados(),
+        throwsStateError,
+      );
+
+      await fake.encerrarSessao();
+      fake.erroAoGarantirSessao = null;
+      final anonimo = await fake.garantirSessaoEPerfilSincronizados();
+      expect(anonimo.estaAutenticado, isFalse);
     });
 
     test('permite simular cancelamento voluntário e exceções determinísticas em cada operação', () async {

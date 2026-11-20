@@ -334,5 +334,89 @@ void main() {
       );
       expect(apenasNome.autorNomePublico, equals('Apenas Nome'));
     });
+
+    test('garantirSessaoEPerfilSincronizados renova JWT expirado via refreshToken e reconcilia public.perfis', () async {
+      var chamadasRefresh = 0;
+      var chamadasPerfis = 0;
+      final clienteFake = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'refresh_token') {
+            chamadasRefresh++;
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-renovado-$chamadasRefresh',
+                'refresh_token': 'refresh-renovado-$chamadasRefresh',
+                'user': {
+                  'id': 'usr-reconciliado',
+                  'user_metadata': <String, dynamic>{},
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            chamadasPerfis++;
+            if (request.method == 'GET') {
+              return http.Response(
+                jsonEncode([
+                  {
+                    'autor_id_publico': 'z9Yx8Wv7Ut6Sr5',
+                    'autor_nome_publico': 'Atleta Canônico',
+                    'avatar_url': 'https://cdn.aresta.cc/avatar.webp',
+                  },
+                ]),
+                200,
+              );
+            }
+            return http.Response('[]', 201);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
+
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteFake,
+        obterUrlSupabase: () => 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+        obterAnonKeySupabase: () => 'anon-key-1',
+      );
+
+      // 1. Perfil não autenticado -> retorna sem chamadas de rede
+      final semConta = await servico.garantirSessaoEPerfilSincronizados();
+      expect(semConta.estaAutenticado, isFalse);
+      expect(chamadasRefresh, 0);
+
+      // 2. Perfil autenticado sem tokens -> retorna inalterado
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(userId: 'usr-reconciliado'),
+      );
+      final semTokens = await servico.garantirSessaoEPerfilSincronizados();
+      expect(semTokens.accessToken, isNull);
+      expect(chamadasRefresh, 0);
+
+      // 3. Perfil com accessToken ativo -> reconcilia linha em public.perfis sem renovar token
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          userId: 'usr-reconciliado',
+          accessToken: 'jwt-valido-1',
+          refreshToken: 'refresh-valido-1',
+        ),
+      );
+      final reconciliado = await servico.garantirSessaoEPerfilSincronizados();
+      expect(chamadasRefresh, 0);
+      expect(chamadasPerfis, 1);
+      expect(reconciliado.autorIdPublico, 'z9Yx8Wv7Ut6Sr5');
+      expect(reconciliado.autorNomePublico, 'Atleta Canônico');
+      expect(reconciliado.fotoUrl, 'https://cdn.aresta.cc/avatar.webp');
+
+      // 4. Renovação forçada após HTTP 401 -> obtém novo accessToken e refreshToken
+      final renovado = await servico.garantirSessaoEPerfilSincronizados(
+        forcarRenovacaoToken: true,
+      );
+      expect(chamadasRefresh, 1);
+      expect(renovado.accessToken, 'jwt-renovado-1');
+      expect(renovado.refreshToken, 'refresh-renovado-1');
+    });
   });
 }
