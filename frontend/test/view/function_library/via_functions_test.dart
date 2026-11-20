@@ -642,6 +642,22 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(MapaThumbnail), findsOneWidget);
+
+        // Atualiza escalada sem viewModel externo (exercita descarte e recriação interna em CorpoDetalhesVia)
+        final novaEscalada = Escalada(
+          viaEsportiva: ViaEsportiva(nome: 'Via Substituída no Corpo'),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(context, novaEscalada, 'crag1'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Via Substituída no Corpo'), findsOneWidget);
       },
     );
   });

@@ -98,7 +98,9 @@ void main() {
     expect(vm.modalidade, 'Esportiva');
     expect(vm.ehDestaque, isTrue);
     expect(vm.ehHighline, isFalse);
+    expect(vm.ehBoulder, isFalse);
     expect(vm.possuiUid, isTrue);
+    expect(vm.codigoGrauOficial, GrauVia_GrauVia.BR_7A.value);
     expect(vm.grauOficialExibicao, '7a');
     expect(vm.rotuloGrauOficial, 'GRAU OFICIAL');
     expect(vm.complementoGrauOficial, contains('Artificial A1+'));

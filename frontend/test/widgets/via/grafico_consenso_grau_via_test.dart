@@ -94,4 +94,47 @@ void main() {
     expect(find.text('Justo (0)'), findsOneWidget);
     expect(find.text('+1'), findsOneWidget);
   });
+
+  testWidgets('oculta BarrasDistribuicaoGrauVia quando sem votos e não causa overflow em 220px @ 1.5x', (tester) async {
+    await tester.pumpWidget(
+      envolver(
+        const BarrasDistribuicaoGrauVia(
+          consenso: ConsensoGrauVia.vazio(),
+          codigoGrauOficial: null,
+          ehBoulder: false,
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsNothing);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.5),
+          ),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SizedBox(
+              width: 220,
+              child: BarrasDistribuicaoGrauVia(
+                consenso: const ConsensoGrauVia(
+                  grauSugerido: '7a',
+                  totalVotos: 5,
+                  distribuicaoDeltas: {0: 5},
+                ),
+                codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+                ehBoulder: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

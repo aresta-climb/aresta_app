@@ -443,9 +443,13 @@ void main() {
     await tester.tap(btnSalvar);
     await tester.pumpAndSettle();
 
-    // ViaPage reflete consenso de grau (7b) e comentário público imediatamente
+    // ViaPage reflete consenso de grau (7b), gráfico de votos e comentário público imediatamente
+    expect(find.text('7a'), findsOneWidget);
     expect(find.text('7b'), findsOneWidget);
     expect(find.text('100% sugerem +1'), findsOneWidget);
+    expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
+    expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
+    expect(find.text('7b (+1)'), findsOneWidget);
     expect(find.text('Notas da Comunidade (1)'), findsOneWidget);
     expect(find.text('Clipar a 3ª da orelha esquerda.'), findsOneWidget);
     expect(find.text('FLASH ★'), findsOneWidget);

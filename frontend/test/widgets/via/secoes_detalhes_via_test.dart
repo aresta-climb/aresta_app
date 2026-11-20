@@ -73,6 +73,7 @@ void main() {
           exibirCartaoGrau: true,
           rotuloGrauOficial: 'GRAU OFICIAL',
           grauOficial: '7a',
+          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
           complementoGrauOficial: 'Guia Oficial / Conquistador',
           consensoGrau: const ConsensoGrauVia(
             grauSugerido: '7b',
@@ -90,6 +91,10 @@ void main() {
     expect(find.text('CONSENSO DA COMUNIDADE'), findsOneWidget);
     expect(find.text('7b'), findsOneWidget);
     expect(find.text('80% sugerem +1'), findsOneWidget);
+    expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
+    expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
+    expect(find.text('DISTRIBUIÇÃO DE VOTOS (10)'), findsOneWidget);
+    expect(find.text('7b (+1)'), findsOneWidget);
     expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));

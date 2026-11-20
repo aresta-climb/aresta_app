@@ -36,8 +36,8 @@ Representa a identidade esportiva pública e o estado de autenticação do escal
 - `autorNomePublico`: Nome ou apelido esportivo exibido nas telas, sincronizado com `public.perfis` no Supabase.
 - `userId`: Identificador UUID opcional da conta autenticada no Supabase Auth (`auth.users`).
 - `fotoUrl`: URL pública da foto de perfil no Supabase Storage (`avatars/<userId>/avatar.webp`) ou Data URI em base64 (`data:image/webp;base64,...`) para exibição offline.
-- `accessToken`: Token JWT opcional da sessão autenticada no Supabase Auth, utilizado para operações autenticadas no Storage e PostgREST.
-- `estaAutenticado`: Indica se há um `userId` não vazio vinculado ao perfil. Ao invocar `copyWith(limparUserId: true)` no encerramento de sessão, tanto `userId` quanto `accessToken` são limpos simultaneamente, mantendo `autorIdPublico` e demais dados locais intactos.
+- `accessToken` e `refreshToken`: Tokens JWT e de renovação da sessão autenticada no Supabase Auth (`grant_type=refresh_token`), utilizados para manter escritas autenticadas no Storage e em `public.fila_interacoes` mesmo após a expiração de 1 hora do JWT.
+- `estaAutenticado`: Indica se há um `userId` não vazio vinculado ao perfil. Ao invocar `copyWith(limparUserId: true)` no encerramento de sessão, `userId`, `accessToken` e `refreshToken` são limpos simultaneamente, mantendo `autorIdPublico` e demais dados locais intactos.
 
 ### `TipoAscensao` e `TipoEscalada` (`modelos/tipo_ascensao.dart`, `modelos/tipo_escalada.dart`)
 Enums com rotulagem amigável em português e métodos utilitários:
