@@ -91,6 +91,7 @@ void main() {
             return http.Response(
               jsonEncode({
                 'access_token': 'jwt-otp-1',
+                'refresh_token': 'refresh-otp-1',
                 'user': {
                   'id': 'uuid-otp-1',
                   'user_metadata': <String, dynamic>{},
@@ -214,6 +215,7 @@ void main() {
       );
       expect(resOtp.userId, equals('uuid-otp-1'));
       expect(resOtp.accessToken, equals('jwt-otp-1'));
+      expect(resOtp.refreshToken, equals('refresh-otp-1'));
       expect(resOtp.nomeExibicao, equals('atleta'));
       expect(resOtp.autorIdPublicoRemoto, equals(idPublicoLocal));
     });
@@ -486,6 +488,102 @@ void main() {
         urlStorage,
         startsWith('$urlBase/storage/v1/object/public/avatars/usr-1/avatar.webp'),
       );
+    });
+
+    test('renovarSessaoComRefreshToken e garantirLinhaPerfisSincronizada renovam JWT e reconciliam public.perfis', () async {
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'refresh_token') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['refresh_token'] == 'refresh-invalido') {
+              return http.Response(
+                jsonEncode({
+                  'error_code': 'refresh_token_not_found',
+                  'msg': 'Invalid Refresh Token',
+                }),
+                400,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-renovado-99',
+                if (body['refresh_token'] == 'refresh-rotacionado')
+                  'refresh_token': 'refresh-novo-99',
+                'user': {
+                  'id': 'uuid-usr-99',
+                  'user_metadata': <String, dynamic>{},
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            if (request.method == 'GET') {
+              return http.Response(
+                jsonEncode([
+                  {
+                    'autor_id_publico': 'z9Yx8Wv7Ut6Sr5',
+                    'autor_nome_publico': 'Atleta Reconciliado',
+                    'avatar_url': null,
+                  },
+                ]),
+                200,
+              );
+            }
+            return http.Response('[]', 201);
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+
+      final cliente = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+      );
+
+      final renovadoRotacionado = await cliente.renovarSessaoComRefreshToken(
+        refreshToken: '  refresh-rotacionado  ',
+        autorIdPublicoLocal: idPublicoLocal,
+        nomeFallback: 'Fallback',
+        anonKey: anonKey,
+      );
+      expect(renovadoRotacionado.accessToken, 'jwt-renovado-99');
+      expect(renovadoRotacionado.refreshToken, 'refresh-novo-99');
+      expect(renovadoRotacionado.autorIdPublicoRemoto, 'z9Yx8Wv7Ut6Sr5');
+
+      final renovadoMantido = await cliente.renovarSessaoComRefreshToken(
+        refreshToken: 'refresh-sem-rotacao',
+        autorIdPublicoLocal: idPublicoLocal,
+        nomeFallback: 'Fallback',
+        anonKey: anonKey,
+      );
+      expect(renovadoMantido.refreshToken, 'refresh-sem-rotacao');
+
+      await expectLater(
+        () => cliente.renovarSessaoComRefreshToken(
+          refreshToken: 'refresh-invalido',
+          autorIdPublicoLocal: idPublicoLocal,
+          nomeFallback: 'Fallback',
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 400)
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isFalse),
+        ),
+      );
+
+      final linha = await cliente.garantirLinhaPerfisSincronizada(
+        anonKey: anonKey,
+        accessToken: 'jwt-renovado-99',
+        userId: 'uuid-usr-99',
+        autorIdPublico: idPublicoLocal,
+        nomePublico: 'Local',
+        fotoUrl: null,
+      );
+      expect(linha.autorIdPublico, 'z9Yx8Wv7Ut6Sr5');
+      expect(linha.nomePublico, 'Atleta Reconciliado');
     });
   });
 }
