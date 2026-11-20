@@ -79,7 +79,7 @@ void main() {
     expect(ultimoPayloadRecebido!['alerta_alvo_uid'], 'alertaAbelha01');
   });
 
-  test('busca interações pendentes via PostgREST e lança HttpException em erro HTTP', () async {
+  test('busca interações pendentes com anonKey e lança ExcecaoHttpFilaInteracoes em erro HTTP', () async {
     corpoRespostaGet = [
       {
         'id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -99,24 +99,31 @@ void main() {
       resolvedorAnonKey: () => 'anon-key-teste',
     );
 
-    final lista = await cliente.buscarInteracoesPendentes(
-      'x8siJek3FiG3aB',
-      accessToken: 'jwt-leitura',
-    );
-    expect(ultimoAuthHeader, 'Bearer jwt-leitura');
+    final lista = await cliente.buscarInteracoesPendentes('x8siJek3FiG3aB');
+    expect(ultimoAuthHeader, 'Bearer anon-key-teste');
     expect(lista, hasLength(1));
     expect(lista.single.textoComentario, 'Ótimo crux!');
 
     expect(await cliente.buscarInteracoesPendentes('   '), isEmpty);
 
-    statusResposta = 500;
+    statusResposta = 403;
     await expectLater(
       () => cliente.buscarInteracoesPendentes('x8siJek3FiG3aB'),
-      throwsA(isA<HttpException>()),
+      throwsA(
+        isA<ExcecaoHttpFilaInteracoes>()
+            .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 403)
+            .having((e) => e.toString(), 'toString', contains('403')),
+      ),
     );
     await expectLater(
       () => cliente.inserirInteracao(lista.single),
-      throwsA(isA<HttpException>()),
+      throwsA(
+        isA<ExcecaoHttpFilaInteracoes>().having(
+          (e) => e.codigoStatusHttp,
+          'codigoStatusHttp',
+          403,
+        ),
+      ),
     );
 
     // Valida resolvedores padrão do RemoteConfig usando ClienteHttpAresta.paraTestes

@@ -4,19 +4,41 @@
 import 'dart:convert';
 import 'dart:io';
 import '../../data/modelos/item_fila_interacao.dart';
+import '../firebase/app_logger.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
+
+/// Exceção tipada de transporte da tabela `public.fila_interacoes`, expondo [codigoStatusHttp]
+/// para distinguir expiração de JWT (`401`), violação de RLS (`403`) e falhas transitórias.
+class ExcecaoHttpFilaInteracoes implements HttpException, ExcecaoComStatusHttp {
+  /// Código de status HTTP retornado pelo PostgREST.
+  @override
+  final int codigoStatusHttp;
+
+  @override
+  final String message;
+
+  @override
+  final Uri? uri;
+
+  /// Cria uma instância imutável de [ExcecaoHttpFilaInteracoes].
+  const ExcecaoHttpFilaInteracoes({
+    required this.codigoStatusHttp,
+    required this.message,
+    this.uri,
+  });
+
+  @override
+  String toString() => 'ExcecaoHttpFilaInteracoes($codigoStatusHttp): $message';
+}
 
 /// Contrato de comunicação HTTP com a tabela `public.fila_interacoes` (PostgREST).
 ///
 /// Separa a serialização/transporte de rede da orquestração reativa e da fila
 /// offline de [RepositorioInteracoesVia], viabilizando Fakes determinísticos em memória.
 abstract interface class ClienteFilaInteracoes {
-  /// Consulta todas as interações com `status = 'PENDENTE'` para [escaladaUid].
-  Future<List<ItemFilaInteracao>> buscarInteracoesPendentes(
-    String escaladaUid, {
-    String? accessToken,
-  });
+  /// Consulta todas as interações com `status = 'PENDENTE'` para [escaladaUid] via leitura pública.
+  Future<List<ItemFilaInteracao>> buscarInteracoesPendentes(String escaladaUid);
 
   /// Insere um novo evento na tabela `public.fila_interacoes`.
   ///
@@ -72,9 +94,8 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
 
   @override
   Future<List<ItemFilaInteracao>> buscarInteracoesPendentes(
-    String escaladaUid, {
-    String? accessToken,
-  }) async {
+    String escaladaUid,
+  ) async {
     final uidLimpo = escaladaUid.trim();
     if (uidLimpo.isEmpty) {
       return const [];
@@ -91,12 +112,13 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
 
     final resposta = await _clienteHttp.get(
       uri,
-      headers: _construirCabecalhos(accessToken: accessToken),
+      headers: _construirCabecalhos(),
     );
 
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw HttpException(
-        'HTTP ${resposta.statusCode}: ${resposta.body}',
+      throw ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: ${resposta.body}',
         uri: uri,
       );
     }
@@ -126,8 +148,9 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
     );
 
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw HttpException(
-        'HTTP ${resposta.statusCode}: ${resposta.body}',
+      throw ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: ${resposta.body}',
         uri: uri,
       );
     }

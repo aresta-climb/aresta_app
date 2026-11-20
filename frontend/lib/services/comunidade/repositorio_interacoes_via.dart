@@ -128,10 +128,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     await _drenarFilaPendente(cliente, accessToken: perfil.accessToken);
 
     try {
-      final remotos = await cliente.buscarInteracoesPendentes(
-        uidVia,
-        accessToken: perfil.accessToken,
-      );
+      final remotos = await cliente.buscarInteracoesPendentes(uidVia);
       final pendentesVia = _filaPendente.where((i) => i.escaladaUid == uidVia);
       _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
         [...remotos, ...pendentesVia],

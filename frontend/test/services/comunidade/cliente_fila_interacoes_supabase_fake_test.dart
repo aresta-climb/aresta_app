@@ -31,6 +31,11 @@ void main() {
     expect(fake.ultimoAccessTokenInsercao, 'jwt-token-123');
     expect(fake.itensInseridos, hasLength(2));
 
+    fake.filaErrosInsercao.add(StateError('Erro pontual 1'));
+    await expectLater(() => fake.inserirInteracao(voto), throwsStateError);
+    await fake.inserirInteracao(voto, accessToken: 'jwt-retentativa');
+    expect(fake.ultimoAccessTokenInsercao, 'jwt-retentativa');
+
     fake.erroSimulado = StateError('Offline simulado');
     await expectLater(
       () => fake.buscarInteracoesPendentes('x8siJek3FiG3aB'),

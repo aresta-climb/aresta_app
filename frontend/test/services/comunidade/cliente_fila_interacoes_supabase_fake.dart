@@ -11,6 +11,9 @@ import 'package:frontend/services/comunidade/cliente_fila_interacoes_supabase.da
 class ClienteFilaInteracoesFake implements ClienteFilaInteracoes {
   final List<ItemFilaInteracao> _tabelaRemota = [];
 
+  /// Fila opcional de erros consumidos sequencialmente a cada chamada a [inserirInteracao].
+  final List<Object> filaErrosInsercao = [];
+
   /// Último `accessToken` recebido em [inserirInteracao].
   String? ultimoAccessTokenInsercao;
 
@@ -27,9 +30,8 @@ class ClienteFilaInteracoesFake implements ClienteFilaInteracoes {
 
   @override
   Future<List<ItemFilaInteracao>> buscarInteracoesPendentes(
-    String escaladaUid, {
-    String? accessToken,
-  }) async {
+    String escaladaUid,
+  ) async {
     if (erroSimulado != null) {
       throw erroSimulado!;
     }
@@ -43,6 +45,9 @@ class ClienteFilaInteracoesFake implements ClienteFilaInteracoes {
     ItemFilaInteracao item, {
     String? accessToken,
   }) async {
+    if (filaErrosInsercao.isNotEmpty) {
+      throw filaErrosInsercao.removeAt(0);
+    }
     if (erroSimulado != null) {
       throw erroSimulado!;
     }
