@@ -64,6 +64,9 @@ class ResultadoProvedorAutenticacao {
   /// Token JWT de sessão do Supabase Auth, quando disponível.
   final String? accessToken;
 
+  /// Token de renovação da sessão GoTrue, quando disponível.
+  final String? refreshToken;
+
   /// Identificador público NanoID 14c recuperado do banco remoto, quando existente.
   final String? autorIdPublicoRemoto;
 
@@ -73,6 +76,7 @@ class ResultadoProvedorAutenticacao {
     this.nomeExibicao,
     this.fotoUrl,
     this.accessToken,
+    this.refreshToken,
     this.autorIdPublicoRemoto,
   });
 }

@@ -41,6 +41,7 @@ class SincronizadorPerfilSupabase {
     required String baseUrl,
     required String anonKey,
     required String? accessToken,
+    String? refreshToken,
     required Map<String, dynamic> usuario,
     required String autorIdPublicoLocal,
     required String nomeFallback,
@@ -82,6 +83,7 @@ class SincronizadorPerfilSupabase {
       nomeExibicao: nomeEfetivo,
       fotoUrl: fotoEfetiva,
       accessToken: accessToken,
+      refreshToken: refreshToken,
       autorIdPublicoRemoto: autorIdEfetivo,
     );
   }

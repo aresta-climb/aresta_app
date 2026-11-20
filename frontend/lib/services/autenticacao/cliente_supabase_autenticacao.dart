@@ -138,11 +138,13 @@ class ClienteSupabaseAutenticacao {
     }
 
     final accessToken = mapa['access_token'] as String?;
+    final refreshToken = mapa['refresh_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
     return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
+      refreshToken: refreshToken,
       usuario: usuario,
       autorIdPublicoLocal: autorIdPublicoLocal,
       nomeFallback: emailLimpo.split('@').first,
@@ -290,6 +292,7 @@ class ClienteSupabaseAutenticacao {
     }
 
     final accessToken = mapa['access_token'] as String?;
+    final refreshToken = mapa['refresh_token'] as String?;
     final usuarioBruto = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
     final metadadosAtuais = Map<String, dynamic>.from(
       (usuarioBruto['user_metadata'] as Map<String, dynamic>?) ?? const {},
@@ -309,6 +312,7 @@ class ClienteSupabaseAutenticacao {
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
+      refreshToken: refreshToken,
       usuario: usuarioEnriquecido,
       autorIdPublicoLocal: autorIdPublicoLocal,
       nomeFallback: nomeFallback,
@@ -375,14 +379,86 @@ class ClienteSupabaseAutenticacao {
     }
 
     final accessToken = mapa['access_token'] as String?;
+    final refreshToken = mapa['refresh_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
     return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
+      refreshToken: refreshToken,
       usuario: usuario,
       autorIdPublicoLocal: autorIdPublicoLocal,
       nomeFallback: nomeFallback,
+    );
+  }
+
+  /// Renova a sessão JWT expirada no GoTrue (`/auth/v1/token?grant_type=refresh_token`)
+  /// e reconcilia os metadados do escalador em `public.perfis`.
+  Future<ResultadoProvedorAutenticacao> renovarSessaoComRefreshToken({
+    required String refreshToken,
+    required String autorIdPublicoLocal,
+    required String nomeFallback,
+    required String anonKey,
+  }) async {
+    final baseUrl = _baseUrl;
+    final tokenLimpo = refreshToken.trim();
+    final resposta = await _clienteHttp.post(
+      Uri.parse('$baseUrl/auth/v1/token?grant_type=refresh_token'),
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer $anonKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'refresh_token': tokenLimpo}),
+    );
+
+    final mapa = _decodificarJsonSeguro(resposta.body);
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoAutenticacao(
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Não foi possível renovar a sessão autenticada.',
+        ),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: false,
+        causaTecnica:
+            'HTTP ${resposta.statusCode} /auth/v1/token?grant_type=refresh_token: ${resposta.body}',
+      );
+    }
+
+    final novoAccessToken = mapa['access_token'] as String?;
+    final novoRefreshToken =
+        (mapa['refresh_token'] as String?) ?? tokenLimpo;
+    final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
+      baseUrl: baseUrl,
+      anonKey: anonKey,
+      accessToken: novoAccessToken,
+      refreshToken: novoRefreshToken,
+      usuario: usuario,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      nomeFallback: nomeFallback,
+    );
+  }
+
+  /// Garante que a linha do escalador exista em `public.perfis` e devolve a identidade reconciliada.
+  Future<({String autorIdPublico, String nomePublico, String? fotoUrl})>
+  garantirLinhaPerfisSincronizada({
+    required String anonKey,
+    required String accessToken,
+    required String userId,
+    required String autorIdPublico,
+    required String nomePublico,
+    required String? fotoUrl,
+  }) {
+    return _sincronizadorPerfil.sincronizarLinhaPerfis(
+      baseUrl: _baseUrl,
+      anonKey: anonKey,
+      accessToken: accessToken,
+      userId: userId,
+      autorIdPublico: autorIdPublico,
+      nomePublico: nomePublico,
+      fotoUrl: fotoUrl,
     );
   }
 
