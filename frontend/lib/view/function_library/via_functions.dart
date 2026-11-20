@@ -301,6 +301,8 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                 exibirCartaoGrau: _viewModel.exibirCartaoGrau,
                 rotuloGrauOficial: _viewModel.rotuloGrauOficial,
                 grauOficial: _viewModel.grauOficialExibicao,
+                codigoGrauOficial: _viewModel.codigoGrauOficial,
+                ehBoulder: _viewModel.ehBoulder,
                 complementoGrauOficial: _viewModel.complementoGrauOficial,
                 consensoGrau: _viewModel.consensoGrau,
                 alertasAtivos: _viewModel.alertasAtivos,

@@ -172,8 +172,8 @@ class ViaViewModel extends ChangeNotifier {
       repositorioInteracoes
           .sincronizarEscalada(
             escalada.uid,
-            codigoGrauOficial: obterCodigoGrauOficial(escalada),
-            ehBoulder: escalada.whichTipo() == Escalada_Tipo.boulder,
+            codigoGrauOficial: codigoGrauOficial,
+            ehBoulder: ehBoulder,
           )
           .catchError((Object e) {
             AppLogger.instance.logAviso(
@@ -207,6 +207,12 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Indica se a modalidade é um Highline (sem grau esportivo de escalada).
   bool get ehHighline => escalada.whichTipo() == Escalada_Tipo.highline;
+
+  /// Indica se a escalada pertence à modalidade Boulder (escala V).
+  bool get ehBoulder => escalada.whichTipo() == Escalada_Tipo.boulder;
+
+  /// Código numérico Protobuf do grau oficial da escalada, quando definido.
+  int? get codigoGrauOficial => obterCodigoGrauOficial(escalada);
 
   /// Indica se os recursos interativos (alertas Waze, consenso, caderneta e notas) estão ativos.
   bool get exibirRecursosComunidade =>

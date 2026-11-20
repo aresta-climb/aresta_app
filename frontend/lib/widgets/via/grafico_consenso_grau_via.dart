@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../theme/cores_app.dart';
+import '../../utils/calculadora_delta_grau.dart';
 
 /// Anel vetorial compacto (estilo *donut*) que resume a proporção de votos mais suaves (`< 0`),
 /// justos (`0`) e mais duros (`> 0`) ao lado do grau sugerido pela comunidade na `ViaPage`.
@@ -109,5 +110,54 @@ class _PintorAnelConsenso extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PintorAnelConsenso oldDelegate) {
     return !mapEquals(oldDelegate.distribuicaoDeltas, distribuicaoDeltas);
+  }
+}
+
+/// Gráfico de barras horizontais exibindo a distribuição democrática de votos (`-2` a `+2`)
+/// com os respectivos graus resolvidos ao lado do Grau Oficial do Conquistador.
+class BarrasDistribuicaoGrauVia extends StatelessWidget {
+  /// Sequência canônica de deltas exibida no gráfico.
+  static const List<int> deltasOrdenados = [-2, -1, 0, 1, 2];
+
+  /// Consenso consolidado da escalada.
+  final ConsensoGrauVia consenso;
+
+  /// Código numérico Protobuf do grau oficial para rotular cada faixa com o grau correspondente.
+  final int? codigoGrauOficial;
+
+  /// Indica se a escalada pertence à escala V de boulder.
+  final bool ehBoulder;
+
+  /// Cria uma instância de [BarrasDistribuicaoGrauVia].
+  const BarrasDistribuicaoGrauVia({
+    super.key,
+    required this.consenso,
+    required this.codigoGrauOficial,
+    required this.ehBoulder,
+  });
+
+  static String _formatarRotuloFaixa(
+    int delta, {
+    required int? codigoGrauOficial,
+    required bool ehBoulder,
+  }) {
+    final textoDelta = delta > 0 ? '+$delta' : '$delta';
+    final codigo = deslocarCodigoGrau(
+      codigoGrauOficial,
+      delta,
+      ehBoulder: ehBoulder,
+    );
+    final grau = formatarGrauPorCodigo(codigo, ehBoulder: ehBoulder);
+    if (grau != null) return '$grau ($textoDelta)';
+    return delta == 0 ? 'Justo (0)' : textoDelta;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!consenso.possuiVotos || consenso.distribuicaoDeltas.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return const SizedBox.shrink();
   }
 }
