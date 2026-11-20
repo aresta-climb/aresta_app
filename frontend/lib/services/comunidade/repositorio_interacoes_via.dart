@@ -88,8 +88,8 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   bool _filaCarregada = false;
 
   final Map<String, DadosComunidadeVia> _dadosPorEscalada = {};
-  final Map<String, List<({int? deltaGrau, int? grauSugerido})>> _votosLocais =
-      {};
+  final Map<String, Map<String, ({int? deltaGrau, int? grauSugerido})>>
+  _votosLocaisPorAutor = {};
   final List<ItemFilaInteracao> _filaPendente = [];
   final ValueNotifier<int> _versaoNotifier = ValueNotifier<int>(0);
 
@@ -124,14 +124,28 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     }
 
     await _carregarFilaPendenteSeNecessario();
-    final perfil = _repositorioCaderneta.obterPerfil();
-    await _drenarFilaPendente(cliente, accessToken: perfil.accessToken);
+    await _drenarFilaPendente(cliente);
 
     try {
       final remotos = await cliente.buscarInteracoesPendentes(uidVia);
-      final pendentesVia = _filaPendente.where((i) => i.escaladaUid == uidVia);
+      final combinados = <ItemFilaInteracao>[
+        ...remotos,
+        ..._filaPendente.where((i) => i.escaladaUid == uidVia),
+      ]..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
+
+      final mapaVotos = <String, ({int? deltaGrau, int? grauSugerido})>{};
+      for (final item in combinados) {
+        if (item.tipo == TipoFilaInteracao.votoGrau) {
+          mapaVotos[item.autorIdPublico] = (
+            deltaGrau: item.deltaGrau,
+            grauSugerido: item.grauSugerido,
+          );
+        }
+      }
+      _votosLocaisPorAutor[uidVia] = mapaVotos;
+
       _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
-        [...remotos, ...pendentesVia],
+        combinados,
         codigoGrauOficial: codigoGrauOficial,
         ehBoulder: ehBoulder,
       );
@@ -177,25 +191,14 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         deslocarCodigoGrau(codigoGrauOficial, deltaGrau, ehBoulder: ehBoulder);
 
     final atual = obterDadosEscalada(uidVia);
-    final votos = List<({int? deltaGrau, int? grauSugerido})>.from(
-      _votosLocais[uidVia] ?? const [],
+    final votosPorAutor = Map<String, ({int? deltaGrau, int? grauSugerido})>.from(
+      _votosLocaisPorAutor[uidVia] ?? const {},
     );
-    if (votos.isEmpty && atual.consensoGrau.possuiVotos) {
-      atual.consensoGrau.distribuicaoDeltas.forEach((delta, qtd) {
-        for (var i = 0; i < qtd; i++) {
-          votos.add((
-            deltaGrau: delta,
-            grauSugerido: deslocarCodigoGrau(
-              codigoGrauOficial,
-              delta,
-              ehBoulder: ehBoulder,
-            ),
-          ));
-        }
-      });
-    }
-    votos.add((deltaGrau: deltaGrau, grauSugerido: codEfetivo));
-    _votosLocais[uidVia] = votos;
+    votosPorAutor[perfil.autorIdPublico] = (
+      deltaGrau: deltaGrau,
+      grauSugerido: codEfetivo,
+    );
+    _votosLocaisPorAutor[uidVia] = votosPorAutor;
 
     final comentarios = List<ComentarioComunidadeVia>.from(atual.comentarios);
     final textoLimpo = comentarioPublico?.trim();
@@ -214,7 +217,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
 
     _dadosPorEscalada[uidVia] = atual.copyWith(
       consensoGrau: consolidarConsensoDeVotos(
-        votos: votos,
+        votos: votosPorAutor.values.toList(growable: false),
         codigoGrauOficial: codigoGrauOficial,
         ehBoulder: ehBoulder,
       ),
@@ -222,7 +225,8 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     );
     _versaoNotifier.value++;
 
-    if (_clienteFila != null &&
+    final cliente = _clienteFila;
+    if (cliente != null &&
         perfil.estaAutenticado &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico)) {
@@ -246,10 +250,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
             criadoEm: novoComentario.criadoEm,
           ),
       ];
-      await _enfileirarEDespachar(
-        itensParaEnviar,
-        accessToken: perfil.accessToken,
-      );
+      await _enfileirarEDespachar(cliente, itensParaEnviar, accessToken: perfil.accessToken);
     }
   }
 
@@ -299,11 +300,12 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     );
     _versaoNotifier.value++;
 
-    if (_clienteFila != null &&
+    final cliente = _clienteFila;
+    if (cliente != null &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
         validarUid(resultado.uid)) {
-      await _enfileirarEDespachar([
+      await _enfileirarEDespachar(cliente, [
         ItemFilaInteracao.alertaSeguranca(
           autorIdPublico: perfil.autorIdPublico,
           autorNomePublico: perfil.autorNomePublico,
@@ -344,12 +346,13 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     );
     _versaoNotifier.value++;
 
+    final cliente = _clienteFila;
     final perfil = _repositorioCaderneta.obterPerfil();
-    if (_clienteFila != null &&
+    if (cliente != null &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
         validarUid(alertaUid)) {
-      await _enfileirarEDespachar([
+      await _enfileirarEDespachar(cliente, [
         ItemFilaInteracao.confirmacaoAlerta(
           autorIdPublico: perfil.autorIdPublico,
           autorNomePublico: perfil.autorNomePublico,
@@ -389,12 +392,20 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   Future<void> _enfileirarEDespachar(
+    ClienteFilaInteracoes cliente,
     List<ItemFilaInteracao> novosItens, {
     String? accessToken,
   }) async {
-    final cliente = _clienteFila;
-    if (cliente == null) return;
     await _carregarFilaPendenteSeNecessario();
+    for (final novo in novosItens) {
+      if (novo.tipo == TipoFilaInteracao.votoGrau) {
+        _filaPendente.removeWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.votoGrau &&
+              p.escaladaUid == novo.escaladaUid,
+        );
+      }
+    }
     _filaPendente.addAll(novosItens);
     await _drenarFilaPendente(cliente, accessToken: accessToken);
   }
