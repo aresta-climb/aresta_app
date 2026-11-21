@@ -25,8 +25,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URL
+import java.util.UUID
 import kotlin.math.min
 
 class MainActivity : FlutterActivity() {
@@ -98,12 +104,121 @@ class MainActivity : FlutterActivity() {
                         result.success(mapOf("erro" to "webClientId ausente"))
                         return@setMethodCallHandler
                     }
+                    if (BuildConfig.ARESTA_SMOKE_CI && ehEmuladorAndroid()) {
+                        val cfgSmoke = extrairConfiguracaoSmokeValida()
+                        if (cfgSmoke != null) {
+                            solicitarIdTokenLoopbackSmoke(cfgSmoke.first, webClientId, result)
+                            return@setMethodCallHandler
+                        }
+                    }
                     iniciarLoginNativoGoogle(webClientId, result)
                 }
                 "solicitarIdTokenApple" -> {
                     result.success(null)
                 }
                 else -> result.notImplemented()
+            }
+        }
+
+        if (BuildConfig.ARESTA_SMOKE_CI && ehEmuladorAndroid()) {
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                "app.escalada.croquis/smoke_ci"
+            ).setMethodCallHandler { call, result ->
+                if (call.method == "obterConfiguracaoSmoke") {
+                    val cfg = extrairConfiguracaoSmokeValida()
+                    if (cfg != null) {
+                        result.success(
+                            mapOf(
+                                "ativo" to true,
+                                "servidorUrl" to cfg.first,
+                                "token" to cfg.second
+                            )
+                        )
+                    } else {
+                        result.success(mapOf("ativo" to false))
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    private fun ehEmuladorAndroid(): Boolean {
+        return Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+            Build.HARDWARE.contains("ranchu", ignoreCase = true) ||
+            Build.HARDWARE.contains("goldfish", ignoreCase = true) ||
+            Build.PRODUCT.contains("sdk_gphone", ignoreCase = true) ||
+            Build.MODEL.contains("Emulator", ignoreCase = true) ||
+            Build.MODEL.contains("Android SDK built for", ignoreCase = true)
+    }
+
+    private fun extrairConfiguracaoSmokeValida(): Pair<String, String>? {
+        val srvBruto = intent?.getStringExtra("smoke_server")?.trim()?.trimEnd('/').orEmpty()
+        val tokBruto = intent?.getStringExtra("smoke_token")?.trim().orEmpty()
+        if (srvBruto.isEmpty() || tokBruto.isEmpty()) return null
+        return try {
+            val uri = URI(srvBruto)
+            val host = uri.host?.lowercase().orEmpty()
+            val hostsLoopback = setOf("10.0.2.2", "127.0.0.1", "localhost")
+            if (uri.scheme == "http" && uri.port > 0 && hostsLoopback.contains(host)) {
+                Pair("http://$host:${uri.port}", tokBruto)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun solicitarIdTokenLoopbackSmoke(
+        servidorUrl: String,
+        webClientId: String,
+        result: MethodChannel.Result
+    ) {
+        escopoPrincipal.launch {
+            try {
+                val mapa = withContext(Dispatchers.IO) {
+                    val rawNonce = UUID.randomUUID().toString().replace("-", "")
+                    val url = URL("$servidorUrl/__smoke__/oidc-token")
+                    val conn = (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        connectTimeout = 5000
+                        readTimeout = 5000
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                    }
+                    val payloadReq = JSONObject().apply {
+                        put("rawNonce", rawNonce)
+                        put("webClientId", webClientId)
+                    }.toString()
+                    conn.outputStream.use { it.write(payloadReq.toByteArray(Charsets.UTF_8)) }
+                    val codigo = conn.responseCode
+                    val texto = (if (codigo in 200..299) conn.inputStream else conn.errorStream)
+                        ?.bufferedReader(Charsets.UTF_8)
+                        ?.use { it.readText() }
+                        .orEmpty()
+                    if (codigo !in 200..299) {
+                        mapOf("erro" to "HTTP $codigo: $texto")
+                    } else {
+                        val json = JSONObject(texto)
+                        mapOf(
+                            "idToken" to json.optString("idToken"),
+                            "nonce" to json.optString("nonce", rawNonce),
+                            "nomeExibicao" to json.optString("nomeExibicao", "Escalador Smoke CI"),
+                            "cancelado" to false
+                        )
+                    }
+                }
+                result.success(mapa)
+            } catch (e: Exception) {
+                result.success(mapOf("erro" to (e.message ?: e.javaClass.simpleName)))
             }
         }
     }

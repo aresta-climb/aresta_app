@@ -1,10 +1,20 @@
-name: Android Release Sub-Workflow 
+name: Android Release Sub-Workflow
 
 on:
   workflow_call:
     inputs:
+      etapa:
+        description: 'Etapa a executar: build_e_smoke ou publicar'
+        required: false
+        type: string
+        default: 'build_e_smoke'
+      ref_git:
+        description: 'Commit SHA ou tag para checkout'
+        required: false
+        type: string
+        default: ''
       tag_name:
-        description: 'A tag do git para construir'
+        description: 'A tag do git da release'
         required: true
         type: string
       enviar_para_producao:
@@ -19,12 +29,14 @@ on:
         default: ''
 
 jobs:
-  build:
-    name: Build Android
+  build_e_smoke:
+    name: Compilar e Validar Smoke Android (KVM)
+    if: ${{ inputs.etapa == 'build_e_smoke' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - name: Generate GitHub App Token
+      - name: Gerar GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
@@ -34,9 +46,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.tag_name }}
+          ref: ${{ inputs.ref_git != '' && inputs.ref_git || inputs.tag_name }}
           token: ${{ steps.app-token.outputs.token }}
           submodules: 'recursive'
+
+      - name: Baixar Pacote Candidato de Release
+        uses: actions/download-artifact@v8
+        with:
+          name: pacote-candidato-release
+          path: pacote-candidato-release
+
+      - name: Aplicar Versão Candidata, Preload e Termos Legais
+        run: |
+          tar -xzf pacote-candidato-release/candidato.tar.gz
+          LEGAL_SHA=$(cat pacote-candidato-release/legal_submodule_sha.txt | tr -d '[:space:]')
+          git -C frontend/legal/repo fetch origin
+          git -C frontend/legal/repo checkout "$LEGAL_SHA"
+
+      - name: Liberar espaço em disco
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/2*
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          df -h
 
       - name: Setup Java
         uses: actions/setup-java@v6
@@ -46,35 +79,191 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-          
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.50.0'
           channel: 'stable'
           cache: true
-          
 
-      - name: Get Flutter Packages
+      - name: Obter dependências do Flutter
         working-directory: ./frontend
         run: flutter pub get
 
-      - name: Decode Keystore
+      - name: Decodificar Keystore de Release
         working-directory: ./frontend/android/app
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo $KEYSTORE_BASE64 | base64 -d > upload-keystore.jks
 
-      - name: Build AAB
+      - name: Compilar Android App Bundle Oficial (AAB Puro da Loja)
         working-directory: ./frontend
         env:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
+
+      - name: Empacotar Símbolos de Depuração Nativos
+        working-directory: ./frontend
+        run: |
+          SRC_DIR="build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib"
+          if [ ! -d "$SRC_DIR" ]; then
+            SRC_DIR="build/app/intermediates/merged_native_libs/release/out/lib"
+          fi
+          if [ ! -d "$SRC_DIR" ]; then
+            SRC_DIR="build/app/intermediates/stripped_native_libs/release/out/lib"
+          fi
+          mkdir -p build/native-debug-symbols
+          DEST_ZIP="$(pwd)/build/native-debug-symbols/native-debug-symbols.zip"
+          if [ -d "$SRC_DIR" ]; then
+            cd "$SRC_DIR"
+            zip -r "$DEST_ZIP" ./*
+            cd - > /dev/null
+          else
+            touch empty_symbol
+            zip -j "$DEST_ZIP" empty_symbol
+            rm empty_symbol
+          fi
+
+      - name: Empacotar Tarball de Staging Oficial antes do Build Descartável de Smoke
+        run: |
+          tar -czf android-staging-archive.tar.gz \
+            frontend/build/app/outputs/bundle/release/app-release.aab \
+            frontend/build/app/outputs/mapping/release \
+            frontend/build/symbols \
+            frontend/build/native-debug-symbols/native-debug-symbols.zip
+
+      - name: Compilar APK Descartável de Smoke (--release --obfuscate x86_64)
+        working-directory: ./frontend
+        env:
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          STORE_FILE: upload-keystore.jks
+        run: |
+          ORG_GRADLE_PROJECT_arestaSmokeCi=true flutter build apk --release --obfuscate \
+            --dart-define=HABILITAR_PERFIL=true \
+            --target-platform android-x64 \
+            --target=lib/services/smoke_ci/main_smoke_ci.dart \
+            --split-debug-info=build/smoke_symbols
+
+      - name: Baixar Bundletool e Executar Smoke Test Pós-Build em Emulador Android KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo chmod 666 /dev/kvm || true
+
+          curl -sSL "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar" -o "$RUNNER_TEMP/bundletool.jar"
+
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          EMULATOR="$ANDROID_HOME/emulator/emulator"
+          ADB="$ANDROID_HOME/platform-tools/adb"
+
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "emulator" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
+
+          echo "no" | "$AVDMANAGER" create avd -n smoke_avd -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
+
+          nohup "$EMULATOR" -avd smoke_avd -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          EMU_PID=$!
+
+          "$ADB" wait-for-device
+          for i in $(seq 1 90); do
+            BOOT=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$BOOT" = "1" ]; then
+              echo "Emulador Android KVM pronto em ${i}x2s!"
+              break
+            fi
+            sleep 2
+          done
+
+          "$ADB" shell settings put global window_animation_scale 0 || true
+          "$ADB" shell settings put global transition_animation_scale 0 || true
+          "$ADB" shell settings put global animator_duration_scale 0 || true
+          "$ADB" shell input keyevent 82 || true
+
+          set +e
+          (
+            cd frontend
+            dart run tool/release_tools/smoke_test_pacote.dart \
+              --plataforma android \
+              --aab build/app/outputs/bundle/release/app-release.aab \
+              --apk-smoke build/app/outputs/flutter-apk/app-release.apk \
+              --bundletool-jar "$RUNNER_TEMP/bundletool.jar" \
+              --pacote app.escalada.croquis \
+              --simbolos build/smoke_symbols \
+              --saida-relatorio build/evidencia-smoke-android.json
+          )
+          SMOKE_RC=$?
+          "$ADB" emu kill || kill -9 "$EMU_PID" || true
+          set -e
+          if [ $SMOKE_RC -ne 0 ]; then
+            echo "::error::Smoke Test Android falhou com código $SMOKE_RC"
+            tail -n 80 "$RUNNER_TEMP/emulator.log" || true
+            exit $SMOKE_RC
+          fi
+
+      - name: Publicar Evidência do Smoke Test Android
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: evidencia-smoke-android-${{ inputs.tag_name }}
+          path: frontend/build/evidencia-smoke-android.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Salvar Artefatos de Release Android Aprovados (Staging e Auditoria)
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-${{ inputs.tag_name }}
+          path: android-staging-archive.tar.gz
+          retention-days: 90
+
+  publicar:
+    name: Publicar Android (Sentry, Crashlytics e Google Play)
+    if: ${{ inputs.etapa == 'publicar' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Gerar GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Checkout da Tag Oficial
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag_name }}
+          token: ${{ steps.app-token.outputs.token }}
+          submodules: 'recursive'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Obter dependências do Flutter
+        working-directory: ./frontend
+        run: flutter pub get
+
+      - name: Baixar Artefatos Android Aprovados no Smoke Test
+        uses: actions/download-artifact@v8
+        with:
+          name: android-release-${{ inputs.tag_name }}
+          path: .
+
+      - name: Extrair Artefatos Aprovados
+        run: tar -xzf android-staging-archive.tar.gz
 
       - name: Validar e Fazer Upload de Símbolos para o Sentry (Fail-Fast)
         working-directory: ./frontend
@@ -87,44 +276,7 @@ jobs:
           fi
           dart run sentry_dart_plugin
 
-      - name: Package Native Debug Symbols
-        working-directory: ./frontend
-        run: |
-          SRC_DIR="build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib"
-          if [ ! -d "$SRC_DIR" ]; then
-            SRC_DIR="build/app/intermediates/merged_native_libs/release/out/lib"
-          fi
-          if [ ! -d "$SRC_DIR" ]; then
-            SRC_DIR="build/app/intermediates/stripped_native_libs/release/out/lib"
-          fi
-          
-          echo "Buscando bibliotecas nativas em: $SRC_DIR"
-          mkdir -p build/native-debug-symbols
-          DEST_ZIP="$(pwd)/build/native-debug-symbols/native-debug-symbols.zip"
-          if [ -d "$SRC_DIR" ]; then
-            cd "$SRC_DIR"
-            zip -r "$DEST_ZIP" ./*
-            cd - > /dev/null
-            echo "Arquivo de símbolos nativos criado com sucesso em: $DEST_ZIP"
-          else
-            echo "::warning::Diretório de bibliotecas nativas não encontrado. Criando arquivo de símbolos vazio."
-            touch empty_symbol
-            zip -j "$DEST_ZIP" empty_symbol
-            rm empty_symbol
-          fi
-
-      - name: Upload Android Release Artifacts (AAB, Mappings, Símbolos Dart e Símbolos Nativos)
-        uses: actions/upload-artifact@v7
-        with:
-          name: android-release-${{ inputs.tag_name }}
-          path: |
-            frontend/build/app/outputs/bundle/release/*.aab
-            frontend/build/app/outputs/mapping/release/
-            frontend/build/symbols
-            frontend/build/native-debug-symbols/native-debug-symbols.zip
-          retention-days: 90
-
-      - name: Upload Dart Symbols to Firebase Crashlytics
+      - name: Upload de Símbolos Dart para o Firebase Crashlytics
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
@@ -152,7 +304,7 @@ jobs:
           echo "$NOTAS_LANCAMENTO" > frontend/build/whatsnew/whatsnew-pt-BR
           echo "Arquivo whatsnew-pt-BR criado com sucesso em frontend/build/whatsnew/whatsnew-pt-BR"
 
-      - name: Upload to Google Play Console
+      - name: Upload para Google Play Console
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.ANDROID_PLAY_STORE_CONFIG_JSON }}

@@ -18,10 +18,19 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val habilitarSmokeCi = providers.gradleProperty("arestaSmokeCi")
+    .map { it.toBoolean() }
+    .orElse(false)
+    .get()
+
 android {
     namespace = "com.example.frontend"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -38,6 +47,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        buildConfigField("boolean", "ARESTA_SMOKE_CI", habilitarSmokeCi.toString())
+        manifestPlaceholders["usesCleartextTraffic"] = habilitarSmokeCi.toString()
     }
 
     signingConfigs {

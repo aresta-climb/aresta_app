@@ -61,8 +61,28 @@ import workmanager
       let args = call.arguments as? [String: Any]
       switch call.method {
       case "solicitarIdTokenApple":
+#if targetEnvironment(simulator)
+        if let cfgSmoke = self.obterConfiguracaoSmokeSimulator() {
+          self.solicitarIdTokenLoopbackSmoke(
+            servidorUrl: cfgSmoke.servidorUrl,
+            webClientId: "smoke-apple-client",
+            result: result
+          )
+          return
+        }
+#endif
         self.iniciarLoginNativoApple(result: result)
       case "solicitarIdTokenGoogle":
+#if targetEnvironment(simulator)
+        if let cfgSmoke = self.obterConfiguracaoSmokeSimulator() {
+          self.solicitarIdTokenLoopbackSmoke(
+            servidorUrl: cfgSmoke.servidorUrl,
+            webClientId: (args?["webClientId"] as? String) ?? "smoke-google-client",
+            result: result
+          )
+          return
+        }
+#endif
         let urlAutorizacao = (args?["urlAutorizacaoPkce"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let esquemaCallback = (args?["esquemaCallback"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "aresta"
         self.iniciarSessaoWebGooglePkce(
@@ -74,7 +94,99 @@ import workmanager
         result(FlutterMethodNotImplemented)
       }
     }
+
+#if targetEnvironment(simulator)
+    let canalSmokeCi = FlutterMethodChannel(
+      name: "app.escalada.croquis/smoke_ci",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    canalSmokeCi.setMethodCallHandler { [weak self] (call, result) in
+      guard let self = self else {
+        result(["ativo": false])
+        return
+      }
+      if call.method == "obterConfiguracaoSmoke" {
+        if let cfg = self.obterConfiguracaoSmokeSimulator() {
+          result([
+            "ativo": true,
+            "servidorUrl": cfg.servidorUrl,
+            "token": cfg.token
+          ])
+        } else {
+          result(["ativo": false])
+        }
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
+#endif
   }
+
+#if targetEnvironment(simulator)
+  private func obterConfiguracaoSmokeSimulator() -> (servidorUrl: String, token: String)? {
+    let env = ProcessInfo.processInfo.environment
+    let srvBruto = (env["ARESTA_SMOKE_SERVER"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let tokBruto = (env["ARESTA_SMOKE_TOKEN"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !srvBruto.isEmpty, !tokBruto.isEmpty,
+          let comps = URLComponents(string: srvBruto),
+          comps.scheme == "http",
+          let host = comps.host?.lowercased(),
+          let port = comps.port, port > 0 else {
+      return nil
+    }
+    let permitidos: Set<String> = ["127.0.0.1", "localhost", "10.0.2.2"]
+    guard permitidos.contains(host) else {
+      return nil
+    }
+    return ("http://\(host):\(port)", tokBruto)
+  }
+
+  private func solicitarIdTokenLoopbackSmoke(
+    servidorUrl: String,
+    webClientId: String,
+    result: @escaping FlutterResult
+  ) {
+    guard let url = URL(string: "\(servidorUrl)/__smoke__/oidc-token") else {
+      result(["erro": "URL inválida do servidor smoke."])
+      return
+    }
+    let rawNonce = gerarNonceAleatorio()
+    let nonceHash = sha256Hex(rawNonce)
+    var requisicao = URLRequest(url: url)
+    requisicao.httpMethod = "POST"
+    requisicao.timeoutInterval = 10
+    requisicao.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    let payload: [String: Any] = [
+      "rawNonce": rawNonce,
+      "nonceHash": nonceHash,
+      "webClientId": webClientId
+    ]
+    requisicao.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+    URLSession.shared.dataTask(with: requisicao) { dados, resposta, erro in
+      DispatchQueue.main.async {
+        if let erro = erro {
+          result(["erro": erro.localizedDescription])
+          return
+        }
+        guard let http = resposta as? HTTPURLResponse,
+              (200...299).contains(http.statusCode),
+              let dados = dados,
+              let json = (try? JSONSerialization.jsonObject(with: dados)) as? [String: Any],
+              let idToken = json["idToken"] as? String else {
+          result(["erro": "Falha ao obter idToken do servidor local de smoke."])
+          return
+        }
+        result([
+          "idToken": idToken,
+          "nonce": rawNonce,
+          "nomeExibicao": (json["nomeExibicao"] as? String) ?? "Escalador Smoke CI",
+          "cancelado": false
+        ])
+      }
+    }.resume()
+  }
+#endif
 
   private func iniciarSessaoWebGooglePkce(
     urlAutorizacao: String,

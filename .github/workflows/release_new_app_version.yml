@@ -33,6 +33,11 @@ on:
         required: true
         type: boolean
         default: true
+      publicar_nas_lojas:
+        description: 'Cortar versão no Git e publicar nas lojas/Sentry/Crashlytics? (desmarque para teste interno de CI)'
+        required: true
+        type: boolean
+        default: true
       executar_robo_caotico:
         description: 'Executar campanha de fuzzing do Robô Caótico (5 min)?'
         required: true
@@ -45,13 +50,12 @@ on:
 
 jobs:
   prepare_release:
-    name: Prepare Release Version
+    name: Validar Testes e Preparar Versão Candidata
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Permissão necessária para fazer commit e criar tags
     outputs:
       tag_name: ${{ steps.bump.outputs.tag_name }}
       versao_release: ${{ steps.bump.outputs.versao_release }}
+      versao_completa: ${{ steps.bump.outputs.versao_completa }}
       novo_build: ${{ steps.bump.outputs.novo_build }}
     steps:
       - name: Validar Notas de Lançamento (Fail-Early)
@@ -70,27 +74,27 @@ jobs:
           fi
           echo "Notas de lançamento validadas com sucesso."
 
-      - name: Generate GitHub App Token
+      - name: Gerar GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
           client-id: ${{ secrets.BOT_CLIENT_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
-      - name: Checkout Code
+      - name: Checkout do Código
         uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
           submodules: 'recursive'
 
-      - name: Setup Flutter
+      - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.50.0'
           channel: 'stable'
           cache: true
 
-      - name: Validate Flutter Analyze (Zero Warnings/Errors)
+      - name: Validar Flutter Analyze (Zero Warnings/Errors)
         working-directory: ./frontend
         run: |
           flutter pub get
@@ -126,32 +130,120 @@ jobs:
             --exportar-env "$GITHUB_OUTPUT"
           cd ..
 
-      - name: Injetar Versão Oficial e Atualizar Recursos
+      - name: Preparar Pacote Candidato de Versão, Preload e Termos Legais (Sem Push no Git)
         run: |
           FINAL_VERSION="${{ steps.bump.outputs.versao_completa }}"
           TAG_NAME="${{ steps.bump.outputs.tag_name }}"
-          PUBSPEC="frontend/pubspec.yaml"
-          
-          echo "Final target version: $FINAL_VERSION"
-          echo "Target tag: $TAG_NAME"
-          
+          echo "Versão candidata preparada: $FINAL_VERSION ($TAG_NAME)"
+
           cd frontend
           dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml "$FINAL_VERSION"
           flutter pub get
           dart tool/sync_preload.dart
           cd ..
 
-          # Atualiza os termos legais e recalcula a versão dos termos
           git submodule update --remote frontend/legal/repo
+          LEGAL_SHA=$(git -C frontend/legal/repo rev-parse HEAD)
           cd frontend/tool/legal_updater
           dart pub get
           dart run bin/update_legal_version.dart ../../legal/repo ../../lib/constants/legal_version.g.dart
           cd ../../..
-          
-          # Configura a identidade do robô no git
+
+          mkdir -p pacote-candidato-release
+          tar -czf pacote-candidato-release/candidato.tar.gz \
+            frontend/pubspec.yaml \
+            frontend/lib/constants/legal_version.g.dart \
+            frontend/assets/preload
+          echo "$LEGAL_SHA" > pacote-candidato-release/legal_submodule_sha.txt
+
+      - name: Publicar Pacote Candidato para Compilação Multiplataforma
+        uses: actions/upload-artifact@v7
+        with:
+          name: pacote-candidato-release
+          path: pacote-candidato-release/
+          retention-days: 5
+
+  build_e_smoke_android:
+    name: Build e Smoke Test Android (KVM)
+    needs: prepare_release
+    if: ${{ inputs.deploy_android }}
+    uses: ./.github/workflows/build_android.yml
+    with:
+      etapa: 'build_e_smoke'
+      ref_git: ${{ github.sha }}
+      tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+      enviar_para_producao: ${{ inputs.enviar_para_producao }}
+      release_notes: ${{ inputs.release_notes }}
+    secrets: inherit
+
+  build_e_smoke_ios:
+    name: Build e Smoke Test iOS (Simulator + IPA)
+    needs: prepare_release
+    if: ${{ inputs.deploy_ios }}
+    uses: ./.github/workflows/build_ios.yml
+    with:
+      etapa: 'build_e_smoke'
+      ref_git: ${{ github.sha }}
+      tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+    secrets: inherit
+
+  cortar_versao:
+    name: Cortar Versão e Tag Atômica no Git
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [prepare_release, build_e_smoke_android, build_e_smoke_ios]
+    if: >-
+      always() &&
+      inputs.publicar_nas_lojas &&
+      (inputs.deploy_android || inputs.deploy_ios) &&
+      needs.prepare_release.result == 'success' &&
+      (!inputs.deploy_android || needs.build_e_smoke_android.result == 'success') &&
+      (!inputs.deploy_ios || needs.build_e_smoke_ios.result == 'success')
+    steps:
+      - name: Gerar GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Checkout da Branch Alvo
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.app-token.outputs.token }}
+          submodules: 'recursive'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Baixar Pacote Candidato Aprovado
+        uses: actions/download-artifact@v8
+        with:
+          name: pacote-candidato-release
+          path: pacote-candidato-release
+
+      - name: Aplicar Versão Aprovada, Criar Tag e Avançar Ciclo Dev Atômico
+        run: |
+          FINAL_VERSION="${{ needs.prepare_release.outputs.versao_completa }}"
+          RELEASE_VER="${{ needs.prepare_release.outputs.versao_release }}"
+          RELEASE_BUILD="${{ needs.prepare_release.outputs.novo_build }}"
+          TAG_NAME="${{ needs.prepare_release.outputs.tag_name }}"
+          PUBSPEC="frontend/pubspec.yaml"
+
+          tar -xzf pacote-candidato-release/candidato.tar.gz
+          LEGAL_SHA=$(cat pacote-candidato-release/legal_submodule_sha.txt | tr -d '[:space:]')
+          git -C frontend/legal/repo fetch origin
+          git -C frontend/legal/repo checkout "$LEGAL_SHA"
+
           git config --global user.name "aresta-climb-bot[bot]"
           git config --global user.email "281080576+aresta-climb-bot[bot]@users.noreply.github.com"
-          
+
           DEPLOY_MSG=""
           if [ "${{ inputs.deploy_android }}" == "true" ] && [ "${{ inputs.deploy_ios }}" == "true" ]; then
             DEPLOY_MSG="Android e iOS"
@@ -162,58 +254,50 @@ jobs:
           else
             DEPLOY_MSG="nenhuma plataforma"
           fi
-          
-          # Commita as alterações
-          git add $PUBSPEC frontend/assets/preload/ frontend/legal/repo frontend/lib/constants/legal_version.g.dart
-          git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo ($DEPLOY_MSG)"
-          
-          # Cria a tag apontando para este exato commit
-          git tag $TAG_NAME
-          
-          # Envia tudo de volta para a branch que chamou a esteira (geralmente main)
-          git push origin HEAD
-          git push origin $TAG_NAME
 
-      - name: Iniciar Ciclo de Desenvolvimento Posterior
-        run: |
-          RELEASE_VER="${{ steps.bump.outputs.versao_release }}"
-          RELEASE_BUILD="${{ steps.bump.outputs.novo_build }}"
-          PUBSPEC="frontend/pubspec.yaml"
-          
+          git add "$PUBSPEC" frontend/assets/preload/ frontend/legal/repo frontend/lib/constants/legal_version.g.dart
+          git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo ($DEPLOY_MSG)"
+          git tag "$TAG_NAME"
+
           cd frontend
           DEV_VERSION=$(dart run tool/release_tools/calcular_proximo_dev.dart "$RELEASE_VER" --build "$RELEASE_BUILD" --formato completo)
-          echo "Setting version to dev mode: $DEV_VERSION"
+          echo "Configurando versão de desenvolvimento: $DEV_VERSION"
           dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml "$DEV_VERSION"
           cd ..
-          
-          git add $PUBSPEC
-          git commit -m "chore: iniciar ciclo de desenvolvimento ($DEV_VERSION)"
-          git push origin HEAD
 
-  build_android:
-    name: Build Android
-    needs: prepare_release
-    if: ${{ inputs.deploy_android }}
+          git add "$PUBSPEC"
+          git commit -m "chore: iniciar ciclo de desenvolvimento ($DEV_VERSION)"
+
+          git push --atomic origin HEAD "refs/tags/$TAG_NAME"
+
+  publicar_android:
+    name: Publicar Android (Sentry, Crashlytics e Google Play)
+    needs: [prepare_release, build_e_smoke_android, cortar_versao]
+    if: ${{ inputs.publicar_nas_lojas && inputs.deploy_android }}
     uses: ./.github/workflows/build_android.yml
     with:
+      etapa: 'publicar'
+      ref_git: ${{ needs.prepare_release.outputs.tag_name }}
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
       enviar_para_producao: ${{ inputs.enviar_para_producao }}
       release_notes: ${{ inputs.release_notes }}
     secrets: inherit
 
-  build_ios:
-    name: Build iOS
-    needs: prepare_release
-    if: ${{ inputs.deploy_ios }}
+  publicar_ios:
+    name: Publicar iOS (Sentry, Crashlytics e TestFlight)
+    needs: [prepare_release, build_e_smoke_ios, cortar_versao]
+    if: ${{ inputs.publicar_nas_lojas && inputs.deploy_ios }}
     uses: ./.github/workflows/build_ios.yml
     with:
+      etapa: 'publicar'
+      ref_git: ${{ needs.prepare_release.outputs.tag_name }}
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
     secrets: inherit
 
   submit_ios_review:
     name: Submeter iOS para Revisão
-    needs: [prepare_release, build_ios]
-    if: ${{ inputs.deploy_ios && inputs.enviar_para_producao }}
+    needs: [prepare_release, cortar_versao, publicar_ios]
+    if: ${{ inputs.publicar_nas_lojas && inputs.deploy_ios && inputs.enviar_para_producao }}
     uses: ./.github/workflows/submit_ios_review.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
