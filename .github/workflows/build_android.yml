@@ -166,6 +166,9 @@ jobs:
           curl -sSL "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar" -o "$RUNNER_TEMP/bundletool.jar"
 
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export ANDROID_USER_HOME="$HOME/.android"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
@@ -176,6 +179,8 @@ jobs:
           yes | "$SDKMANAGER" --install "platform-tools" "emulator" "platforms;android-34" "system-images;android-34;google_apis;x86_64" > /dev/null
 
           echo "no" | "$AVDMANAGER" create avd -n smoke_avd -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
+          echo "AVDs disponíveis em $ANDROID_AVD_HOME:"
+          "$EMULATOR" -list-avds
 
           "$ADB" kill-server || true
           "$ADB" start-server

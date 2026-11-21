@@ -43,6 +43,7 @@ void main() {
         expect(androidYaml, contains('smoke_test_pacote.dart'));
         expect(androidYaml, contains('ORG_GRADLE_PROJECT_arestaSmokeCi=true'));
         expect(androidYaml, contains('libpulse0'));
+        expect(androidYaml, contains('ANDROID_AVD_HOME'));
         expect(androidYaml, contains('kill -0 "\$EMU_PID"'));
         expect(androidYaml.contains('wait-for-device'), isFalse);
         expect(
@@ -59,6 +60,15 @@ void main() {
           isFalse,
           reason: 'O job publicar do iOS não deve recompilar o IPA.',
         );
+
+        final settingsGradle =
+            File('android/settings.gradle.kts').readAsStringSync();
+        expect(
+          settingsGradle.contains('version "9.0.1"'),
+          isFalse,
+          reason: 'Flutter 3.50.0 exige Android Gradle Plugin >= 9.1.1.',
+        );
+        expect(settingsGradle, contains('id("com.android.application") version "9.1.1"'));
       },
     );
   });
