@@ -9,6 +9,7 @@ import '../../data/modelos/tipo_ascensao.dart';
 import '../../services/autenticacao/servico_autenticacao.dart';
 import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/firebase/app_logger.dart';
 import '../../services/midia/seletor_foto_perfil.dart';
 import '../../services/repositorio_dataset.dart';
 
@@ -41,6 +42,11 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
 
   /// Catálogo de vias instanciado e gerenciado internamente quando criado via [comCatalogo].
   final CatalogoViasCaderneta? _catalogoViasProprio;
+
+  String? _mensagemErroExclusao;
+
+  /// Mensagem descritiva amigável caso a última tentativa de [excluirConta] tenha falhado.
+  String? get mensagemErroExclusao => _mensagemErroExclusao;
 
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
@@ -189,5 +195,39 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Encerra a sessão autenticada do escalador, preservando o ID público e as cadenas locais.
   Future<void> encerrarSessao() async {
     await _servicoAutenticacao.encerrarSessao();
+  }
+
+  /// Exclui irreversivelmente a conta autenticada no Supabase e limpa os dados locais.
+  ///
+  /// Retorna `true` quando a exclusão remota e local conclui com sucesso, ou `false`
+  /// populando [mensagemErroExclusao] em caso de falha de rede ou servidor.
+  Future<bool> excluirConta() async {
+    _mensagemErroExclusao = null;
+    try {
+      await _servicoAutenticacao.excluirConta();
+      return true;
+    } on ExcecaoAutenticacao catch (e) {
+      _mensagemErroExclusao = e.mensagem;
+      notifyListeners();
+      return false;
+    } catch (e, stackTrace) {
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          'Exclusão de conta adiada por ausência de conexão: $e',
+        );
+        _mensagemErroExclusao =
+            'Sem conexão com a internet. Conecte-se para excluir sua conta.';
+      } else {
+        AppLogger.instance.logError(
+          'Falha inesperada ao excluir conta do escalador',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        _mensagemErroExclusao =
+            'Não foi possível excluir a conta neste momento.';
+      }
+      notifyListeners();
+      return false;
+    }
   }
 }

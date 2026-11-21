@@ -122,6 +122,10 @@ abstract class ServicoAutenticacao {
 
   /// Encerra a sessão autenticada, limpando o `userId` e preservando os dados offline locais.
   Future<void> encerrarSessao();
+
+  /// Exclui irreversivelmente a conta autenticada no Supabase (`auth.users`, `perfis`,
+  /// `cadenas` e avatares) e limpa a caderneta e o perfil do dispositivo.
+  Future<void> excluirConta();
 }
 
 /// Implementação de produção de [ServicoAutenticacao] integrada ao [RepositorioCaderneta] e ao Supabase.
@@ -259,6 +263,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       refreshToken: resultado.refreshToken ?? perfilAtual.refreshToken,
     );
     await _repositorio.salvarPerfil(novoPerfil);
+    await _repositorio.sincronizarComNuvem();
     return _repositorio.obterPerfil();
   }
 
@@ -419,5 +424,49 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       return;
     }
     await _repositorio.salvarPerfil(atual.copyWith(limparUserId: true));
+  }
+
+  @override
+  Future<void> excluirConta() async {
+    final atual = _repositorio.obterPerfil();
+    if (!atual.estaAutenticado) {
+      throw const ExcecaoAutenticacao(
+        'Nenhuma conta autenticada ativa para excluir.',
+        ehErroUsuario: true,
+      );
+    }
+
+    final anonKey = _exigirAnonKey();
+    final tokenInicial = atual.accessToken;
+    if (tokenInicial == null && atual.refreshToken == null) {
+      throw const ExcecaoAutenticacao(
+        'Sessão expirada. Entre novamente para confirmar a exclusão da conta.',
+        ehErroUsuario: true,
+      );
+    }
+
+    try {
+      if (tokenInicial == null) {
+        throw const ExcecaoAutenticacao('', codigoStatusHttp: 401);
+      }
+      await _clienteSupabase.excluirContaAutenticada(
+        anonKey: anonKey,
+        accessToken: tokenInicial,
+      );
+    } on ExcecaoAutenticacao catch (e) {
+      if (e.codigoStatusHttp == 401 && atual.refreshToken != null) {
+        final renovado = await garantirSessaoEPerfilSincronizados(
+          forcarRenovacaoToken: true,
+        );
+        await _clienteSupabase.excluirContaAutenticada(
+          anonKey: anonKey,
+          accessToken: renovado.accessToken!,
+        );
+      } else {
+        rethrow;
+      }
+    }
+
+    await _repositorio.limparDadosContaExcluida();
   }
 }
