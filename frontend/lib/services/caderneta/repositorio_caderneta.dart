@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../utils/gerador_uid.dart';
+import '../autenticacao/servico_autenticacao.dart';
 import '../firebase/app_logger.dart';
 import 'armazenamento_local_caderneta.dart';
 import 'cliente_cadenas_supabase.dart';
@@ -186,6 +187,102 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
       }
     }
 
+    try {
+      await _executarRodadaSincronizacao(cliente, perfilInicial);
+    } catch (erroInicial, stackInicial) {
+      if (_ehErroNaoAutorizado(erroInicial)) {
+        try {
+          final renovador = _aoRenovarSessaoExpirada;
+          final perfilRenovado = renovador != null
+              ? await renovador()
+              : await ServicoAutenticacaoLocal.instancia
+                    .garantirSessaoEPerfilSincronizados(
+                      forcarRenovacaoToken: true,
+                    );
+          await _executarRodadaSincronizacao(cliente, perfilRenovado);
+          return;
+        } catch (erroRetentativa, stackRetentativa) {
+          _registrarFalhaSincronizacao(
+            'Sincronização de cadenas adiada após tentativa de renovar sessão',
+            erroRetentativa,
+            stackRetentativa,
+          );
+          await _armazenamento.salvarFilaSincronizacao(
+            idsUpsertPendentes: _idsUpsertPendentes,
+            idsExclusaoPendentes: _idsExclusaoPendentes,
+          );
+          return;
+        }
+      }
+
+      _registrarFalhaSincronizacao(
+        'Falha ao sincronizar caderneta com public.cadenas',
+        erroInicial,
+        stackInicial,
+      );
+      await _armazenamento.salvarFilaSincronizacao(
+        idsUpsertPendentes: _idsUpsertPendentes,
+        idsExclusaoPendentes: _idsExclusaoPendentes,
+      );
+    }
+  }
+
+  Future<void> _executarRodadaSincronizacao(
+    ClienteCadenas cliente,
+    PerfilEscalador perfil,
+  ) async {
+    final userId = perfil.userId!;
+    final token = perfil.accessToken ?? '';
+
+    for (final idExclusao in _idsExclusaoPendentes.toList(growable: false)) {
+      await cliente.excluirCadenaRemota(
+        idExclusao,
+        userId: userId,
+        accessToken: token,
+      );
+      _idsExclusaoPendentes.remove(idExclusao);
+    }
+
+    final pendentesEnvio = _cadenas
+        .where(
+          (c) => _idsUpsertPendentes.contains(c.id) && validarUid(c.escaladaUid),
+        )
+        .toList(growable: false);
+    if (pendentesEnvio.isNotEmpty) {
+      await cliente.upsertCadenas(
+        pendentesEnvio,
+        userId: userId,
+        accessToken: token,
+      );
+      for (final enviada in pendentesEnvio) {
+        _idsUpsertPendentes.remove(enviada.id);
+      }
+    }
+
+    final remotas = await cliente.listarCadenasDoUsuario(
+      userId: userId,
+      accessToken: token,
+    );
+
+    final mescladasPorId = <String, Cadena>{
+      for (final local in _cadenas)
+        if (!validarUid(local.escaladaUid)) local.id: local,
+      for (final remota in remotas)
+        if (!_idsExclusaoPendentes.contains(remota.id)) remota.id: remota,
+    };
+
+    final ordenadas = mescladasPorId.values.toList()
+      ..sort((a, b) => b.dataAscensao.compareTo(a.dataAscensao));
+
+    _cadenas
+      ..clear()
+      ..addAll(ordenadas);
+    await _armazenamento.salvarCadenas(_cadenas);
+    await _armazenamento.salvarFilaSincronizacao(
+      idsUpsertPendentes: _idsUpsertPendentes,
+      idsExclusaoPendentes: _idsExclusaoPendentes,
+    );
+    _cadenasNotifier.value = List.unmodifiable(_cadenas);
   }
 
   static bool _ehErroNaoAutorizado(Object erro) =>
