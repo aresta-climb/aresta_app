@@ -157,6 +157,7 @@ void main() {
       var abriuConfiguracoes = false;
       var abriuDados = false;
       var confirmouSaida = false;
+      var confirmouExclusao = false;
       var abriuEntrarConta = false;
 
       await tester.pumpWidget(
@@ -167,6 +168,7 @@ void main() {
             onAbrirConfiguracoes: () => abriuConfiguracoes = true,
             onAbrirDadosPrivacidade: () => abriuDados = true,
             onConfirmarSaida: () => confirmouSaida = true,
+            onConfirmarExclusaoConta: () => confirmouExclusao = true,
           ),
         ),
       );
@@ -176,6 +178,7 @@ void main() {
       expect(find.text('Configurações'), findsOneWidget);
       expect(find.text('Dados e privacidade'), findsOneWidget);
       expect(find.text('Sair'), findsOneWidget);
+      expect(find.text('Excluir conta'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('item_menu_entrar_conta')));
       await tester.pump();
@@ -196,6 +199,10 @@ void main() {
       await tester.tap(find.byKey(const Key('item_menu_sair')));
       await tester.pump();
       expect(confirmouSaida, isTrue);
+
+      await tester.tap(find.byKey(const Key('item_menu_excluir_conta')));
+      await tester.pump();
+      expect(confirmouExclusao, isTrue);
     });
 
     testWidgets('buildCardMetricaHub aplica borda padrão derivada de corIcone quando corBorda é omitida', (tester) async {

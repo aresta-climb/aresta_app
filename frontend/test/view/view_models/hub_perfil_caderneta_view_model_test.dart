@@ -9,6 +9,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/midia/seletor_foto_perfil.dart';
@@ -16,6 +17,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../services/autenticacao/servico_autenticacao_fake.dart';
 
 class _SeletorFotoPerfilFake implements SeletorFotoPerfil {
   String? proximaFoto;
@@ -189,6 +191,53 @@ void main() {
       expect(vm.autorIdPublico, equals(idOriginal));
 
       vm.dispose();
+    });
+
+    test('excluirConta remove conta autenticada, limpa caderneta e expõe erro amigável em falha de rede/servidor', () async {
+      final authFake = ServicoAutenticacaoFake(repositorio: repositorio);
+      await authFake.entrarComGoogle();
+      await repositorio.salvarCadena(
+        Cadena.criar(
+          escaladaUid: 'x8siJek3FiG3aB',
+          dataAscensao: DateTime(2026, 9, 10),
+        ),
+      );
+
+      final vm = HubPerfilCadernetaViewModel(
+        repositorio: repositorio,
+        servicoAutenticacao: authFake,
+      );
+      addTearDown(vm.dispose);
+
+      // 1. Falha transitória de rede -> retorna false com mensagem amigável sem apagar dados locais
+      authFake.erroAoExcluirConta = const SocketException('Sem rede');
+      expect(await vm.excluirConta(), isFalse);
+      expect(vm.mensagemErroExclusao, contains('conexão'));
+      expect(vm.estaAutenticado, isTrue);
+      expect(vm.totalCadenas, 1);
+
+      // 2. ExcecaoAutenticacao explícita -> expõe mensagem da exceção
+      authFake.erroAoExcluirConta = const ExcecaoAutenticacao(
+        'Não foi possível excluir a conta agora.',
+        ehErroUsuario: false,
+      );
+      expect(await vm.excluirConta(), isFalse);
+      expect(vm.mensagemErroExclusao, 'Não foi possível excluir a conta agora.');
+
+      // 2b. Exceção operacional inesperada -> registra em AppLogger e expõe mensagem genérica
+      authFake.erroAoExcluirConta = StateError('Erro inesperado');
+      expect(await vm.excluirConta(), isFalse);
+      expect(
+        vm.mensagemErroExclusao,
+        'Não foi possível excluir a conta neste momento.',
+      );
+
+      // 3. Sucesso -> limpa sessão, caderneta e erro
+      authFake.erroAoExcluirConta = null;
+      expect(await vm.excluirConta(), isTrue);
+      expect(vm.mensagemErroExclusao, isNull);
+      expect(vm.estaAutenticado, isFalse);
+      expect(vm.totalCadenas, 0);
     });
 
     test('notifica ouvintes reativamente quando escutaMetadados emite atualização e remove listener no dispose', () {

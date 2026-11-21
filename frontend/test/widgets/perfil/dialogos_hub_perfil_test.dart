@@ -181,4 +181,40 @@ void main() {
       },
     );
   });
+
+  group('exibirDialogoConfirmarExclusaoConta', () {
+    testWidgets(
+      'exibe aviso irreversível, retorna false ao cancelar e true ao confirmar exclusão',
+      (tester) async {
+        bool? confirmou;
+
+        await tester.pumpWidget(
+          envolverComTema(
+            Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  confirmou = await exibirDialogoConfirmarExclusaoConta(context);
+                },
+                child: const Text('Excluir'),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Excluir'));
+        await tester.pumpAndSettle();
+        expect(find.text('Excluir conta permanentemente?'), findsOneWidget);
+
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+        expect(confirmou, isFalse);
+
+        await tester.tap(find.text('Excluir'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_confirmar_exclusao_conta')));
+        await tester.pumpAndSettle();
+        expect(confirmou, isTrue);
+      },
+    );
+  });
 }
