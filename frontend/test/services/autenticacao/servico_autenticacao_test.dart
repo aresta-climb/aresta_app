@@ -418,5 +418,97 @@ void main() {
       expect(renovado.accessToken, 'jwt-renovado-1');
       expect(renovado.refreshToken, 'refresh-renovado-1');
     });
+
+    test('excluirConta falha rápido sem sessão/token, renova JWT em 401 e limpa caderneta e perfil local', () async {
+      var tentativasRpc = 0;
+      final clienteFake = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'refresh_token') {
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-fresco',
+                'refresh_token': 'refresh-fresco',
+                'user': {'id': 'usr-del-1'},
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            return http.Response('[]', 200);
+          }
+          if (request.url.path.endsWith('/rest/v1/rpc/excluir_minha_conta')) {
+            tentativasRpc++;
+            if (request.headers['Authorization'] == 'Bearer jwt-expirado') {
+              return http.Response('{"message":"JWT expired"}', 401);
+            }
+            if (request.headers['Authorization'] == 'Bearer jwt-erro-500') {
+              return http.Response('{"message":"Internal error"}', 500);
+            }
+            return http.Response('', 204);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
+
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteFake,
+        obterUrlSupabase: () => 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+        obterAnonKeySupabase: () => 'anon-key-1',
+      );
+
+      // 1. Sem conta autenticada -> Fail-Fast
+      await expectLater(
+        servico.excluirConta,
+        throwsA(isA<ExcecaoAutenticacao>()),
+      );
+
+      // 2. Autenticado sem accessToken nem refreshToken -> Fail-Fast
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(userId: 'usr-del-1'),
+      );
+      await expectLater(
+        servico.excluirConta,
+        throwsA(isA<ExcecaoAutenticacao>()),
+      );
+
+      // 3. Erro 500 definitivo no RPC é propagado (Fail-Fast sem apagar caderneta local)
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          userId: 'usr-del-1',
+          accessToken: 'jwt-erro-500',
+        ),
+      );
+      await expectLater(
+        servico.excluirConta,
+        throwsA(isA<ExcecaoAutenticacao>()),
+      );
+
+      // 4. Autenticado sem accessToken em cache mas com refreshToken -> renova e exclui
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          userId: 'usr-del-1',
+          limparAccessToken: true,
+          refreshToken: 'refresh-valido',
+        ),
+      );
+      await servico.excluirConta();
+      expect(servico.estaAutenticado, isFalse);
+
+      // 5. Autenticado com JWT expirado + refreshToken -> renova sessão em 401, executa RPC e apaga dados locais
+      tentativasRpc = 0;
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          userId: 'usr-del-1',
+          accessToken: 'jwt-expirado',
+          refreshToken: 'refresh-valido',
+        ),
+      );
+      await servico.excluirConta();
+      expect(tentativasRpc, 2);
+      expect(servico.estaAutenticado, isFalse);
+      expect(repositorio.cadenasNotifier.value, isEmpty);
+    });
   });
 }
