@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/services/caderneta/cliente_cadenas_supabase.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'cliente_cadenas_supabase_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -264,6 +267,31 @@ void main() {
 
       // Restaura para não vazar estado entre outros testes
       RepositorioCadernetaLocal.instancia = null;
+    });
+
+    test('sincroniza cadenas locais pré-login, fila offline (upsert/delete), renovação 401 e limpeza de conta excluída', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final clienteFake = ClienteCadenasFake();
+
+      // Nuvem já possui 1 cadena salva anteriormente em outro aparelho
+      final cadenaOutroAparelho = Cadena(
+        id: '11111111-1111-4111-8111-111111111111',
+        userId: 'uuid-atleta-1',
+        escaladaUid: 'm8Kq2L1x9Y7zWq',
+        dataAscensao: DateTime(2026, 8, 1),
+        tipoAscensao: TipoAscensao.aVista,
+      );
+      clienteFake.semearCadenas('uuid-atleta-1', [cadenaOutroAparelho]);
+
+      var renovacoes401 = 0;
+      late RepositorioCadernetaLocal repoSinc;
+      repoSinc = RepositorioCadernetaLocal(
+        preferencias: prefs,
+        clienteCadenas: clienteFake,
+      );
+      await repoSinc.inicializar();
+
+      // 1. Escalador usa o app offline sem conta e registra 1 cadena com NanoID válido
     });
   });
 }

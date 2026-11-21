@@ -143,5 +143,74 @@ void main() {
         );
       },
     );
+
+    test(
+      'persiste fila de mutações pendentes (upsert e exclusão), ignora JSON corrompido e limpa tudo em limparDadosLocais',
+      () async {
+        final semPrefs = ArmazenamentoLocalCaderneta();
+        await semPrefs.salvarFilaSincronizacao(
+          idsUpsertPendentes: {'id-1'},
+          idsExclusaoPendentes: {'id-2'},
+        );
+        await semPrefs.limparDadosLocais();
+
+        final prefs = await SharedPreferences.getInstance();
+        final armazenamento = ArmazenamentoLocalCaderneta(preferencias: prefs);
+        expect(await armazenamento.carregarIdsUpsertPendentes(), isEmpty);
+        expect(await armazenamento.carregarIdsExclusaoPendentes(), isEmpty);
+
+        await armazenamento.salvarFilaSincronizacao(
+          idsUpsertPendentes: {'uuid-up-1', 'uuid-up-2'},
+          idsExclusaoPendentes: {'uuid-del-1'},
+        );
+        expect(
+          await armazenamento.carregarIdsUpsertPendentes(),
+          equals({'uuid-up-1', 'uuid-up-2'}),
+        );
+        expect(
+          await armazenamento.carregarIdsExclusaoPendentes(),
+          equals({'uuid-del-1'}),
+        );
+
+        await armazenamento.salvarFilaSincronizacao(
+          idsUpsertPendentes: const {},
+          idsExclusaoPendentes: const {},
+        );
+        expect(
+          prefs.getString(ArmazenamentoLocalCaderneta.chaveIdsUpsertPendentes),
+          isNull,
+        );
+        expect(
+          prefs.getString(ArmazenamentoLocalCaderneta.chaveIdsExclusaoPendentes),
+          isNull,
+        );
+
+        await prefs.setString(
+          ArmazenamentoLocalCaderneta.chaveIdsUpsertPendentes,
+          '{corrompido',
+        );
+        await prefs.setString(
+          ArmazenamentoLocalCaderneta.chaveIdsExclusaoPendentes,
+          '{corrompido',
+        );
+        expect(await armazenamento.carregarIdsUpsertPendentes(), isEmpty);
+        expect(await armazenamento.carregarIdsExclusaoPendentes(), isEmpty);
+
+        await armazenamento.salvarCadenas([
+          Cadena.criar(
+            escaladaUid: 'x8siJek3FiG3aB',
+            dataAscensao: DateTime(2026, 10, 10),
+          ),
+        ]);
+        await armazenamento.salvarFilaSincronizacao(
+          idsUpsertPendentes: {'id-a'},
+          idsExclusaoPendentes: {'id-b'},
+        );
+        await armazenamento.limparDadosLocais();
+        expect(await armazenamento.carregarCadenas(), isEmpty);
+        expect(await armazenamento.carregarIdsUpsertPendentes(), isEmpty);
+        expect(await armazenamento.carregarIdsExclusaoPendentes(), isEmpty);
+      },
+    );
   });
 }
