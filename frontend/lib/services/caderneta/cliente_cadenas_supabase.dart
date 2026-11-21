@@ -83,17 +83,111 @@ class ClienteCadenasSupabase implements ClienteCadenas {
   String get _baseUrl =>
       _resolvedorBaseUrl().trim().replaceAll(RegExp(r'/+$'), '');
 
+  Map<String, String> _construirCabecalhos({
+    required String accessToken,
+    String? prefer,
+    bool comCorpoJson = false,
+  }) {
+    final anonKey = _resolvedorAnonKey();
+    return <String, String>{
+      'apikey': anonKey,
+      'Authorization': 'Bearer ${accessToken.trim()}',
+      if (comCorpoJson) 'Content-Type': 'application/json',
+      'Prefer': ?prefer,
+    };
+  }
 
   @override
   Future<List<Cadena>> listarCadenasDoUsuario({
     required String userId,
     required String accessToken,
-  }) async => const [];
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/cadenas'
+      '?user_id=eq.${userId.trim()}'
+      '&order=data_ascensao.desc,criado_em.desc'
+      '&select=$_colunasSelecao',
+    );
+
+    final resposta = await _clienteHttp.get(
+      uri,
+      headers: _construirCabecalhos(accessToken: accessToken),
+    );
+
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoHttpCadenas(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: ${resposta.body}',
+        uri: uri,
+      );
+    }
+
+    final decodificado = jsonDecode(resposta.body) as List<dynamic>;
+    return decodificado
+        .whereType<Map<String, dynamic>>()
+        .map(Cadena.fromMap)
+        .toList(growable: false);
+  }
 
   @override
   Future<void> upsertCadenas(
     List<Cadena> cadenas, {
     required String userId,
     required String accessToken,
-  }) async {}
+  }) async {
+    if (cadenas.isEmpty) return;
+
+    final uri = Uri.parse('$_baseUrl/rest/v1/cadenas?on_conflict=id');
+    final payload = cadenas
+        .map((c) => c.toPayloadSupabase(userId: userId.trim()))
+        .toList(growable: false);
+
+    final resposta = await _clienteHttp.post(
+      uri,
+      headers: _construirCabecalhos(
+        accessToken: accessToken,
+        comCorpoJson: true,
+        prefer: 'resolution=merge-duplicates,return=minimal',
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoHttpCadenas(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: ${resposta.body}',
+        uri: uri,
+      );
+    }
+  }
+
+  @override
+  Future<void> excluirCadenaRemota(
+    String cadenaId, {
+    required String userId,
+    required String accessToken,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/cadenas'
+      '?id=eq.${cadenaId.trim()}'
+      '&user_id=eq.${userId.trim()}',
+    );
+    final requisicao = Request('DELETE', uri)
+      ..headers.addAll(
+        _construirCabecalhos(
+          accessToken: accessToken,
+          prefer: 'return=minimal',
+        ),
+      );
+
+    final resposta = await _clienteHttp.send(requisicao);
+    final corpo = await resposta.stream.bytesToString();
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoHttpCadenas(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: $corpo',
+        uri: uri,
+      );
+    }
+  }
 }
