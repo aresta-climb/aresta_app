@@ -42,6 +42,9 @@ void main() {
         expect(androidYaml, contains('android-staging-archive.tar.gz'));
         expect(androidYaml, contains('smoke_test_pacote.dart'));
         expect(androidYaml, contains('ORG_GRADLE_PROJECT_arestaSmokeCi=true'));
+        expect(androidYaml, contains('libpulse0'));
+        expect(androidYaml, contains('kill -0 "\$EMU_PID"'));
+        expect(androidYaml.contains('wait-for-device'), isFalse);
         expect(
           androidYaml.split('publicar:').last.contains('flutter build'),
           isFalse,

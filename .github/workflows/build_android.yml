@@ -153,6 +153,11 @@ jobs:
 
       - name: Baixar Bundletool e Executar Smoke Test Pós-Build em Emulador Android KVM
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libpulse0 libgl1 libegl1 libgbm1 libxkbcommon0 libnss3 libxcb-cursor0
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
@@ -160,28 +165,47 @@ jobs:
 
           curl -sSL "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar" -o "$RUNNER_TEMP/bundletool.jar"
 
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
           EMULATOR="$ANDROID_HOME/emulator/emulator"
           ADB="$ANDROID_HOME/platform-tools/adb"
 
           yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" --install "platform-tools" "emulator" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
+          yes | "$SDKMANAGER" --install "platform-tools" "emulator" "platforms;android-34" "system-images;android-34;google_apis;x86_64" > /dev/null
 
           echo "no" | "$AVDMANAGER" create avd -n smoke_avd -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
 
-          nohup "$EMULATOR" -avd smoke_avd -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          "$ADB" kill-server || true
+          "$ADB" start-server
+
+          nohup "$EMULATOR" -avd smoke_avd -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot -no-metrics -wipe-data > "$RUNNER_TEMP/emulator.log" 2>&1 < /dev/null &
           EMU_PID=$!
 
-          "$ADB" wait-for-device
+          BOOT_OK=0
           for i in $(seq 1 90); do
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "::error::Processo do Android Emulator encerrou prematuramente!"
+              cat "$RUNNER_TEMP/emulator.log" || true
+              "$ADB" kill-server || true
+              exit 1
+            fi
             BOOT=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
             if [ "$BOOT" = "1" ]; then
               echo "Emulador Android KVM pronto em ${i}x2s!"
+              BOOT_OK=1
               break
             fi
             sleep 2
           done
+          if [ $BOOT_OK -ne 1 ]; then
+            echo "::error::Timeout aguardando sys.boot_completed=1 no Android Emulator!"
+            cat "$RUNNER_TEMP/emulator.log" || true
+            kill -9 "$EMU_PID" 2>/dev/null || true
+            "$ADB" kill-server || true
+            exit 1
+          fi
 
           "$ADB" shell settings put global window_animation_scale 0 || true
           "$ADB" shell settings put global transition_animation_scale 0 || true
@@ -201,7 +225,9 @@ jobs:
               --saida-relatorio build/evidencia-smoke-android.json
           )
           SMOKE_RC=$?
-          "$ADB" emu kill || kill -9 "$EMU_PID" || true
+          "$ADB" emu kill || true
+          kill -9 "$EMU_PID" 2>/dev/null || true
+          "$ADB" kill-server || true
           set -e
           if [ $SMOKE_RC -ne 0 ]; then
             echo "::error::Smoke Test Android falhou com código $SMOKE_RC"
