@@ -108,6 +108,26 @@ class Cadena {
     };
   }
 
+  /// Converte a ascensão para o payload PostgREST da tabela `public.cadenas`,
+  /// formatando `data_ascensao` como `DATE` (`YYYY-MM-DD`) sem desvio de fuso horário.
+  Map<String, dynamic> toPayloadSupabase({required String userId}) {
+    final ano = dataAscensao.year.toString().padLeft(4, '0');
+    final mes = dataAscensao.month.toString().padLeft(2, '0');
+    final dia = dataAscensao.day.toString().padLeft(2, '0');
+    return <String, dynamic>{
+      'id': id,
+      'user_id': userId,
+      'escalada_uid': escaladaUid,
+      'data_ascensao': '$ano-$mes-$dia',
+      'tipo_ascensao': tipoAscensao.codigo,
+      'tipo_escalada': tipoEscalada.codigo,
+      'tentativas': tentativas,
+      'grau_sugerido': grauSugerido,
+      'notas_privadas': notasPrivadas,
+      'criado_em': criadoEm.toUtc().toIso8601String(),
+    };
+  }
+
   /// Reconstrói uma instância a partir de um [Map].
   factory Cadena.fromMap(Map<String, dynamic> map) {
     return Cadena(

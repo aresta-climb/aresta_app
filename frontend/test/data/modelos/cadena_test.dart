@@ -211,5 +211,34 @@ void main() {
         lessThan(5),
       );
     });
+
+    test('toPayloadSupabase formata data_ascensao como YYYY-MM-DD compatível com DATE do PostgreSQL', () {
+      final cadena = Cadena(
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        escaladaUid: escaladaUidValido,
+        dataAscensao: DateTime(2026, 3, 7, 19, 45),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+        tentativas: 1,
+        grauSugerido: 25,
+        notasPrivadas: 'Crux técnico',
+        criadoEm: DateTime.utc(2026, 3, 7, 22, 0),
+      );
+
+      final payload = cadena.toPayloadSupabase(userId: 'uuid-usr-1');
+      expect(payload['id'], '123e4567-e89b-12d3-a456-426614174000');
+      expect(payload['user_id'], 'uuid-usr-1');
+      expect(payload['escalada_uid'], escaladaUidValido);
+      expect(payload['data_ascensao'], '2026-03-07');
+      expect(payload['tipo_ascensao'], 2);
+      expect(payload['tipo_escalada'], 1);
+      expect(payload['tentativas'], 1);
+      expect(payload['grau_sugerido'], 25);
+      expect(payload['notas_privadas'], 'Crux técnico');
+
+      final restaurada = Cadena.fromMap(payload);
+      expect(restaurada.dataAscensao, DateTime(2026, 3, 7));
+      expect(restaurada.userId, 'uuid-usr-1');
+    });
   });
 }

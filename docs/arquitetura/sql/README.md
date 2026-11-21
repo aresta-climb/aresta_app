@@ -36,8 +36,10 @@ Este diretório contém os artefatos executáveis de banco de dados para habilit
   * Política RLS: `auth.uid() = user_id` (`SELECT`, `INSERT`, `UPDATE`).
 * **Bucket `avatars` no Supabase Storage (`storage.buckets` / `storage.objects`):**
   * Bucket público para leitura de avatares (`avatars/<user_id>/avatar.webp`), com políticas RLS que restringem `INSERT`, `UPDATE` e `DELETE` exclusivamente à pasta do próprio usuário autenticado (`(storage.foldername(name))[1] = auth.uid()::text`).
-* **`public.cadenas` (Backup Estritamente Privado):**
-  * Nenhuma leitura pública é permitida (`REVOKE ALL FROM anon`). Apenas o próprio atleta (`auth.uid() = user_id`) lê, insere, edita ou exclui suas ascensões e `notas_privadas`.
+* **`public.cadenas` (Backup Estritamente Privado via PostgREST):**
+  * Nenhuma leitura pública é permitida (`REVOKE ALL FROM anon`). Apenas o próprio atleta (`auth.uid() = user_id`) lê, insere/atualiza (`POST ?on_conflict=id`) ou exclui (`DELETE`) suas ascensões e `notas_privadas`, sincronizadas pelo aplicativo com fila local offline.
+* **`public.excluir_minha_conta()` (Exclusão Irreversível de Conta — LGPD & Apple 5.1.1(v)):**
+  * Função `SECURITY DEFINER` invocada via `POST /rest/v1/rpc/excluir_minha_conta` exclusivamente por usuários `authenticated`. Remove os arquivos em `avatars/<auth.uid()>/` e exclui a linha em `auth.users`, cascateando `public.perfis` e `public.cadenas` sem expor ou afetar contribuições comunitárias desidentificadas.
 * **`public.fila_interacoes` (Duas Camadas de Permissão):**
   * **Votos de Grau (`VOTO_GRAU`) e Comentários (`COMENTARIO`):** Exigem usuário autenticado (`TO authenticated`) cujo `autor_id_publico` pertença ao seu registro em `public.perfis`, registrando opcionalmente `tipo_ascensao` (`1..4`) para exibição do selo esportivo (`À VISTA ★`, `FLASH ★`, etc.).
   * **Alertas de Segurança estilo Waze (`ALERTA_SEGURANCA`) e Confirmações *"Ainda está lá?"* (`CONFIRMACAO_ALERTA`):** Liberados também para usuários sem conta (`TO anon, authenticated`) identificados pelo NanoID 14c local do aparelho (e vinculados entre si via `alerta_alvo_uid` NanoID 14c), garantindo que nenhum escalador enfrente barreira de login para reportar ou confirmar riscos de vida na rocha (abelhas/marimbondos, bloco solto, grampo precário, via molhada ou exposição).

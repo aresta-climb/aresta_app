@@ -394,4 +394,41 @@ BEGIN
 END
 $$;
 
+-- ============================================================================
+-- 7. EXCLUSÃO DEFINITIVA DA PRÓPRIA CONTA (APPLE APP STORE 5.1.1(v) & LGPD)
+-- ============================================================================
+-- Remove os avatares privados do bucket `avatars` e exclui o registro em
+-- `auth.users` do titular autenticado (`auth.uid()`), disparando `ON DELETE CASCADE`
+-- imediato em `public.perfis` e `public.cadenas` e preservando o acervo público
+-- desidentificado em `public.fila_interacoes` / `aresta_db`.
+
+CREATE OR REPLACE FUNCTION public.excluir_minha_conta()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, storage
+AS $$
+DECLARE
+    uid_autenticado UUID := auth.uid();
+BEGIN
+    IF uid_autenticado IS NULL THEN
+        RAISE EXCEPTION 'Sessão inválida: é necessário estar autenticado para excluir a conta.'
+            USING ERRCODE = '42501';
+    END IF;
+
+    DELETE FROM storage.objects
+    WHERE bucket_id = 'avatars'
+      AND (storage.foldername(name))[1] = uid_autenticado::text;
+
+    DELETE FROM auth.users
+    WHERE id = uid_autenticado;
+END;
+$$;
+
+COMMENT ON FUNCTION public.excluir_minha_conta() IS
+    'Exclui irreversivelmente a conta autenticada (auth.users, public.perfis, public.cadenas e avatares) conforme LGPD e Apple Guideline 5.1.1(v).';
+
+REVOKE ALL ON FUNCTION public.excluir_minha_conta() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.excluir_minha_conta() TO authenticated, service_role;
+
 COMMIT;
