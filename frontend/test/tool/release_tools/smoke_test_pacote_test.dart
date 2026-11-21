@@ -93,6 +93,7 @@ void main() {
       final jsonEvidencia = jsonDecode(evidencia.readAsStringSync()) as Map<String, dynamic>;
       expect(jsonEvidencia['auditoriaAabAprovada'], isTrue);
       expect(jsonEvidencia['coldStartLojaAprovado'], isTrue);
+      expect(comandos.any((c) => c.contains('--ks=')), isTrue);
       expect(comandos.any((c) => c.contains('pidof app.escalada.croquis')), isTrue);
     });
 

@@ -104,6 +104,27 @@ class OrquestradorSmokePacote {
     final tempDir = await Directory.systemTemp.createTemp('smoke_android_ci_');
     try {
       stdout.writeln('==> [Android 2/3] Validando Cold Start puro do universal.apk da loja...');
+      final debugKsPath = '${tempDir.path}/smoke_debug.keystore';
+      await _exigirSucesso('keytool', <String>[
+        '-genkeypair',
+        '-keystore',
+        debugKsPath,
+        '-storepass',
+        'android',
+        '-alias',
+        'androiddebugkey',
+        '-keypass',
+        'android',
+        '-keyalg',
+        'RSA',
+        '-keysize',
+        '2048',
+        '-validity',
+        '1',
+        '-dname',
+        'CN=Smoke CI,O=Aresta,C=BR',
+      ]);
+
       final apksPath = '${tempDir.path}/loja_universal.apks';
       await _exigirSucesso('java', <String>[
         '-jar',
@@ -112,6 +133,10 @@ class OrquestradorSmokePacote {
         '--bundle=${arquivoAab.path}',
         '--output=$apksPath',
         '--mode=universal',
+        '--ks=$debugKsPath',
+        '--ks-pass=pass:android',
+        '--ks-key-alias=androiddebugkey',
+        '--key-pass=pass:android',
       ]);
 
       final apksBytes = File(apksPath).readAsBytesSync();
