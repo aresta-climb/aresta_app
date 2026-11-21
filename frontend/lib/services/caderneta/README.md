@@ -13,9 +13,9 @@ A caderneta do escalador é concebida com arquitetura **offline-first reativa**:
   - O perfil do atleta (`PerfilEscalador`) possui um `autorIdPublico` (NanoID 14c) único e legível para compartilhamento seguro e contribuições comunitárias, além de `fotoUrl`, `userId` e `accessToken` quando autenticado no Supabase.
 - **Reatividade com `ValueListenable`**:
   O repositório expõe listeners reativos (`cadenasNotifier` e `perfilNotifier`) permitindo que a interface do usuário (ex.: `HubPerfilCadernetaPage`, `CadernetaPage`, `ViaPage`) reaja imediatamente a inserções, edições, mudanças de foto e exclusões sem requisições síncronas bloqueantes.
-- **Sincronização de Perfil e Preparação para PowerSync**:
-  - O nome esportivo (`autorNomePublico`), o identificador público (`autorIdPublico`) e a foto (`fotoUrl`) são sincronizados com o Supabase Auth, o bucket `avatars` no Supabase Storage e a tabela `public.perfis` por meio de `ServicoAutenticacaoLocal` e `ClienteSupabaseAutenticacao`.
-  - O esquema de dados em memória e em cache persistente reflete a estrutura relacional mapeada para as tabelas (`cadenas`, `perfis`) integradas com o PowerSync.
+- **Sincronização Direta via PostgREST (`public.cadenas`) e Exclusão Irreversível de Conta**:
+  - O nome esportivo (`autorNomePublico`), o identificador público (`autorIdPublico`) e a foto (`fotoUrl`) são sincronizados com o Supabase Auth, o bucket `avatars` no Supabase Storage e a tabela `public.perfis` por meio de `ServicoAutenticacaoLocal` e `ClienteSupabaseAutenticacao` (incluindo exclusão definitiva via RPC `public.excluir_minha_conta()`).
+  - As ascensões e tentativas (`Cadena`) são sincronizadas bidirecionalmente com `public.cadenas` via `ClienteCadenasSupabase` (`/rest/v1/cadenas` com `on_conflict=id`), mantendo conjuntos persistentes de mutações offline (`aresta_cadenas_upsert_pendentes_v1` e `aresta_cadenas_exclusao_pendentes_v1`) e renovação automática de JWT em respostas `HTTP 401`.
 
 ---
 
