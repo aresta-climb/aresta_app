@@ -86,6 +86,29 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
     }
   }
 
+  Future<void> _confirmarExclusaoConta(BuildContext context) async {
+    final confirmou = await exibirDialogoConfirmarExclusaoConta(context);
+    if (confirmou != true || !context.mounted) return;
+
+    final excluiu = await _viewModel.excluirConta();
+    if (!context.mounted) return;
+
+    if (excluiu) {
+      AppNav.back(context);
+      return;
+    }
+
+    final mensagem = _viewModel.mensagemErroExclusao;
+    if (mensagem != null && mensagem.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensagem),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _editarPerfil(BuildContext context) async {
     final novoNome = await exibirDialogoEditarPerfil(
       context,
@@ -151,6 +174,9 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
                     onAbrirDadosPrivacidade: () =>
                         _abrirDadosPrivacidade(context),
                     onConfirmarSaida: () => _confirmarSaida(context),
+                    onConfirmarExclusaoConta: _viewModel.estaAutenticado
+                        ? () => _confirmarExclusaoConta(context)
+                        : null,
                   ),
                   const SizedBox(height: 32),
                 ],

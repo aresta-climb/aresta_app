@@ -307,6 +307,7 @@ Widget buildMenuOpcoesHub({
   required VoidCallback onAbrirConfiguracoes,
   required VoidCallback onAbrirDadosPrivacidade,
   required VoidCallback onConfirmarSaida,
+  VoidCallback? onConfirmarExclusaoConta,
   VoidCallback? onEntrarNaConta,
 }) {
   return Column(
@@ -349,6 +350,16 @@ Widget buildMenuOpcoesHub({
         onTap: onConfirmarSaida,
         isPerigo: true,
       ),
+      if (onConfirmarExclusaoConta != null) ...[
+        const SizedBox(height: 10),
+        buildItemMenuHub(
+          key: const Key('item_menu_excluir_conta'),
+          icone: Icons.delete_forever_outlined,
+          titulo: 'Excluir conta',
+          onTap: onConfirmarExclusaoConta,
+          isPerigo: true,
+        ),
+      ],
     ],
   );
 }

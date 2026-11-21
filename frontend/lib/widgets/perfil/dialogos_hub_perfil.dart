@@ -340,3 +340,61 @@ class DialogoConfirmarSaida extends StatelessWidget {
     );
   }
 }
+
+/// Exibe o diálogo de confirmação para exclusão irreversível da conta autenticada
+/// em conformidade com a LGPD (§9.3) e a Diretriz 5.1.1(v) da Apple App Store.
+Future<bool?> exibirDialogoConfirmarExclusaoConta(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (_) => const DialogoConfirmarExclusaoConta(),
+  );
+}
+
+/// Diálogo declarativo de confirmação de exclusão permanente da conta do escalador.
+class DialogoConfirmarExclusaoConta extends StatelessWidget {
+  /// Cria uma instância constante de [DialogoConfirmarExclusaoConta].
+  const DialogoConfirmarExclusaoConta({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: cores.graniteEdge),
+      ),
+      title: Text(
+        'Excluir conta permanentemente?',
+        style: TextStyle(
+          color: cores.chalkWhite,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        'Esta ação é irreversível. Sua conta, foto de perfil e todas as cadenas '
+        'sincronizadas serão apagadas permanentemente da nuvem e deste dispositivo.',
+        style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.4),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Color(0xFF94A3B8)),
+          ),
+        ),
+        ElevatedButton(
+          key: const Key('btn_confirmar_exclusao_conta'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFEF4444),
+            foregroundColor: cores.chalkWhite,
+          ),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Excluir conta'),
+        ),
+      ],
+    );
+  }
+}
