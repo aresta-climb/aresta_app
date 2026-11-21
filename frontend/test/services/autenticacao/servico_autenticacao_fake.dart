@@ -31,6 +31,9 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
   /// Exceção determinística opcional lançada em [garantirSessaoEPerfilSincronizados].
   Object? erroAoGarantirSessao;
 
+  /// Exceção determinística opcional lançada em [excluirConta].
+  Object? erroAoExcluirConta;
+
   /// Identificador público canônico opcional devolvido ao reconciliar `public.perfis`.
   String? autorIdPublicoRemotoReconciliado;
 
@@ -43,6 +46,9 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
   /// Contador de renovações de token realizadas em [garantirSessaoEPerfilSincronizados].
   int totalRenovacoesToken = 0;
 
+  /// Contador de exclusões definitivas de conta concluídas com sucesso.
+  int totalContasExcluidas = 0;
+
   /// Cria uma instância configurável de [ServicoAutenticacaoFake].
   ServicoAutenticacaoFake({
     RepositorioCaderneta? repositorio,
@@ -52,6 +58,7 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
     this.erroAoVerificarOtp,
     this.erroNoLoginSocial,
     this.erroAoGarantirSessao,
+    this.erroAoExcluirConta,
     this.autorIdPublicoRemotoReconciliado,
   }) : _repositorio = repositorio ?? RepositorioCadernetaLocal.instancia;
 
@@ -194,5 +201,20 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
     final atual = _repositorio.obterPerfil();
     if (!atual.estaAutenticado) return;
     await _repositorio.salvarPerfil(atual.copyWith(limparUserId: true));
+  }
+
+  @override
+  Future<void> excluirConta() async {
+    if (!estaAutenticado) {
+      throw const ExcecaoAutenticacao(
+        'Nenhuma conta autenticada ativa para excluir.',
+        ehErroUsuario: true,
+      );
+    }
+    if (erroAoExcluirConta != null) {
+      Error.throwWithStackTrace(erroAoExcluirConta!, StackTrace.current);
+    }
+    totalContasExcluidas++;
+    await _repositorio.limparDadosContaExcluida();
   }
 }

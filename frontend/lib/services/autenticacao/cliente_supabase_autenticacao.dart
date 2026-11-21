@@ -482,4 +482,36 @@ class ClienteSupabaseAutenticacao {
       fotoFinal: fotoFinal,
     );
   }
+
+  /// Executa a exclusão irreversível da conta autenticada via RPC `public.excluir_minha_conta`
+  /// (`SECURITY DEFINER`), removendo avatares no Storage e cascateando `perfis` e `cadenas`.
+  Future<void> excluirContaAutenticada({
+    required String anonKey,
+    required String accessToken,
+  }) async {
+    final baseUrl = _baseUrl;
+    final resposta = await _clienteHttp.post(
+      Uri.parse('$baseUrl/rest/v1/rpc/excluir_minha_conta'),
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    );
+
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      final mapa = _decodificarJsonSeguro(resposta.body);
+      throw ExcecaoAutenticacao(
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Não foi possível excluir a conta neste momento.',
+        ),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: false,
+        causaTecnica:
+            'HTTP ${resposta.statusCode} /rest/v1/rpc/excluir_minha_conta: ${resposta.body}',
+      );
+    }
+  }
 }

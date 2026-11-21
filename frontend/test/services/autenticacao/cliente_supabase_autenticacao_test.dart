@@ -585,5 +585,49 @@ void main() {
       expect(linha.autorIdPublico, 'z9Yx8Wv7Ut6Sr5');
       expect(linha.nomePublico, 'Atleta Reconciliado');
     });
+
+    test('excluirContaAutenticada invoca RPC public.excluir_minha_conta e falha explicitamente em erro HTTP', () async {
+      http.Request? ultimaReq;
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          ultimaReq = request;
+          if (request.headers['Authorization'] == 'Bearer jwt-invalido') {
+            return http.Response(
+              jsonEncode({'message': 'JWT expired'}),
+              401,
+            );
+          }
+          return http.Response('', 204);
+        }),
+      );
+
+      final cliente = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+      );
+
+      await cliente.excluirContaAutenticada(
+        anonKey: anonKey,
+        accessToken: 'jwt-valido',
+      );
+      expect(
+        ultimaReq?.url.toString(),
+        '$urlBase/rest/v1/rpc/excluir_minha_conta',
+      );
+      expect(ultimaReq?.method, 'POST');
+      expect(ultimaReq?.headers['Authorization'], 'Bearer jwt-valido');
+
+      await expectLater(
+        () => cliente.excluirContaAutenticada(
+          anonKey: anonKey,
+          accessToken: 'jwt-invalido',
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 401)
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isFalse),
+        ),
+      );
+    });
   });
 }
