@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/caderneta/cliente_cadenas_supabase.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:http/testing.dart';
 
 void main() {
   late HttpServer servidor;
@@ -81,5 +83,92 @@ void main() {
       notasPrivadas: 'Costura 3 longa',
       criadoEm: DateTime.utc(2026, 9, 14, 15, 0),
     );
+
+    await cliente.upsertCadenas(
+      [cadena],
+      userId: 'uuid-usr-1',
+      accessToken: 'jwt-usr-1',
+    );
+    expect(ultimoMetodo, 'POST');
+    expect(ultimaUri?.queryParameters['on_conflict'], 'id');
+    expect(ultimoAuth, 'Bearer jwt-usr-1');
+    expect(ultimoPrefer, contains('resolution=merge-duplicates'));
+    final enviado = (ultimoPayload as List<dynamic>).single as Map<String, dynamic>;
+    expect(enviado['data_ascensao'], '2026-09-14');
+    expect(enviado['user_id'], 'uuid-usr-1');
+
+    linhasGet = [enviado];
+    final carregadas = await cliente.listarCadenasDoUsuario(
+      userId: 'uuid-usr-1',
+      accessToken: 'jwt-usr-1',
+    );
+    expect(ultimoMetodo, 'GET');
+    expect(ultimaUri?.queryParameters['user_id'], 'eq.uuid-usr-1');
+    expect(carregadas, hasLength(1));
+    expect(carregadas.single.notasPrivadas, 'Costura 3 longa');
+
+    await cliente.excluirCadenaRemota(
+      cadena.id,
+      userId: 'uuid-usr-1',
+      accessToken: 'jwt-usr-1',
+    );
+    expect(ultimoMetodo, 'DELETE');
+    expect(ultimaUri?.queryParameters['id'], 'eq.${cadena.id}');
+    expect(ultimaUri?.queryParameters['user_id'], 'eq.uuid-usr-1');
+  });
+
+  test('lança ExcecaoHttpCadenas tipada em erros HTTP e suporta resolvedores padrão', () async {
+    final cliente = ClienteCadenasSupabase(
+      resolvedorBaseUrl: () => baseUrl,
+      resolvedorAnonKey: () => 'anon-key-1',
+    );
+    final cadena = Cadena.criar(
+      escaladaUid: 'x8siJek3FiG3aB',
+      dataAscensao: DateTime(2026, 10, 1),
+    );
+
+    statusResposta = 401;
+    await expectLater(
+      () => cliente.listarCadenasDoUsuario(
+        userId: 'uuid-usr-1',
+        accessToken: 'jwt-expirado',
+      ),
+      throwsA(
+        isA<ExcecaoHttpCadenas>()
+            .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 401)
+            .having((e) => e.toString(), 'toString', contains('401')),
+      ),
+    );
+    await expectLater(
+      () => cliente.upsertCadenas(
+        [cadena],
+        userId: 'uuid-usr-1',
+        accessToken: 'jwt-expirado',
+      ),
+      throwsA(isA<ExcecaoHttpCadenas>()),
+    );
+    await expectLater(
+      () => cliente.excluirCadenaRemota(
+        cadena.id,
+        userId: 'uuid-usr-1',
+        accessToken: 'jwt-expirado',
+      ),
+      throwsA(isA<ExcecaoHttpCadenas>()),
+    );
+
+    Uri? uriPadrao;
+    final padrao = ClienteCadenasSupabase(
+      clienteHttp: ClienteHttpAresta.paraTestes(
+        MockClient((req) async {
+          uriPadrao = req.url;
+          return Response('[]', 200);
+        }),
+      ),
+    );
+    expect(
+      await padrao.listarCadenasDoUsuario(userId: 'usr-1', accessToken: 'jwt'),
+      isEmpty,
+    );
+    expect(uriPadrao?.path, '/rest/v1/cadenas');
   });
 }
