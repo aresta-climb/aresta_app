@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/cliente_cadenas_supabase.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../autenticacao/servico_autenticacao_fake.dart';
 import 'cliente_cadenas_supabase_fake.dart';
 
 void main() {
@@ -288,10 +290,106 @@ void main() {
       repoSinc = RepositorioCadernetaLocal(
         preferencias: prefs,
         clienteCadenas: clienteFake,
+        aoRenovarSessaoExpirada: () async {
+          renovacoes401++;
+          final novo = repoSinc.obterPerfil().copyWith(
+            accessToken: 'jwt-renovado-$renovacoes401',
+          );
+          await repoSinc.salvarPerfil(novo);
+          return novo;
+        },
       );
       await repoSinc.inicializar();
 
       // 1. Escalador usa o app offline sem conta e registra 1 cadena com NanoID válido
+      final cadenaPreLogin = Cadena.criar(
+        escaladaUid: 'x8siJek3FiG3aB',
+        dataAscensao: DateTime(2026, 9, 10),
+        tipoAscensao: TipoAscensao.flash,
+        notasPrivadas: 'Anotada antes de criar conta',
+      );
+      await repoSinc.salvarCadena(cadenaPreLogin);
+      expect(clienteFake.cadenasDaConta('uuid-atleta-1'), hasLength(1));
+
+      // 2. Faz login -> sincronizarComNuvem envia a cadena pré-login e baixa a do outro aparelho
+      await repoSinc.salvarPerfil(
+        repoSinc.obterPerfil().copyWith(
+          userId: 'uuid-atleta-1',
+          accessToken: 'jwt-inicial',
+          refreshToken: 'refresh-inicial',
+        ),
+      );
+      await repoSinc.sincronizarComNuvem();
+      expect(repoSinc.cadenasNotifier.value, hasLength(2));
+      expect(clienteFake.cadenasDaConta('uuid-atleta-1'), hasLength(2));
+
+      // 3. Sem sinal na rocha: cria nova cadena e exclui a antiga -> retidas na fila offline em disco
+      clienteFake.erroSimulado = const SocketException('Sem sinal na falésia');
+      final cadenaOffline = Cadena.criar(
+        escaladaUid: 'p9Rt3M2y0Z8aXr',
+        dataAscensao: DateTime(2026, 10, 12),
+        tipoAscensao: TipoAscensao.trabalhado,
+      );
+      await repoSinc.salvarCadena(cadenaOffline);
+      await repoSinc.excluirCadena(cadenaOutroAparelho.id);
+      expect(repoSinc.cadenasNotifier.value.map((c) => c.id), equals([cadenaOffline.id, cadenaPreLogin.id]));
+      // Na nuvem ainda não refletiu porque estava offline
+      expect(
+        clienteFake.cadenasDaConta('uuid-atleta-1').map((c) => c.id),
+        contains(cadenaOutroAparelho.id),
+      );
+
+      // 4. Falha na retentativa após 401 preserva fila em disco; depois reabre com renovador padrão (ServicoAutenticacaoLocal.instancia)
+      clienteFake.erroSimulado = null;
+      clienteFake.filaErros.addAll([
+        const ExcecaoHttpCadenas(
+          codigoStatusHttp: 401,
+          message: 'JWT expired',
+        ),
+        const SocketException('Queda durante retentativa'),
+      ]);
+      await repoSinc.sincronizarComNuvem();
+      expect(renovacoes401, 1);
+
+      clienteFake.filaErros.add(
+        const ExcecaoHttpCadenas(
+          codigoStatusHttp: 401,
+          message: 'JWT expired novamente',
+        ),
+      );
+      final repoReaberto = RepositorioCadernetaLocal(
+        preferencias: prefs,
+        clienteCadenas: clienteFake,
+      );
+      final authPadraoFake = ServicoAutenticacaoFake(repositorio: repoReaberto);
+      ServicoAutenticacaoLocal.instancia = authPadraoFake;
+      addTearDown(ServicoAutenticacaoLocal.redefinirParaTestes);
+
+      await repoReaberto.inicializar();
+      await repoReaberto.sincronizarComNuvem();
+
+      expect(authPadraoFake.totalRenovacoesToken, greaterThanOrEqualTo(1));
+      final naNuvem = clienteFake.cadenasDaConta('uuid-atleta-1');
+      expect(
+        naNuvem.map((c) => c.id),
+        equals([cadenaOffline.id, cadenaPreLogin.id]),
+      );
+
+      // Erro HTTP definitivo 500 registra erro sem derrubar o app
+      clienteFake.filaErros.add(
+        const ExcecaoHttpCadenas(
+          codigoStatusHttp: 500,
+          message: 'Erro interno',
+        ),
+      );
+      await repoReaberto.sincronizarComNuvem();
+
+      // 5. Exclusão definitiva da conta limpa cadenas locais, filas e gera novo perfil anônimo limpo
+      final idPublicoAntigo = repoReaberto.obterPerfil().autorIdPublico;
+      await repoReaberto.limparDadosContaExcluida();
+      expect(repoReaberto.cadenasNotifier.value, isEmpty);
+      expect(repoReaberto.obterPerfil().estaAutenticado, isFalse);
+      expect(repoReaberto.obterPerfil().autorIdPublico, isNot(equals(idPublicoAntigo)));
     });
   });
 }
