@@ -20,6 +20,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/autenticacao/servico_autenticacao_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -386,6 +387,80 @@ void main() {
         await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
         await tester.pump();
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'exibe Excluir conta quando autenticado, mostra erro em falha e fecha Hub após exclusão confirmada',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final authFake = ServicoAutenticacaoFake(repositorio: repositorio);
+        await authFake.entrarComGoogle();
+        final vm = HubPerfilCadernetaViewModel(
+          repositorio: repositorio,
+          servicoAutenticacao: authFake,
+        );
+        addTearDown(vm.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => HubPerfilCadernetaPage(viewModel: vm),
+                    ),
+                  );
+                },
+                child: const Text('Abrir Hub Logado'),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Abrir Hub Logado'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('item_menu_excluir_conta')), findsOneWidget);
+
+        // 1. Cancelar diálogo não exclui conta
+        await tester.tap(find.byKey(const Key('item_menu_excluir_conta')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+        expect(repositorio.obterPerfil().estaAutenticado, isTrue);
+
+        // 2. Falha de rede ao confirmar exibe SnackBar e permanece no Hub
+        authFake.erroAoExcluirConta = Exception('Sem conexão com a internet');
+        await tester.tap(find.byKey(const Key('item_menu_excluir_conta')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_confirmar_exclusao_conta')));
+        await tester.pumpAndSettle();
+        expect(find.byType(HubPerfilCadernetaPage), findsOneWidget);
+        expect(find.textContaining('conexão'), findsOneWidget);
+
+        ScaffoldMessenger.of(
+          tester.element(find.byType(HubPerfilCadernetaPage)),
+        ).clearSnackBars();
+        await tester.pumpAndSettle();
+
+        // 3. Sucesso exclui conta e desempilha o Hub
+        authFake.erroAoExcluirConta = null;
+        await tester.tap(find.byKey(const Key('item_menu_excluir_conta')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_confirmar_exclusao_conta')));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HubPerfilCadernetaPage), findsNothing);
+        expect(repositorio.obterPerfil().estaAutenticado, isFalse);
       },
     );
   });

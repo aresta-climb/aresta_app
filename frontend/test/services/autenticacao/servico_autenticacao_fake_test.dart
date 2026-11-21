@@ -86,6 +86,20 @@ void main() {
       fake.erroAoGarantirSessao = null;
       final anonimo = await fake.garantirSessaoEPerfilSincronizados();
       expect(anonimo.estaAutenticado, isFalse);
+
+      await expectLater(
+        fake.excluirConta,
+        throwsA(isA<ExcecaoAutenticacao>()),
+      );
+
+      await fake.entrarComGoogle();
+      fake.erroAoExcluirConta = StateError('Offline na exclusão');
+      await expectLater(fake.excluirConta, throwsStateError);
+
+      fake.erroAoExcluirConta = null;
+      await fake.excluirConta();
+      expect(fake.estaAutenticado, isFalse);
+      expect(fake.totalContasExcluidas, 1);
     });
 
     test('permite simular cancelamento voluntário e exceções determinísticas em cada operação', () async {
