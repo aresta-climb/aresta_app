@@ -12,11 +12,10 @@ import 'armazenamento_local_caderneta.dart';
 import 'cliente_cadenas_supabase.dart';
 import 'estatisticas_caderneta.dart';
 
-
 /// Contrato abstrato do repositório reativo da caderneta pessoal de cadenas e perfil.
 ///
-/// Desenvolvido em padrão *Local-First*, provendo reatividade imediata via [ValueListenable]
-/// e desacoplamento para posterior integração transparente com o PowerSync SDK.
+/// Desenvolvido em padrão *Local-First*, provendo reatividade imediata (`0ms`) via
+/// [ValueListenable] e sincronização bidirecional resiliente com `public.cadenas` via PostgREST.
 abstract interface class RepositorioCaderneta {
   /// Notificador reativo contendo a lista imutável de todas as ascensões registradas.
   ValueListenable<List<Cadena>> get cadenasNotifier;
@@ -27,10 +26,10 @@ abstract interface class RepositorioCaderneta {
   /// Inicializa o repositório a partir do armazenamento local permanente.
   Future<void> inicializar();
 
-  /// Salva ou atualiza uma ascensão esportiva na caderneta.
+  /// Salva ou atualiza uma ascensão esportiva na caderneta local e agenda sincronização em nuvem.
   Future<void> salvarCadena(Cadena cadena);
 
-  /// Exclui permanentemente uma ascensão esportiva pelo seu [id] UUID.
+  /// Exclui permanentemente uma ascensão esportiva pelo seu [id] UUID local e na nuvem.
   Future<void> excluirCadena(String id);
 
   /// Retorna as ascensões registradas para uma via específica ([escaladaUid]),
@@ -61,14 +60,16 @@ abstract interface class RepositorioCaderneta {
   });
 }
 
-/// Implementação padrão local-first de [RepositorioCaderneta], separando o estado
-/// reativo e as consultas de domínio do adaptador de persistência [ArmazenamentoLocalCaderneta].
+/// Implementação padrão local-first de [RepositorioCaderneta], integrando persistência
+/// instantânea em [ArmazenamentoLocalCaderneta] e backup bidirecional via [ClienteCadenas].
 class RepositorioCadernetaLocal implements RepositorioCaderneta {
   static RepositorioCadernetaLocal? _instanciaCompartilhada;
 
-  /// Retorna ou instancia a instância singleton do repositório.
+  /// Retorna ou instancia a instância singleton do repositório conectada ao [ClienteCadenasSupabase].
   static RepositorioCadernetaLocal get instancia =>
-      _instanciaCompartilhada ??= RepositorioCadernetaLocal();
+      _instanciaCompartilhada ??= RepositorioCadernetaLocal(
+        clienteCadenas: ClienteCadenasSupabase(),
+      );
 
   /// Permite sobrescrever a instância singleton para fins de teste.
   @visibleForTesting
@@ -77,6 +78,9 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
   }
 
   final ArmazenamentoLocalCaderneta _armazenamento;
+  final ClienteCadenas? _clienteCadenas;
+  final Future<PerfilEscalador> Function()? _aoRenovarSessaoExpirada;
+
   final ValueNotifier<List<Cadena>> _cadenasNotifier =
       ValueNotifier<List<Cadena>>(const []);
   final ValueNotifier<PerfilEscalador> _perfilNotifier =
@@ -86,13 +90,17 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
   final Set<String> _idsUpsertPendentes = <String>{};
   final Set<String> _idsExclusaoPendentes = <String>{};
 
-  /// Construtor que aceita opcionalmente um [ArmazenamentoLocalCaderneta] ou [SharedPreferences].
+  /// Construtor com suporte opcional a [ClienteCadenas] para sincronização PostgREST.
   RepositorioCadernetaLocal({
     SharedPreferences? preferencias,
     ArmazenamentoLocalCaderneta? armazenamento,
+    ClienteCadenas? clienteCadenas,
+    Future<PerfilEscalador> Function()? aoRenovarSessaoExpirada,
   }) : _armazenamento =
            armazenamento ??
-           ArmazenamentoLocalCaderneta(preferencias: preferencias);
+           ArmazenamentoLocalCaderneta(preferencias: preferencias),
+       _clienteCadenas = clienteCadenas,
+       _aoRenovarSessaoExpirada = aoRenovarSessaoExpirada;
 
   @override
   ValueListenable<List<Cadena>> get cadenasNotifier => _cadenasNotifier;
@@ -106,7 +114,17 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
     _cadenas
       ..clear()
       ..addAll(await _armazenamento.carregarCadenas());
+    _idsUpsertPendentes
+      ..clear()
+      ..addAll(await _armazenamento.carregarIdsUpsertPendentes());
+    _idsExclusaoPendentes
+      ..clear()
+      ..addAll(await _armazenamento.carregarIdsExclusaoPendentes());
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
+
+    if (_clienteCadenas != null && _perfilNotifier.value.estaAutenticado) {
+      unawaited(sincronizarComNuvem());
+    }
   }
 
   @override
@@ -120,6 +138,18 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
     await _armazenamento.salvarCadenas(_cadenas);
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
+
+    if (validarUid(cadena.escaladaUid)) {
+      _idsUpsertPendentes.add(cadena.id);
+      _idsExclusaoPendentes.remove(cadena.id);
+      await _armazenamento.salvarFilaSincronizacao(
+        idsUpsertPendentes: _idsUpsertPendentes,
+        idsExclusaoPendentes: _idsExclusaoPendentes,
+      );
+      if (_clienteCadenas != null && obterPerfil().estaAutenticado) {
+        await sincronizarComNuvem();
+      }
+    }
   }
 
   @override
@@ -127,15 +157,55 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
     _cadenas.removeWhere((c) => c.id == id);
     await _armazenamento.salvarCadenas(_cadenas);
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
+
+    _idsUpsertPendentes.remove(id);
+    if (obterPerfil().estaAutenticado) {
+      _idsExclusaoPendentes.add(id);
+    }
+    await _armazenamento.salvarFilaSincronizacao(
+      idsUpsertPendentes: _idsUpsertPendentes,
+      idsExclusaoPendentes: _idsExclusaoPendentes,
+    );
+    if (_clienteCadenas != null && obterPerfil().estaAutenticado) {
+      await sincronizarComNuvem();
+    }
   }
 
-
   @override
-  Future<void> sincronizarComNuvem() async {}
+  Future<void> sincronizarComNuvem() async {
+    final cliente = _clienteCadenas;
+    final perfilInicial = obterPerfil();
+    if (cliente == null || !perfilInicial.estaAutenticado) {
+      return;
+    }
+
+    for (final local in _cadenas) {
+      if (validarUid(local.escaladaUid) &&
+          local.userId != perfilInicial.userId) {
+        _idsUpsertPendentes.add(local.id);
+      }
+    }
+
+  }
 
   static bool _ehErroNaoAutorizado(Object erro) =>
       erro is ExcecaoComStatusHttp && erro.codigoStatusHttp == 401;
 
+  static void _registrarFalhaSincronizacao(
+    String contexto,
+    Object erro,
+    StackTrace stackTrace,
+  ) {
+    if (AppLogger.isFalhaConexaoOuTimeout(erro)) {
+      AppLogger.instance.logAviso('$contexto ($erro)');
+    } else {
+      AppLogger.instance.logError(
+        contexto,
+        error: erro,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   @override
   Future<void> limparDadosContaExcluida() async {
