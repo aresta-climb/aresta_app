@@ -1,12 +1,17 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
+import '../../utils/gerador_uid.dart';
+import '../firebase/app_logger.dart';
 import 'armazenamento_local_caderneta.dart';
+import 'cliente_cadenas_supabase.dart';
 import 'estatisticas_caderneta.dart';
+
 
 /// Contrato abstrato do repositório reativo da caderneta pessoal de cadenas e perfil.
 ///
@@ -44,6 +49,12 @@ abstract interface class RepositorioCaderneta {
   /// Retorna a instância síncrona atual do perfil do atleta.
   PerfilEscalador obterPerfil();
 
+  /// Drena mutações offline pendentes (`upsert`/`delete`) e reconcilia a caderneta com `public.cadenas`.
+  Future<void> sincronizarComNuvem();
+
+  /// Apaga permanentemente cadenas, filas de sincronização e perfil local após exclusão de conta.
+  Future<void> limparDadosContaExcluida();
+
   /// Compila as métricas analíticas e pirâmide de graduação com os dados da caderneta.
   EstatisticasCaderneta calcularEstatisticas({
     String? Function(String escaladaUid)? obterGrauDaVia,
@@ -72,6 +83,8 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
       ValueNotifier<PerfilEscalador>(PerfilEscalador.criarPadrao());
 
   final List<Cadena> _cadenas = [];
+  final Set<String> _idsUpsertPendentes = <String>{};
+  final Set<String> _idsExclusaoPendentes = <String>{};
 
   /// Construtor que aceita opcionalmente um [ArmazenamentoLocalCaderneta] ou [SharedPreferences].
   RepositorioCadernetaLocal({
@@ -114,6 +127,27 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
     _cadenas.removeWhere((c) => c.id == id);
     await _armazenamento.salvarCadenas(_cadenas);
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
+  }
+
+
+  @override
+  Future<void> sincronizarComNuvem() async {}
+
+  static bool _ehErroNaoAutorizado(Object erro) =>
+      erro is ExcecaoComStatusHttp && erro.codigoStatusHttp == 401;
+
+
+  @override
+  Future<void> limparDadosContaExcluida() async {
+    _cadenas.clear();
+    _idsUpsertPendentes.clear();
+    _idsExclusaoPendentes.clear();
+    await _armazenamento.limparDadosLocais();
+
+    final novoPerfil = PerfilEscalador.criarPadrao();
+    await _armazenamento.salvarPerfil(novoPerfil);
+    _perfilNotifier.value = novoPerfil;
+    _cadenasNotifier.value = const [];
   }
 
   @override
