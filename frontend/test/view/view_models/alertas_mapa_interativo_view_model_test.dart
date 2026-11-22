@@ -316,5 +316,25 @@ void main() {
           ),
         },
       );
-  });
+      await Future<void>.delayed(Duration.zero);
+      repoFake.erroSimulado = null;
+      expect(vm.bolhasNoMapa, hasLength(5));
+
+      // Quando perfilHabilitado é false, oculta todas as bolhas e alertas
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+      expect(vm.bolhasNoMapa, isEmpty);
+      expect(vm.obterAlertasDoSetor(setor2Andar), isEmpty);
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+
+      // Resolução definitiva por expiração e por dispose
+      vm.iniciarResolucaoAlertaComDesfazer(uidSetorVia, 'alertaBloco002');
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      expect(repoFake.obterDadosEscalada(uidSetorVia).alertasAtivos, isEmpty);
+
+      vm.iniciarResolucaoAlertaComDesfazer(uidGrupoVia, 'alertaMolhada3');
+      vm.dispose();
+      await Future<void>.delayed(Duration.zero);
+      expect(repoFake.obterDadosEscalada(uidGrupoVia).alertasAtivos, isEmpty);
+    },
+  );
 }
