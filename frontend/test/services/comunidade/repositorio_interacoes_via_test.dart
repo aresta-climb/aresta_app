@@ -423,5 +423,95 @@ void main() {
 
     // 6. Alerta de segurança reportado após falha HTTP 500 no voto anterior NÃO sofre bloqueio de fila (chega para todos os usuários!)
     authFake.erroAoGarantirSessao = null;
+    clienteFake.filaErrosInsercao.add(
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 500,
+        message: 'Erro 500 apenas no voto retido',
+      ),
+    );
+    await repo.reportarAlerta(
+      escaladaUid: 'y9tjKfl4GjH4bC',
+      categoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+      detalhe: 'Bloco solto na saída',
+    );
+    expect(
+      clienteFake.itensInseridos.any(
+        (i) =>
+            i.tipo == TipoFilaInteracao.alertaSeguranca &&
+            i.escaladaUid == 'y9tjKfl4GjH4bC',
+      ),
+      isTrue,
+    );
+
+    // 7. Sincronização em lote mescla fila local, preserva consenso prévio e tolera erro HTTP 500
+    await repo.sincronizarEscaladasEmLote(['   ']);
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'd4Ml0Q2y5Wx9No',
+        autorNomePublico: 'Pedro',
+        userId: 'uuid-pedro',
+        accessToken: 'jwt-pedro',
+      ),
+    );
+    clienteFake.filaErrosInsercao.addAll([
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 500,
+        message: 'Erro temporário 500 no voto retido',
+      ),
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 500,
+        message: 'Erro temporário 500 na confirmação',
+      ),
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 500,
+        message: 'Erro 500 ao drenar voto antes do lote',
+      ),
+      const ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: 500,
+        message: 'Erro 500 ao drenar confirmação antes do lote',
+      ),
+    ]);
+    await repo.confirmarAlerta(
+      escaladaUid: 'y9tjKfl4GjH4bC',
+      alertaUid: repo.obterDadosEscalada('y9tjKfl4GjH4bC').alertasAtivos.single.uid,
+      aindaEstaLa: true,
+    );
+    await repo.sincronizarEscaladasEmLote(['x8siJek3FiG3aB', 'y9tjKfl4GjH4bC']);
+    expect(
+      repo.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.possuiVotos,
+      isTrue,
+    );
+
+    clienteFake.erroSimulado = const HttpException('HTTP 500 no lote');
+    await repo.sincronizarEscaladasEmLote(['y9tjKfl4GjH4bC']);
+    clienteFake.erroSimulado = null;
+    authFake.erroAoGarantirSessao = null;
+
+    // 8. Sincronização em lote carrega alertas ativos de múltiplas vias para outro usuário no mapa interativo
+    SharedPreferences.setMockInitialValues({});
+    final prefsOutroUsuario = await SharedPreferences.getInstance();
+    final repoOutroUsuario = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: RepositorioCadernetaLocal(
+        preferencias: prefsOutroUsuario,
+      ),
+      clienteFila: clienteFake,
+    );
+    await repoOutroUsuario.sincronizarEscaladasEmLote([
+      'x8siJek3FiG3aB',
+      'y9tjKfl4GjH4bC',
+      'rascunho_invalido',
+    ]);
+    expect(
+      repoOutroUsuario.obterDadosEscalada('y9tjKfl4GjH4bC').alertasAtivos,
+      hasLength(1),
+    );
+    expect(
+      repoOutroUsuario
+          .obterDadosEscalada('y9tjKfl4GjH4bC')
+          .alertasAtivos
+          .single
+          .detalhe,
+      'Bloco solto na saída',
+    );
   });
 }
