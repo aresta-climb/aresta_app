@@ -109,11 +109,49 @@ void main() {
     );
 
     final lista = await cliente.buscarInteracoesPendentes('x8siJek3FiG3aB');
-    expect(ultimoAuthHeader, 'Bearer anon-key-teste');
+    expect(ultimoApikeyHeader, 'sb_publishable_teste123');
+    expect(ultimoAuthHeader, isNull);
     expect(lista, hasLength(1));
     expect(lista.single.textoComentario, 'Ótimo crux!');
 
     expect(await cliente.buscarInteracoesPendentes('   '), isEmpty);
+    expect(await cliente.buscarInteracoesPendentesEmLote(['  ', '']), isEmpty);
+    expect(await cliente.buscarInteracoesRelacionadasAoAutor('   '), isEmpty);
+    // Quando o autor só possui COMENTARIO (sem alertas), buscarInteracoesRelacionadasAoAutor retorna vazio
+    expect(
+      await cliente.buscarInteracoesRelacionadasAoAutor('c3Lk9P1x4Vw8Mn'),
+      isEmpty,
+    );
+
+    corpoRespostaGet = [
+      {
+        'id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        'autor_id_publico': 'c3Lk9P1x4Vw8Mn',
+        'autor_nome_publico': 'Mariana',
+        'escalada_uid': 'x8siJek3FiG3aB',
+        'tipo': 'ALERTA_SEGURANCA',
+        'categoria_alerta': 'ABELHAS_INSETOS',
+        'alerta_alvo_uid': 'alertaAbelha01',
+        'status': 'PENDENTE',
+        'criado_em': '2026-11-19T18:00:00Z',
+      },
+    ];
+    expect(
+      await cliente.buscarInteracoesRelacionadasAoAutor('c3Lk9P1x4Vw8Mn'),
+      hasLength(1),
+    );
+
+    final emLote = await cliente.buscarInteracoesPendentesEmLote([
+      'x8siJek3FiG3aB',
+      'y9tjKfl4GjH4bC',
+      'x8siJek3FiG3aB',
+    ]);
+    expect(emLote, hasLength(1));
+    expect(ultimoAuthHeader, isNull);
+    expect(
+      ultimaUriRequisitada?.query,
+      contains('escalada_uid=in.(x8siJek3FiG3aB,y9tjKfl4GjH4bC)'),
+    );
 
     statusResposta = 403;
     await expectLater(
@@ -122,6 +160,16 @@ void main() {
         isA<ExcecaoHttpFilaInteracoes>()
             .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 403)
             .having((e) => e.toString(), 'toString', contains('403')),
+      ),
+    );
+    await expectLater(
+      () => cliente.buscarInteracoesPendentesEmLote(['x8siJek3FiG3aB']),
+      throwsA(
+        isA<ExcecaoHttpFilaInteracoes>().having(
+          (e) => e.codigoStatusHttp,
+          'codigoStatusHttp',
+          403,
+        ),
       ),
     );
     await expectLater(
