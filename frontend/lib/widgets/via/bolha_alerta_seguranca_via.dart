@@ -200,7 +200,7 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Reportado por ${alerta.autorNomePublico} em $dia/$mes • ${alerta.confirmacoesAtivas}x confirmado',
+                          subtitulo,
                           style: TextStyle(
                             color: cores.ashGrey,
                             fontSize: 12,
@@ -211,7 +211,7 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                   ),
                 ],
               ),
-              if (alerta.detalhe != null) ...[
+              if (citacaoDetalhe != null) ...[
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -221,7 +221,7 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                     border: Border.all(color: cores.graniteEdge),
                   ),
                   child: Text(
-                    '“${alerta.detalhe}”',
+                    citacaoDetalhe,
                     style: TextStyle(
                       color: cores.chalkWhite,
                       fontStyle: FontStyle.italic,
@@ -340,49 +340,60 @@ class _FormularioReportarAlertaVia extends StatefulWidget {
 
 class _FormularioReportarAlertaViaState
     extends State<_FormularioReportarAlertaVia> {
-  CategoriaAlertaSeguranca _categoriaSelecionada =
-      CategoriaAlertaSeguranca.abelhasInsetos;
-  final TextEditingController _detalheController = TextEditingController();
+  late final FormularioAlertaViaViewModel _viewModel;
+  late final TextEditingController _detalheController;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = FormularioAlertaViaViewModel();
+    _detalheController = TextEditingController()
+      ..addListener(() => _viewModel.definirDetalhe(_detalheController.text));
+  }
 
   @override
   void dispose() {
     _detalheController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Reportar Alerta na Via',
-              style: TextStyle(
-                color: cores.chalkWhite,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Avise outros escaladores sobre riscos imediatos nesta linha.',
-              style: TextStyle(color: cores.ashGrey, fontSize: 13),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: CategoriaAlertaSeguranca.values.map((cat) {
-                final selecionado = cat == _categoriaSelecionada;
-                return InkWell(
-                  key: Key('opcao_alerta_${cat.codigoBanco}'),
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => setState(() => _categoriaSelecionada = cat),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Reportar Alerta na Via',
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Avise outros escaladores sobre riscos imediatos nesta linha.',
+                  style: TextStyle(color: cores.ashGrey, fontSize: 13),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _viewModel.opcoesCategorias.map((cat) {
+                    final selecionado = cat == _viewModel.categoriaSelecionada;
+                    return InkWell(
+                      key: Key('opcao_alerta_${cat.codigoBanco}'),
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _viewModel.selecionarCategoria(cat),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -472,6 +483,8 @@ class _FormularioReportarAlertaViaState
           ],
         ),
       ),
+    );
+      },
     );
   }
 }
