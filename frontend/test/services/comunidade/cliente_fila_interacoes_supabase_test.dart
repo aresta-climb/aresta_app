@@ -15,6 +15,8 @@ void main() {
   late String baseUrl;
   Map<String, dynamic>? ultimoPayloadRecebido;
   String? ultimoAuthHeader;
+  String? ultimoApikeyHeader;
+  Uri? ultimaUriRequisitada;
   int statusResposta = 200;
   Object corpoRespostaGet = <Map<String, dynamic>>[];
 
@@ -22,14 +24,18 @@ void main() {
     HttpOverrides.global = null;
     ultimoPayloadRecebido = null;
     ultimoAuthHeader = null;
+    ultimoApikeyHeader = null;
+    ultimaUriRequisitada = null;
     statusResposta = 200;
     corpoRespostaGet = <Map<String, dynamic>>[];
 
     servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    baseUrl = 'http://127.0.0.1:${servidor.port}';
+    baseUrl = 'http://127.0.0.1:${servidor.port}/';
 
     servidor.listen((req) async {
       ultimoAuthHeader = req.headers.value('authorization');
+      ultimoApikeyHeader = req.headers.value('apikey');
+      ultimaUriRequisitada = req.uri;
       if (req.method == 'POST') {
         final texto = await utf8.decoder.bind(req).join();
         ultimoPayloadRecebido = jsonDecode(texto) as Map<String, dynamic>;
@@ -48,10 +54,10 @@ void main() {
     await servidor.close(force: true);
   });
 
-  test('insere voto autenticado sem enviar id NanoID na chave UUID e alerta anônimo com anonKey', () async {
+  test('insere voto autenticado com JWT e alerta público sem enviar publishable key como Bearer JWT', () async {
     final cliente = ClienteFilaInteracoesSupabase(
       resolvedorBaseUrl: () => baseUrl,
-      resolvedorAnonKey: () => 'anon-key-teste',
+      resolvedorAnonKey: () => 'sb_publishable_teste123',
     );
 
     final voto = ItemFilaInteracao.votoGrau(
@@ -62,6 +68,7 @@ void main() {
       grauSugerido: 26,
     );
     await cliente.inserirInteracao(voto, accessToken: 'jwt-atleta');
+    expect(ultimoApikeyHeader, 'sb_publishable_teste123');
     expect(ultimoAuthHeader, 'Bearer jwt-atleta');
     expect(ultimoPayloadRecebido!.containsKey('id'), isFalse);
     expect(ultimoPayloadRecebido!['tipo'], 'VOTO_GRAU');
@@ -75,11 +82,13 @@ void main() {
       categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
     );
     await cliente.inserirInteracao(alerta);
-    expect(ultimoAuthHeader, 'Bearer anon-key-teste');
+    expect(ultimoApikeyHeader, 'sb_publishable_teste123');
+    expect(ultimoAuthHeader, isNull);
+    expect(ultimaUriRequisitada?.path, '/rest/v1/fila_interacoes');
     expect(ultimoPayloadRecebido!['alerta_alvo_uid'], 'alertaAbelha01');
   });
 
-  test('busca interações pendentes com anonKey e lança ExcecaoHttpFilaInteracoes em erro HTTP', () async {
+  test('busca interações pendentes individuais e em lote apenas com apikey e lança ExcecaoHttpFilaInteracoes em erro HTTP', () async {
     corpoRespostaGet = [
       {
         'id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -96,7 +105,7 @@ void main() {
 
     final cliente = ClienteFilaInteracoesSupabase(
       resolvedorBaseUrl: () => baseUrl,
-      resolvedorAnonKey: () => 'anon-key-teste',
+      resolvedorAnonKey: () => 'sb_publishable_teste123',
     );
 
     final lista = await cliente.buscarInteracoesPendentes('x8siJek3FiG3aB');

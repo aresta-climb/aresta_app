@@ -41,6 +41,40 @@ class ClienteFilaInteracoesFake implements ClienteFilaInteracoes {
   }
 
   @override
+  Future<List<ItemFilaInteracao>> buscarInteracoesPendentesEmLote(
+    Iterable<String> escaladaUids,
+  ) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    final conjunto = escaladaUids.map((u) => u.trim()).toSet();
+    return _tabelaRemota
+        .where((i) => conjunto.contains(i.escaladaUid))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<ItemFilaInteracao>> buscarInteracoesRelacionadasAoAutor(
+    String autorIdPublico,
+  ) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    final autor = autorIdPublico.trim();
+    final vias = _tabelaRemota
+        .where(
+          (i) =>
+              i.autorIdPublico == autor &&
+              (i.tipo == TipoFilaInteracao.alertaSeguranca ||
+                  i.tipo == TipoFilaInteracao.confirmacaoAlerta),
+        )
+        .map((i) => i.escaladaUid)
+        .toSet();
+    if (vias.isEmpty) return const [];
+    return buscarInteracoesPendentesEmLote(vias);
+  }
+
+  @override
   Future<void> inserirInteracao(
     ItemFilaInteracao item, {
     String? accessToken,

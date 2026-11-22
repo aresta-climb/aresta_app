@@ -168,6 +168,13 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
         )
         .map((i) => i.escaladaUid)
         .toSet();
+    if (viasDeAlerta.isEmpty) {
+      return const [];
+    }
+    return buscarInteracoesPendentesEmLote(viasDeAlerta);
+  }
+
+  Future<List<ItemFilaInteracao>> _executarGetLista(Uri uri) async {
     final resposta = await _clienteHttp.get(
       uri,
       headers: _construirCabecalhos(),
@@ -193,8 +200,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
     ItemFilaInteracao item, {
     String? accessToken,
   }) async {
-    final baseUrl = _resolvedorBaseUrl();
-    final uri = Uri.parse('$baseUrl/rest/v1/fila_interacoes');
+    final uri = Uri.parse('$_baseUrl/rest/v1/fila_interacoes');
 
     final resposta = await _clienteHttp.post(
       uri,

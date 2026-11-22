@@ -20,6 +20,21 @@ void main() {
 
     expect(await fake.buscarInteracoesPendentes('x8siJek3FiG3aB'), hasLength(1));
     expect(await fake.buscarInteracoesPendentes('outraVia000001'), isEmpty);
+    expect(
+      await fake.buscarInteracoesPendentesEmLote([
+        'x8siJek3FiG3aB',
+        'outraVia000001',
+      ]),
+      hasLength(1),
+    );
+    expect(
+      await fake.buscarInteracoesRelacionadasAoAutor('c3Lk9P1x4Vw8Mn'),
+      hasLength(1),
+    );
+    expect(
+      await fake.buscarInteracoesRelacionadasAoAutor('semAlertas0001'),
+      isEmpty,
+    );
 
     final voto = ItemFilaInteracao.votoGrau(
       autorIdPublico: 'c3Lk9P1x4Vw8Mn',
@@ -39,6 +54,14 @@ void main() {
     fake.erroSimulado = StateError('Offline simulado');
     await expectLater(
       () => fake.buscarInteracoesPendentes('x8siJek3FiG3aB'),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.buscarInteracoesPendentesEmLote(['x8siJek3FiG3aB']),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.buscarInteracoesRelacionadasAoAutor('c3Lk9P1x4Vw8Mn'),
       throwsStateError,
     );
     await expectLater(
