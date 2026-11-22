@@ -116,9 +116,57 @@ class DespachanteFilaInteracoes {
               erroRetentativa,
               stackRetentativa,
             );
+            restantes.add(item);
+            if (AppLogger.isFalhaConexaoOuTimeout(erroRetentativa)) {
+              restantes.addAll(_filaPendente.sublist(i + 1));
+              break;
+            }
+            continue;
           }
         }
+
+        registrarFalhaRede(
+          'Interação retida na fila offline (${item.tipo.codigoBanco})',
+          erroInicial,
+          stackInicial,
+        );
+        if (AppLogger.isFalhaConexaoOuTimeout(erroInicial)) {
+          restantes
+            ..add(item)
+            ..addAll(_filaPendente.sublist(i + 1));
+          break;
+        }
+        restantes.add(item);
       }
     }
+
+    _filaPendente
+      ..clear()
+      ..addAll(restantes);
+    await _armazenamentoFila.salvarItensPendentes(_filaPendente);
   }
+
+  /// Registra falhas transitórias de conectividade como aviso e demais falhas como erro.
+  static void registrarFalhaRede(
+    String contexto,
+    Object erro,
+    StackTrace stackTrace,
+  ) {
+    if (AppLogger.isFalhaConexaoOuTimeout(erro)) {
+      AppLogger.instance.logAviso('$contexto: $erro');
+    } else {
+      AppLogger.instance.logError(
+        contexto,
+        error: erro,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  static bool _ehConflitoDuplicado(Object erro) =>
+      erro is ExcecaoComStatusHttp && erro.codigoStatusHttp == 409;
+
+  static bool _ehFalhaSessaoOuRls(Object erro) =>
+      erro is ExcecaoComStatusHttp &&
+      (erro.codigoStatusHttp == 401 || erro.codigoStatusHttp == 403);
 }
