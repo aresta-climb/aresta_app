@@ -56,6 +56,12 @@ void main() {
       await reaberto.salvarItensPendentes(itens);
       await reaberto.limparFila();
       expect(await reaberto.carregarItensPendentes(), isEmpty);
+
+      expect(await reaberto.carregarCacheAlertasUsuario(), isEmpty);
+      await reaberto.salvarCacheAlertasUsuario(itens);
+      expect(await reaberto.carregarCacheAlertasUsuario(), hasLength(2));
+      await reaberto.salvarCacheAlertasUsuario(const []);
+      expect(await reaberto.carregarCacheAlertasUsuario(), isEmpty);
     },
   );
 

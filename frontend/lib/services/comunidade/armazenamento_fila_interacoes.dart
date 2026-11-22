@@ -14,6 +14,10 @@ class ArmazenamentoFilaInteracoes {
   /// Chave de armazenamento persistente da fila de interações pendentes.
   static const String chaveFilaPendente = 'fila_pendente_interacoes_via_v1';
 
+  /// Chave de cache local dos eventos de alerta ligados ao perfil para leitura offline na Caderneta.
+  static const String chaveCacheAlertasUsuario =
+      'cache_alertas_usuario_caderneta_v1';
+
   SharedPreferences? _preferencias;
 
   /// Cria uma instância de [ArmazenamentoFilaInteracoes].
@@ -23,10 +27,9 @@ class ArmazenamentoFilaInteracoes {
   Future<SharedPreferences> _obterPrefs() async =>
       _preferencias ??= await SharedPreferences.getInstance();
 
-  /// Carrega os itens pendentes salvos em disco, retornando lista vazia quando ausente ou corrompido.
-  Future<List<ItemFilaInteracao>> carregarItensPendentes() async {
+  Future<List<ItemFilaInteracao>> _carregarLista(String chave) async {
     final prefs = await _obterPrefs();
-    final bruto = prefs.getString(chaveFilaPendente);
+    final bruto = prefs.getString(chave);
     if (bruto == null || bruto.isEmpty) {
       return const [];
     }
@@ -42,18 +45,33 @@ class ArmazenamentoFilaInteracoes {
     }
   }
 
-  /// Salva a lista atualizada de [itens] pendentes em disco (removendo a chave quando vazia).
-  Future<void> salvarItensPendentes(List<ItemFilaInteracao> itens) async {
+  Future<void> _salvarLista(String chave, List<ItemFilaInteracao> itens) async {
     final prefs = await _obterPrefs();
     if (itens.isEmpty) {
-      await prefs.remove(chaveFilaPendente);
+      await prefs.remove(chave);
       return;
     }
     final serializado = jsonEncode(
       itens.map((i) => i.toJson()).toList(growable: false),
     );
-    await prefs.setString(chaveFilaPendente, serializado);
+    await prefs.setString(chave, serializado);
   }
+
+  /// Carrega os itens pendentes salvos em disco, retornando lista vazia quando ausente ou corrompido.
+  Future<List<ItemFilaInteracao>> carregarItensPendentes() =>
+      _carregarLista(chaveFilaPendente);
+
+  /// Salva a lista atualizada de [itens] pendentes em disco (removendo a chave quando vazia).
+  Future<void> salvarItensPendentes(List<ItemFilaInteracao> itens) =>
+      _salvarLista(chaveFilaPendente, itens);
+
+  /// Carrega o histórico local de alertas criados/confirmados pelo usuário para a Caderneta offline.
+  Future<List<ItemFilaInteracao>> carregarCacheAlertasUsuario() =>
+      _carregarLista(chaveCacheAlertasUsuario);
+
+  /// Persiste em disco os eventos de alertas criados/confirmados pelo usuário para acesso offline.
+  Future<void> salvarCacheAlertasUsuario(List<ItemFilaInteracao> itens) =>
+      _salvarLista(chaveCacheAlertasUsuario, itens);
 
   /// Remove integralmente a fila offline persistida em disco.
   Future<void> limparFila() async {

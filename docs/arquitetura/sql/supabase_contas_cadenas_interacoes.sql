@@ -391,21 +391,30 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_fila_validar_contribuicao_unica_alerta ON public.fila_interacoes;
+CREATE TRIGGER trg_fila_validar_contribuicao_unica_alerta
+    BEFORE INSERT ON public.fila_interacoes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.validar_contribuicao_unica_alerta();
+
 -- Habilitação obrigatória de RLS em public.fila_interacoes
 ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
 
--- Política 1: Transparência total de leitura das interações pendentes na fila
+-- Limpeza explícita de todas as políticas antigas (incluindo a política anônima obsoleta)
 DROP POLICY IF EXISTS "fila_interacoes_leitura" ON public.fila_interacoes;
 DROP POLICY IF EXISTS "fila_interacoes_leitura_publica" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_insercao" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_insercao_autenticada" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima" ON public.fila_interacoes;
+
+-- Política 1: Transparência total de leitura das interações e alertas pendentes para todos (com ou sem conta)
 CREATE POLICY "fila_interacoes_leitura_publica" ON public.fila_interacoes
     FOR SELECT
     TO anon, authenticated
     USING (true);
 
--- Política 2: Escaladores autenticados podem enviar qualquer tipo de interação
--- vinculada ao seu próprio autor_id_publico registrado em public.perfis.
-DROP POLICY IF EXISTS "fila_interacoes_insercao" ON public.fila_interacoes;
-DROP POLICY IF EXISTS "fila_interacoes_insercao_autenticada" ON public.fila_interacoes;
+-- Política 2: Toda escrita na fila (votos, comentários, alertas de segurança e confirmações "Ainda está lá?")
+-- exige usuário autenticado e vínculo verificado com seu autor_id_publico em public.perfis.
 CREATE POLICY "fila_interacoes_insercao_autenticada" ON public.fila_interacoes
     FOR INSERT
     TO authenticated
@@ -418,18 +427,6 @@ CREATE POLICY "fila_interacoes_insercao_autenticada" ON public.fila_interacoes
         )
     );
 
--- Política 3: Qualquer usuário do aplicativo (inclusive anônimo / sem conta) pode
--- reportar alertas de risco iminente na rocha e responder "Ainda está lá?" usando
--- o autor_id_publico local do aparelho, sem barreira de login.
-DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima" ON public.fila_interacoes;
-CREATE POLICY "fila_interacoes_seguranca_anonima" ON public.fila_interacoes
-    FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (
-        status = 'PENDENTE'
-        AND tipo IN ('ALERTA_SEGURANCA', 'CONFIRMACAO_ALERTA')
-    );
-
 -- ============================================================================
 -- 5. PRIVILÉGIOS DE ACESSO POR ROLE (PRINCÍPIO DO MENOR PRIVILÉGIO)
 -- ============================================================================
@@ -440,10 +437,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.perfis TO authenticated;
 REVOKE ALL ON public.cadenas FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.cadenas TO authenticated;
 
--- Clientes (anon/authenticated) podem apenas ler e enfileirar interações;
--- atualização de status e purga pertencem exclusivamente ao Aresta Bot (service_role).
-REVOKE UPDATE, DELETE, TRUNCATE ON public.fila_interacoes FROM anon, authenticated;
-GRANT SELECT, INSERT ON public.fila_interacoes TO anon, authenticated;
+-- Clientes anônimos possuem estritamente leitura pública dos alertas e consensos;
+-- somente clientes autenticados podem enfileirar novas interações, e apenas service_role atualiza/purga.
+REVOKE ALL ON public.fila_interacoes FROM anon;
+GRANT SELECT ON public.fila_interacoes TO anon;
+
+REVOKE UPDATE, DELETE, TRUNCATE ON public.fila_interacoes FROM authenticated;
+GRANT SELECT, INSERT ON public.fila_interacoes TO authenticated;
 
 GRANT ALL ON public.perfis, public.cadenas, public.fila_interacoes TO service_role;
 
