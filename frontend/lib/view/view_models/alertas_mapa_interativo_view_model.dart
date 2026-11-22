@@ -175,5 +175,92 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
       for (final p in _mapa.pontosDeInteresse)
         if (p.uid.isNotEmpty) p.uid: p,
     };
+
+    final bolhas = <BolhaAlertaMapaApresentacao>[];
+    final alertasJaProjetados = <String>{};
+
+    for (final entrada in _referenciasResolvidas.entries) {
+      final ref = entrada.key;
+      final resolvido = entrada.value;
+      final ancora = _resolverAncoraReferencia(ref, poiPorUid);
+      if (ancora == null) continue;
+
+      final relX = (ancora.$1 / _mapa.larguraMapa).clamp(0.04, 0.96);
+      final relY = (ancora.$2 / _mapa.alturaMapa).clamp(0.04, 0.96);
+
+      for (final esc in _coletarEscaladasDoAlvo(resolvido)) {
+        final alertas = obterAlertasDaEscalada(esc.uid);
+        if (alertas.isEmpty) continue;
+        final principal = alertas.first;
+        if (!alertasJaProjetados.add('${ref.hashCode}_${principal.uid}')) {
+          continue;
+        }
+        bolhas.add(
+          BolhaAlertaMapaApresentacao(
+            alerta: principal,
+            escaladaUid: esc.uid,
+            nomeEscalada: obterNomeEscalada(esc),
+            relX: relX,
+            relY: relY,
+          ),
+        );
+        break;
+      }
+    }
+    return List.unmodifiable(bolhas);
+  }
+
+  /// Oculta imediatamente [alertaUid] no mapa e agenda sua resolução definitiva após [duracaoJanelaDesfazer].
+  void iniciarResolucaoAlertaComDesfazer(String escaladaUid, String alertaUid) {
+    _resolucoesPendentes.remove(alertaUid)?.timer.cancel();
+    _resolucoesPendentes[alertaUid] = (
+      escaladaUid: escaladaUid,
+      timer: Timer(duracaoJanelaDesfazer, () {
+        _resolucoesPendentes.remove(alertaUid);
+        unawaited(confirmarAlerta(escaladaUid, alertaUid, aindaEstaLa: false));
+      }),
+    );
+    _notificar();
+  }
+
+  /// Cancela a resolução pendente de [alertaUid], restaurando a bolha no mapa.
+  void desfazerResolucaoAlerta(String alertaUid) {
+    final pendente = _resolucoesPendentes.remove(alertaUid);
+    if (pendente != null) {
+      pendente.timer.cancel();
+      _notificar();
+    }
+  }
+
+  /// Registra a resposta *"Ainda está lá?"* sobre [alertaUid] na via [escaladaUid].
+  Future<bool> confirmarAlerta(
+    String escaladaUid,
+    String alertaUid, {
+    required bool aindaEstaLa,
+  }) async {
+    try {
+      await repositorioInteracoes.confirmarAlerta(
+        escaladaUid: escaladaUid,
+        alertaUid: alertaUid,
+        aindaEstaLa: aindaEstaLa,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao confirmar alerta $alertaUid pelo mapa na via $escaladaUid',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  static List<Escalada> _coletarEscaladasDoAlvo(ResolvedDataset resolvido) {
+    if (resolvido.escalada != null) {
+      return [resolvido.escalada!];
+    }
+    if (resolvido.setor != null) {
+      return resolvido.setor!.escaladas;
+    }
   }
 }
