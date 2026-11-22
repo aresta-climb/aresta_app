@@ -41,48 +41,42 @@ class BarraInferiorAcoesVia extends StatelessWidget {
         color: cores.deepBasalt,
         border: Border(top: BorderSide(color: cores.graniteEdge)),
       ),
-      child: Row(
-        children: [
-          if (exibirBotaoCaderneta)
-            Expanded(
-              child: ElevatedButton.icon(
-                key: const Key('btn_registrar_cadena'),
-                onPressed: aoRegistrarCadena,
-                icon: Icon(
-                  possuiCadena
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.bookmark_add_outlined,
-                  size: 18,
-                  color: cores.chalkWhite,
-                ),
-                label: Text(
-                  rotuloBotaoCaderneta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: possuiCadena
-                      ? cores.darkPine
-                      : AppColors.brandColor,
-                  foregroundColor: cores.chalkWhite,
-                  side: possuiCadena
-                      ? BorderSide(color: cores.fernGreen)
-                      : null,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 14,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          key: const Key('btn_registrar_cadena'),
+          onPressed: aoRegistrarCadena,
+          icon: Icon(
+            possuiCadena
+                ? Icons.check_circle_outline_rounded
+                : Icons.bookmark_add_outlined,
+            size: 18,
+            color: cores.chalkWhite,
+          ),
+          label: Text(
+            rotuloBotaoCaderneta,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
-        ],
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: possuiCadena
+                ? cores.darkPine
+                : AppColors.brandColor,
+            foregroundColor: cores.chalkWhite,
+            side: possuiCadena ? BorderSide(color: cores.fernGreen) : null,
+            padding: const EdgeInsets.symmetric(
+              vertical: 13,
+              horizontal: 16,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
       ),
     );
   }
