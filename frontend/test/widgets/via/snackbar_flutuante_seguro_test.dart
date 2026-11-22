@@ -64,5 +64,89 @@ void main() {
       expect(retangulo1.bottom, closeTo(664.0, 1.0));
       expect(retangulo1.left, closeTo(16.0, 1.0));
       expect(retangulo1.right, closeTo(384.0, 1.0));
-  });
+
+      // Caso 2: padding.bottom zerado por ancestral (0), mas viewPadding.bottom do SO segue 48px!
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(400, 800),
+              padding: EdgeInsets.zero,
+              viewPadding: EdgeInsets.only(bottom: 48),
+            ),
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    key: const Key('btn_disparar_2'),
+                    onPressed: () {
+                      exibirSnackBarFlutuanteSeguro(
+                        context,
+                        texto: 'Notificação simples sem ação.',
+                      );
+                    },
+                    child: const Text('Disparar 2'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_disparar_2')));
+      await tester.pumpAndSettle();
+
+      final superficieVisivel2 = find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first;
+      final retangulo2 = tester.getRect(superficieVisivel2);
+      // Mesmo com padding.bottom == 0, fica em 800 - 48 (SO) - 16 (folga) = 736px!
+      expect(retangulo2.bottom, closeTo(736.0, 1.0));
+
+      // Caso 3: MediaQuery intermediário zerou tanto padding quanto viewPadding, mas a janela física tem 48px!
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(400, 800)),
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    key: const Key('btn_disparar_3'),
+                    onPressed: () {
+                      exibirSnackBarFlutuanteSeguro(
+                        context,
+                        texto: 'Resgatado via View.viewPadding.',
+                      );
+                    },
+                    child: const Text('Disparar 3'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_disparar_3')));
+      await tester.pumpAndSettle();
+
+      final superficieVisivel3 = find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first;
+      final retangulo3 = tester.getRect(superficieVisivel3);
+      expect(retangulo3.bottom, closeTo(736.0, 1.0));
+    },
+  );
 }
