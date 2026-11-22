@@ -274,8 +274,101 @@ abstract final class ExtratorDetalhesTecnicosVia {
           titulo: titulo,
           grau: grau.isNotEmpty ? grau : null,
           extensao: _extrairExtensaoEnfiada(enf),
+          protecoes: _extrairProtecoesEnfiada(enf),
+          equipamentoMovel: enf.whichTipo() == Escalada_Tipo.viaMovel &&
+                  enf.viaMovel.protecoesMoveis.trim().isNotEmpty
+              ? enf.viaMovel.protecoesMoveis.trim()
+              : null,
+          descricao: _extrairDescricaoSimples(enf),
         ),
       );
+    }
+    return List.unmodifiable(resultado);
+  }
+
+  /// Extrai vídeos e postagens curadas de beta sem duplicação de URL.
+  static List<ItemMidiaBetaVia> extrairMidiasBeta(Escalada escalada) {
+    final itens = <ItemMidiaBetaVia>[];
+    final urlsVistas = <String>{};
+
+    for (final beta in escalada.betas) {
+      final url = beta.url.trim();
+      if (url.isEmpty || !urlsVistas.add(url)) continue;
+      final origem = _rotuloFonteMidia(beta.fonte);
+      final tituloLimpo = beta.titulo.trim();
+      itens.add(
+        ItemMidiaBetaVia(
+          titulo: tituloLimpo.isNotEmpty ? tituloLimpo : 'Beta em $origem',
+          url: url,
+          origemRotulo: origem,
+        ),
+      );
+    }
+
+    final urlDireta = _extrairUrlVideoBeta(escalada);
+    if (urlDireta != null && urlsVistas.add(urlDireta)) {
+      itens.add(
+        ItemMidiaBetaVia(
+          titulo: 'Assistir Vídeo Beta',
+          url: urlDireta,
+          origemRotulo: 'Vídeo',
+        ),
+      );
+    }
+    return List.unmodifiable(itens);
+  }
+
+  /// Extrai os nomes dos conquistadores unidos por vírgula, ou `null` quando ausentes.
+  static String? extrairConquistadores(Escalada escalada) {
+    final lista = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.conquistadores,
+      Escalada_Tipo.viaMovel => escalada.viaMovel.conquistadores,
+      Escalada_Tipo.boulder => escalada.boulder.conquistadores,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.conquistadores,
+      Escalada_Tipo.highline => escalada.highline.conquistadores,
+      Escalada_Tipo.notSet => const <String>[],
+    };
+    final limpos = lista.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+    return limpos.isEmpty ? null : limpos.join(', ');
+  }
+
+  /// Extrai a data de conquista/abertura quando preenchida.
+  static String? extrairDataAbertura(Escalada escalada) {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.dataAbertura.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dataAbertura.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.dataAbertura.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dataAbertura.trim(),
+      Escalada_Tipo.highline => escalada.highline.dataAbertura.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Extrai a data da última manutenção quando preenchida.
+  static String? extrairDataManutencao(Escalada escalada) {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.dataManutencao.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dataManutencao.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dataManutencao.trim(),
+      Escalada_Tipo.highline => escalada.highline.dataManutencao.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Extrai a chave Pix de manutenção quando cadastrada.
+  static String? extrairChavePix(Escalada escalada) {
+    final chave = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva =>
+        escalada.viaEsportiva.chavePixManutencao.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.chavePixManutencao.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.chavePixManutencao.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.chavePixManutencao.trim(),
     }
   }
 }
