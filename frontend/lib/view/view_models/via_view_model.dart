@@ -138,6 +138,95 @@ class ViaViewModel extends ChangeNotifier {
       : 'GRAU OFICIAL';
 
   /// Grau oficial formatado (ou `'Projeto'`), retornando `null` quando indefinido ou em highline.
+  String? get grauOficialExibicao =>
+      ExtratorDetalhesTecnicosVia.extrairGrauOficialExibicao(escalada);
+
+  /// Linha complementar abaixo do grau oficial (grau médio em multienfiadas e artificial).
+  String get complementoGrauOficial =>
+      ExtratorDetalhesTecnicosVia.extrairComplementoGrauOficial(escalada);
+
+  /// Indica se o cartão comparativo de grau deve ser exibido na tela.
+  bool get exibirCartaoGrau =>
+      !ehHighline &&
+      (grauOficialExibicao != null || (exibirRecursosComunidade && possuiUid));
+
+  /// Consenso democrático de grau da comunidade (exposto apenas quando [exibirRecursosComunidade] está ativo).
+  ConsensoGrauVia? get consensoGrau {
+    if (!exibirRecursosComunidade || ehHighline || !possuiUid) {
+      return null;
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).consensoGrau;
+  }
+
+  /// Modelo visual imutável do consenso comunitário pronto para renderização na Dumb UI.
+  ApresentacaoConsensoGrauVia? get apresentacaoConsenso {
+    final consenso = consensoGrau;
+    if (consenso == null) return null;
+    return ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+      consenso,
+      codigoGrauOficial: codigoGrauOficial,
+      ehBoulder: ehBoulder,
+    );
+  }
+
+  /// Lista de alertas de segurança estilo Waze ativos para renderização das bolhas vermelhas flutuantes.
+  List<AlertaSegurancaVia> get alertasAtivos {
+    if (!exibirRecursosComunidade || !possuiUid) {
+      return const [];
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).alertasAtivos;
+  }
+
+  /// Lista de comentários e notas de beta públicas da comunidade.
+  List<ComentarioComunidadeVia> get comentariosComunidade {
+    if (!exibirRecursosComunidade || !possuiUid) {
+      return const [];
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).comentarios;
+  }
+
+  /// Notas públicas pré-formatadas com autor, data e estilo prontas para a Dumb UI.
+  List<NotaComunidadeApresentacao> get notasComunidadeApresentacao =>
+      ExtratorDetalhesTecnicosVia.formatarNotasComunidade(comentariosComunidade);
+
+  /// Tipo de ancoragem/parada da via, quando informado.
+  String? get tipoAncoragem =>
+      ExtratorDetalhesTecnicosVia.extrairTipoAncoragem(escalada);
+
+  /// Lista enxuta e sem duplicações dos atributos técnicos específicos da modalidade.
+  List<AtributoTecnicoVia> get atributosTecnicos =>
+      ExtratorDetalhesTecnicosVia.extrairAtributosTecnicos(escalada);
+
+  /// Seções textuais e de equipamento recomendadas para a escalada.
+  List<SecaoTextoVia> get secoesTexto =>
+      ExtratorDetalhesTecnicosVia.extrairSecoesTexto(escalada);
+
+  /// Lista estruturada das enfiadas em vias de múltiplas enfiadas.
+  List<ResumoEnfiadaVia> get enfiadas =>
+      ExtratorDetalhesTecnicosVia.extrairEnfiadas(escalada);
+
+  /// Vídeos e postagens curadas de beta (`escalada.betas` + `urlVideoBeta`).
+  List<ItemMidiaBetaVia> get midiasBeta =>
+      ExtratorDetalhesTecnicosVia.extrairMidiasBeta(escalada);
+
+  /// Nomes dos conquistadores unidos por vírgula, ou `null` quando ausentes.
+  String? get conquistadoresTexto =>
+      ExtratorDetalhesTecnicosVia.extrairConquistadores(escalada);
+
+  /// Data de conquista/abertura, quando preenchida.
+  String? get dataAbertura =>
+      ExtratorDetalhesTecnicosVia.extrairDataAbertura(escalada);
+
+  /// Data da última manutenção registrada, quando preenchida.
+  String? get dataManutencao =>
+      ExtratorDetalhesTecnicosVia.extrairDataManutencao(escalada);
+
+  /// Indica se há informações de conquista ou manutenção a exibir.
+  bool get possuiHistorico =>
+      conquistadoresTexto != null ||
+      dataAbertura != null ||
+      dataManutencao != null;
+
   /// Copia [chavePixManutencao] para a área de transferência do dispositivo.
   Future<bool> copiarChavePix() async {
     final chave = chavePixManutencao;
@@ -198,5 +287,4 @@ class ViaViewModel extends ChangeNotifier {
       return false;
     }
   }
-
 }
