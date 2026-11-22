@@ -33,11 +33,13 @@ lib/view/
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
     ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google e Apple OAuth, e-mail/senha, criação de conta e modo offline)
-    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão e métricas
+    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão, exclusão de conta e métricas
+    ├── edicao_perfil_view_model.dart - Estado e normalização do diálogo de edição de nome e foto do perfil
     ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
-    ├── via_view_model.dart       - Estado reativo da ViaPage (extração Protobuf unificada, sincronização comunitária, consenso de grau, alertas estilo Waze, enfiadas, betas e cópia Pix)
+    ├── via_view_model.dart       - Estado reativo da ViaPage, comandos de compartilhamento/telemetria/Pix/alertas e modelos visuais delegados ao `ExtratorDetalhesTecnicosVia`
+    ├── formulario_alerta_via_view_model.dart - Estado e formatação do formulário e modal de alertas estilo Waze na ViaPage
     ├── secao_caderneta_via_view_model.dart - Estado reativo do bloco pessoal de ascensões dentro da ViaPage
-    ├── registro_cadena_view_model.dart - Estado unificado de registro/edição de cadena pessoal + votação pública de grau (`-2..+2`) e comentário de beta
+    ├── registro_cadena_view_model.dart - Estado unificado de registro/edição de cadena pessoal + opções pré-formatadas de grau (`-2..+2`) e comentário público
     ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
     ├── comunidade_view_model.dart - Estado de links e mídias sociais comunitárias

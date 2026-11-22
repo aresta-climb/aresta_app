@@ -28,3 +28,10 @@ Garante o isolamento arquitetural de conexões HTTP em todo o código de produç
 - Proíbe o uso de `ClienteHttpAresta.paraTestes` dentro de `lib/`.
 - Proíbe chamadas a `.close()` em clientes HTTP para preservar o pool persistente de conexões Keep-Alive.
 
+### 6. `isolamento_mvvm_modulos_test.dart`
+Fiscaliza a arquitetura limpa, modularidade e padrão **MVVM (Dumb UI)**:
+- Garante que páginas e widgets declarativos (`login`, `caderneta`, `hub_perfil_caderneta`, `via`, `widgets/autenticacao`, `widgets/caderneta`, `widgets/perfil`, `widgets/via` e bibliotecas visuais associadas) jamais importem `services/` diretamente.
+- Garante que modelos de domínio em `lib/data/modelos/` permaneçam puros, sem acoplamento com `services/`, `view/`, `widgets/` ou `pages/`.
+- Garante espelhamento `1:1` obrigatório de `_test.dart` e limites modulares de responsabilidade única (`< 650` linhas por arquivo).
+
+
