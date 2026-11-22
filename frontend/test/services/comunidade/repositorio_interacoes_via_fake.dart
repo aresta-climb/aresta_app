@@ -15,13 +15,20 @@ import 'package:frontend/utils/gerador_uid.dart';
 class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   final Map<String, DadosComunidadeVia> _dados = {};
   final Map<String, int> _votosUsuario = {};
+  final List<AlertaContribuidoCaderneta> _meusAlertas = [];
   final ValueNotifier<int> _versao = ValueNotifier<int>(0);
 
   /// Lista de `escaladaUid` sincronizados via [sincronizarEscalada].
   final List<String> escaladasSincronizadas = [];
 
-  /// Indica se o usuário simulado está autenticado para votar em graus comunitários.
+  /// Indica se o usuário simulado está autenticado para votar e interagir com alertas.
   bool autenticadoSimulado = true;
+
+  /// Identificador NanoID 14c do perfil simulado atual.
+  String autorIdSimulado = 'c3Lk9P1x4Vw8Mn';
+
+  /// Quantidade de sincronizações de alertas da Caderneta disparadas.
+  int sincronizacoesMeusAlertas = 0;
 
   /// Quando preenchido, faz com que operações mutáveis e de sincronização lancem este erro.
   Object? erroSimulado;
@@ -33,12 +40,35 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   bool get usuarioEstaAutenticado => autenticadoSimulado;
 
   @override
+  String get autorIdPublicoAtual => autorIdSimulado;
+
+  @override
   int? obterDeltaVotoUsuario(String escaladaUid) => _votosUsuario[escaladaUid];
 
   /// Semeia de forma síncrona e determinística o estado comunitário de [escaladaUid].
   void semearDados(String escaladaUid, DadosComunidadeVia dados) {
     _dados[escaladaUid] = dados;
     _versao.value++;
+  }
+
+  /// Semeia a lista de alertas criados ou confirmados pelo usuário na Caderneta.
+  void semearMeusAlertas(Iterable<AlertaContribuidoCaderneta> itens) {
+    _meusAlertas
+      ..clear()
+      ..addAll(itens);
+    _versao.value++;
+  }
+
+  @override
+  List<AlertaContribuidoCaderneta> obterMeusAlertasContribuidos() =>
+      List.unmodifiable(_meusAlertas);
+
+  @override
+  Future<void> sincronizarMeusAlertasContribuidos() async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    sincronizacoesMeusAlertas++;
   }
 
   @override
@@ -56,6 +86,16 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
       throw erroSimulado!;
     }
     escaladasSincronizadas.add(escaladaUid);
+  }
+
+  @override
+  Future<void> sincronizarEscaladasEmLote(
+    Iterable<String> escaladaUids,
+  ) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    escaladasSincronizadas.addAll(escaladaUids);
   }
 
   @override
@@ -131,10 +171,20 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
       escaladaUid: escaladaUid,
       categoria: categoria,
       detalhe: detalhe,
+      autorIdPublico: autorIdSimulado,
       autorNomePublico: 'Escalador Teste',
     );
     _dados[escaladaUid] = atual.copyWith(
       alertasAtivos: List.unmodifiable([novo, ...atual.alertasAtivos]),
+    );
+    _meusAlertas.insert(
+      0,
+      AlertaContribuidoCaderneta(
+        alerta: novo,
+        papel: PapelContribuicaoAlerta.criadoPorMim,
+        ativo: true,
+        ultimaInteracaoEm: novo.criadoEm,
+      ),
     );
     _versao.value++;
     return novo;
@@ -154,8 +204,21 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
     final idx = lista.indexWhere((a) => a.uid == alertaUid);
     if (idx >= 0) {
       if (aindaEstaLa) {
-        lista[idx] = lista[idx].copyWith(
-          confirmacoesAtivas: lista[idx].confirmacoesAtivas + 1,
+        final existente = lista[idx];
+        if (existente.jaConfirmadoPor(autorIdSimulado)) return;
+        final atualizado = existente.copyWith(
+          confirmacoesAtivas: existente.confirmacoesAtivas + 1,
+          confirmadoresUids: {...existente.confirmadoresUids, autorIdSimulado},
+        );
+        lista[idx] = atualizado;
+        _meusAlertas.insert(
+          0,
+          AlertaContribuidoCaderneta(
+            alerta: atualizado,
+            papel: PapelContribuicaoAlerta.confirmadoPorMim,
+            ativo: true,
+            ultimaInteracaoEm: DateTime.now().toUtc(),
+          ),
         );
       } else {
         lista.removeAt(idx);

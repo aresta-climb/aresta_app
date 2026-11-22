@@ -551,27 +551,14 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         for (final lista in _eventosAlertasPorVia.values) ...lista,
       ]);
 
-
-  static bool _ehFalhaSessaoOuRls(Object erro) {
-    if (erro is ExcecaoComStatusHttp) {
-      return erro.codigoStatusHttp == 401 || erro.codigoStatusHttp == 403;
-    }
-    return false;
-  }
-
-  static void _registrarFalhaRede(
-    String contexto,
-    Object erro,
-    StackTrace stackTrace,
-  ) {
-    if (AppLogger.isFalhaConexaoOuTimeout(erro)) {
-      AppLogger.instance.logAviso('$contexto: $erro');
-    } else {
-      AppLogger.instance.logError(
-        contexto,
-        error: erro,
-        stackTrace: stackTrace,
-      );
+  Future<void> _hidratarEstadoLocalSeNecessario() async {
+    if (_cacheCarregado) return;
+    _cacheCarregado = true;
+    await _despachante.garantirCarregada();
+    for (final ev in await _armazenamentoFila.carregarCacheAlertasUsuario()) {
+      _eventosAlertasPorVia
+          .putIfAbsent(ev.escaladaUid, () => <ItemFilaInteracao>[])
+          .add(ev);
     }
   }
 }
