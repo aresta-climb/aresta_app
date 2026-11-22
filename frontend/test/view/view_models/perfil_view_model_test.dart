@@ -347,6 +347,42 @@ void main() {
           );
           await Future<void>.delayed(Duration.zero);
           repoAlertas.erroSimulado = null;
-      });
+
+          final alerta1 = await repoAlertas.reportarAlerta(
+            escaladaUid: 'viaFaraoUid001',
+            categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+            detalhe: 'Colmeia na 4ª costura',
+          );
+          final alerta2 = await repoAlertas.reportarAlerta(
+            escaladaUid: 'viaLunarUid002',
+            categoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          );
+          expect(vm.meusAlertas, hasLength(2));
+          expect(vm.tituloSecaoMeusAlertas, 'Meus Alertas na Rocha (2)');
+
+          // Desfazer restaura ativo imediatamente
+          vm.iniciarResolucaoMeuAlertaComDesfazer(alerta1);
+          expect(
+            vm.meusAlertas.firstWhere((m) => m.alerta.uid == alerta1.uid).ativo,
+            isFalse,
+          );
+          vm.desfazerResolucaoMeuAlerta(alerta1.uid);
+          expect(
+            vm.meusAlertas.firstWhere((m) => m.alerta.uid == alerta1.uid).ativo,
+            isTrue,
+          );
+
+          // Expiração definitiva do timer
+          vm.iniciarResolucaoMeuAlertaComDesfazer(alerta1);
+          await Future<void>.delayed(const Duration(milliseconds: 70));
+          expect(repoAlertas.obterDadosEscalada('viaFaraoUid001').alertasAtivos, isEmpty);
+
+          // Resolução pendente no dispose também efetiva confirmação
+          vm.iniciarResolucaoMeuAlertaComDesfazer(alerta2);
+          vm.dispose();
+          await Future<void>.delayed(Duration.zero);
+          expect(repoAlertas.obterDadosEscalada('viaLunarUid002').alertasAtivos, isEmpty);
+        },
+      );
   });
 }

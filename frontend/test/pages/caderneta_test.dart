@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/main.dart';
@@ -19,6 +20,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/perfil_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -423,6 +425,58 @@ void main() {
       // Confirma que CadernetaPage foi desempilhada
       expect(find.text('MINHA CADERNETA'), findsNothing);
       expect(find.text('Abrir Caderneta'), findsOneWidget);
+    });
+
+    testWidgets('exibe alertas criados e confirmados na Caderneta e permite resolver com Desfazer', (tester) async {
+      final repoAlertas = RepositorioInteracoesViaFake();
+      final criado = await repoAlertas.reportarAlerta(
+        escaladaUid: 'via-1',
+        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        detalhe: 'Colmeia ativa',
+      );
+      final alertaDeOutro = AlertaSegurancaVia.criar(
+        uid: 'alertaOutro001',
+        escaladaUid: 'via-2',
+        categoria: CategoriaAlertaSeguranca.viaMolhada,
+        autorIdPublico: 'outroAutor0001',
+      );
+      repoAlertas.semearDados(
+        'via-2',
+        DadosComunidadeVia(alertasAtivos: [alertaDeOutro]),
+      );
+      await repoAlertas.confirmarAlerta(
+        escaladaUid: 'via-2',
+        alertaUid: 'alertaOutro001',
+        aindaEstaLa: true,
+      );
+
+      final vm = PerfilViewModel(
+        repositorio: repositorio,
+        repositorioInteracoes: repoAlertas,
+        obterNomeDaVia: (uid) =>
+            uid == 'via-1' ? 'Fenda do Crepúsculo' : 'Bloco Lunar',
+        obterGrauDaVia: (uid) => uid == 'via-1' ? '7a' : 'V4',
+      );
+      addTearDown(vm.dispose);
+
+      await tester.pumpWidget(criarCadernetaWidget(viewModel: vm));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Meus Alertas na Rocha (2)'), findsOneWidget);
+      expect(find.text('CRIADO POR VOCÊ'), findsOneWidget);
+      expect(find.text('CONFIRMADO (+1)'), findsOneWidget);
+
+      final btnResolver = find.byKey(Key('btn_resolver_meu_alerta_${criado.uid}'));
+      await tester.ensureVisible(btnResolver);
+      await tester.tap(btnResolver);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alerta marcado como resolvido.'), findsOneWidget);
+      expect(find.text('Desfazer'), findsOneWidget);
+
+      await tester.tap(find.text('Desfazer'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(Key('btn_resolver_meu_alerta_${criado.uid}')), findsOneWidget);
     });
   });
 }
