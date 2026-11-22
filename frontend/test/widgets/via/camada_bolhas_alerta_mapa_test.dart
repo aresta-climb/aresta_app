@@ -63,5 +63,95 @@ void main() {
         repositorioInteracoes: repoFake,
         duracaoJanelaDesfazer: const Duration(seconds: 4),
       );
+      final transformController = TransformationController();
+      addTearDown(() {
+        transformController.dispose();
+        vm.dispose();
+      });
+
+      // Dimensão zero retorna SizedBox.shrink
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Scaffold(
+            body: CamadaBolhasAlertaMapa(
+              viewModel: vm,
+              transformationController: transformController,
+              larguraCanvas: 0,
+              alturaCanvas: 400,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
+
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+      tester.view.padding = FakeViewPadding.zero;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetViewPadding();
+        tester.view.resetPadding();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 400,
+              child: Stack(
+                children: [
+                  CamadaBolhasAlertaMapa(
+                    viewModel: vm,
+                    transformationController: transformController,
+                    larguraCanvas: 400,
+                    alturaCanvas: 400,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+      expect(find.text('🐝'), findsOneWidget);
+
+      // 1. Confirmar que ainda está lá (+1)
+      await tester.tap(find.byType(BolhaEmojiAlertaVia));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_confirmar_alerta_ativo')));
+      await tester.pumpAndSettle();
+      expect(
+        repoFake.obterDadosEscalada(uidVia).alertasAtivos.single.confirmacoesAtivas,
+        2,
+      );
+
+      // 2. Resolver com Desfazer e restaurar (sem invadir os 48px inferiores do SO)
+      await tester.tap(find.byType(BolhaEmojiAlertaVia));
+      await tester.pumpAndSettle();
+      expect(find.text('Ainda está lá?'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
+      await tester.pumpAndSettle();
+      expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
+      expect(find.text('Desfazer'), findsOneWidget);
+      final pillSnackMapa = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(SnackBar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(pillSnackMapa.bottom, lessThanOrEqualTo(800.0 - 48.0 - 16.0));
+
+      await tester.tap(find.text('Desfazer'));
+      await tester.pumpAndSettle();
   });
 }
