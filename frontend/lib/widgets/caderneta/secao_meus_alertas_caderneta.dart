@@ -164,6 +164,91 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
                                 ? const Color(0xFFFCA5A5)
                                 : cores.mossRock,
                           ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              item.papel.rotuloSelo,
+                              style: TextStyle(
+                                color: criadoPorMim
+                                    ? const Color(0xFFFCA5A5)
+                                    : cores.mossRock,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      textoStatus,
+                      style: TextStyle(
+                        color: item.ativo ? cores.chalkWhite : cores.ashGrey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      alerta.categoria.emoji,
+                      style: const TextStyle(fontSize: 20, height: 1.1),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                nomeVia,
+                                style: TextStyle(
+                                  color: cores.chalkWhite,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (grauVia != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cores.deepBasalt,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    grauVia!,
+                                    style: TextStyle(
+                                      color: cores.rustIron,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${alerta.categoria.rotulo} • $dataFormatada',
+                            style: TextStyle(
+                              color: cores.ashGrey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (alerta.detalhe != null) ...[
+                            const SizedBox(height: 4),
+                          ],
                         ],
                       ),
                     ),
