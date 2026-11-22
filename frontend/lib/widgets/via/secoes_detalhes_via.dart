@@ -357,83 +357,12 @@ class CartaoGrauVia extends StatelessWidget {
                         children: [
                           blocoOficial,
                           Divider(color: cores.graniteEdge, height: 24),
-                          blocoComunidade,
-                        ],
-                      );
-                    }
-                    return IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: blocoOficial),
-                          VerticalDivider(
-                            color: cores.graniteEdge,
-                            width: 24,
-                            thickness: 1,
-                          ),
-                          Expanded(child: blocoComunidade),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                if (consenso.possuiVotos &&
-                    consenso.distribuicaoDeltas.isNotEmpty) ...[
-                  Divider(color: cores.graniteEdge, height: 24),
-                  BarrasDistribuicaoGrauVia(
-                    consenso: consenso,
-                    codigoGrauOficial: codigoGrauOficial,
-                    ehBoulder: ehBoulder,
-                  ),
-                ],
-              ],
-            ),
-    );
-  }
-}
-
-class _BlocoConsensoComunidade extends StatelessWidget {
-  final ConsensoGrauVia consenso;
-
-  const _BlocoConsensoComunidade({required this.consenso});
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = context.colors;
-    final possuiVotos = consenso.possuiVotos;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'CONSENSO DA COMUNIDADE',
-          style: TextStyle(
-            color: cores.rustIron,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.6,
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (possuiVotos)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnelConsensoGrauVia(consenso: consenso),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  consenso.grauSugerido!,
-                  style: TextStyle(
-                    color: cores.chalkWhite,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-        ),
-      ],
+                  ],
+                );
+              }
+          }),
+        ],
+      ),
     );
   }
 }
