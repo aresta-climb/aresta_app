@@ -36,7 +36,93 @@ class BarraInferiorAcoesVia extends StatelessWidget {
     required this.aoRegistrarCadena,
   });
 
-
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    if (!exibirBotaoCroqui && !exibirBotaoCaderneta) {
+      return const SizedBox.shrink();
+    }
+    final cores = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: cores.deepBasalt,
+        border: Border(top: BorderSide(color: cores.graniteEdge)),
+      ),
+      child: Row(
+        children: [
+          if (exibirBotaoCroqui) ...[
+            OutlinedButton.icon(
+              key: const Key('btn_dock_croqui_via'),
+              onPressed: aoAbrirCroqui,
+              icon: Icon(
+                Icons.map_outlined,
+                size: 17,
+                color: cores.beastHide,
+              ),
+              label: Text(
+                'Croqui',
+                style: TextStyle(
+                  color: cores.chalkWhite,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: cores.caveShadow,
+                side: BorderSide(color: cores.graniteEdge),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            if (exibirBotaoCaderneta) const SizedBox(width: 10),
+          ],
+          if (exibirBotaoCaderneta)
+            Expanded(
+              child: ElevatedButton.icon(
+                key: const Key('btn_registrar_cadena'),
+                onPressed: aoRegistrarCadena,
+                icon: Icon(
+                  possuiCadena
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.bookmark_add_outlined,
+                  size: 18,
+                  color: cores.chalkWhite,
+                ),
+                label: Text(
+                  rotuloBotaoCaderneta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: possuiCadena
+                      ? cores.darkPine
+                      : AppColors.brandColor,
+                  foregroundColor: cores.chalkWhite,
+                  side: possuiCadena
+                      ? BorderSide(color: cores.fernGreen)
+                      : null,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
