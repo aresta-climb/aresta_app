@@ -260,6 +260,7 @@ jobs:
           git tag "$TAG_NAME"
 
           cd frontend
+          flutter pub get > /dev/null
           DEV_VERSION=$(dart run tool/release_tools/calcular_proximo_dev.dart "$RELEASE_VER" --build "$RELEASE_BUILD" --formato completo)
           echo "Configurando versão de desenvolvimento: $DEV_VERSION"
           dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml "$DEV_VERSION"

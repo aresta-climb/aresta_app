@@ -21,6 +21,15 @@ void main() {
         expect(yaml, contains('publicar_ios:'));
         expect(yaml, contains('git push --atomic origin HEAD'));
 
+        final blocoCortar =
+            yaml.split('cortar_versao:').last.split('publicar_android:').first;
+        expect(
+          blocoCortar.indexOf('flutter pub get'),
+          lessThan(blocoCortar.indexOf('calcular_proximo_dev.dart')),
+          reason:
+              'cortar_versao DEVE executar flutter pub get após aplicar o pubspec candidato e antes de capturar stdout de dart run calcular_proximo_dev.dart.',
+        );
+
         final antesDoBuild = yaml.split('build_e_smoke_android:').first;
         expect(
           antesDoBuild.contains('git push'),
