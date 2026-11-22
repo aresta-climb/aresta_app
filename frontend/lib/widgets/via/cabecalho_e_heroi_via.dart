@@ -53,47 +53,42 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            nomeEscalada,
-            style: TextStyle(
-              color: cores.chalkWhite,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1.2,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          nomeEscalada,
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            height: 1.2,
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (modalidade.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cores.caveShadow,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: cores.graniteEdge),
-                  ),
-                  child: Text(
-                    modalidade.toUpperCase(),
-                    style: TextStyle(
-                      color: cores.beastHide,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (modalidade.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cores.deepBasalt,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: cores.graniteEdge),
+                ),
+                child: Text(
+                  modalidade.toUpperCase(),
+                  style: TextStyle(
+                    color: cores.beastHide,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
                   ),
                 ),
+              ),
               if (ehDestaque)
                 Container(
                   key: const Key('selo_via_classica'),
@@ -138,7 +133,6 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
             ),
           ],
         ],
-      ),
     );
   }
 }
@@ -306,19 +300,19 @@ class CartaoGrauVia extends StatelessWidget {
             letterSpacing: 0.6,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           grauOficial ?? '—',
           style: TextStyle(
             color: cores.chalkWhite,
-            fontSize: 28,
+            fontSize: 26,
             fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           complementoGrauOficial,
-          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+          style: TextStyle(color: cores.ashGrey, fontSize: 11),
         ),
       ],
     );
