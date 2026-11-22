@@ -402,6 +402,8 @@ void main() {
 
         expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
         expect(find.byType(MapaThumbnail), findsNothing);
+        await tester.tap(find.text('VER NO CROQUI INTERATIVO'));
+        await tester.pumpAndSettle();
       },
     );
 
@@ -522,7 +524,7 @@ void main() {
     );
 
     testWidgets(
-      'deve renderizar botão "VER NO CROQUI INTERATIVO" quando via possui referência no mapa via ResolvedDataset',
+      'deve renderizar MapaThumbnail do setor e botão Croqui no dock quando via possui referência no mapa via ResolvedDataset',
       (tester) async {
         final esc = Escalada(
           uid: 'via-ref-1',
@@ -575,8 +577,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
-        expect(find.byType(MapaThumbnail), findsNothing);
+        expect(find.byType(MapaThumbnail), findsOneWidget);
+        expect(find.byKey(const Key('btn_dock_croqui_via')), findsOneWidget);
       },
     );
 

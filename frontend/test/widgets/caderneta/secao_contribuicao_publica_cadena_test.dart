@@ -43,6 +43,7 @@ void main() {
     );
 
     expect(find.text('CONTRIBUIÇÃO PÚBLICA'), findsOneWidget);
+    expect(find.text('Beta da Comunidade (opcional)'), findsOneWidget);
     expect(find.text('Justo (7a)'), findsOneWidget);
     expect(find.text('+1 (7b)'), findsOneWidget);
     expect(find.text('-1 (6ºsup)'), findsOneWidget);

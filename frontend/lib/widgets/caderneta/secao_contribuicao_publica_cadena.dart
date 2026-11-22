@@ -119,7 +119,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Dica Pública / Beta (opcional)',
+                    'Beta da Comunidade (opcional)',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: cores.chalkWhite,
                       fontWeight: FontWeight.w600,
