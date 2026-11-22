@@ -213,3 +213,94 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
     );
   }
 }
+
+/// Fileira responsiva (Dumb UI) de 5 pílulas interativas (`-2` a `+2`) posicionada sob o gráfico
+/// de consenso para votação direta de 1 toque na percepção de grau da escalada.
+class SeletorPilulasVotoGrauVia extends StatelessWidget {
+  /// Cinco opções pré-formatadas fornecidas pelo `ViaViewModel`.
+  final List<OpcaoPilulaVotoGrauVia> pilulas;
+
+  /// Callback acionado ao tocar em uma pílula de grau (`-2` a `+2`).
+  final ValueChanged<int> aoSelecionarDelta;
+
+  /// Cria uma instância de [SeletorPilulasVotoGrauVia].
+  const SeletorPilulasVotoGrauVia({
+    super.key,
+    required this.pilulas,
+    required this.aoSelecionarDelta,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (pilulas.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
+    return LayoutBuilder(
+      builder: (context, restricoes) {
+        if (restricoes.maxWidth < 260) {
+          return Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: pilulas
+                .map((opcao) => _construirPilula(cores, opcao, expandir: false))
+                .toList(growable: false),
+          );
+        }
+
+        return Row(
+          children: [
+            for (var i = 0; i < pilulas.length; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Expanded(
+                child: _construirPilula(cores, pilulas[i], expandir: true),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _construirPilula(
+    AppColors cores,
+    OpcaoPilulaVotoGrauVia opcao, {
+    required bool expandir,
+  }) {
+    final selecionada = opcao.selecionada;
+    final filho = InkWell(
+      key: Key('pilula_voto_grau_${opcao.delta}'),
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => aoSelecionarDelta(opcao.delta),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: 6,
+          horizontal: expandir ? 2 : 10,
+        ),
+        decoration: BoxDecoration(
+          color: selecionada ? AppColors.brandColor : cores.deepBasalt,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selecionada ? AppColors.brandColor : cores.graniteEdge,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              opcao.grauExibicao,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selecionada ? Colors.white : cores.chalkWhite,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return filho;
+  }
+}
