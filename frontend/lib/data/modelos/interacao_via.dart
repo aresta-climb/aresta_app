@@ -86,6 +86,35 @@ enum CategoriaAlertaSeguranca {
   }
 }
 
+/// Papel da contribuição do escalador autenticado sobre um alerta exibido na sua Caderneta.
+enum PapelContribuicaoAlerta {
+  /// Alerta aberto originalmente pelo próprio escalador.
+  criadoPorMim('CRIADO POR VOCÊ'),
+
+  /// Alerta aberto por outro escalador e confirmado (`+1`) pelo usuário atual.
+  confirmadoPorMim('CONFIRMADO (+1)');
+
+  /// Rótulo em caixa alta exibido no selo visual da `CadernetaPage`.
+  final String rotuloSelo;
+
+  const PapelContribuicaoAlerta(this.rotuloSelo);
+}
+
+/// Estado de permissão e deduplicação do usuário atual diante do modal *"Ainda está lá?"*.
+enum EstadoInteracaoAlertaUsuario {
+  /// Usuário autenticado que ainda não criou nem confirmou este alerta (`+1` liberado).
+  podeConfirmar,
+
+  /// Usuário autenticado que criou originalmente este alerta (`+1` bloqueado, resolução liberada).
+  criadoPorMim,
+
+  /// Usuário autenticado que já confirmou (`+1`) este alerta (`+1` bloqueado, resolução liberada).
+  jaConfirmadoPorMim,
+
+  /// Usuário sem conta autenticada (visualização liberada, ações exigem login no Perfil).
+  requerAutenticacao,
+}
+
 /// Representa um alerta ativo de segurança estilo Waze vinculado a uma escalada.
 ///
 /// Projetado para ser exibido como uma bolha vermelha compacta no canto superior
@@ -107,14 +136,20 @@ class AlertaSegurancaVia {
   /// Observação complementar opcional (máximo de 100 caracteres).
   final String? detalhe;
 
+  /// Identificador público NanoID 14c do perfil que abriu o alerta, quando conhecido.
+  final String? autorIdPublico;
+
   /// Apelido público do escalador que reportou o alerta.
   final String autorNomePublico;
 
   /// Instante em que o alerta foi registrado.
   final DateTime criadoEm;
 
-  /// Total acumulado de confirmações *"Ainda está lá?"* positivas.
+  /// Total acumulado de confirmações *"Ainda está lá?"* positivas (1 por perfil).
   final int confirmacoesAtivas;
+
+  /// Conjunto imutável de `autorIdPublico` que já contabilizam confirmação ativa neste alerta.
+  final Set<String> confirmadoresUids;
 
   /// Cria uma instância imutável de [AlertaSegurancaVia].
   const AlertaSegurancaVia({
@@ -122,9 +157,11 @@ class AlertaSegurancaVia {
     required this.escaladaUid,
     required this.categoria,
     this.detalhe,
+    this.autorIdPublico,
     required this.autorNomePublico,
     required this.criadoEm,
     this.confirmacoesAtivas = 1,
+    this.confirmadoresUids = const {},
   });
 
   /// Fábrica validada que gera um NanoID 14c e normaliza os campos textuais sob filosofia Fail-Fast.
@@ -133,9 +170,11 @@ class AlertaSegurancaVia {
     required String escaladaUid,
     required CategoriaAlertaSeguranca categoria,
     String? detalhe,
+    String? autorIdPublico,
     String? autorNomePublico,
     DateTime? criadoEm,
     int confirmacoesAtivas = 1,
+    Set<String>? confirmadoresUids,
   }) {
     final detalheLimpo = detalhe?.trim();
     if (detalheLimpo != null && detalheLimpo.length > limiteCaracteresDetalhe) {
@@ -146,6 +185,15 @@ class AlertaSegurancaVia {
       );
     }
     final nomeLimpo = autorNomePublico?.trim();
+    final idLimpo = autorIdPublico?.trim();
+    final autorIdEfetivo = (idLimpo != null && idLimpo.isNotEmpty)
+        ? idLimpo
+        : null;
+    final conjuntoConfirmadores = <String>{
+      if (confirmadoresUids != null)
+        ...confirmadoresUids.map((u) => u.trim()).where((u) => u.isNotEmpty),
+      ?autorIdEfetivo,
+    };
 
     return AlertaSegurancaVia(
       uid: uid ?? gerarUid(),
@@ -154,18 +202,51 @@ class AlertaSegurancaVia {
       detalhe: (detalheLimpo != null && detalheLimpo.isNotEmpty)
           ? detalheLimpo
           : null,
+      autorIdPublico: autorIdEfetivo,
       autorNomePublico: (nomeLimpo != null && nomeLimpo.isNotEmpty)
           ? nomeLimpo
           : PerfilEscalador.apelidoPadrao,
       criadoEm: criadoEm ?? DateTime.now(),
       confirmacoesAtivas: confirmacoesAtivas,
+      confirmadoresUids: Set.unmodifiable(conjuntoConfirmadores),
     );
+  }
+
+  /// Indica se este alerta foi aberto originalmente por [autorId].
+  bool foiCriadoPor(String? autorId) {
+    final limpo = autorId?.trim();
+    return limpo != null && limpo.isNotEmpty && autorIdPublico == limpo;
+  }
+
+  /// Indica se [autorId] já contribuiu para este alerta (como criador ou confirmador `+1`).
+  bool jaConfirmadoPor(String? autorId) {
+    final limpo = autorId?.trim();
+    if (limpo == null || limpo.isEmpty) return false;
+    return autorIdPublico == limpo || confirmadoresUids.contains(limpo);
+  }
+
+  /// Determina o [EstadoInteracaoAlertaUsuario] aplicável ao escalador atual.
+  EstadoInteracaoAlertaUsuario resolverEstadoParaUsuario({
+    required bool estaAutenticado,
+    required String? autorIdPublicoUsuario,
+  }) {
+    if (!estaAutenticado) {
+      return EstadoInteracaoAlertaUsuario.requerAutenticacao;
+    }
+    if (foiCriadoPor(autorIdPublicoUsuario)) {
+      return EstadoInteracaoAlertaUsuario.criadoPorMim;
+    }
+    if (jaConfirmadoPor(autorIdPublicoUsuario)) {
+      return EstadoInteracaoAlertaUsuario.jaConfirmadoPorMim;
+    }
+    return EstadoInteracaoAlertaUsuario.podeConfirmar;
   }
 
   /// Retorna uma nova cópia com os campos informados atualizados.
   AlertaSegurancaVia copyWith({
     String? detalhe,
     int? confirmacoesAtivas,
+    Set<String>? confirmadoresUids,
   }) {
     return AlertaSegurancaVia(
       uid: uid,
