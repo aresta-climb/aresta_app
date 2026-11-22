@@ -405,24 +405,24 @@ class _BlocoConsensoComunidade extends StatelessWidget {
           'CONSENSO DA COMUNIDADE',
           style: TextStyle(
             color: cores.rustIron,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.6,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         if (apresentacao.possuiVotos)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnelConsensoGrauVia(apresentacao: apresentacao),
+              AnelConsensoGrauVia(apresentacao: apresentacao, tamanho: 26),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   apresentacao.grauSugerido!,
                   style: TextStyle(
                     color: cores.chalkWhite,
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -434,21 +434,22 @@ class _BlocoConsensoComunidade extends StatelessWidget {
             'Sem votos',
             style: TextStyle(
               color: cores.ashGrey,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
             ),
           ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           apresentacao.subtituloTendencia,
-          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+          style: TextStyle(color: cores.ashGrey, fontSize: 11),
         ),
       ],
     );
   }
 }
 
-/// Seção declarativa (Dumb UI) que renderiza `MapaThumbnail` ou o botão `'VER NO CROQUI INTERATIVO'`.
+/// Seção declarativa (Dumb UI) que renderiza a foto do croqui (`MapaThumbnail` com rótulo da linha)
+/// ou o atalho compacto `'VER NO CROQUI INTERATIVO'`.
 class SecaoMapaCroquiVia extends StatelessWidget {
   /// Estado pré-resolvido de mapas e referências da escalada.
   final EstadoCroquiVia estadoCroqui;
@@ -483,19 +484,49 @@ class SecaoMapaCroquiVia extends StatelessWidget {
   Widget build(BuildContext context) {
     if (estadoCroqui.mapasMiniatura.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(bottom: 14),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: AspectRatio(
-            aspectRatio: estadoCroqui.aspectRatioMiniatura,
-            child: MapaThumbnail(
-              mapas: estadoCroqui.mapasMiniatura,
-              cragId: cragId,
-              setorContext: setor,
-              grupoContext: grupo,
-              nomeContexto: nomeEscalada,
-              carrosselItensOverride: estadoCroqui.itensCarrosselMiniatura,
-            ),
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: estadoCroqui.aspectRatioMiniatura.clamp(1.2, 2.2),
+                child: MapaThumbnail(
+                  mapas: estadoCroqui.mapasMiniatura,
+                  cragId: cragId,
+                  setorContext: setor,
+                  grupoContext: grupo,
+                  nomeContexto: nomeEscalada,
+                  carrosselItensOverride: estadoCroqui.itensCarrosselMiniatura,
+                ),
+              ),
+              if (estadoCroqui.rotuloLinhaNoMapa != null)
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Text(
+                      'Linha #${estadoCroqui.rotuloLinhaNoMapa}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       );
@@ -506,21 +537,28 @@ class SecaoMapaCroquiVia extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: InkWell(
         onTap: aoAbrirCroquiInterativo,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           decoration: BoxDecoration(
-            color: AppColors.brandColor,
+            color: context.colors.deepBasalt,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.brandColor.withValues(alpha: 0.65),
+            ),
           ),
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.explore_outlined, color: Colors.white, size: 20),
+              Icon(
+                Icons.explore_outlined,
+                color: AppColors.brandColor,
+                size: 18,
+              ),
               SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -528,9 +566,9 @@ class SecaoMapaCroquiVia extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
                   ),
                 ),
               ),
