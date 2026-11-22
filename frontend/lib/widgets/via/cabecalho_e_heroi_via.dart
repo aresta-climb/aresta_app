@@ -76,11 +76,96 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
                     horizontal: 10,
                     vertical: 5,
                   ),
-              ),
+                  decoration: BoxDecoration(
+                    color: cores.caveShadow,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: cores.graniteEdge),
+                  ),
+                  child: Text(
+                    modalidade.toUpperCase(),
+                    style: TextStyle(
+                      color: cores.beastHide,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              if (ehDestaque)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star_rounded, size: 15, color: Colors.amber),
+                      SizedBox(width: 4),
+                      Text(
+                        'CLÁSSICA',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
+          if (setor != null && setor!.nome.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            LinhaLocalizacaoSetor(
+              cragId: cragId,
+              setor: setor!,
+              grupo: grupo,
+              escalada: escalada,
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Área heroica superior (Dumb UI) combinando croqui/mapa, cartão de grau e bolhas flutuantes de alerta.
+class AreaHeroiTopoGrauVia extends StatelessWidget {
+  /// Estado pré-resolvido de miniatura ou navegação do croqui.
+  final EstadoCroquiVia estadoCroqui;
+
+  /// Identificador do croqui.
+  final String cragId;
+
+  /// Nome da escalada usado na miniatura.
+  final String nomeEscalada;
+
+  /// Setor pai opcional.
+  final Setor? setor;
+
+  /// Grupo pai opcional.
+  final Grupo? grupo;
+
+  /// Callback acionado ao tocar em `'VER NO CROQUI INTERATIVO'`.
+  final VoidCallback aoAbrirCroquiInterativo;
+
+  /// Indica se o cartão de grau deve ser renderizado.
+  final bool exibirCartaoGrau;
+
+  /// Rótulo do grau oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
+  final String rotuloGrauOficial;
+
+  /// Grau oficial formatado, ou `null` quando indefinido.
+  final String? grauOficial;
+
+  /// Subtítulo abaixo do grau oficial.
+  final String complementoGrauOficial;
 }
