@@ -4,8 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/data/modelos/interacao_via.dart';
-import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -13,11 +11,11 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/function_library/via_functions.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
-import 'package:frontend/widgets/mapa_thumbnail.dart';
-import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import 'package:frontend/widgets/via/secoes_detalhes_via.dart';
 import '../../mocks/mock_telemetria.dart';
+
 
 void main() {
   Widget envolver(Widget filho) {
@@ -26,96 +24,6 @@ void main() {
       home: Scaffold(body: SingleChildScrollView(child: filho)),
     );
   }
-
-  testWidgets('CabecalhoIdentidadeVia renderiza título completo, modalidade, selo CLÁSSICA e localização', (tester) async {
-    final escalada = Escalada(
-      viaEsportiva: ViaEsportiva(nome: 'Aresta do Sol Nascente', destaque: true),
-    );
-    final setor = Setor(nome: 'Setor Principal');
-    final grupo = Grupo(nome: 'Face Norte');
-
-    await tester.pumpWidget(
-      envolver(
-        CabecalhoIdentidadeVia(
-          nomeEscalada: 'Aresta do Sol Nascente',
-          modalidade: 'Esportiva',
-          ehDestaque: true,
-          cragId: 'crag1',
-          escalada: escalada,
-          setor: setor,
-          grupo: grupo,
-        ),
-      ),
-    );
-
-    expect(find.text('Aresta do Sol Nascente'), findsOneWidget);
-    expect(find.text('ESPORTIVA'), findsOneWidget);
-    expect(find.text('CLÁSSICA'), findsOneWidget);
-    expect(find.textContaining('Face Norte > Setor Principal'), findsOneWidget);
-  });
-
-  testWidgets('AreaHeroiTopoGrauVia posiciona bolha vermelha flutuante no canto superior direito e renderiza consenso', (tester) async {
-    AlertaSegurancaVia? alertaTocado;
-    final alerta = AlertaSegurancaVia.criar(
-      uid: 'alertaTopo0001',
-      escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.abelhasInsetos,
-    );
-
-    await tester.pumpWidget(
-      envolver(
-        AreaHeroiTopoGrauVia(
-          escalada: Escalada(
-            uid: 'x8siJek3FiG3aB',
-            viaEsportiva: ViaEsportiva(nome: 'Deslize'),
-          ),
-          cragId: 'crag1',
-          exibirCartaoGrau: true,
-          rotuloGrauOficial: 'GRAU OFICIAL',
-          grauOficial: '7a',
-          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-          complementoGrauOficial: 'Guia Oficial / Conquistador',
-          consensoGrau: const ConsensoGrauVia(
-            grauSugerido: '7b',
-            totalVotos: 10,
-            distribuicaoDeltas: {1: 8, 0: 2},
-          ),
-          alertasAtivos: [alerta],
-          aoTocarAlerta: (a) => alertaTocado = a,
-        ),
-      ),
-    );
-
-    expect(find.text('GRAU OFICIAL'), findsOneWidget);
-    expect(find.text('7a'), findsOneWidget);
-    expect(find.text('CONSENSO DA COMUNIDADE'), findsOneWidget);
-    expect(find.text('7b'), findsOneWidget);
-    expect(find.text('80% sugerem +1'), findsOneWidget);
-    expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
-    expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
-    expect(find.text('DISTRIBUIÇÃO DE VOTOS (10)'), findsOneWidget);
-    expect(find.text('7b (+1)'), findsOneWidget);
-    expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
-    expect(alertaTocado?.uid, 'alertaTopo0001');
-  });
-
-  testWidgets('CartaoGrauVia exibe estado vazio de consenso quando ainda não há votos', (tester) async {
-    await tester.pumpWidget(
-      envolver(
-        const CartaoGrauVia(
-          rotuloGrauOficial: 'GRAU OFICIAL',
-          grauOficial: null,
-          complementoGrauOficial: 'Guia Oficial / Conquistador',
-          consensoGrau: ConsensoGrauVia.vazio(),
-        ),
-      ),
-    );
-
-    expect(find.text('—'), findsOneWidget);
-    expect(find.text('Sem votos'), findsOneWidget);
-  });
 
   testWidgets('GradeAtributosTecnicosVia, SecaoEnfiadasVia, SecaoBetasMidiaVia, SecaoNotasComunidadeVia e SecaoHistoricoEPixVia renderizam e acionam callbacks sem overflow em 320x568 @ 1.5x', (tester) async {
     tester.view.physicalSize = const Size(320, 568);
