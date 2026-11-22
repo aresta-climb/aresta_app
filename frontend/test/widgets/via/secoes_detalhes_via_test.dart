@@ -71,6 +71,26 @@ void main() {
                       rotulo: 'EXPOSIÇÃO',
                       valor: 'E2',
                     ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.enfiadas,
+                      rotulo: 'ENFIADAS',
+                      valor: '4',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.duracao,
+                      rotulo: 'DURAÇÃO',
+                      valor: 'D3',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.modalidade,
+                      rotulo: 'TIPO',
+                      valor: 'Mista',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.distancia,
+                      rotulo: 'DISTÂNCIA',
+                      valor: '90m',
+                    ),
                   ],
                   tipoAncoragem: 'Dupla com argola inox',
                 ),
@@ -151,37 +171,35 @@ void main() {
     expect(copiouPix, isTrue);
 
     // Adaptação em coluna única (< 250px) e seções vazias
-  });
-
-  testWidgets('SecaoMapaCroquiVia renderiza MapaThumbnail sem pico e navega ao tocar em VER NO CROQUI INTERATIVO (ida e retorno)', (tester) async {
-    final telemetria = MockTelemetryService();
-    TelemetryService.instance = telemetria;
-
-    // 1. Mapa próprio sem pico (usa mapasValidos diretamente)
-    final escaladaComMapa = Escalada(
-      uid: 'viaMapaProprio',
-      viaEsportiva: ViaEsportiva(nome: 'Via Foto Própria'),
-      mapas: [
-        Mapa(
-          caminhoImagemMapa: 'mapas/proprio.webp',
-          larguraMapa: 1000,
-          alturaMapa: 800,
-        ),
-      ],
-    );
     await tester.pumpWidget(
       envolver(
-        SecaoMapaCroquiVia(
-          escalada: escaladaComMapa,
-          cragId: 'crag1',
-          setor: Setor(nome: 'Setor Sol'),
-          grupo: Grupo(nome: 'Grupo Leste'),
+        SizedBox(
+          width: 220,
+          child: Column(
+            children: [
+              const GradeAtributosTecnicosVia(
+                atributos: [
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.extensao,
+                    rotulo: 'EXTENSÃO',
+                    valor: '20m',
+                  ),
+                ],
+              ),
+              const GradeAtributosTecnicosVia(atributos: []),
+              SecaoHistoricoEPixVia(aoCopiarPix: () {}),
+            ],
+          ),
         ),
       ),
     );
-    expect(find.byType(MapaThumbnail), findsOneWidget);
+    expect(find.text('20m'), findsOneWidget);
+  });
 
-    // 2. Referências em mapa do setor (fromMapaPage: false -> AppNav.toMapas)
+  testWidgets('CorpoDetalhesVia coordena navegação de croqui interativo (ida e retorno) via ViaViewModel', (tester) async {
+    final telemetria = MockTelemetryService();
+    TelemetryService.instance = telemetria;
+
     final escaladaRef = Escalada(
       uid: 'viaRefCroqui01',
       viaEsportiva: ViaEsportiva(nome: 'Via Croqui'),
@@ -232,7 +250,7 @@ void main() {
           syncService: syncService,
           treeController: navIda,
           child: Scaffold(
-            body: SecaoMapaCroquiVia(
+            body: CorpoDetalhesVia(
               escalada: escaladaRef,
               cragId: 'crag1',
               pico: pico,
@@ -253,7 +271,6 @@ void main() {
     expect(noMapas.mapas[0].initialSelectedId, 'pt1');
     expect(noMapas.mapas[1].initialSelectedId, isNull);
 
-    // 3. Aberta a partir do MapaPage (fromMapaPage: true -> AppNav.back)
     const noPai = PicoNode(cragId: 'crag1', parent: HomeNode());
     final navVolta = TreeNavigationController(
       estadoInicial: const ArvoreNavegacao(
@@ -273,23 +290,21 @@ void main() {
           datasetRepo: datasetRepo,
           syncService: syncService,
           treeController: navVolta,
-          child: Builder(
-            builder: (ctx) => Navigator(
-              pages: [
-                MaterialPage<void>(
-                  child: Scaffold(
-                    body: SecaoMapaCroquiVia(
-                      escalada: escaladaRef,
-                      cragId: 'crag1',
-                      pico: pico,
-                      setor: setor,
-                      fromMapaPage: true,
-                    ),
+          child: Navigator(
+            pages: [
+              MaterialPage<void>(
+                child: Scaffold(
+                  body: CorpoDetalhesVia(
+                    escalada: escaladaRef,
+                    cragId: 'crag1',
+                    pico: pico,
+                    setor: setor,
+                    fromMapaPage: true,
                   ),
                 ),
-              ],
-              onDidRemovePage: (_) {},
-            ),
+              ),
+            ],
+            onDidRemovePage: (_) {},
           ),
         ),
       ),
