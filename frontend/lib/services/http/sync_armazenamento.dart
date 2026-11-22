@@ -58,9 +58,13 @@ class SyncStorage {
     return null;
   }
 
-  /// Grava o valor do ETag no arquivo especificado.
+  /// Grava o valor do ETag no arquivo especificado,
+  /// criando a estrutura de diretórios caso necessário.
   Future<void> writeETag(String etagPath, String etag) async {
     final file = File(etagPath);
+    if (!await file.parent.exists()) {
+      await file.parent.create(recursive: true);
+    }
     await file.writeAsString(etag);
   }
 

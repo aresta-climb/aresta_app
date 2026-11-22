@@ -829,6 +829,7 @@ void main() {
     });
 
     tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       editor.isExperimentalMode.value = false;
       editor.editorUrl.value = null;
       try {
@@ -1112,7 +1113,8 @@ void main() {
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
 
-    tearDown(() {
+    tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       try {
         tempDir.deleteSync(recursive: true);
       } catch (e) {
@@ -1370,7 +1372,8 @@ void main() {
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
 
-    tearDown(() {
+    tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       try {
         if (tempDir.existsSync()) {
           tempDir.deleteSync(recursive: true);
@@ -1538,7 +1541,8 @@ void main() {
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
 
-    tearDown(() {
+    tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       if (tempDir.existsSync()) {
         try {
           tempDir.deleteSync(recursive: true);
@@ -2004,6 +2008,7 @@ void main() {
         final result = await syncServiceFake.downloadCrag(
           oldIndice.croquis.first,
         );
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
         // 1. O primeiro syncIndex retornará 304 Not Modified.
         // 2. O app tentará baixar o pico com OLD_OUTDATED_HASH, o FakeClient retornará o pico correto, mas o hash mismatch falhará.
@@ -2044,6 +2049,7 @@ void main() {
     });
 
     tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);
       }
@@ -2133,7 +2139,8 @@ void main() {
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
 
-    tearDown(() {
+    tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       try {
         if (tempDir.existsSync()) {
           tempDir.deleteSync(recursive: true);

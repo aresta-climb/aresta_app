@@ -98,6 +98,17 @@ void main() {
       expect(content, 'new_etag');
     });
 
+    test(
+      'writeETag cria o diretorio pai caso nao exista e escreve o arquivo',
+      () async {
+        final path = '${tempDir.path}/subdir_inexistente/write.etag';
+        await storage.writeETag(path, 'etag_com_subdir');
+
+        final content = await File(path).readAsString();
+        expect(content, 'etag_com_subdir');
+      },
+    );
+
     test('deleteETag exclui o arquivo se existir', () async {
       final path = '${tempDir.path}/delete.etag';
       await File(path).writeAsString('to_delete');
