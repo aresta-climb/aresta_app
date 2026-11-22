@@ -10,9 +10,10 @@
 --      (preservando o autor_id_publico local do dispositivo quando informado).
 --   3. Tabela public.cadenas para backup privado da caderneta via PowerSync.
 --   4. Tabela public.fila_interacoes (buffer horário do Aresta Bot) suportando:
---      - Votos de graduação e comentários (exigem conta autenticada).
---      - Alertas de segurança estilo Waze e confirmações "Ainda está lá?"
---        (permitidos também para usuários anônimos sem conta).
+--      - Leitura pública irrestrita (anon e authenticated) para visibilidade universal.
+--      - Inserção autenticada por perfil (VOTO_GRAU, COMENTARIO, ALERTA_SEGURANCA
+--        e CONFIRMACAO_ALERTA exigem conta autenticada vinculada a public.perfis).
+--      - Prevenção de spam/+1 duplicado por autor (1 confirmação positiva por perfil/alerta).
 --   5. Políticas estritas de Row Level Security (RLS) e publicação PowerSync.
 -- ============================================================================
 
@@ -300,6 +301,95 @@ CREATE INDEX IF NOT EXISTS idx_fila_pendentes
 CREATE INDEX IF NOT EXISTS idx_fila_escalada_pendentes
     ON public.fila_interacoes(escalada_uid)
     WHERE status = 'PENDENTE';
+
+CREATE INDEX IF NOT EXISTS idx_fila_autor_pendentes
+    ON public.fila_interacoes(autor_id_publico, criado_em DESC)
+    WHERE status = 'PENDENTE';
+
+-- Higienização idempotente de eventuais registros legados duplicados antes de criar o índice único:
+-- 1) Remove auto-confirmações (+1) em que o próprio autor do alerta tentou confirmar o seu alerta.
+DELETE FROM public.fila_interacoes c
+USING public.fila_interacoes a
+WHERE c.status = 'PENDENTE'
+  AND c.tipo = 'CONFIRMACAO_ALERTA'
+  AND c.alerta_ativo = true
+  AND a.status = 'PENDENTE'
+  AND a.tipo = 'ALERTA_SEGURANCA'
+  AND a.alerta_alvo_uid = c.alerta_alvo_uid
+  AND a.autor_id_publico = c.autor_id_publico;
+
+-- 2) Remove confirmações positivas (+1) repetidas do mesmo autor sobre o mesmo alerta, preservando a mais antiga.
+DELETE FROM public.fila_interacoes c1
+USING public.fila_interacoes c2
+WHERE c1.status = 'PENDENTE'
+  AND c1.tipo = 'CONFIRMACAO_ALERTA'
+  AND c1.alerta_ativo = true
+  AND c2.status = 'PENDENTE'
+  AND c2.tipo = 'CONFIRMACAO_ALERTA'
+  AND c2.alerta_ativo = true
+  AND c1.alerta_alvo_uid = c2.alerta_alvo_uid
+  AND c1.autor_id_publico = c2.autor_id_publico
+  AND (
+      c1.criado_em > c2.criado_em
+      OR (c1.criado_em = c2.criado_em AND c1.id::text > c2.id::text)
+  );
+
+-- Índice único parcial: no máximo 1 confirmação positiva ("Ainda está lá?") por perfil em cada alerta pendente
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fila_confirmacao_positiva_unica_por_autor
+    ON public.fila_interacoes(alerta_alvo_uid, autor_id_publico)
+    WHERE status = 'PENDENTE'
+      AND tipo = 'CONFIRMACAO_ALERTA'
+      AND alerta_ativo = true;
+
+-- Gatilho de integridade semântica contra spam de +1 pelo próprio criador ou duplicação de alerta ativo na mesma categoria
+CREATE OR REPLACE FUNCTION public.validar_contribuicao_unica_alerta()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.status = 'PENDENTE'
+       AND NEW.tipo = 'CONFIRMACAO_ALERTA'
+       AND NEW.alerta_ativo = true THEN
+        IF EXISTS (
+            SELECT 1
+            FROM public.fila_interacoes a
+            WHERE a.status = 'PENDENTE'
+              AND a.tipo = 'ALERTA_SEGURANCA'
+              AND a.alerta_alvo_uid = NEW.alerta_alvo_uid
+              AND a.autor_id_publico = NEW.autor_id_publico
+        ) THEN
+            RAISE EXCEPTION 'O autor que criou o alerta já contabiliza sua confirmação inicial.'
+                USING ERRCODE = '23505';
+        END IF;
+    ELSIF NEW.status = 'PENDENTE'
+          AND NEW.tipo = 'ALERTA_SEGURANCA' THEN
+        IF EXISTS (
+            SELECT 1
+            FROM public.fila_interacoes a
+            WHERE a.status = 'PENDENTE'
+              AND a.tipo = 'ALERTA_SEGURANCA'
+              AND a.escalada_uid = NEW.escalada_uid
+              AND a.categoria_alerta = NEW.categoria_alerta
+              AND a.autor_id_publico = NEW.autor_id_publico
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM public.fila_interacoes r
+                  WHERE r.status = 'PENDENTE'
+                    AND r.tipo = 'CONFIRMACAO_ALERTA'
+                    AND r.alerta_alvo_uid = a.alerta_alvo_uid
+                    AND r.alerta_ativo = false
+                    AND r.criado_em >= a.criado_em
+              )
+        ) THEN
+            RAISE EXCEPTION 'Este perfil já possui um alerta ativo nesta categoria para esta via.'
+                USING ERRCODE = '23505';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
 
 -- Habilitação obrigatória de RLS em public.fila_interacoes
 ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
