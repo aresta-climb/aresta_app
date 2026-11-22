@@ -34,5 +34,91 @@ class DespachanteFilaInteracoes {
   /// Garante a hidratação inicial da fila offline a partir do armazenamento local.
   Future<void> garantirCarregada() async {
     if (_carregada) return;
+    _carregada = true;
+    _filaPendente
+      ..clear()
+      ..addAll(await _armazenamentoFila.carregarItensPendentes());
+  }
+
+  /// Adiciona [novosItens] à fila (substituindo voto anterior da mesma via) e drena em [cliente].
+  Future<void> enfileirarEDespachar(
+    ClienteFilaInteracoes cliente,
+    List<ItemFilaInteracao> novosItens,
+  ) async {
+    await garantirCarregada();
+    for (final novo in novosItens) {
+      if (novo.tipo == TipoFilaInteracao.votoGrau) {
+        _filaPendente.removeWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.votoGrau &&
+              p.escaladaUid == novo.escaladaUid,
+        );
+      }
+    }
+    _filaPendente.addAll(novosItens);
+    await drenar(cliente);
+  }
+
+  /// Envia os itens pendentes para [cliente] com token JWT autenticado e reconciliação automática.
+  Future<void> drenar(ClienteFilaInteracoes cliente) async {
+    await garantirCarregada();
+    if (_filaPendente.isEmpty) return;
+
+    var perfilAtual = _repositorioCaderneta.obterPerfil();
+    if (perfilAtual.estaAutenticado && perfilAtual.accessToken == null) {
+      try {
+        perfilAtual = await _servicoAutenticacao
+            .garantirSessaoEPerfilSincronizados();
+      } catch (e, stackTrace) {
+        registrarFalhaRede(
+          'Não foi possível preparar sessão autenticada antes do envio comunitário',
+          e,
+          stackTrace,
+        );
+      }
+    }
+
+    final restantes = <ItemFilaInteracao>[];
+    for (var i = 0; i < _filaPendente.length; i++) {
+      var item = _filaPendente[i];
+      if (perfilAtual.estaAutenticado && validarUid(perfilAtual.autorIdPublico)) {
+        item = item.comAutor(
+          autorIdPublico: perfilAtual.autorIdPublico,
+          autorNomePublico: perfilAtual.autorNomePublico,
+        );
+      }
+
+      try {
+        await cliente.inserirInteracao(item, accessToken: perfilAtual.accessToken);
+      } catch (erroInicial, stackInicial) {
+        if (_ehConflitoDuplicado(erroInicial)) continue;
+        if (perfilAtual.estaAutenticado && _ehFalhaSessaoOuRls(erroInicial)) {
+          try {
+            final eh401 =
+                (erroInicial as ExcecaoComStatusHttp).codigoStatusHttp == 401;
+            perfilAtual = await _servicoAutenticacao
+                .garantirSessaoEPerfilSincronizados(
+                  forcarRenovacaoToken: eh401,
+                );
+            item = item.comAutor(
+              autorIdPublico: perfilAtual.autorIdPublico,
+              autorNomePublico: perfilAtual.autorNomePublico,
+            );
+            await cliente.inserirInteracao(
+              item,
+              accessToken: perfilAtual.accessToken,
+            );
+            continue;
+          } catch (erroRetentativa, stackRetentativa) {
+            if (_ehConflitoDuplicado(erroRetentativa)) continue;
+            registrarFalhaRede(
+              'Interação retida após reconciliar sessão/perfil (${item.tipo.codigoBanco})',
+              erroRetentativa,
+              stackRetentativa,
+            );
+          }
+        }
+      }
+    }
   }
 }
