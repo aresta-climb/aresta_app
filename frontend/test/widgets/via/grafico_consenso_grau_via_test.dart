@@ -29,12 +29,21 @@ void main() {
           ehBoulder: false,
         );
 
+    var deltaTocada = -99;
     await tester.pumpWidget(
       envolver(
         Column(
           children: [
             AnelConsensoGrauVia(apresentacao: apresentacaoInicial),
             BarrasDistribuicaoGrauVia(apresentacao: apresentacaoInicial),
+            SeletorPilulasVotoGrauVia(
+              pilulas: apresentacaoInicial.pilulasVoto,
+              aoSelecionarDelta: (d) => deltaTocada = d,
+            ),
+            const SeletorPilulasVotoGrauVia(
+              pilulas: [],
+              aoSelecionarDelta: print,
+            ),
           ],
         ),
       ),
@@ -42,6 +51,10 @@ void main() {
 
     expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
     expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
+    expect(find.byKey(const Key('pilula_voto_grau_0')), findsOneWidget);
+    expect(find.byKey(const Key('pilula_voto_grau_1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pilula_voto_grau_1')));
+    expect(deltaTocada, 1);
     expect(find.text('DISTRIBUIÇÃO DE VOTOS (10)'), findsOneWidget);
     expect(find.byKey(const Key('barra_delta_grau_-2')), findsOneWidget);
     expect(find.byKey(const Key('barra_delta_grau_0')), findsOneWidget);
@@ -163,7 +176,26 @@ void main() {
           body: SingleChildScrollView(
             child: SizedBox(
               width: 220,
-              child: BarrasDistribuicaoGrauVia(apresentacao: apresentacaoUnanime),
+              child: Column(
+                children: [
+                  BarrasDistribuicaoGrauVia(apresentacao: apresentacaoUnanime),
+                  SeletorPilulasVotoGrauVia(
+                    pilulas: ExtratorDetalhesTecnicosVia
+                        .construirApresentacaoConsenso(
+                          const ConsensoGrauVia(
+                            grauSugerido: '7a',
+                            totalVotos: 5,
+                            distribuicaoDeltas: {0: 5},
+                          ),
+                          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+                          ehBoulder: false,
+                          deltaVotoUsuario: 0,
+                        )
+                        .pilulasVoto,
+                    aoSelecionarDelta: (_) {},
+                  ),
+                ],
+              ),
             ),
           ),
         ),

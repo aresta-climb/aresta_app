@@ -297,6 +297,20 @@ class SeletorPilulasVotoGrauVia extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
+            const SizedBox(height: 1),
+            Text(
+              opcao.subtituloDelta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selecionada
+                    ? Colors.white.withValues(alpha: 0.88)
+                    : cores.ashGrey,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
