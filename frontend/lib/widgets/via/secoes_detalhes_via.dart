@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/extrator_detalhes_tecnicos_via.dart';
-import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../view/function_library/markdown_offline.dart';
 
 /// Faixa compacta declarativa (Dumb UI) de pílulas técnicas e parada da escalada,
@@ -52,11 +51,52 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
             runSpacing: 8,
             children: atributos
                 .map(
-                  (a) => buildOutlineStatCard(
-                    context,
-                    a.rotulo,
-                    a.valor,
-                    _resolverIcone(a.icone),
+                  (a) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cores.deepBasalt,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: cores.graniteEdge),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _resolverIcone(a.icone),
+                          size: 14,
+                          color: AppColors.brandColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '${a.rotulo}:',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: cores.ashGrey,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            a.valor,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: cores.chalkWhite,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
                 .toList(growable: false),
@@ -321,7 +361,7 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _TituloSecaoVia(
-            titulo: 'Notas da Comunidade (${notas.length})',
+            titulo: 'Betas da Comunidade (${notas.length})',
           ),
           const SizedBox(height: 10),
           ...notas.map((nota) {

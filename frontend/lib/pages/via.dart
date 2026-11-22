@@ -3,14 +3,15 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../navigation/funcoes_navegacao.dart';
+import '../theme/cores_app.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
 import '../widgets/via/bolha_alerta_seguranca_via.dart';
 
-/// Página declarativa (Dumb UI / MVVM) que exibe os detalhes técnicos, croqui interativo,
-/// consenso comunitário de grau, bolhas de alerta estilo Waze e caderneta de uma [Escalada],
+/// Página declarativa (Dumb UI / MVVM) que exibe o Passaporte unificado da via, croqui interativo,
+/// consenso comunitário com votação direta, bolhas de alerta com desfazer e dock de caderneta,
 /// delegando todos os comandos e estados ao [ViaViewModel].
 class ViaPage extends StatefulWidget {
   /// Escalada Protobuf exibida.
@@ -120,16 +121,40 @@ class _ViaPageState extends State<ViaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cores = context.colors;
+
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        final nome = _viewModel.nomeEscalada;
+        final podeVoltar =
+            ModalRoute.of(context)?.canPop == true || AppNav.canGoBack(context);
+        final subtituloTopo = widget.pico?.nome.isNotEmpty == true
+            ? widget.pico!.nome
+            : '';
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: buildCommonAppBar(
-            context,
-            nome.toUpperCase(),
+          appBar: AppBar(
+            backgroundColor: cores.deepBasalt,
+            elevation: 0,
+            leading: podeVoltar
+                ? IconButton(
+                    icon: Icon(Icons.arrow_back, color: cores.chalkWhite),
+                    onPressed: () => AppNav.back(context),
+                  )
+                : null,
+            title: subtituloTopo.isNotEmpty
+                ? Text(
+                    subtituloTopo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : null,
             actions: [
               if (_viewModel.podeReportarAlerta)
                 IconButton(
