@@ -87,4 +87,93 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
     _notificar();
   }
 
+  bool get _habilitado => controladorInteracoes.recursoHabilitadoNoAmbiente;
+
+  void _sincronizarViasDoMapa() {
+    if (!_habilitado) return;
+    final novosUids = <String>{};
+    for (final resolvido in _referenciasResolvidas.values) {
+      for (final esc in _coletarEscaladasDoAlvo(resolvido)) {
+        final uid = esc.uid.trim();
+        if (uid.isNotEmpty && _uidsJaSincronizados.add(uid)) {
+          novosUids.add(uid);
+        }
+      }
+    }
+    if (novosUids.isEmpty) return;
+    unawaited(
+      repositorioInteracoes.sincronizarEscaladasEmLote(novosUids).catchError((
+        Object e,
+      ) {
+        AppLogger.instance.logAviso(
+          'Sincronização em lote de alertas do mapa adiada: $e',
+        );
+      }),
+    );
+  }
+
+  void _notificar() {
+    if (!_descartado) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    final pendentes = _resolucoesPendentes.entries.toList(growable: false);
+    _resolucoesPendentes.clear();
+    for (final entrada in pendentes) {
+      entrada.value.timer.cancel();
+      unawaited(
+        confirmarAlerta(
+          entrada.value.escaladaUid,
+          entrada.key,
+          aindaEstaLa: false,
+        ),
+      );
+    }
+    repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
+    controladorInteracoes.interacoesAtivasNotifier.removeListener(_notificar);
+    super.dispose();
+  }
+
+  /// Retorna os alertas ativos visíveis de [escaladaUid] (excluindo janelas pendentes de Desfazer).
+  List<AlertaSegurancaVia> obterAlertasDaEscalada(String escaladaUid) {
+    if (!_habilitado || escaladaUid.trim().isEmpty) return const [];
+    return repositorioInteracoes
+        .obterDadosEscalada(escaladaUid.trim())
+        .alertasAtivos
+        .where((a) => !_resolucoesPendentes.containsKey(a.uid))
+        .toList(growable: false);
+  }
+
+  /// Determina o estado de permissão e deduplicação do usuário atual sobre [alerta] no mapa.
+  EstadoInteracaoAlertaUsuario estadoInteracaoDoAlerta(
+    AlertaSegurancaVia alerta,
+  ) => alerta.resolverEstadoParaUsuario(
+    estaAutenticado: repositorioInteracoes.usuarioEstaAutenticado,
+    autorIdPublicoUsuario: repositorioInteracoes.autorIdPublicoAtual,
+  );
+
+  /// Retorna todos os alertas ativos agregados das vias pertencentes a [setor].
+  List<AlertaSegurancaVia> obterAlertasDoSetor(Setor setor) {
+    if (!_habilitado) return const [];
+    final resultado = <AlertaSegurancaVia>[];
+    for (final esc in setor.escaladas) {
+      resultado.addAll(obterAlertasDaEscalada(esc.uid));
+    }
+    return List.unmodifiable(resultado);
+  }
+
+  /// Projeta todas as bolhas ativas nas coordenadas normalizadas `(relX, relY)` do [_mapa].
+  List<BolhaAlertaMapaApresentacao> get bolhasNoMapa {
+    if (!_habilitado || _mapa.larguraMapa <= 0 || _mapa.alturaMapa <= 0) {
+      return const [];
+    }
+    final poiPorUid = <String, Mapa_PontoDeInteresse>{
+      for (final p in _mapa.pontosDeInteresse)
+        if (p.uid.isNotEmpty) p.uid: p,
+    };
+  }
 }
