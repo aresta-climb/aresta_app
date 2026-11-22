@@ -262,7 +262,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('btn_dock_croqui_via')));
+    await tester.tap(find.text('Mapas Interativos (2)'));
     await tester.pumpAndSettle();
 
     expect(navIda.currentNode, isA<MapasCarrosselNode>());
@@ -310,7 +310,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('btn_dock_croqui_via')));
+    await tester.tap(find.text('Mapas Interativos (2)'));
     await tester.pumpAndSettle();
     expect(navVolta.currentNode, isA<PicoNode>());
   });

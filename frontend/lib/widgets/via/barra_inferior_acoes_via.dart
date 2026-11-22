@@ -4,15 +4,9 @@
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
 
-/// Barra inferior fixa ao alcance do polegar (*Thumb Dock*, Dumb UI) unificando o atalho
-/// do croqui interativo e o botão principal de registro de cadena/tentativa na `ViaPage`.
+/// Barra inferior fixa ao alcance do polegar (*Thumb Dock*, Dumb UI) exibindo a ação primária
+/// de registro de cadena ou tentativa alinhada com os cartões da `ViaPage`.
 class BarraInferiorAcoesVia extends StatelessWidget {
-  /// Indica se existe croqui interativo para exibir o atalho secundário `'Croqui'`.
-  final bool exibirBotaoCroqui;
-
-  /// Callback acionado ao tocar no atalho de croqui.
-  final VoidCallback aoAbrirCroqui;
-
   /// Indica se o botão principal de caderneta deve ser exibido.
   final bool exibirBotaoCaderneta;
 
@@ -28,8 +22,6 @@ class BarraInferiorAcoesVia extends StatelessWidget {
   /// Cria uma instância de [BarraInferiorAcoesVia].
   const BarraInferiorAcoesVia({
     super.key,
-    required this.exibirBotaoCroqui,
-    required this.aoAbrirCroqui,
     required this.exibirBotaoCaderneta,
     required this.possuiCadena,
     required this.rotuloBotaoCaderneta,
@@ -38,7 +30,7 @@ class BarraInferiorAcoesVia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!exibirBotaoCroqui && !exibirBotaoCaderneta) {
+    if (!exibirBotaoCaderneta) {
       return const SizedBox.shrink();
     }
     final cores = context.colors;
@@ -51,37 +43,6 @@ class BarraInferiorAcoesVia extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (exibirBotaoCroqui) ...[
-            OutlinedButton.icon(
-              key: const Key('btn_dock_croqui_via'),
-              onPressed: aoAbrirCroqui,
-              icon: Icon(
-                Icons.map_outlined,
-                size: 17,
-                color: cores.beastHide,
-              ),
-              label: Text(
-                'Croqui',
-                style: TextStyle(
-                  color: cores.chalkWhite,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: cores.caveShadow,
-                side: BorderSide(color: cores.graniteEdge),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            if (exibirBotaoCaderneta) const SizedBox(width: 10),
-          ],
           if (exibirBotaoCaderneta)
             Expanded(
               child: ElevatedButton.icon(
