@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../navigation/wrapper_navegacao_arvore.dart';
 import '../../theme/temas.dart';
 import '../autenticacao/servico_autenticacao.dart';
+import '../caderneta/cliente_cadenas_supabase.dart';
 import '../caderneta/repositorio_caderneta.dart';
 import '../editor_croqui.dart';
 import '../http/sync_service.dart';
@@ -32,7 +33,12 @@ Future<void> iniciarSmokeCi() async {
   await editor.loadFromDisk();
   final datasetRepo = DatasetRepository(editorDeCroqui: editor);
   final syncService = SyncService(datasetRepository: datasetRepo);
-  final repoCaderneta = RepositorioCadernetaLocal.instancia;
+  final repoCaderneta = RepositorioCadernetaLocal(
+    clienteCadenas: ClienteCadenasSupabase(
+      resolvedorBaseUrl: () => configuracao.uriBase.toString(),
+      resolvedorAnonKey: () => 'smoke-anon-key-ci',
+    ),
+  );
   final servicoAuth = ServicoAutenticacaoLocal(
     repositorio: repoCaderneta,
     obterUrlSupabase: () => configuracao.uriBase.toString(),

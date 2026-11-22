@@ -34,6 +34,8 @@ class ServidorSmokeCi {
 
   String _nomePerfilAtual = 'Escalador Smoke CI';
   String _autorIdPublicoAtual = 'autSmokeCi0001';
+  final Map<String, Map<String, dynamic>> _cadenasPorId =
+      <String, Map<String, dynamic>>{};
 
   ServidorSmokeCi._(
     this._servidor,
@@ -289,6 +291,45 @@ class ServidorSmokeCi {
         }
         await _responderJson(req.response, 200, <dynamic>[]);
         return;
+      }
+
+      if (caminho == '/rest/v1/cadenas') {
+        if (req.method == 'GET') {
+          await req.drain<void>();
+          await _responderJson(
+            req.response,
+            200,
+            _cadenasPorId.values.toList(growable: false),
+          );
+          return;
+        }
+        if (req.method == 'POST') {
+          final texto = await utf8.decoder.bind(req).join();
+          if (texto.trim().isNotEmpty) {
+            final decodificado = jsonDecode(texto);
+            final itens = decodificado is List<dynamic>
+                ? decodificado
+                : <dynamic>[decodificado];
+            for (final item in itens.whereType<Map<String, dynamic>>()) {
+              final id = (item['id'] as String?)?.trim() ?? '';
+              if (id.isNotEmpty) {
+                _cadenasPorId[id] = Map<String, dynamic>.from(item);
+              }
+            }
+          }
+          await _responderJson(req.response, 201, const <dynamic>[]);
+          return;
+        }
+        if (req.method == 'DELETE') {
+          await req.drain<void>();
+          final filtroId = req.uri.queryParameters['id'] ?? '';
+          if (filtroId.startsWith('eq.')) {
+            _cadenasPorId.remove(filtroId.substring(3));
+          }
+          req.response.statusCode = 204;
+          await req.response.close();
+          return;
+        }
       }
 
       if (caminho == '/auth/v1/user') {

@@ -115,6 +115,40 @@ void main() {
         final croqui = Croqui.fromBuffer(bytesCroqui);
         expect(croqui.picos, isNotEmpty);
 
+        // 4b. Serve CRUD em memória para /rest/v1/cadenas (sincronização da caderneta)
+        final reqUpsertCadena = await client.postUrl(
+          servidor.uriLocalHost.replace(
+            path: '/rest/v1/cadenas',
+            query: 'on_conflict=id',
+          ),
+        );
+        reqUpsertCadena.headers.contentType = ContentType.json;
+        reqUpsertCadena.write(jsonEncode(<Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'cad-smoke-1',
+            'user_id': 'usr_smoke_ci',
+            'escalada_uid': ServidorSmokeCi.uidEscaladaSmoke,
+            'data_ascensao': '2026-11-22T00:00:00.000Z',
+            'tipo_ascensao': 1,
+            'tipo_escalada': 1,
+            'tentativas': 1,
+            'notas_privadas': 'Smoke',
+            'criado_em': '2026-11-22T00:00:00.000Z',
+          },
+        ]));
+        final respUpsertCadena = await reqUpsertCadena.close();
+        await respUpsertCadena.drain<void>();
+        expect(respUpsertCadena.statusCode, 201);
+
+        final reqGetCadenas = await client.getUrl(
+          servidor.uriLocalHost.replace(path: '/rest/v1/cadenas'),
+        );
+        final respGetCadenas = await reqGetCadenas.close();
+        final listaCadenas = jsonDecode(
+          await utf8.decoder.bind(respGetCadenas).join(),
+        ) as List<dynamic>;
+        expect(listaCadenas, hasLength(1));
+
         // 5. Rejeita token errado em /__smoke__/relatorio e aceita o correto
         final reqProibido = await client.postUrl(
           servidor.uriLocalHost.replace(path: '/__smoke__/relatorio'),
