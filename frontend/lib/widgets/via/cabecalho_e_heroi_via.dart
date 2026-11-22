@@ -257,4 +257,94 @@ class CartaoGrauVia extends StatelessWidget {
   /// Valor textual do grau oficial, ou `null` quando indefinido.
   final String? grauOficial;
 
+  /// Subtítulo contextual do grau oficial.
+  final String complementoGrauOficial;
+
+  /// Apresentação pré-calculada do consenso comunitário (quando habilitado).
+  final ApresentacaoConsensoGrauVia? apresentacaoConsenso;
+
+  /// Cria uma instância de [CartaoGrauVia].
+  const CartaoGrauVia({
+    super.key,
+    required this.rotuloGrauOficial,
+    required this.grauOficial,
+    required this.complementoGrauOficial,
+    this.apresentacaoConsenso,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    final consenso = apresentacaoConsenso;
+
+    final blocoOficial = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          rotuloGrauOficial,
+          style: TextStyle(
+            color: cores.ashGrey,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          grauOficial ?? '—',
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          complementoGrauOficial,
+          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: consenso == null
+          ? blocoOficial
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LayoutBuilder(
+                  builder: (context, restricoes) {
+                    final empilhar = restricoes.maxWidth < 260;
+                    final blocoComunidade = _BlocoConsensoComunidade(
+                      apresentacao: consenso,
+                    );
+                    if (empilhar) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          blocoOficial,
+                          Divider(color: cores.graniteEdge, height: 24),
+                          blocoComunidade,
+                        ],
+                      );
+                    }
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: blocoOficial),
+                  ],
+                ),
+              );
+          }),
+        ],
+      ),
+    );
+  }
 }
