@@ -54,7 +54,7 @@ void main() {
   );
 
   test(
-    'EstadoCroquiVia.resolver mapeia miniaturas próprias (com e sem pico) e referências externas',
+    'EstadoCroquiVia.resolver mapeia miniaturas próprias, mapas de setor referenciados e rótulo da linha',
     () {
       final viaPropria = Escalada(
         viaEsportiva: ViaEsportiva(nome: 'Via Própria'),
@@ -72,26 +72,47 @@ void main() {
         setor: Setor(nome: 'Setor Sol'),
         grupo: Grupo(nome: 'Grupo Leste'),
       );
+      expect(semPico.possuiCroqui, isTrue);
       expect(semPico.aspectRatioMiniatura, 2.0);
       expect(semPico.itensCarrosselMiniatura.single.setorContextNome, 'Setor Sol');
       expect(semPico.itensCarrosselMiniatura.single.grupoContextNome, 'Grupo Leste');
 
-      final pico = Pico(
-        nome: 'Pico Sol',
-        setoresOuGrupos: [
-          SetorOuGrupo(
-            setor: ArquivoSetor(
-              conteudo: Setor(nome: 'Setor Sol', escaladas: [viaPropria]),
-            ),
-          ),
+      final viaNoMapaSetor = Escalada(
+        uid: 'viaSetorFoto01',
+        viaEsportiva: ViaEsportiva(nome: 'Esticãozinho'),
+      );
+      final mapaDoSetor = Mapa(
+        caminhoImagemMapa: 'mapas/setor_onca.webp',
+        larguraMapa: 1200,
+        alturaMapa: 800,
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(uid: 'pt4', rotulo: '4'),
+        ],
+        referencias: [
+          Mapa_Referencia(alvoUid: 'viaSetorFoto01', pontosUids: ['pt4']),
         ],
       );
-      final comPico = EstadoCroquiVia.resolver(
-        escalada: viaPropria,
-        pico: pico,
-        setor: Setor(nome: 'Setor Sol'),
+      final setorOnca = Setor(
+        uid: 'setorOncaUid01',
+        nome: 'Setor Onça',
+        escaladas: [viaNoMapaSetor],
+        mapas: [mapaDoSetor],
       );
-      expect(comPico.mapasMiniatura, hasLength(1));
+      final pico = Pico(
+        nome: 'Serra do Cipó',
+        setoresOuGrupos: [
+          SetorOuGrupo(setor: ArquivoSetor(conteudo: setorOnca)),
+        ],
+      );
+      final resolvidoSetor = EstadoCroquiVia.resolver(
+        escalada: viaNoMapaSetor,
+        pico: pico,
+        setor: setorOnca,
+      );
+      expect(resolvidoSetor.possuiCroqui, isTrue);
+      expect(resolvidoSetor.mapasMiniatura, hasLength(1));
+      expect(resolvidoSetor.aspectRatioMiniatura, 1.5);
+      expect(resolvidoSetor.rotuloLinhaNoMapa, '4');
     },
   );
 }

@@ -521,4 +521,52 @@ void main() {
     // Notificação após dispose não lança FlutterError
     repoFake.semearDados(uidVia, const DadosComunidadeVia.vazio());
   });
+
+  test('suporta voto direto nas pílulas de grau e janela de desfazer na resolução de alerta', () async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    const uidVia = 'viaInterativa01';
+
+    final vm = ViaViewModel(
+      escalada: Escalada(
+        uid: uidVia,
+        viaEsportiva: ViaEsportiva(
+          nome: 'Aresta Solar',
+          dificuldade: GrauVia_GrauVia.BR_7A,
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+      duracaoJanelaDesfazer: const Duration(milliseconds: 60),
+    );
+
+    // 1. Sem autenticação, votar retorna requerAutenticacao
+    repoFake.autenticadoSimulado = false;
+    expect(
+      await vm.votarGrauComunidade(1),
+      ResultadoVotoGrauVia.requerAutenticacao,
+    );
+
+    // 2. Autenticado, registra voto +1 (7b) e destaca pílula selecionada
+    repoFake.autenticadoSimulado = true;
+    expect(await vm.votarGrauComunidade(1), ResultadoVotoGrauVia.registrado);
+    expect(vm.apresentacaoConsenso?.deltaVotoUsuario, 1);
+    expect(
+      vm.apresentacaoConsenso?.pilulasVoto.firstWhere((p) => p.delta == 1).selecionada,
+      isTrue,
+    );
+
+    // 3. Falha determinística ao votar retorna ResultadoVotoGrauVia.falha
+    repoFake.erroSimulado = StateError('Erro de voto');
+    expect(await vm.votarGrauComunidade(0), ResultadoVotoGrauVia.falha);
+    repoFake.erroSimulado = null;
+
+    // 4. Resolver alerta com janela de Desfazer: ocultar imediatamente e restaurar ao desfazer
+    await vm.reportarAlerta(CategoriaAlertaSeguranca.abelhasInsetos);
+    final alertaId = vm.alertasAtivos.single.uid;
+
+    vm.iniciarResolucaoAlertaComDesfazer(alertaId);
+    expect(vm.alertasAtivos, isEmpty);
+    expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, hasLength(1));
+
+    vm.dispose();
+  });
 }
