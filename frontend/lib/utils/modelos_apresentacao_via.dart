@@ -193,4 +193,102 @@ class ApresentacaoConsensoGrauVia {
 
   /// Faixas ordenadas (`-2` a `+2`) prontas para renderização sem cálculos na UI.
   final List<FaixaDistribuicaoGrauApresentacao> faixasDistribuicao;
+
+  /// Cria uma instância constante de [ApresentacaoConsensoGrauVia].
+  const ApresentacaoConsensoGrauVia({
+    required this.possuiVotos,
+    required this.grauSugerido,
+    required this.subtituloTendencia,
+    required this.tituloDistribuicao,
+    required this.votosSuaves,
+    required this.votosJustos,
+    required this.votosDuros,
+    required this.faixasDistribuicao,
+  });
+
+  /// Cria o estado inicial sem votos para vias ainda não avaliadas.
+  const ApresentacaoConsensoGrauVia.semVotos()
+    : possuiVotos = false,
+      grauSugerido = null,
+      subtituloTendencia = 'Registre sua ascensão para avaliar',
+      tituloDistribuicao = '',
+      votosSuaves = 0,
+      votosJustos = 0,
+      votosDuros = 0,
+      faixasDistribuicao = const [];
+
+  /// Constrói a apresentação completa a partir do agregado [ConsensoGrauVia].
+  factory ApresentacaoConsensoGrauVia.deConsenso(
+    ConsensoGrauVia consenso, {
+    required int? codigoGrauOficial,
+    required bool ehBoulder,
+  }) {
+    if (!consenso.possuiVotos) {
+      return const ApresentacaoConsensoGrauVia.semVotos();
+    }
+
+    var votosSuaves = 0;
+    var votosJustos = 0;
+    var votosDuros = 0;
+    consenso.distribuicaoDeltas.forEach((delta, contagem) {
+      if (delta < 0) {
+        votosSuaves += contagem;
+      } else if (delta == 0) {
+        votosJustos += contagem;
+      } else {
+        votosDuros += contagem;
+      }
+    });
+
+    final faixas = <FaixaDistribuicaoGrauApresentacao>[];
+    if (consenso.distribuicaoDeltas.isNotEmpty) {
+      var maiorContagem = 1;
+      for (final delta in _deltasOrdenados) {
+        final qtd = consenso.distribuicaoDeltas[delta] ?? 0;
+        if (qtd > maiorContagem) maiorContagem = qtd;
+      }
+
+      for (final delta in _deltasOrdenados) {
+        final contagem = consenso.distribuicaoDeltas[delta] ?? 0;
+        faixas.add(
+          FaixaDistribuicaoGrauApresentacao(
+            delta: delta,
+            rotulo: _formatarRotuloFaixa(
+              delta,
+              codigoGrauOficial: codigoGrauOficial,
+              ehBoulder: ehBoulder,
+            ),
+            contagem: contagem,
+            fatorLargura: contagem / maiorContagem,
+            ehModa: contagem == maiorContagem && contagem > 0,
+          ),
+        );
+      }
+    }
+
+    return ApresentacaoConsensoGrauVia(
+      possuiVotos: true,
+      grauSugerido: consenso.grauSugerido,
+      subtituloTendencia:
+          consenso.resumoTendencia ?? '${consenso.totalVotos} avaliações',
+      tituloDistribuicao: 'DISTRIBUIÇÃO DE VOTOS (${consenso.totalVotos})',
+      votosSuaves: votosSuaves,
+      votosJustos: votosJustos,
+      votosDuros: votosDuros,
+      faixasDistribuicao: List.unmodifiable(faixas),
+    );
+  }
+
+  static String _formatarRotuloFaixa(
+    int delta, {
+    required int? codigoGrauOficial,
+    required bool ehBoulder,
+  }) {
+    final textoDelta = delta > 0 ? '+$delta' : '$delta';
+    final codigo = deslocarCodigoGrau(
+      codigoGrauOficial,
+      delta,
+      ehBoulder: ehBoulder,
+    );
+  }
 }
