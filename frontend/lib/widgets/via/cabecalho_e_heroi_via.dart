@@ -89,50 +89,50 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
                   ),
                 ),
               ),
-              if (ehDestaque)
-                Container(
-                  key: const Key('selo_via_classica'),
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _corEstrelaClassica.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _corEstrelaClassica.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: 15,
-                        color: _corEstrelaClassica,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'CLÁSSICA',
-                        style: TextStyle(
-                          color: Color(0xFFFDE68A),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ],
+            if (ehDestaque)
+              Container(
+                key: const Key('selo_via_classica'),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _corEstrelaClassica.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _corEstrelaClassica.withValues(alpha: 0.55),
                   ),
                 ),
-            ],
-          ),
-          if (setor != null && setor!.nome.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            LinhaLocalizacaoSetor(
-              cragId: cragId,
-              setor: setor!,
-              grupo: grupo,
-              escalada: escalada,
-            ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      size: 15,
+                      color: _corEstrelaClassica,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'CLÁSSICA',
+                      style: TextStyle(
+                        color: Color(0xFFFDE68A),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
+        ),
+        if (setor != null && setor!.nome.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          LinhaLocalizacaoSetor(
+            cragId: cragId,
+            setor: setor!,
+            grupo: grupo,
+            escalada: escalada,
+          ),
         ],
+      ],
     );
   }
 }
@@ -316,6 +316,18 @@ class CartaoGrauVia extends StatelessWidget {
         ),
       ],
     );
+
+    if (consenso == null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cores.deepBasalt.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cores.graniteEdge),
+        ),
+        child: blocoOficial,
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
