@@ -15,64 +15,10 @@ import '../../utils/formatador_escalada.dart';
 import '../../utils/extrator_detalhes_tecnicos_via.dart';
 
 export '../../utils/extrator_detalhes_tecnicos_via.dart';
-/// Resumo limpo e estruturado de uma enfiada individual em uma `ViaMultiplasEnfiadas`.
-@immutable
-class ResumoEnfiadaVia {
-  /// Índice sequencial da enfiada (iniciando em 1).
-  final int numero;
 
-  /// Título combinando o número e o nome opcional da enfiada.
-  final String titulo;
-
-  /// Grau formatado da enfiada, quando definido.
-  final String? grau;
-
-  /// Extensão formatada em metros, quando definida.
-  final String? extensao;
-
-  /// Proteções fixas no formato `X+Y`, quando presentes.
-  final String? protecoes;
-
-  /// Recomendação de peças móveis da enfiada, quando presente.
-  final String? equipamentoMovel;
-
-  /// Descrição específica da enfiada, quando presente.
-  final String? descricao;
-
-  /// Cria uma instância imutável de [ResumoEnfiadaVia].
-  const ResumoEnfiadaVia({
-    required this.numero,
-    required this.titulo,
-    this.grau,
-    this.extensao,
-    this.protecoes,
-    this.equipamentoMovel,
-    this.descricao,
-  });
-}
-
-/// Item clicável de mídia externa ou vídeo demonstrativo de beta da via.
-@immutable
-class ItemMidiaBetaVia {
-  /// Título descritivo do vídeo, postagem ou artigo.
-  final String titulo;
-
-  /// URL de destino validada.
-  final String url;
-
-  /// Rótulo amigável da plataforma de origem (ex.: `'YouTube'`, `'Instagram'`, `'Blog'`, `'Vídeo'`).
-  final String origemRotulo;
-
-  /// Cria uma instância imutável de [ItemMidiaBetaVia].
-  const ItemMidiaBetaVia({
-    required this.titulo,
-    required this.url,
-    required this.origemRotulo,
-  });
-}
-
-/// ViewModel (MVVM) responsável por toda a lógica de apresentação, extração técnica Protobuf,
-/// consenso de graduação e alertas de segurança estilo Waze da `ViaPage`.
+/// ViewModel (MVVM) responsável pelo estado reativo, comandos de negócio (compartilhamento,
+/// Pix, links externos, telemetria de croqui e alertas estilo Waze) e modelos de apresentação
+/// imutáveis consumidos pela Dumb UI da `ViaPage`.
 class ViaViewModel extends ChangeNotifier {
   /// Escalada Protobuf exibida na página.
   final Escalada escalada;
@@ -193,30 +139,6 @@ class ViaViewModel extends ChangeNotifier {
         return '';
     }
   }
-
-  /// Indica se a linha é marcada como clássica/destaque do setor.
-  bool get ehDestaque {
-    switch (escalada.whichTipo()) {
-      case Escalada_Tipo.viaEsportiva:
-        return escalada.viaEsportiva.destaque;
-      case Escalada_Tipo.viaMovel:
-        return escalada.viaMovel.destaque;
-      case Escalada_Tipo.boulder:
-        return escalada.boulder.destaque;
-      case Escalada_Tipo.viaMultiplasEnfiadas:
-        return escalada.viaMultiplasEnfiadas.destaque;
-      case Escalada_Tipo.highline:
-        return escalada.highline.destaque;
-      case Escalada_Tipo.notSet:
-        return false;
-    }
-  }
-
-  /// Rótulo do bloco de grau oficial do conquistador.
-  String get rotuloGrauOficial =>
-      escalada.whichTipo() == Escalada_Tipo.viaMultiplasEnfiadas
-      ? 'GRAU MÁXIMO'
-      : 'GRAU OFICIAL';
 
   /// Grau oficial formatado (ou `'Projeto'`), retornando `null` quando indefinido ou em highline.
   String? get grauOficialExibicao {
