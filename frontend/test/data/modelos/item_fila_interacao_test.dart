@@ -271,7 +271,97 @@ void main() {
           alertaAtivo: true,
           criadoEm: t2,
         ),
-          ];
+        // Pedro confirma duas vezes — só deve somar 1 vez (total = 2)
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: pedro,
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'viaCriadaPorMi',
+          alertaAlvoUid: 'alertaMeu00001',
+          alertaAtivo: true,
+          criadoEm: t2,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: pedro,
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'viaCriadaPorMi',
+          alertaAlvoUid: 'alertaMeu00001',
+          alertaAtivo: true,
+          criadoEm: t3,
+        ),
+        // Pedro cria alerta na via 2, eu confirmo (+1), e depois é resolvido
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: pedro,
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'viaConfirmada1',
+          alertaAlvoUid: 'alertaPedro002',
+          categoriaAlerta: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          detalhe: 'Bloco solto',
+          criadoEm: t1,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: eu,
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'viaConfirmada1',
+          alertaAlvoUid: 'alertaPedro002',
+          alertaAtivo: true,
+          criadoEm: t2,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: pedro,
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'viaConfirmada1',
+          alertaAlvoUid: 'alertaPedro002',
+          alertaAtivo: false,
+          criadoEm: t3,
+        ),
+      ];
+
+      final dadosVia1 = consolidarItensFilaEmDadosComunidade(
+        eventos.where((e) => e.escaladaUid == 'viaCriadaPorMi'),
+        ehBoulder: false,
+      );
+      expect(dadosVia1.alertasAtivos.single.confirmacoesAtivas, 2);
+
+      final meus = consolidarAlertasContribuidosPeloAutor(
+        eventos,
+        autorIdPublico: eu,
+      );
+      expect(meus, hasLength(3));
+      // Ativos vêm primeiro, ordenados do mais recente para o mais antigo
+      expect(meus[0].alerta.uid, 'alertaRecente3');
+      expect(meus[1].alerta.uid, 'alertaMeu00001');
+      expect(meus[1].papel, PapelContribuicaoAlerta.criadoPorMim);
+      expect(meus[1].ativo, isTrue);
+      expect(meus[1].alerta.confirmacoesAtivas, 2);
+
+      expect(meus[2].alerta.uid, 'alertaPedro002');
+      expect(meus[2].papel, PapelContribuicaoAlerta.confirmadoPorMim);
+      expect(meus[2].ativo, isFalse);
+
+      expect(
+        consolidarAlertasContribuidosPeloAutor(eventos, autorIdPublico: '   '),
+        isEmpty,
+      );
+
+      final sql = File(
+        '../docs/arquitetura/sql/supabase_contas_cadenas_interacoes.sql',
+      ).readAsStringSync();
+      expect(
+        sql,
+        contains('DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima"'),
+      );
+      expect(
+        sql.contains('CREATE POLICY "fila_interacoes_seguranca_anonima"'),
+        isFalse,
+      );
+      expect(
+        sql,
+        contains('REVOKE ALL ON public.fila_interacoes FROM anon;'),
+      );
+      expect(
+        sql,
+        contains('idx_fila_confirmacao_positiva_unica_por_autor'),
+      );
     });
   });
 }
