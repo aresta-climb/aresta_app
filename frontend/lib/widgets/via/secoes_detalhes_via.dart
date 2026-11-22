@@ -7,7 +7,8 @@ import '../../utils/extrator_detalhes_tecnicos_via.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../view/function_library/markdown_offline.dart';
 
-/// Grade responsiva declarativa (Dumb UI) de especificações técnicas e ancoragem da via.
+/// Faixa compacta declarativa (Dumb UI) de pílulas técnicas e parada da escalada,
+/// eliminando caixas largas semivazias em vias esparsas.
 class GradeAtributosTecnicosVia extends StatelessWidget {
   /// Lista de atributos técnicos extraídos pelo `ViaViewModel`.
   final List<AtributoTecnicoVia> atributos;
@@ -42,64 +43,48 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
     }
     final cores = context.colors;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (atributos.isNotEmpty)
-            LayoutBuilder(
-              builder: (context, restricoes) {
-                final larguraTotal = restricoes.maxWidth;
-                final usarDuasColunas = larguraTotal >= 250;
-                final larguraItem = usarDuasColunas
-                    ? (larguraTotal - 12) / 2
-                    : larguraTotal;
-
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: atributos
-                      .map(
-                        (a) => SizedBox(
-                          width: larguraItem,
-                          child: buildOutlineStatCard(
-                            context,
-                            a.rotulo,
-                            a.valor,
-                            _resolverIcone(a.icone),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-          if (tipoAncoragem != null) ...[
-            if (atributos.isNotEmpty) const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: cores.caveShadow,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cores.graniteEdge),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.anchor_rounded, size: 18, color: cores.beastHide),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Ancoragem: $tipoAncoragem',
-                      style: TextStyle(color: cores.chalkWhite, fontSize: 13),
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (atributos.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: atributos
+                .map(
+                  (a) => buildOutlineStatCard(
+                    context,
+                    a.rotulo,
+                    a.valor,
+                    _resolverIcone(a.icone),
                   ),
-                ],
-              ),
+                )
+                .toList(growable: false),
+          ),
+        if (tipoAncoragem != null) ...[
+          if (atributos.isNotEmpty) const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: cores.deepBasalt,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: cores.graniteEdge),
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(Icons.anchor_rounded, size: 16, color: cores.beastHide),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ancoragem: $tipoAncoragem',
+                    style: TextStyle(color: cores.chalkWhite, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
