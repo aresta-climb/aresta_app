@@ -339,12 +339,89 @@ class CartaoGrauVia extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: blocoOficial),
-                  ],
+                          VerticalDivider(
+                            color: cores.graniteEdge,
+                            width: 24,
+                            thickness: 1,
+                          ),
+                          Expanded(child: blocoComunidade),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-          }),
-        ],
-      ),
+                if (consenso.possuiVotos &&
+                    consenso.faixasDistribuicao.isNotEmpty) ...[
+                  Divider(color: cores.graniteEdge, height: 24),
+                  BarrasDistribuicaoGrauVia(apresentacao: consenso),
+                ],
+              ],
+            ),
     );
   }
+}
+
+class _BlocoConsensoComunidade extends StatelessWidget {
+  final ApresentacaoConsensoGrauVia apresentacao;
+
+  const _BlocoConsensoComunidade({required this.apresentacao});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'CONSENSO DA COMUNIDADE',
+          style: TextStyle(
+            color: cores.rustIron,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (apresentacao.possuiVotos)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnelConsensoGrauVia(apresentacao: apresentacao),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  apresentacao.grauSugerido!,
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            'Sem votos',
+            style: TextStyle(
+              color: cores.ashGrey,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        const SizedBox(height: 4),
+        Text(
+          apresentacao.subtituloTendencia,
+          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+/// Seção declarativa (Dumb UI) que renderiza `MapaThumbnail` ou o botão `'VER NO CROQUI INTERATIVO'`.
+class SecaoMapaCroquiVia extends StatelessWidget {
+  /// Estado pré-resolvido de mapas e referências da escalada.
+  final EstadoCroquiVia estadoCroqui;
 }
