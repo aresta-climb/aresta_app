@@ -262,5 +262,72 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
     if (resolvido.setor != null) {
       return resolvido.setor!.escaladas;
     }
+    if (resolvido.grupo != null) {
+      return [
+        for (final s in resolvido.grupo!.setores)
+          if (s.hasConteudo()) ...s.conteudo.escaladas,
+      ];
+    }
+    return const [];
+  }
+
+  static (double, double)? _resolverAncoraReferencia(
+    Mapa_Referencia ref,
+    Map<String, Mapa_PontoDeInteresse> poiPorUid,
+  ) {
+    for (final uid in ref.pontosUids) {
+      final poi = poiPorUid[uid];
+      if (poi == null) continue;
+      final ancora = _extrairCoordenadaAncora(poi);
+      if (ancora != null) return ancora;
+    }
+    return null;
+  }
+
+  static (double, double)? _extrairCoordenadaAncora(
+    Mapa_PontoDeInteresse ponto,
+  ) {
+    switch (ponto.whichTipoArea()) {
+      case Mapa_PontoDeInteresse_TipoArea.circulo:
+        return (ponto.circulo.x.toDouble(), ponto.circulo.y.toDouble());
+      case Mapa_PontoDeInteresse_TipoArea.quadrado:
+        return (ponto.quadrado.x.toDouble(), ponto.quadrado.y.toDouble());
+      case Mapa_PontoDeInteresse_TipoArea.retangulo:
+        return (ponto.retangulo.x.toDouble(), ponto.retangulo.y.toDouble());
+      case Mapa_PontoDeInteresse_TipoArea.poligono:
+        final coords = ponto.poligono.coordenadas;
+        if (coords.length < 2) return null;
+        var somaX = 0.0;
+        var somaY = 0.0;
+        final totalVertices = coords.length ~/ 2;
+        for (var i = 0; i < totalVertices * 2; i += 2) {
+          somaX += coords[i];
+          somaY += coords[i + 1];
+        }
+        return (somaX / totalVertices, somaY / totalVertices);
+      case Mapa_PontoDeInteresse_TipoArea.linha:
+        final linha = ponto.linha;
+        if (linha.hasCompilado()) {
+          for (final m in linha.compilado.marcadores) {
+            if (m.tipo == NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR ||
+                m.tipo == NoTrajeto_TipoNo.INICIO_AGACHADO) {
+              return (m.x.toDouble(), m.y.toDouble());
+            }
+          }
+          if (linha.compilado.hasCaixaDelimitadora()) {
+            return (
+              linha.compilado.caixaDelimitadora.x.toDouble(),
+              linha.compilado.caixaDelimitadora.y.toDouble(),
+            );
+          }
+        }
+        if (linha.hasConteudo() && linha.conteudo.nos.isNotEmpty) {
+          final primeiro = linha.conteudo.nos.first;
+          return (primeiro.x.toDouble(), primeiro.y.toDouble());
+        }
+        return null;
+      case Mapa_PontoDeInteresse_TipoArea.notSet:
+        return null;
+    }
   }
 }
