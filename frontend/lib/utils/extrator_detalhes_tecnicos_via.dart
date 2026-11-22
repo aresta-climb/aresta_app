@@ -179,6 +179,103 @@ abstract final class ExtratorDetalhesTecnicosVia {
           v.quantidadeCosturasIntermediarias,
           v.quantidadeEquipamentosParada,
         );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.duracao,
+          'DURAÇÃO',
+          _formatarEnumCodigo(v.duracao.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.modalidade,
+          'TIPO',
+          _formatarEnumSimples(v.tipoViaMultiplasEnfiadas.name),
+        );
+      case Escalada_Tipo.highline:
+        final v = escalada.highline;
+        _adicionarMetros(itens, TipoIconeAtributoVia.distancia, 'DISTÂNCIA', v.distancia);
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'ALTURA', v.altura);
+        if (v.exposicao > 0) {
+          itens.add(
+            AtributoTecnicoVia(
+              icone: TipoIconeAtributoVia.exposicao,
+              rotulo: 'EXPOSIÇÃO',
+              valor: '${v.exposicao}',
+            ),
+          );
+        }
+      case Escalada_Tipo.notSet:
+        break;
+    }
+    return List.unmodifiable(itens);
+  }
+
+  /// Extrai as seções textuais e recomendações de equipamento da [escalada].
+  static List<SecaoTextoVia> extrairSecoesTexto(Escalada escalada) {
+    final secoes = <SecaoTextoVia>[];
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        _adicionarTexto(secoes, 'Descrição', escalada.viaEsportiva.descricao, true);
+      case Escalada_Tipo.viaMovel:
+        _adicionarTexto(secoes, 'Descrição', escalada.viaMovel.descricao, true);
+        _adicionarTexto(secoes, 'Peças Móveis', escalada.viaMovel.protecoesMoveis, false);
+      case Escalada_Tipo.boulder:
+        _adicionarTexto(secoes, 'Descrição', escalada.boulder.descricao, true);
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        _adicionarTexto(
+          secoes,
+          'Descrição',
+          escalada.viaMultiplasEnfiadas.descricao,
+          true,
+        );
+        _adicionarTexto(
+          secoes,
+          'Rack & Equipamento',
+          escalada.viaMultiplasEnfiadas.equipamentoRecomendado,
+          false,
+        );
+      case Escalada_Tipo.highline:
+        _adicionarTexto(secoes, 'Descrição do Acesso', escalada.highline.descricaoAcesso, true);
+        _adicionarTexto(
+          secoes,
+          'Descrição da Ancoragem',
+          escalada.highline.descricaoAncoragem,
+          true,
+        );
+        _adicionarTexto(secoes, 'Descrição', escalada.highline.descricao, true);
+      case Escalada_Tipo.notSet:
+        break;
+    }
+    return List.unmodifiable(secoes);
+  }
+
+  /// Extrai a lista estruturada de enfiadas em vias de múltiplas enfiadas.
+  static List<ResumoEnfiadaVia> extrairEnfiadas(Escalada escalada) {
+    if (escalada.whichTipo() != Escalada_Tipo.viaMultiplasEnfiadas) {
+      return const [];
+    }
+    final brutas = escalada.viaMultiplasEnfiadas.enfiadas;
+    final resultado = <ResumoEnfiadaVia>[];
+    for (var i = 0; i < brutas.length; i++) {
+      final enf = brutas[i];
+      final numero = i + 1;
+      final nome = obterNomeEscalada(enf, padrao: '').trim();
+      final titulo = nome.isNotEmpty ? 'Enfiada $numero • $nome' : 'Enfiada $numero';
+      final grau = obterTextoGrauEscalada(enf);
+      resultado.add(
+        ResumoEnfiadaVia(
+          numero: numero,
+          titulo: titulo,
+          grau: grau.isNotEmpty ? grau : null,
+          extensao: _extrairExtensaoEnfiada(enf),
+        ),
+      );
     }
   }
 }
