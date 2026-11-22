@@ -7,11 +7,13 @@ import 'package:frontend/aresta_api/proto/generated/beta.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import '../../mocks/mock_telemetria.dart';
 import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 import '../../services/plataforma_lancador_url_fake.dart';
 
@@ -432,8 +434,10 @@ void main() {
     expect(vm.exibirRecursosComunidade, isFalse);
     expect(vm.podeReportarAlerta, isFalse);
     expect(vm.consensoGrau, isNull);
+    expect(vm.apresentacaoConsenso, isNull);
     expect(vm.alertasAtivos, isEmpty);
     expect(vm.comentariosComunidade, isEmpty);
+    expect(vm.notasComunidadeApresentacao, isEmpty);
 
     // Ativar flag e alternar preferência dispara sincronização (inclusive tratando falha sem crash)
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
@@ -446,7 +450,45 @@ void main() {
     expect(vm.exibirRecursosComunidade, isTrue);
     expect(vm.podeReportarAlerta, isTrue);
     expect(vm.consensoGrau?.grauSugerido, '7b');
+    expect(vm.apresentacaoConsenso?.votosDuros, 9);
     expect(vm.comentariosComunidade, hasLength(1));
+    expect(
+      vm.notasComunidadeApresentacao.single.cabecalhoAutorData,
+      'Mariana • 19/11/2026',
+    );
+
+    // Comandos de compartilhamento, telemetria de croqui e resolução de croqui no ViewModel
+    String? linkCompartilhado;
+    final telemetriaFake = MockTelemetryService();
+    final vmComServicos = ViaViewModel(
+      escalada: Escalada(
+        uid: uidVia,
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Comunitária',
+          dificuldade: GrauVia_GrauVia.BR_7A,
+        ),
+        mapas: [
+          Mapa(
+            caminhoImagemMapa: 'mapas/proprio.webp',
+            larguraMapa: 800,
+            alturaMapa: 400,
+          ),
+        ],
+      ),
+      repositorioInteracoes: repoFake,
+      telemetria: telemetriaFake,
+      servicoCompartilhamento: ServicoCompartilhamento(
+        executorCompartilhamento: (texto) async => linkCompartilhado = texto,
+      ),
+    );
+    vmComServicos.registrarVisualizacaoCroqui(cragId: 'crag1');
+    await vmComServicos.compartilharEscalada(cragId: 'crag1');
+    expect(linkCompartilhado, contains(uidVia));
+    expect(
+      vmComServicos.resolverEstadoCroqui().aspectRatioMiniatura,
+      2.0,
+    );
+    vmComServicos.dispose();
 
     expect(
       await vm.reportarAlerta(

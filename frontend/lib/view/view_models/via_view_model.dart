@@ -227,6 +227,58 @@ class ViaViewModel extends ChangeNotifier {
       dataAbertura != null ||
       dataManutencao != null;
 
+  /// Chave Pix para apoio à manutenção da via, quando cadastrada.
+  String? get chavePixManutencao =>
+      ExtratorDetalhesTecnicosVia.extrairChavePix(escalada);
+
+  /// Resolve os mapas e itens de carrossel do croqui para a Dumb UI.
+  EstadoCroquiVia resolverEstadoCroqui({
+    Pico? pico,
+    Setor? setor,
+    Grupo? grupo,
+    DatasetResolver? resolvedorExterno,
+  }) {
+    return ExtratorDetalhesTecnicosVia.resolverEstadoCroqui(
+      escalada: escalada,
+      pico: pico,
+      setor: setor,
+      grupo: grupo,
+      resolvedorExterno: resolvedorExterno,
+    );
+  }
+
+  /// Registra telemetria de navegação para o croqui interativo sem acoplar a UI ao serviço.
+  void registrarVisualizacaoCroqui({
+    required String cragId,
+    String? nomeSetor,
+  }) {
+    (_telemetria ?? TelemetryService.instance).logAcaoEscalada(
+      cragId,
+      nomeSetor ?? '',
+      nomeEscalada,
+      'ver_no_mapa_destaque',
+      'detalhes_via',
+    );
+  }
+
+  /// Compartilha o link profundo da escalada delegando ao [ServicoCompartilhamento].
+  Future<void> compartilharEscalada({
+    required String cragId,
+    String? nomePico,
+    String? nomeSetor,
+    String? nomeGrupo,
+  }) {
+    final servico = _servicoCompartilhamento ?? ServicoCompartilhamento.instancia;
+    return servico.compartilharEscalada(
+      idCroqui: cragId,
+      uid: escalada.uid,
+      nomeEscalada: nomeEscalada,
+      grau: obterTextoGrauEscalada(escalada),
+      nomeSetor: nomeSetor ?? nomeGrupo ?? 'Geral',
+      nomePico: nomePico ?? cragId,
+    );
+  }
+
   /// Copia [chavePixManutencao] para a área de transferência do dispositivo.
   Future<bool> copiarChavePix() async {
     final chave = chavePixManutencao;
