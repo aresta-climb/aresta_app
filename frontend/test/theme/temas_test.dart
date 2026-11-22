@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -22,10 +22,11 @@ void main() {
       expect(coresExtension, isNotNull);
       expect(coresExtension, AppColors.light);
 
-      // Validação de temas de botões para evitar crashes no Material 3
+      // Validação de temas de botões e SnackBar flutuante não intrusivo aos botões do SO
       expect(tema.iconButtonTheme.style, isNotNull);
       expect(tema.menuButtonTheme.style, isNotNull);
       expect(tema.popupMenuTheme.color, AppColors.light.slateStone);
+      expect(tema.snackBarTheme.behavior, SnackBarBehavior.floating);
     });
 
     test('construirTemaEscuro constrói tema escuro com propriedades esperadas', () {
@@ -42,10 +43,11 @@ void main() {
       expect(coresExtension, isNotNull);
       expect(coresExtension, AppColors.dark);
 
-      // Validação de temas de botões para evitar crashes no Material 3
+      // Validação de temas de botões e SnackBar flutuante não intrusivo aos botões do SO
       expect(tema.iconButtonTheme.style, isNotNull);
       expect(tema.menuButtonTheme.style, isNotNull);
       expect(tema.popupMenuTheme.color, AppColors.dark.deepBasalt);
+      expect(tema.snackBarTheme.behavior, SnackBarBehavior.floating);
     });
   });
 }

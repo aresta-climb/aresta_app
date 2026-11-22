@@ -24,6 +24,9 @@ class MapaThumbnail extends StatefulWidget {
   /// Lista pré-resolvida de itens para o carrossel (ex: combinação de mapas locais e de setor).
   final List<CarrosselItemData>? carrosselItensOverride;
 
+  /// Callback opcional que substitui a navegação padrão ao tocar na miniatura.
+  final VoidCallback? onTapOverride;
+
   const MapaThumbnail({
     super.key,
     required this.mapas,
@@ -35,6 +38,7 @@ class MapaThumbnail extends StatefulWidget {
     this.imageProviderFutureOverride,
     this.preCarregadorDisco,
     this.carrosselItensOverride,
+    this.onTapOverride,
   });
 
   @override
@@ -114,6 +118,10 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
           height: alturaEfetiva,
           child: GestureDetector(
             onTap: () {
+              if (widget.onTapOverride != null) {
+                widget.onTapOverride!();
+                return;
+              }
               TelemetryService.instance.logAbrirMapa(
                 widget.cragId,
                 widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral',

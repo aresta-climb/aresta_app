@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -44,6 +44,21 @@ ThemeData construirTemaClaro() {
         color: cores.fishBone,
       ),
     ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      insetPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      backgroundColor: cores.obsidianBrown,
+      contentTextStyle: TextStyle(
+        fontFamily: 'Montserrat',
+        color: cores.chalkWhite,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      actionTextColor: cores.rustIron,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+    ),
     extensions: const [AppColors.light],
   );
 }
@@ -86,6 +101,22 @@ ThemeData construirTemaEscuro() {
       textStyle: TextStyle(
         fontFamily: 'Montserrat',
         color: cores.fishBone,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      insetPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      backgroundColor: cores.caveShadow,
+      contentTextStyle: TextStyle(
+        fontFamily: 'Montserrat',
+        color: cores.chalkWhite,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      actionTextColor: cores.rustIron,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: cores.graniteEdge),
       ),
     ),
     extensions: const [AppColors.dark],
