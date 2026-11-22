@@ -48,6 +48,74 @@ void main() {
           autorIdPublico: 'c3Lk9P1x4Vw8Mn',
           confirmacoesAtivas: 3,
         ),
+        papel: PapelContribuicaoAlerta.criadoPorMim,
+        ativo: true,
+        ultimaInteracaoEm: DateTime(2026, 11, 20),
       );
-  });
+
+      final confirmadoResolvido = AlertaContribuidoCaderneta(
+        alerta: AlertaSegurancaVia.criar(
+          uid: 'alertaConf0002',
+          escaladaUid: 'viaLunarUid002',
+          categoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          autorIdPublico: 'outroAutor0001',
+          confirmacoesAtivas: 1,
+        ),
+        papel: PapelContribuicaoAlerta.confirmadoPorMim,
+        ativo: false,
+        ultimaInteracaoEm: DateTime(2026, 11, 18),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.5),
+            ),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: SecaoMeusAlertasCaderneta(
+                tituloSecao: 'Meus Alertas na Rocha (2)',
+                alertas: [criadoAtivo, confirmadoResolvido],
+                obterNomeVia: (uid) =>
+                    uid == 'viaFaraoUid001' ? 'Faraó' : 'Bloco Lunar',
+                obterGrauVia: (uid) => uid == 'viaFaraoUid001' ? '8a' : null,
+                formatarData: (_) => '20/11/2026',
+                aoTocarVia: (uid) => viaTocada = uid,
+                aoResolverAlerta: (item) => resolvido = item,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Meus Alertas na Rocha (2)'), findsOneWidget);
+      expect(find.text('CRIADO POR VOCÊ'), findsOneWidget);
+      expect(find.text('CONFIRMADO (+1)'), findsOneWidget);
+      expect(find.text('Ativo • 3 confirmações'), findsOneWidget);
+      expect(find.text('Resolvido'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('item_meu_alerta_alertaCriado01')),
+      );
+      expect(viaTocada, 'viaFaraoUid001');
+
+      final btnResolver = find.byKey(
+        const Key('btn_resolver_meu_alerta_alertaCriado01'),
+      );
+      await tester.ensureVisible(btnResolver);
+      await tester.tap(btnResolver);
+      expect(resolvido?.alerta.uid, 'alertaCriado01');
+      expect(
+        find.byKey(const Key('btn_resolver_meu_alerta_alertaConf0002')),
+        findsNothing,
+      );
+    },
+  );
 }

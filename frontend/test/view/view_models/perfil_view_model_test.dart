@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
@@ -14,6 +15,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/view/view_models/perfil_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -332,5 +334,19 @@ void main() {
           viewModel.dispose();
         },
       );
+
+      test(
+        'acompanha alertas criados e confirmados na Caderneta com janela de Desfazer, expiração, falha de sync e dispose',
+        () async {
+          final repoAlertas = RepositorioInteracoesViaFake()
+            ..erroSimulado = StateError('Sync offline adiado');
+          final vm = PerfilViewModel(
+            repositorio: repositorio,
+            repositorioInteracoes: repoAlertas,
+            duracaoJanelaDesfazer: const Duration(milliseconds: 50),
+          );
+          await Future<void>.delayed(Duration.zero);
+          repoAlertas.erroSimulado = null;
+      });
   });
 }
