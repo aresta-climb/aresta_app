@@ -88,5 +88,92 @@ void main() {
         escaladaUid: 'x8siJek3FiG3aB',
         categoria: CategoriaAlertaSeguranca.abelhasInsetos,
       );
-  });
+      final consenso = ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+        const ConsensoGrauVia(
+          grauSugerido: '7b',
+          totalVotos: 10,
+          distribuicaoDeltas: {1: 8, 0: 2},
+        ),
+        codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+        ehBoulder: false,
+      );
+
+      await tester.pumpWidget(
+        envolver(
+          AreaHeroiTopoGrauVia(
+            estadoCroqui: const EstadoCroquiVia(
+              itensNavegacaoCroqui: [
+                CarrosselItemData(mapaCaminhoImagem: 'mapas/setor.webp'),
+              ],
+            ),
+            cragId: 'crag1',
+            nomeEscalada: 'Deslize',
+            aoAbrirCroquiInterativo: () => clicouCroqui = true,
+            exibirCartaoGrau: true,
+            rotuloGrauOficial: 'GRAU OFICIAL',
+            grauOficial: '7a',
+            complementoGrauOficial: 'Guia Oficial / Conquistador',
+            apresentacaoConsenso: consenso,
+            alertasAtivos: [alerta],
+            aoTocarAlerta: (a) => alertaTocado = a,
+          ),
+        ),
+      );
+
+      expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+      expect(find.text('7b (+1)'), findsOneWidget);
+      expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+
+      await tester.tap(find.text('VER NO CROQUI INTERATIVO'));
+      expect(clicouCroqui, isTrue);
+
+      await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+      expect(alertaTocado?.uid, 'alertaTopo0001');
+
+      // Sem cartão de grau (ex.: Highline com alerta ativo)
+      await tester.pumpWidget(
+        envolver(
+          AreaHeroiTopoGrauVia(
+            estadoCroqui: const EstadoCroquiVia(),
+            cragId: 'crag1',
+            nomeEscalada: 'Fita Alta',
+            aoAbrirCroquiInterativo: () {},
+            exibirCartaoGrau: false,
+            rotuloGrauOficial: 'GRAU OFICIAL',
+            grauOficial: null,
+            complementoGrauOficial: '',
+            apresentacaoConsenso: null,
+            alertasAtivos: [alerta],
+            aoTocarAlerta: (_) {},
+          ),
+        ),
+      );
+      expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+
+      // Miniatura direta quando há mapas válidos na própria escalada
+      await tester.pumpWidget(
+        envolver(
+          SecaoMapaCroquiVia(
+            cragId: 'crag1',
+            nomeEscalada: 'Via Própria',
+            estadoCroqui: EstadoCroquiVia(
+              mapasMiniatura: [
+                Mapa(
+                  caminhoImagemMapa: 'mapas/proprio.webp',
+                  larguraMapa: 1000,
+                  alturaMapa: 800,
+                ),
+              ],
+              aspectRatioMiniatura: 1.25,
+              itensCarrosselMiniatura: const [
+                CarrosselItemData(mapaCaminhoImagem: 'mapas/proprio.webp'),
+              ],
+            ),
+            aoAbrirCroquiInterativo: () {},
+          ),
+        ),
+      );
+      expect(find.byType(MapaThumbnail), findsOneWidget);
+    },
+  );
 }
