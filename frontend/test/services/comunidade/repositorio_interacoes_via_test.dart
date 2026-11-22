@@ -111,13 +111,51 @@ void main() {
     expect(segundoAutor.detalhe, 'Ainda escorrendo água');
   });
 
-  test('confirmarAlerta incrementa contagem quando ativo e remove alerta quando resolvido', () async {
-    final repo = RepositorioInteracoesViaMemoria();
+  test('confirmarAlerta permite no máximo 1 +1 por perfil, sincroniza Meus Alertas offline/online e remove ao resolver', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+    await repoCaderneta.inicializar();
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'autorCriador01',
+        autorNomePublico: 'Criador',
+      ),
+    );
+    final clienteFake = ClienteFilaInteracoesFake();
+    final repo = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      clienteFila: clienteFake,
+      preferencias: prefs,
+    );
     final alerta = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
     );
 
+    // Criador tentando auto-confirmar +1 não aumenta contagem
+    await repo.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: alerta.uid,
+      aindaEstaLa: true,
+    );
+    expect(
+      repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos.single.confirmacoesAtivas,
+      1,
+    );
+
+    // Segundo perfil confirma +1 duas vezes -> conta apenas 1 vez (total = 2)
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'autorConfirm02',
+        autorNomePublico: 'Confirmador',
+      ),
+    );
+    await repo.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: alerta.uid,
+      aindaEstaLa: true,
+    );
     await repo.confirmarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       alertaUid: alerta.uid,
@@ -127,6 +165,24 @@ void main() {
       repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos.single.confirmacoesAtivas,
       2,
     );
+
+    // Sincronizar Meus Alertas (online, erro e sem cliente) e restaurar do cache em disco
+    await repo.sincronizarMeusAlertasContribuidos();
+    expect(repo.obterMeusAlertasContribuidos(), hasLength(1));
+    expect(
+      repo.obterMeusAlertasContribuidos().single.papel,
+      PapelContribuicaoAlerta.confirmadoPorMim,
+    );
+    clienteFake.erroSimulado = const HttpException('Falha sync caderneta');
+    await repo.sincronizarMeusAlertasContribuidos();
+    clienteFake.erroSimulado = null;
+
+    final repoRehidratadoOffline = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      preferencias: prefs,
+    );
+    await repoRehidratadoOffline.sincronizarMeusAlertasContribuidos();
+    expect(repoRehidratadoOffline.obterMeusAlertasContribuidos(), hasLength(1));
 
     // Confirmar alerta inexistente não corrompe estado
     await repo.confirmarAlerta(
@@ -142,6 +198,7 @@ void main() {
       aindaEstaLa: false,
     );
     expect(repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos, isEmpty);
+    await repo.sincronizarEscalada('x8siJek3FiG3aB');
   });
 
   test('rejeita escaladaUid vazio sob filosofia Fail-Fast', () async {
@@ -191,6 +248,13 @@ void main() {
           deltaGrau: 1,
           grauSugerido: GrauVia_GrauVia.BR_7B.value,
         ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: 'd4Ml0Q2y5Wx9No',
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaPedro001',
+          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+        ),
       ]);
 
     final repo = RepositorioInteracoesViaMemoria(
@@ -216,14 +280,14 @@ void main() {
       estiloAscensao: TipoAscensao.flash,
       comentarioPublico: 'Chapeleta 3 longa, levar costura extensível.',
     );
-    final alertaOffline = await repo.reportarAlerta(
+    await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       categoria: CategoriaAlertaSeguranca.abelhasInsetos,
       detalhe: 'Enxame na base',
     );
     await repo.confirmarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      alertaUid: alertaOffline.uid,
+      alertaUid: 'alertaPedro001',
       aindaEstaLa: true,
     );
 
@@ -231,8 +295,13 @@ void main() {
     expect(dadosOffline.consensoGrau.totalVotos, 2);
     expect(dadosOffline.comentarios, hasLength(1));
     expect(dadosOffline.comentarios.single.rotuloEstilo, 'FLASH ★');
-    expect(dadosOffline.alertasAtivos.single.confirmacoesAtivas, 2);
-    expect(clienteFake.itensInseridos, hasLength(1)); // Ainda apenas o item de Pedro
+    expect(
+      dadosOffline.alertasAtivos
+          .firstWhere((a) => a.uid == 'alertaPedro001')
+          .confirmacoesAtivas,
+      2,
+    );
+    expect(clienteFake.itensInseridos, hasLength(2)); // Ainda apenas os 2 itens de Pedro
 
     // 3. Simula reabertura a frio (nova instância lê fila pendente do SharedPreferences) e drena online
     clienteFake.erroSimulado = null;
@@ -245,7 +314,7 @@ void main() {
       'x8siJek3FiG3aB',
       codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
     );
-    expect(clienteFake.itensInseridos, hasLength(5));
+    expect(clienteFake.itensInseridos, hasLength(6));
 
     // 4. Erro operacional HTTP registra erro sem derrubar o app
     clienteFake.erroSimulado = const HttpException('HTTP 500');
@@ -351,5 +420,8 @@ void main() {
     expect(repo.obterDeltaVotoUsuario('x8siJek3FiG3aB'), 1);
     expect(repo.obterDeltaVotoUsuario('outraViaNaoVotada'), isNull);
     expect(prefs.getString(RepositorioInteracoesViaMemoria.chaveFilaPendente), isNotNull);
+
+    // 6. Alerta de segurança reportado após falha HTTP 500 no voto anterior NÃO sofre bloqueio de fila (chega para todos os usuários!)
+    authFake.erroAoGarantirSessao = null;
   });
 }
