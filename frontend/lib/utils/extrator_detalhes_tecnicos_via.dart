@@ -369,6 +369,103 @@ abstract final class ExtratorDetalhesTecnicosVia {
       Escalada_Tipo.boulder => escalada.boulder.chavePixManutencao.trim(),
       Escalada_Tipo.viaMultiplasEnfiadas =>
         escalada.viaMultiplasEnfiadas.chavePixManutencao.trim(),
+      Escalada_Tipo.highline => escalada.highline.chavePixManutencao.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return chave.isNotEmpty ? chave : null;
+  }
+
+  /// Constrói o modelo visual completo [ApresentacaoConsensoGrauVia] para os gráficos da `ViaPage`.
+  static ApresentacaoConsensoGrauVia construirApresentacaoConsenso(
+    ConsensoGrauVia consenso, {
+    required int? codigoGrauOficial,
+    required bool ehBoulder,
+  }) => ApresentacaoConsensoGrauVia.deConsenso(
+    consenso,
+    codigoGrauOficial: codigoGrauOficial,
+    ehBoulder: ehBoulder,
+  );
+
+  /// Formata comentários públicos em [NotaComunidadeApresentacao] para Dumb UI.
+  static List<NotaComunidadeApresentacao> formatarNotasComunidade(
+    List<ComentarioComunidadeVia> comentarios,
+  ) {
+    return comentarios
+        .map((c) {
+          final dia = c.criadoEm.day.toString().padLeft(2, '0');
+          final mes = c.criadoEm.month.toString().padLeft(2, '0');
+          return NotaComunidadeApresentacao(
+            cabecalhoAutorData: '${c.autorNomePublico} • $dia/$mes/${c.criadoEm.year}',
+            rotuloEstilo: c.rotuloEstilo,
+            texto: c.texto,
+          );
+        })
+        .toList(growable: false);
+  }
+
+  /// Resolve a miniatura ou itens de carrossel de croqui para a [escalada] sem lógica na UI.
+  static EstadoCroquiVia resolverEstadoCroqui({
+    required Escalada escalada,
+    Pico? pico,
+    Setor? setor,
+    Grupo? grupo,
+    DatasetResolver? resolvedorExterno,
+  }) => EstadoCroquiVia.resolver(
+    escalada: escalada,
+    pico: pico,
+    setor: setor,
+    grupo: grupo,
+    resolvedorExterno: resolvedorExterno,
+  );
+
+  static String? _extrairArtificialFormatado(Escalada escalada) {
+    final nome = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva =>
+        escalada.viaEsportiva.dificuldadeArtificial.name,
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dificuldadeArtificial.name,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dificuldadeArtificial.name,
+      _ => '',
+    };
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return null;
+    return nome.replaceAll('_MAIS', '+');
+  }
+
+  static String? _extrairArtificialEmLivreFormatado(Escalada escalada) {
+    final nome = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaMovel =>
+        escalada.viaMovel.dificuldadeArtificialEmLivre.name,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dificuldadeArtificialEmLivre.name,
+      _ => '',
+    };
+    final formatado = formatarTextoGrau(nome);
+    return formatado.isNotEmpty ? formatado : null;
+  }
+
+  static String? _extrairUrlVideoBeta(Escalada escalada) {
+    final url = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.urlVideoBeta.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.urlVideoBeta.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.urlVideoBeta.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.urlVideoBeta.trim(),
+      Escalada_Tipo.highline => escalada.highline.urlVideoBeta.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return url.isNotEmpty ? url : null;
+  }
+
+  static void _adicionarMetros(
+    List<AtributoTecnicoVia> itens,
+    TipoIconeAtributoVia icone,
+    String rotulo,
+    int metros,
+  ) {
+    if (metros > 0) {
+      itens.add(
+        AtributoTecnicoVia(icone: icone, rotulo: rotulo, valor: '${metros}m'),
+      );
     }
   }
 }
