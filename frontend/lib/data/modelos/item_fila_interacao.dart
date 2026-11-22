@@ -504,5 +504,35 @@ List<AlertaContribuidoCaderneta> consolidarAlertasContribuidosPeloAutor(
       eventosVia,
       autorFoco: autorLimpo,
     );
+
+    for (final ep in episodios) {
+      if (ep.alerta.foiCriadoPor(autorLimpo)) {
+        resultado.add(
+          AlertaContribuidoCaderneta(
+            alerta: ep.alerta,
+            papel: PapelContribuicaoAlerta.criadoPorMim,
+            ativo: ep.ativo,
+            ultimaInteracaoEm: ep.ultimaInteracaoEm,
+          ),
+        );
+      } else if (ep.alerta.jaConfirmadoPor(autorLimpo)) {
+        resultado.add(
+          AlertaContribuidoCaderneta(
+            alerta: ep.alerta,
+            papel: PapelContribuicaoAlerta.confirmadoPorMim,
+            ativo: ep.ativo,
+            ultimaInteracaoEm: ep.ultimaInteracaoEm,
+          ),
+        );
+      }
+    }
   }
+
+  resultado.sort((a, b) {
+    if (a.ativo != b.ativo) {
+      return a.ativo ? -1 : 1;
+    }
+    return b.ultimaInteracaoEm.compareTo(a.ultimaInteracaoEm);
+  });
+  return List.unmodifiable(resultado);
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
@@ -68,8 +69,8 @@ void main() {
 
       expect(TipoFilaInteracao.votoGrau.exigeContaAutenticada, isTrue);
       expect(TipoFilaInteracao.comentario.exigeContaAutenticada, isTrue);
-      expect(TipoFilaInteracao.alertaSeguranca.exigeContaAutenticada, isFalse);
-      expect(TipoFilaInteracao.confirmacaoAlerta.exigeContaAutenticada, isFalse);
+      expect(TipoFilaInteracao.alertaSeguranca.exigeContaAutenticada, isTrue);
+      expect(TipoFilaInteracao.confirmacaoAlerta.exigeContaAutenticada, isTrue);
 
       final reconciliado = voto.comAutor(
         autorIdPublico: 'z9Yx8Wv7Ut6Sr5',
@@ -220,8 +221,57 @@ void main() {
 
       expect(dados.alertasAtivos, hasLength(1));
       expect(dados.alertasAtivos.single.uid, 'alertaAbelha01');
-      expect(dados.alertasAtivos.single.confirmacoesAtivas, 3);
+      // Pedro já reforçou via alertaSeguranca na mesma categoria, logo seu confirmacaoAlerta repetido NÃO soma de novo (Mariana + Pedro = 2)!
+      expect(dados.alertasAtivos.single.confirmacoesAtivas, 2);
       expect(dados.alertasAtivos.single.detalhe, 'Continua ativo');
+    });
+
+    test('deduplica +1 repetido do mesmo autor, consolida alertas da Caderneta e valida SQL de deploy Supabase', () {
+      final t1 = DateTime.utc(2026, 11, 20, 9, 0);
+      final t2 = DateTime.utc(2026, 11, 20, 10, 0);
+      final t3 = DateTime.utc(2026, 11, 20, 11, 0);
+      const eu = 'c3Lk9P1x4Vw8Mn';
+      const pedro = 'd4Ml0Q2y5Wx9No';
+
+      final eventos = [
+        // Eu crio alerta na via 1 e tento auto-confirmar +1 três vezes
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: eu,
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'viaCriadaPorMi',
+          alertaAlvoUid: 'alertaMeu00001',
+          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          detalhe: 'Colmeia ativa',
+          criadoEm: t1,
+        ),
+        // Duplicata de alertaSeguranca pela mesma autora na mesma categoria não soma novamente
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: eu,
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'viaCriadaPorMi',
+          alertaAlvoUid: 'alertaMeuDup01',
+          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          detalhe: 'Colmeia ativa atualizada',
+          criadoEm: t2,
+        ),
+        // Segundo alerta ativo criado por mim em outra via (testa ordenação por ultimaInteracaoEm entre ativos)
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: eu,
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'viaCriadaRecen',
+          alertaAlvoUid: 'alertaRecente3',
+          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          criadoEm: t3,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: eu,
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'viaCriadaPorMi',
+          alertaAlvoUid: 'alertaMeu00001',
+          alertaAtivo: true,
+          criadoEm: t2,
+        ),
+          ];
     });
   });
 }
