@@ -88,49 +88,55 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
-    final provedorImagem = construirProvedorAvatarPerfil(_fotoUrlExibida);
 
-    return AlertDialog(
-      backgroundColor: cores.deepBasalt,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cores.graniteEdge),
-      ),
-      title: Text(
-        'Editar Perfil',
-        style: TextStyle(
-          color: cores.chalkWhite,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.aoSelecionarNovaFoto != null) ...[
-            Center(
-              child: TextButton.icon(
-                key: const Key('btn_alterar_foto_dialogo'),
-                onPressed: _selecionarFoto,
-                icon: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: cores.caveShadow,
-                  backgroundImage: provedorImagem,
-                  child: provedorImagem == null
-                      ? Icon(
-                          Icons.camera_alt_rounded,
-                          color: cores.chalkWhite,
-                          size: 18,
-                        )
-                      : null,
-                ),
-                label: const Text(
-                  'Alterar foto de perfil',
-                  style: TextStyle(color: Color(0xFFE05A47)),
-                ),
-              ),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final provedorImagem = construirProvedorAvatarPerfil(
+          _viewModel.fotoUrlExibida,
+        );
+
+        return AlertDialog(
+          backgroundColor: cores.deepBasalt,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: cores.graniteEdge),
+          ),
+          title: Text(
+            'Editar Perfil',
+            style: TextStyle(
+              color: cores.chalkWhite,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_viewModel.permiteAlterarFoto) ...[
+                Center(
+                  child: TextButton.icon(
+                    key: const Key('btn_alterar_foto_dialogo'),
+                    onPressed: _viewModel.selecionarNovaFoto,
+                    icon: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: cores.caveShadow,
+                      backgroundImage: provedorImagem,
+                      child: provedorImagem == null
+                          ? Icon(
+                              Icons.camera_alt_rounded,
+                              color: cores.chalkWhite,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                    label: const Text(
+                      'Alterar foto de perfil',
+                      style: TextStyle(color: Color(0xFFE05A47)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
           TextField(
             key: const Key('campo_editar_perfil_nome'),
             controller: _controladorNome,
@@ -170,6 +176,8 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
           child: const Text('Salvar'),
         ),
       ],
+    );
+      },
     );
   }
 }
