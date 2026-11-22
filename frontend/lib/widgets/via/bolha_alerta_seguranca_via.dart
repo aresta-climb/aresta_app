@@ -266,66 +266,46 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                       ),
                     ],
                   ),
+                )
+              else ...[
+                Text(
+                  'Ainda está lá?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              Text(
-                'Ainda está lá?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: cores.chalkWhite,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      key: const Key('btn_confirmar_alerta_resolvido'),
-                      onPressed: () async {
-                        Navigator.of(modalCtx).pop();
-                        await aoResponder(false);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: cores.chalkWhite,
-                        side: BorderSide(color: cores.graniteEdge),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const Key('btn_confirmar_alerta_resolvido'),
+                        onPressed: () async {
+                          Navigator.of(modalCtx).pop();
+                          await aoResponder(false);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: cores.chalkWhite,
+                          side: BorderSide(color: cores.graniteEdge),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Não, já resolveu',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      child: const Text(
-                        'Não, já resolveu',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      key: const Key('btn_confirmar_alerta_ativo'),
-                      onPressed: () async {
-                        Navigator.of(modalCtx).pop();
-                        await aoResponder(true);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _corVermelhoAlerta,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Sim, ainda está lá',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
