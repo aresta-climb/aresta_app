@@ -389,14 +389,82 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    CabecalhoIdentidadeVia(
-                      nomeEscalada: _viewModel.nomeEscalada,
-                      modalidade: _viewModel.modalidade,
-                      ehDestaque: _viewModel.ehDestaque,
-                      cragId: widget.cragId,
-                      escalada: widget.escalada,
-                      setor: widget.setor,
-                      grupo: widget.grupo,
+                    // Cartão Unificado "Passaporte da Via" (Direção C)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cores.caveShadow,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: cores.graniteEdge),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          CabecalhoIdentidadeVia(
+                            nomeEscalada: _viewModel.nomeEscalada,
+                            modalidade: _viewModel.modalidade,
+                            ehDestaque: _viewModel.ehDestaque,
+                            cragId: widget.cragId,
+                            escalada: widget.escalada,
+                            setor: widget.setor,
+                            grupo: widget.grupo,
+                          ),
+                          if (_cadernetaViewModel.visivel &&
+                              resumoAscensao != null) ...[
+                            const SizedBox(height: 12),
+                            InkWell(
+                              onTap: () => _abrirRegistroCadena(context),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _cadernetaViewModel.isCadena
+                                      ? cores.darkPine.withValues(alpha: 0.7)
+                                      : cores.deepBasalt,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _cadernetaViewModel.isCadena
+                                        ? cores.fernGreen.withValues(alpha: 0.7)
+                                        : cores.graniteEdge,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _cadernetaViewModel.isCadena
+                                              ? Icons.check_circle_rounded
+                                              : Icons.refresh_rounded,
+                                          size: 18,
+                                          color: _cadernetaViewModel.isCadena
+                                              ? cores.fernGreen
+                                              : cores.rustIron,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            resumoAscensao,
+                                            style: TextStyle(
+                                              color: cores.chalkWhite,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                     AreaHeroiTopoGrauVia(
                       estadoCroqui: estadoCroqui,
