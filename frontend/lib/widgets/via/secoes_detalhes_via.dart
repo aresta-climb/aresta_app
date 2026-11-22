@@ -98,101 +98,13 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
-                ),
-              if (ehDestaque)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.amber.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.star_rounded, size: 15, color: Colors.amber),
-                      SizedBox(width: 4),
-                      Text(
-                        'CLÁSSICA',
-                        style: TextStyle(
-                          color: Colors.amber,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              ),
             ],
           ),
-          if (setor != null && setor!.nome.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            LinhaLocalizacaoSetor(
-              cragId: cragId,
-              setor: setor!,
-              grupo: grupo,
-              escalada: escalada,
-            ),
-          ],
         ],
       ),
     );
   }
-}
-
-/// Área heroica superior combinando o croqui/mapa e o cartão de grau sob um [Stack]
-/// para ancorar as bolhas vermelhas flutuantes de alerta no canto superior direito.
-class AreaHeroiTopoGrauVia extends StatelessWidget {
-  /// Escalada Protobuf exibida.
-  final Escalada escalada;
-
-  /// Identificador do croqui.
-  final String cragId;
-
-  /// Pico pai para resolução de referências de mapa.
-  final Pico? pico;
-
-  /// Setor pai da escalada.
-  final Setor? setor;
-
-  /// Grupo pai do setor.
-  final Grupo? grupo;
-
-  /// Indica se a navegação partiu diretamente da `MapaPage`.
-  final bool fromMapaPage;
-
-  /// Indica se o cartão de grau deve ser renderizado.
-  final bool exibirCartaoGrau;
-
-  /// Rótulo do grau oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
-  final String rotuloGrauOficial;
-
-  /// Grau oficial formatado, ou `null` quando indefinido.
-  final String? grauOficial;
-
-  /// Código numérico Protobuf do grau oficial para rotulagem do gráfico de consenso.
-  final int? codigoGrauOficial;
-
-  /// Indica se a escalada pertence à modalidade Boulder (escala V).
-  final bool ehBoulder;
-
-  /// Subtítulo abaixo do grau oficial.
-  final String complementoGrauOficial;
-
-  /// Consenso de grau da comunidade (nulo quando a feature flag estiver desativada).
-  final ConsensoGrauVia? consensoGrau;
-
-  /// Alertas ativos exibidos como bolhas vermelhas flutuantes no canto superior direito.
-  final List<AlertaSegurancaVia> alertasAtivos;
-
-  /// Callback acionado ao tocar em uma bolha de alerta.
-  final ValueChanged<AlertaSegurancaVia> aoTocarAlerta;
-
 }
 /// Grade responsiva de especificações técnicas (`EXTENSÃO`, `PROTEÇÕES`, `PAREDE`, etc.) + tipo de ancoragem.
 class GradeAtributosTecnicosVia extends StatelessWidget {
