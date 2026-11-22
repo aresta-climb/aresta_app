@@ -9,7 +9,7 @@ import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/formatador_escalada.dart';
 import '../../widgets/caderneta/modal_registro_cadena.dart';
-import '../../widgets/caderneta/secao_caderneta_via.dart';
+import '../../widgets/via/barra_inferior_acoes_via.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../../widgets/via/cabecalho_e_heroi_via.dart';
 import '../../widgets/via/secoes_detalhes_via.dart';
@@ -458,39 +458,64 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                                         ),
                                       ],
                                     ),
+                                    if (citacaoNotas != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        citacaoNotas,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: cores.ashGrey,
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
                             ),
                           ],
+                          if (_viewModel.atributosTecnicos.isNotEmpty ||
+                              _viewModel.tipoAncoragem != null) ...[
+                            const SizedBox(height: 12),
+                            GradeAtributosTecnicosVia(
+                              atributos: _viewModel.atributosTecnicos,
+                              tipoAncoragem: _viewModel.tipoAncoragem,
+                            ),
+                          ],
+                          if (estadoCroqui.possuiCroqui ||
+                              _viewModel.exibirCartaoGrau ||
+                              _viewModel.alertasAtivos.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            AreaHeroiTopoGrauVia(
+                              estadoCroqui: estadoCroqui,
+                              cragId: widget.cragId,
+                              nomeEscalada: _viewModel.nomeEscalada,
+                              setor: widget.setor,
+                              grupo: widget.grupo,
+                              aoAbrirCroquiInterativo: () =>
+                                  _abrirCroquiInterativo(context, estadoCroqui),
+                              exibirCartaoGrau: _viewModel.exibirCartaoGrau,
+                              rotuloGrauOficial: _viewModel.rotuloGrauOficial,
+                              grauOficial: _viewModel.grauOficialExibicao,
+                              complementoGrauOficial:
+                                  _viewModel.complementoGrauOficial,
+                              apresentacaoConsenso:
+                                  _viewModel.apresentacaoConsenso,
+                              aoVotarGrau: _viewModel.exibirRecursosComunidade &&
+                                      _viewModel.possuiUid
+                                  ? (delta) => _votarGrauDireto(context, delta)
+                                  : null,
+                              alertasAtivos: _viewModel.alertasAtivos,
+                              aoTocarAlerta: (alerta) =>
+                                  _abrirConfirmacaoAlerta(context, alerta),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    AreaHeroiTopoGrauVia(
-                      estadoCroqui: estadoCroqui,
-                      cragId: widget.cragId,
-                      nomeEscalada: _viewModel.nomeEscalada,
-                      setor: widget.setor,
-                      grupo: widget.grupo,
-                      aoAbrirCroquiInterativo: () =>
-                          _abrirCroquiInterativo(context, estadoCroqui),
-                      exibirCartaoGrau: _viewModel.exibirCartaoGrau,
-                      rotuloGrauOficial: _viewModel.rotuloGrauOficial,
-                      grauOficial: _viewModel.grauOficialExibicao,
-                      complementoGrauOficial: _viewModel.complementoGrauOficial,
-                      apresentacaoConsenso: _viewModel.apresentacaoConsenso,
-                      alertasAtivos: _viewModel.alertasAtivos,
-                      aoTocarAlerta: (alerta) =>
-                          _abrirConfirmacaoAlerta(context, alerta),
-                    ),
-                    SecaoCadernetaVia(
-                      escalada: widget.escalada,
-                      viewModel: widget.cadernetaViewModel,
-                    ),
-                    GradeAtributosTecnicosVia(
-                      atributos: _viewModel.atributosTecnicos,
-                      tipoAncoragem: _viewModel.tipoAncoragem,
-                    ),
+                    const SizedBox(height: 18),
                     SecaoTextosETecnicasVia(
                       cragId: widget.cragId,
                       secoes: _viewModel.secoesTexto,
@@ -513,6 +538,14 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                   ],
                 ),
               ),
+            ),
+            BarraInferiorAcoesVia(
+              exibirBotaoCroqui: estadoCroqui.possuiCroqui,
+              aoAbrirCroqui: () => _abrirCroquiInterativo(context, estadoCroqui),
+              exibirBotaoCaderneta: _cadernetaViewModel.visivel,
+              possuiCadena: _cadernetaViewModel.isCadena,
+              rotuloBotaoCaderneta: _cadernetaViewModel.rotuloBotao,
+              aoRegistrarCadena: () => _abrirRegistroCadena(context),
             ),
           ],
         );
