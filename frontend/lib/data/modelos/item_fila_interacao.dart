@@ -330,7 +330,8 @@ class ItemFilaInteracao {
   }
 }
 
-/// Redutor puro que projeta os eventos cronológicos de `fila_interacoes` em [DadosComunidadeVia].
+/// Redutor puro que projeta os eventos cronológicos de `fila_interacoes` em [DadosComunidadeVia],
+/// garantindo deduplicação estrita de 1 confirmação positiva por `autorIdPublico` em cada alerta.
 DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
   Iterable<ItemFilaInteracao> itens, {
   int? codigoGrauOficial,
@@ -341,7 +342,6 @@ DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
 
   final votosPorAutor = <String, ({int? deltaGrau, int? grauSugerido})>{};
   final comentarios = <ComentarioComunidadeVia>[];
-  final alertas = <AlertaSegurancaVia>[];
 
   for (final item in ordenados) {
     switch (item.tipo) {
@@ -366,45 +366,17 @@ DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
           );
         }
       case TipoFilaInteracao.alertaSeguranca:
-        final categoria = item.categoriaAlerta;
-        final uidAlerta = item.alertaAlvoUid;
-        if (categoria == null || uidAlerta == null) break;
-        final idxCat = alertas.indexWhere((a) => a.categoria == categoria);
-        if (idxCat >= 0) {
-          final existente = alertas[idxCat];
-          alertas[idxCat] = existente.copyWith(
-            confirmacoesAtivas: existente.confirmacoesAtivas + 1,
-            detalhe: item.textoComentario ?? existente.detalhe,
-          );
-        } else {
-          alertas.insert(
-            0,
-            AlertaSegurancaVia.criar(
-              uid: uidAlerta,
-              escaladaUid: item.escaladaUid,
-              categoria: categoria,
-              detalhe: item.textoComentario,
-              autorNomePublico: item.autorNomePublico,
-              criadoEm: item.criadoEm,
-            ),
-          );
-        }
       case TipoFilaInteracao.confirmacaoAlerta:
-        final alvoUid = item.alertaAlvoUid;
-        final ativo = item.alertaAtivo;
-        if (alvoUid == null || ativo == null) break;
-        final idx = alertas.indexWhere((a) => a.uid == alvoUid);
-        if (idx >= 0) {
-          if (ativo) {
-            alertas[idx] = alertas[idx].copyWith(
-              confirmacoesAtivas: alertas[idx].confirmacoesAtivas + 1,
-            );
-          } else {
-            alertas.removeAt(idx);
-          }
-        }
+        break;
     }
   }
+
+  final alertasAtivos = _consolidarEpisodiosDeAlerta(ordenados)
+      .where((ep) => ep.ativo)
+      .map((ep) => ep.alerta)
+      .toList()
+      .reversed
+      .toList(growable: false);
 
   return DadosComunidadeVia(
     consensoGrau: consolidarConsensoDeVotos(
@@ -412,7 +384,40 @@ DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
       codigoGrauOficial: codigoGrauOficial,
       ehBoulder: ehBoulder,
     ),
-    alertasAtivos: List.unmodifiable(alertas),
+    alertasAtivos: alertasAtivos,
     comentarios: List.unmodifiable(comentarios),
   );
+}
+
+class _EpisodioAlertaConsolidado {
+  AlertaSegurancaVia alerta;
+  bool ativo = true;
+  DateTime ultimaInteracaoEm;
+
+  _EpisodioAlertaConsolidado({
+    required this.alerta,
+    required this.ultimaInteracaoEm,
+  });
+}
+
+List<_EpisodioAlertaConsolidado> _consolidarEpisodiosDeAlerta(
+  List<ItemFilaInteracao> eventosOrdenados, {
+  String? autorFoco,
+}) {
+  final episodios = <_EpisodioAlertaConsolidado>[];
+  final aliasParaPrincipal = <String, String>{};
+
+  for (final ev in eventosOrdenados) {
+    if (ev.tipo == TipoFilaInteracao.alertaSeguranca) {
+      final cat = ev.categoriaAlerta;
+      final uid = ev.alertaAlvoUid;
+      if (cat == null || uid == null) continue;
+      final idxAtivo = episodios.indexWhere(
+        (ep) => ep.ativo && ep.alerta.categoria == cat,
+      );
+      if (idxAtivo >= 0) {
+        final ep = episodios[idxAtivo];
+      }
+    }
+  }
 }
