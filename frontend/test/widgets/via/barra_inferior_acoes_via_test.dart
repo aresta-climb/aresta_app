@@ -15,13 +15,11 @@ void main() {
   }
 
   testWidgets(
-    'BarraInferiorAcoesVia oculta quando vazia e aciona callbacks nos estados antes e após cadena',
+    'BarraInferiorAcoesVia oculta quando invisível e aciona callback em largura total antes e após cadena',
     (tester) async {
       await tester.pumpWidget(
         envolver(
           BarraInferiorAcoesVia(
-            exibirBotaoCroqui: false,
-            aoAbrirCroqui: () {},
             exibirBotaoCaderneta: false,
             possuiCadena: false,
             rotuloBotaoCaderneta: '',
@@ -29,10 +27,8 @@ void main() {
           ),
         ),
       );
-      expect(find.byKey(const Key('btn_dock_croqui_via')), findsNothing);
       expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
 
-      var clicouCroqui = false;
       var clicouCadena = false;
 
       await tester.pumpWidget(
@@ -40,16 +36,12 @@ void main() {
           Column(
             children: [
               BarraInferiorAcoesVia(
-                exibirBotaoCroqui: true,
-                aoAbrirCroqui: () => clicouCroqui = true,
                 exibirBotaoCaderneta: true,
                 possuiCadena: false,
                 rotuloBotaoCaderneta: 'Registrar Cadena / Tentativa',
                 aoRegistrarCadena: () => clicouCadena = true,
               ),
               BarraInferiorAcoesVia(
-                exibirBotaoCroqui: false,
-                aoAbrirCroqui: () {},
                 exibirBotaoCaderneta: true,
                 possuiCadena: true,
                 rotuloBotaoCaderneta: 'Nova Ascensão / Tentativa',
@@ -59,9 +51,6 @@ void main() {
           ),
         ),
       );
-
-      await tester.tap(find.byKey(const Key('btn_dock_croqui_via')));
-      expect(clicouCroqui, isTrue);
 
       await tester.tap(find.text('Registrar Cadena / Tentativa'));
       expect(clicouCadena, isTrue);

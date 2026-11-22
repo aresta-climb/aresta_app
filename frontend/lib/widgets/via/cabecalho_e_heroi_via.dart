@@ -291,28 +291,42 @@ class CartaoGrauVia extends StatelessWidget {
     final blocoOficial = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          rotuloGrauOficial,
-          style: TextStyle(
-            color: cores.ashGrey,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.6,
+        Container(
+          height: 16,
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              rotuloGrauOficial,
+              maxLines: 1,
+              style: TextStyle(
+                color: cores.ashGrey,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          grauOficial ?? '—',
-          style: TextStyle(
-            color: cores.chalkWhite,
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
+        Container(
+          height: 34,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            grauOficial ?? '—',
+            style: TextStyle(
+              color: cores.chalkWhite,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
           ),
         ),
         const SizedBox(height: 2),
         Text(
           complementoGrauOficial,
-          style: TextStyle(color: cores.ashGrey, fontSize: 11),
+          style: TextStyle(color: cores.ashGrey, fontSize: 11, height: 1.25),
         ),
       ],
     );
@@ -401,13 +415,22 @@ class _BlocoConsensoComunidade extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'CONSENSO DA COMUNIDADE',
-          style: TextStyle(
-            color: cores.rustIron,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.6,
+        Container(
+          height: 16,
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'CONSENSO DA COMUNIDADE',
+              maxLines: 1,
+              style: TextStyle(
+                color: cores.rustIron,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 4),
