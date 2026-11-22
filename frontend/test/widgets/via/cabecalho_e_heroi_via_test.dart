@@ -150,30 +150,41 @@ void main() {
       );
       expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
 
-      // Miniatura direta quando há mapas válidos na própria escalada
+      // Miniatura direta com rótulo da linha e CartaoGrauVia sem consenso
       await tester.pumpWidget(
         envolver(
-          SecaoMapaCroquiVia(
-            cragId: 'crag1',
-            nomeEscalada: 'Via Própria',
-            estadoCroqui: EstadoCroquiVia(
-              mapasMiniatura: [
-                Mapa(
-                  caminhoImagemMapa: 'mapas/proprio.webp',
-                  larguraMapa: 1000,
-                  alturaMapa: 800,
+          Column(
+            children: [
+              const CartaoGrauVia(
+                rotuloGrauOficial: 'GRAU OFICIAL',
+                grauOficial: '7a',
+                complementoGrauOficial: 'Guia Oficial / Conquistador',
+              ),
+              SecaoMapaCroquiVia(
+                cragId: 'crag1',
+                nomeEscalada: 'Via Própria',
+                estadoCroqui: EstadoCroquiVia(
+                  mapasMiniatura: [
+                    Mapa(
+                      caminhoImagemMapa: 'mapas/proprio.webp',
+                      larguraMapa: 1000,
+                      alturaMapa: 800,
+                    ),
+                  ],
+                  aspectRatioMiniatura: 1.25,
+                  rotuloLinhaNoMapa: '4',
+                  itensCarrosselMiniatura: const [
+                    CarrosselItemData(mapaCaminhoImagem: 'mapas/proprio.webp'),
+                  ],
                 ),
-              ],
-              aspectRatioMiniatura: 1.25,
-              itensCarrosselMiniatura: const [
-                CarrosselItemData(mapaCaminhoImagem: 'mapas/proprio.webp'),
-              ],
-            ),
-            aoAbrirCroquiInterativo: () {},
+                aoAbrirCroquiInterativo: () {},
+              ),
+            ],
           ),
         ),
       );
       expect(find.byType(MapaThumbnail), findsOneWidget);
+      expect(find.text('Linha #4'), findsOneWidget);
     },
   );
 }

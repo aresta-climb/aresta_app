@@ -173,7 +173,13 @@ void main() {
     ScaffoldMessenger.of(tester.element(find.byType(ViaPage))).clearSnackBars();
     await tester.pumpAndSettle();
 
-    // 2. Tocar na bolha vermelha e confirmar que o risco já foi resolvido
+    // 2. Tocar na bolha vermelha, primeiro confirmar que ainda está lá (+1) e depois marcar como resolvido
+    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('btn_confirmar_alerta_ativo')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
     await tester.pumpAndSettle();
 
@@ -184,6 +190,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
+    expect(find.text('Alerta marcado como resolvido.'), findsOneWidget);
+    expect(find.text('Desfazer'), findsOneWidget);
+
+    // 3. Tocar em Desfazer restaura imediatamente a bolha de alerta na ViaPage
+    await tester.tap(find.text('Desfazer'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+
+    // 4. Confirmar resolução novamente sem desfazer efetiva a remoção após a janela
+    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    expect(repoFake.obterDadosEscalada('via-uid-alerta1').alertasAtivos, isEmpty);
+
+    // 5. Voto direto sem conta autenticada exibe aviso orientativo
+    repoFake.autenticadoSimulado = false;
+    await tester.ensureVisible(find.byKey(const Key('pilula_voto_grau_0')));
+    await tester.tap(find.byKey(const Key('pilula_voto_grau_0')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Entre na sua conta'), findsOneWidget);
   });
 
   testWidgets('ViaPage abre modal de caderneta, exibe selo Flash, copia chave Pix, abre vídeo beta e compartilha via', (tester) async {
@@ -364,7 +393,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Travessia Aérea do Abismo'), findsOneWidget);
     expect(find.text('HIGHLINE'), findsOneWidget);
-    expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+    expect(find.byKey(const Key('btn_dock_croqui_via')), findsOneWidget);
     expect(find.text('90m'), findsOneWidget);
   });
 
@@ -443,15 +472,22 @@ void main() {
     await tester.tap(btnSalvar);
     await tester.pumpAndSettle();
 
-    // ViaPage reflete consenso de grau (7b), gráfico de votos e comentário público imediatamente
-    expect(find.text('7a'), findsOneWidget);
-    expect(find.text('7b'), findsOneWidget);
+    // ViaPage reflete consenso de grau (7b), gráfico de votos e beta da comunidade imediatamente
+    expect(find.text('7a'), findsWidgets);
+    expect(find.text('7b'), findsWidgets);
     expect(find.text('100% sugerem +1'), findsOneWidget);
     expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
     expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
+    expect(find.byKey(const Key('pilula_voto_grau_1')), findsOneWidget);
     expect(find.text('7b (+1)'), findsOneWidget);
-    expect(find.text('Notas da Comunidade (1)'), findsOneWidget);
+    expect(find.text('Betas da Comunidade (1)'), findsOneWidget);
     expect(find.text('Clipar a 3ª da orelha esquerda.'), findsOneWidget);
     expect(find.text('FLASH ★'), findsOneWidget);
+
+    // Voto direto na pílula Opção 2 (-1 -> 6ºsup) atualiza o consenso na hora
+    await tester.ensureVisible(find.byKey(const Key('pilula_voto_grau_-1')));
+    await tester.tap(find.byKey(const Key('pilula_voto_grau_-1')));
+    await tester.pumpAndSettle();
+    expect(repoFake.obterDeltaVotoUsuario('x8siJek3FiG3aB'), -1);
   });
 }
