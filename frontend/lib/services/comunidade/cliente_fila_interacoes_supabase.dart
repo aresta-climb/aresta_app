@@ -40,11 +40,18 @@ abstract interface class ClienteFilaInteracoes {
   /// Consulta todas as interações com `status = 'PENDENTE'` para [escaladaUid] via leitura pública.
   Future<List<ItemFilaInteracao>> buscarInteracoesPendentes(String escaladaUid);
 
-  /// Insere um novo evento na tabela `public.fila_interacoes`.
-  ///
-  /// Quando [accessToken] é informado, autentica como `authenticated` (permitindo
-  /// `VOTO_GRAU` e `COMENTARIO`); quando omitido, utiliza a chave `anon` (permitindo
-  /// `ALERTA_SEGURANCA` e `CONFIRMACAO_ALERTA` sem barreira de login).
+  /// Consulta em uma única chamada HTTP todas as interações `PENDENTE` para o conjunto [escaladaUids].
+  Future<List<ItemFilaInteracao>> buscarInteracoesPendentesEmLote(
+    Iterable<String> escaladaUids,
+  );
+
+  /// Localiza as vias em que [autorIdPublico] criou ou confirmou alertas `PENDENTE` e retorna
+  /// todos os eventos pendentes dessas vias para consolidar status e contagens na Caderneta.
+  Future<List<ItemFilaInteracao>> buscarInteracoesRelacionadasAoAutor(
+    String autorIdPublico,
+  );
+
+  /// Insere um novo evento na tabela `public.fila_interacoes` autenticado pelo perfil do escalador.
   Future<void> inserirInteracao(
     ItemFilaInteracao item, {
     String? accessToken,
@@ -74,17 +81,19 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
            resolvedorAnonKey ??
            (() => RemoteConfigService.instance.supabaseAnonKey);
 
+  String get _baseUrl =>
+      _resolvedorBaseUrl().trim().replaceAll(RegExp(r'/+$'), '');
+
   Map<String, String> _construirCabecalhos({
     String? accessToken,
     bool comCorpoJson = false,
   }) {
-    final anonKey = _resolvedorAnonKey();
-    final bearer = (accessToken != null && accessToken.trim().isNotEmpty)
-        ? accessToken.trim()
-        : anonKey;
+    final anonKey = _resolvedorAnonKey().trim();
+    final tokenAutenticado = accessToken?.trim();
     return <String, String>{
       'apikey': anonKey,
-      'Authorization': 'Bearer $bearer',
+      if (tokenAutenticado != null && tokenAutenticado.isNotEmpty)
+        'Authorization': 'Bearer $tokenAutenticado',
       if (comCorpoJson) ...{
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
@@ -101,15 +110,64 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
       return const [];
     }
 
-    final baseUrl = _resolvedorBaseUrl();
     final uri = Uri.parse(
-      '$baseUrl/rest/v1/fila_interacoes'
+      '$_baseUrl/rest/v1/fila_interacoes'
       '?escalada_uid=eq.$uidLimpo'
       '&status=eq.PENDENTE'
       '&order=criado_em.asc'
       '&select=$_colunasSelecao',
     );
+    return _executarGetLista(uri);
+  }
 
+  @override
+  Future<List<ItemFilaInteracao>> buscarInteracoesPendentesEmLote(
+    Iterable<String> escaladaUids,
+  ) async {
+    final uidsUnicos = escaladaUids
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (uidsUnicos.isEmpty) {
+      return const [];
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?escalada_uid=in.(${uidsUnicos.join(',')})'
+      '&status=eq.PENDENTE'
+      '&order=criado_em.asc'
+      '&select=$_colunasSelecao',
+    );
+    return _executarGetLista(uri);
+  }
+
+  @override
+  Future<List<ItemFilaInteracao>> buscarInteracoesRelacionadasAoAutor(
+    String autorIdPublico,
+  ) async {
+    final autorLimpo = autorIdPublico.trim();
+    if (autorLimpo.isEmpty) {
+      return const [];
+    }
+
+    final uriAutor = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?autor_id_publico=eq.$autorLimpo'
+      '&status=eq.PENDENTE'
+      '&order=criado_em.asc'
+      '&select=$_colunasSelecao',
+    );
+    final proprios = await _executarGetLista(uriAutor);
+    final viasDeAlerta = proprios
+        .where(
+          (i) =>
+              i.tipo == TipoFilaInteracao.alertaSeguranca ||
+              i.tipo == TipoFilaInteracao.confirmacaoAlerta,
+        )
+        .map((i) => i.escaladaUid)
+        .toSet();
     final resposta = await _clienteHttp.get(
       uri,
       headers: _construirCabecalhos(),
