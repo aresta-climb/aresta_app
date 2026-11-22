@@ -523,96 +523,10 @@ class SecaoMapaCroquiVia extends StatelessWidget {
                     grupoContextNome: grupo?.nome,
                     escaladaContextNome: nome,
                   ),
-                )
-                .toList();
-
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: AspectRatio(
-            aspectRatio:
-                mapasValidos.first.larguraMapa / mapasValidos.first.alturaMapa,
-            child: MapaThumbnail(
-              mapas: mapasValidos,
-              cragId: cragId,
-              setorContext: setor,
-              grupoContext: grupo,
-              nomeContexto: nome,
-              carrosselItensOverride: carrosselItens,
-            ),
-          ),
-        ),
       );
     }
-
-    final referencias = resolved?.referencias ?? const [];
-    if (referencias.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          TelemetryService.instance.logAcaoEscalada(
-            cragId,
-            setor?.nome ?? '',
-            nome,
-            'ver_no_mapa_destaque',
-            'detalhes_via',
-          );
-          if (fromMapaPage) {
-            AppNav.back(context);
-          } else {
-            final mapasData = referencias
-                .map(
-                  (refNoMapa) => CarrosselItemData(
-                    mapaCaminhoImagem: refNoMapa.mapa.caminhoImagemMapa,
-                    setorContextNome: refNoMapa.setorContexto?.nome,
-                    grupoContextNome: refNoMapa.grupoContexto?.nome,
-                    escaladaContextNome: nome,
-                    initialSelectedId:
-                        refNoMapa.referencia.pontosUids.isNotEmpty
-                        ? refNoMapa.referencia.pontosUids.first
-                        : null,
-                  ),
-                )
-                .toList();
-            AppNav.toMapas(context, cragId: cragId, mapas: mapasData);
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppColors.brandColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.explore_outlined, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'VER NO CROQUI INTERATIVO',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
-
 /// Grade responsiva de especificações técnicas (`EXTENSÃO`, `PROTEÇÕES`, `PAREDE`, etc.) + tipo de ancoragem.
 class GradeAtributosTecnicosVia extends StatelessWidget {
   /// Lista de atributos técnicos extraídos pelo `ViaViewModel`.
