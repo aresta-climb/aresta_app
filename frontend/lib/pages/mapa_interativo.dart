@@ -23,6 +23,8 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/extrator_rotulos_referencia.dart';
+import '../view/view_models/alertas_mapa_interativo_view_model.dart';
+import '../widgets/via/camada_bolhas_alerta_mapa.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -111,6 +113,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
   final Map<String, List<Mapa_Referencia>> _poiToRefs = {};
   final Map<Mapa_Referencia, ResolvedDataset> _refToResolved = {};
+  late final AlertasMapaInterativoViewModel _alertasViewModel;
   Future<ImageProvider?>? _imageProviderFuture;
   late bool _autoZoomEnabled;
   bool _initialZoom = false;
@@ -154,6 +157,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     );
 
     _buildReferenceMaps();
+    _alertasViewModel = AlertasMapaInterativoViewModel(
+      mapa: widget.mapa,
+      referenciasResolvidas: _refToResolved,
+    );
 
     if (widget.initialSelectedId != null) {
       _selectedId = widget.initialSelectedId;
@@ -190,6 +197,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   void didUpdateWidget(MapaInterativoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     _buildReferenceMaps();
+    _alertasViewModel.atualizarContextoMapa(
+      mapa: widget.mapa,
+      referenciasResolvidas: _refToResolved,
+    );
 
     // 1. Apenas re-resolve a imagem se o caminho físico ou overrides realmente mudaram
     final imageChanged = widget.mapa.caminhoImagemMapa != oldWidget.mapa.caminhoImagemMapa ||
@@ -336,6 +347,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     _animationController.dispose();
     _highlightController.dispose();
     _transformationController.dispose();
+    _alertasViewModel.dispose();
     super.dispose();
   }
 
@@ -1480,6 +1492,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                           ),
                                     ),
                                     ..._buildMarkers(constraints, viewportSize),
+                                    CamadaBolhasAlertaMapa(
+                                      viewModel: _alertasViewModel,
+                                      transformationController:
+                                          _transformationController,
+                                      larguraCanvas: constraints.maxWidth,
+                                      alturaCanvas: constraints.maxHeight,
+                                    ),
                                   ],
                                 ),
                               );

@@ -101,12 +101,15 @@ class CamadaBolhasAlertaMapa extends StatelessWidget {
                     key: Key(
                       'bolha_mapa_${item.escaladaUid}_${item.alerta.categoria.codigoBanco}',
                     ),
-                    ),
+                    alerta: item.alerta,
+                    aoTocar: () => _abrirConfirmacao(context, item),
                   ),
                 ),
-              );
-          }),
+              ),
+            );
+          }).toList(growable: false),
         );
-    });
+      },
+    );
   }
 }
