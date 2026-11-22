@@ -285,6 +285,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     exibirModalConfirmacaoAlertaVia(
       context,
       alerta: alerta,
+      estadoUsuario: _viewModel.estadoInteracaoDoAlerta(alerta),
       aoResponder: (aindaEstaLa) async {
         if (aindaEstaLa) {
           await _viewModel.confirmarAlerta(
@@ -295,47 +296,33 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
         }
 
         _viewModel.iniciarResolucaoAlertaComDesfazer(alerta.uid);
-        messenger
-          ..clearSnackBars()
-          ..showSnackBar(
-            SnackBar(
-              content: const Text('Alerta marcado como resolvido.'),
-              duration: const Duration(seconds: 4),
-              action: SnackBarAction(
-                label: 'Desfazer',
-                textColor: cores.rustIron,
-                onPressed: () => _viewModel.desfazerResolucaoAlerta(alerta.uid),
-              ),
-            ),
-          );
+        despachanteSnack.exibir(
+          texto: 'Alerta marcado como resolvido.',
+          duracao: const Duration(seconds: 4),
+          rotuloAcao: 'Desfazer',
+          aoAcionar: () => _viewModel.desfazerResolucaoAlerta(alerta.uid),
+        );
       },
     );
   }
 
   Future<void> _votarGrauDireto(BuildContext context, int delta) async {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
     final resultado = await _viewModel.votarGrauComunidade(delta);
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     if (resultado == ResultadoVotoGrauVia.requerAutenticacao) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Entre na sua conta na aba Perfil para votar no grau da via.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
+      despachanteSnack.exibir(
+        texto:
+            'Entre na sua conta na aba Perfil para votar no grau da via.',
+        duracao: const Duration(seconds: 3),
+      );
     } else if (resultado == ResultadoVotoGrauVia.registrado) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Voto de grau atualizado!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      despachanteSnack.exibir(
+        texto: 'Voto de grau atualizado!',
+        duracao: const Duration(seconds: 2),
+      );
     }
   }
 
@@ -359,13 +346,15 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
   }
 
   Future<void> _copiarPix(BuildContext context) async {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
     final copiou = await _viewModel.copiarChavePix();
-    if (copiou && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chave Pix copiada para a área de transferência!'),
-          duration: Duration(seconds: 2),
-        ),
+    if (copiou) {
+      despachanteSnack.exibir(
+        texto: 'Chave Pix copiada para a área de transferência!',
+        duracao: const Duration(seconds: 2),
       );
     }
   }
@@ -482,14 +471,6 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                               ),
                             ),
                           ],
-                          if (_viewModel.atributosTecnicos.isNotEmpty ||
-                              _viewModel.tipoAncoragem != null) ...[
-                            const SizedBox(height: 12),
-                            GradeAtributosTecnicosVia(
-                              atributos: _viewModel.atributosTecnicos,
-                              tipoAncoragem: _viewModel.tipoAncoragem,
-                            ),
-                          ],
                           if (estadoCroqui.possuiCroqui ||
                               _viewModel.exibirCartaoGrau ||
                               _viewModel.alertasAtivos.isNotEmpty) ...[
@@ -516,6 +497,14 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                               alertasAtivos: _viewModel.alertasAtivos,
                               aoTocarAlerta: (alerta) =>
                                   _abrirConfirmacaoAlerta(context, alerta),
+                            ),
+                          ],
+                          if (_viewModel.atributosTecnicos.isNotEmpty ||
+                              _viewModel.tipoAncoragem != null) ...[
+                            const SizedBox(height: 12),
+                            GradeAtributosTecnicosVia(
+                              atributos: _viewModel.atributosTecnicos,
+                              tipoAncoragem: _viewModel.tipoAncoragem,
                             ),
                           ],
                         ],
@@ -546,8 +535,6 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
               ),
             ),
             BarraInferiorAcoesVia(
-              exibirBotaoCroqui: estadoCroqui.possuiCroqui,
-              aoAbrirCroqui: () => _abrirCroquiInterativo(context, estadoCroqui),
               exibirBotaoCaderneta: _cadernetaViewModel.visivel,
               possuiCadena: _cadernetaViewModel.isCadena,
               rotuloBotaoCaderneta: _cadernetaViewModel.rotuloBotao,
