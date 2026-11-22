@@ -53,22 +53,22 @@ void main() {
     expect(find.text('7c (+2)'), findsOneWidget);
     expect(find.text('7'), findsOneWidget);
 
-    // Atualiza distribuição em boulder e sem grau oficial (exercita shouldRepaint do anel)
-    const consensoMaisFacil = ConsensoGrauVia(
-      grauSugerido: 'v3',
-      totalVotos: 4,
-      distribuicaoDeltas: {-1: 3, 0: 1},
-    );
+    final apresentacaoMaisFacil =
+        ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+          const ConsensoGrauVia(
+            grauSugerido: 'v3',
+            totalVotos: 4,
+            distribuicaoDeltas: {-1: 3, 0: 1},
+          ),
+          codigoGrauOficial: GrauBoulder_GrauBoulder.V4.value,
+          ehBoulder: true,
+        );
     await tester.pumpWidget(
       envolver(
         Column(
           children: [
-            const AnelConsensoGrauVia(consenso: consensoMaisFacil),
-            BarrasDistribuicaoGrauVia(
-              consenso: consensoMaisFacil,
-              codigoGrauOficial: GrauBoulder_GrauBoulder.V4.value,
-              ehBoulder: true,
-            ),
+            AnelConsensoGrauVia(apresentacao: apresentacaoMaisFacil),
+            BarrasDistribuicaoGrauVia(apresentacao: apresentacaoMaisFacil),
           ],
         ),
       ),
@@ -77,16 +77,24 @@ void main() {
     expect(find.text('v4 (0)'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
 
+    final semGrauOficial =
+        ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+          const ConsensoGrauVia(
+            grauSugerido: 'v3',
+            totalVotos: 4,
+            distribuicaoDeltas: {-1: 3, 0: 1},
+          ),
+          codigoGrauOficial: null,
+          ehBoulder: false,
+        );
     await tester.pumpWidget(
       envolver(
-        const Column(
+        Column(
           children: [
-            AnelConsensoGrauVia(consenso: ConsensoGrauVia.vazio()),
-            BarrasDistribuicaoGrauVia(
-              consenso: consensoMaisFacil,
-              codigoGrauOficial: null,
-              ehBoulder: false,
+            const AnelConsensoGrauVia(
+              apresentacao: ApresentacaoConsensoGrauVia.semVotos(),
             ),
+            BarrasDistribuicaoGrauVia(apresentacao: semGrauOficial),
           ],
         ),
       ),
@@ -95,19 +103,52 @@ void main() {
     expect(find.text('-1'), findsOneWidget);
     expect(find.text('Justo (0)'), findsOneWidget);
     expect(find.text('+1'), findsOneWidget);
+
+    // Exercita shouldRepaint mantendo a mesma árvore quando apenas votosDuros muda
+    await tester.pumpWidget(
+      envolver(
+        Column(
+          children: [
+            const AnelConsensoGrauVia(
+              apresentacao: ApresentacaoConsensoGrauVia(
+                possuiVotos: true,
+                grauSugerido: '7b',
+                subtituloTendencia: '1 avaliação',
+                tituloDistribuicao: '',
+                votosSuaves: 0,
+                votosJustos: 0,
+                votosDuros: 1,
+                faixasDistribuicao: [],
+              ),
+            ),
+            BarrasDistribuicaoGrauVia(apresentacao: semGrauOficial),
+          ],
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('anel_consenso_grau_via')), findsOneWidget);
   });
 
   testWidgets('oculta BarrasDistribuicaoGrauVia quando sem votos e não causa overflow em 220px @ 1.5x', (tester) async {
     await tester.pumpWidget(
       envolver(
         const BarrasDistribuicaoGrauVia(
-          consenso: ConsensoGrauVia.vazio(),
-          codigoGrauOficial: null,
-          ehBoulder: false,
+          apresentacao: ApresentacaoConsensoGrauVia.semVotos(),
         ),
       ),
     );
     expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsNothing);
+
+    final apresentacaoUnanime =
+        ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+          const ConsensoGrauVia(
+            grauSugerido: '7a',
+            totalVotos: 5,
+            distribuicaoDeltas: {0: 5},
+          ),
+          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+          ehBoulder: false,
+        );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -122,15 +163,7 @@ void main() {
           body: SingleChildScrollView(
             child: SizedBox(
               width: 220,
-              child: BarrasDistribuicaoGrauVia(
-                consenso: const ConsensoGrauVia(
-                  grauSugerido: '7a',
-                  totalVotos: 5,
-                  distribuicaoDeltas: {0: 5},
-                ),
-                codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-                ehBoulder: false,
-              ),
+              child: BarrasDistribuicaoGrauVia(apresentacao: apresentacaoUnanime),
             ),
           ),
         ),
