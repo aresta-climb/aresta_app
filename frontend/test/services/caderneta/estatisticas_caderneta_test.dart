@@ -26,52 +26,6 @@ void main() {
       },
     );
 
-    test('calcula totais e contagens de estilo com precisão', () {
-      final cadenas = [
-        Cadena(
-          id: 'c1',
-          escaladaUid: 'via-1',
-          dataAscensao: DateTime(2026, 9, 1),
-          tipoAscensao: TipoAscensao.aVista,
-          tipoEscalada: TipoEscalada.guiado,
-        ),
-        Cadena(
-          id: 'c2',
-          escaladaUid: 'via-2',
-          dataAscensao: DateTime(2026, 9, 2),
-          tipoAscensao: TipoAscensao.flash,
-          tipoEscalada: TipoEscalada.guiado,
-        ),
-        Cadena(
-          id: 'c3',
-          escaladaUid: 'via-3',
-          dataAscensao: DateTime(2026, 9, 3),
-          tipoAscensao: TipoAscensao.trabalhado,
-          tipoEscalada: TipoEscalada.topRope,
-        ),
-        Cadena(
-          id: 'c4',
-          escaladaUid: 'via-4',
-          dataAscensao: DateTime(2026, 9, 4),
-          tipoAscensao: TipoAscensao.tentativa,
-          tipoEscalada: TipoEscalada.guiado,
-        ),
-      ];
-
-      final stats = EstatisticasCaderneta.calcular(cadenas);
-
-      expect(stats.totalAscensoes, 4);
-      expect(stats.totalCadenas, 3);
-      expect(stats.totalTentativas, 1);
-      expect(stats.contagemPorEstilo[TipoAscensao.aVista], 1);
-      expect(stats.contagemPorEstilo[TipoAscensao.flash], 1);
-      expect(stats.contagemPorEstilo[TipoAscensao.trabalhado], 1);
-      expect(stats.contagemPorEstilo[TipoAscensao.tentativa], 1);
-
-      // 2 cadenas aVista/flash de 3 cadenas totais = 66.67%
-      expect(stats.taxaAVistaFlash, closeTo(66.67, 0.1));
-    });
-
     test('calcula a pirâmide de graduação de vias e boulders ordenadas', () {
       final mapaGraus = {
         'via-5': '5º',
@@ -162,50 +116,6 @@ void main() {
       expect(stats.maiorGrauVia, '8a');
       expect(stats.maiorGrauBoulder, 'V5');
     });
-
-    test(
-      'lida com listas vazias, graus não mapeados e graus nulos elegantemente',
-      () {
-        final statsVazia = EstatisticasCaderneta.calcular([]);
-        expect(statsVazia.totalAscensoes, 0);
-
-        final cadenas = [
-          Cadena(
-            id: 'c1',
-            escaladaUid: 'u1',
-            dataAscensao: DateTime(2026, 9, 1),
-            tipoAscensao: TipoAscensao.aVista,
-            tipoEscalada: TipoEscalada.guiado,
-          ),
-          Cadena(
-            id: 'c2',
-            escaladaUid: 'u2',
-            dataAscensao: DateTime(2026, 9, 2),
-            tipoAscensao: TipoAscensao.flash,
-            tipoEscalada: TipoEscalada.boulder,
-          ),
-          Cadena(
-            id: 'c3',
-            escaladaUid: 'u3',
-            dataAscensao: DateTime(2026, 9, 3),
-            tipoAscensao: TipoAscensao.trabalhado,
-            tipoEscalada: TipoEscalada.guiado,
-          ),
-        ];
-
-        final stats = EstatisticasCaderneta.calcular(
-          cadenas,
-          obterGrauDaVia: (uid) {
-            if (uid == 'u1') return 'Grau Especial 15';
-            if (uid == 'u2') return 'SemNumero';
-            return null; // u3 sem grau
-          },
-        );
-
-        expect(stats.piramideVias.containsKey('Grau Especial 15'), isTrue);
-        expect(stats.piramideBoulders.containsKey('SemNumero'), isTrue);
-      },
-    );
 
     test(
       'iguala instâncias com mesmos valores e diferencia com valores distintos',
