@@ -88,7 +88,7 @@ class ViaViewModel extends ChangeNotifier {
   }
 
   void _sincronizarInteracoesSeAtivo() {
-    if (!exibirRecursosComunidade || !possuiUid) return;
+    if (!exibirAlertasSeguranca) return;
     unawaited(
       repositorioInteracoes
           .sincronizarEscalada(
@@ -140,12 +140,27 @@ class ViaViewModel extends ChangeNotifier {
   /// Código numérico Protobuf do grau oficial da escalada, quando definido.
   int? get codigoGrauOficial => obterCodigoGrauOficial(escalada);
 
-  /// Indica se os recursos interativos (alertas Waze, consenso, caderneta e betas) estão ativos.
+  /// Indica se os alertas públicos de segurança na rocha estão ativos para todos os escaladores.
+  bool get exibirAlertasSeguranca =>
+      controladorInteracoes.recursoHabilitadoNoAmbiente && possuiUid;
+
+  /// Indica se os recursos opcionais de perfil, consenso e caderneta estão ativos.
   bool get exibirRecursosComunidade =>
       controladorInteracoes.exibirElementosInterativos;
 
   /// Indica se o botão de reportar alerta deve aparecer na barra superior da página.
-  bool get podeReportarAlerta => exibirRecursosComunidade && possuiUid;
+  bool get podeReportarAlerta => exibirAlertasSeguranca;
+
+  /// Indica se o escalador atual possui sessão autenticada para criar ou confirmar alertas.
+  bool get usuarioEstaAutenticado => repositorioInteracoes.usuarioEstaAutenticado;
+
+  /// Determina o estado de permissão e deduplicação do usuário atual sobre [alerta].
+  EstadoInteracaoAlertaUsuario estadoInteracaoDoAlerta(
+    AlertaSegurancaVia alerta,
+  ) => alerta.resolverEstadoParaUsuario(
+    estaAutenticado: repositorioInteracoes.usuarioEstaAutenticado,
+    autorIdPublicoUsuario: repositorioInteracoes.autorIdPublicoAtual,
+  );
 
   /// Modalidade formatada em português (`'Esportiva'`, `'Móvel'`, `'Mista'`, `'Boulder'`, `'Multienfiada'`, `'Highline'`).
   String get modalidade => ExtratorDetalhesTecnicosVia.extrairModalidade(escalada);
@@ -194,7 +209,7 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Lista de alertas de segurança ativos (filtrando alertas em janela temporária de desfazer).
   List<AlertaSegurancaVia> get alertasAtivos {
-    if (!exibirRecursosComunidade || !possuiUid) {
+    if (!exibirAlertasSeguranca) {
       return const [];
     }
     final todos = repositorioInteracoes

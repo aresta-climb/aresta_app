@@ -439,13 +439,18 @@ void main() {
     expect(vm.comentariosComunidade, isEmpty);
     expect(vm.notasComunidadeApresentacao, isEmpty);
 
-    // Ativar flag e alternar preferência dispara sincronização (inclusive tratando falha sem crash)
+    // Ativar flag com interacoesAtivas=false mantém alertas de segurança visíveis para todos os escaladores
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(false);
     repoFake.erroSimulado = StateError('Falha inicial de sync');
-    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(false);
     await Future<void>.delayed(Duration.zero);
     repoFake.erroSimulado = null;
+    expect(vm.exibirRecursosComunidade, isFalse);
+    expect(vm.consensoGrau, isNull);
+    expect(vm.podeReportarAlerta, isTrue);
+
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
+    await Future<void>.delayed(Duration.zero);
 
     expect(vm.exibirRecursosComunidade, isTrue);
     expect(vm.podeReportarAlerta, isTrue);

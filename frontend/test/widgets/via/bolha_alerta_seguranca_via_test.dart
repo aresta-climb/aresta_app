@@ -149,7 +149,32 @@ void main() {
         ),
         findsOneWidget,
       );
-      }
+      await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
+      await tester.pumpAndSettle();
+    }
+
+    // Quando não autenticado, exibe orientação de login sem botões mutáveis
+    await tester.pumpWidget(
+      envolverComTema(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              exibirModalConfirmacaoAlertaVia(
+                context,
+                alerta: alerta,
+                estadoUsuario: EstadoInteracaoAlertaUsuario.requerAutenticacao,
+                aoResponder: (_) async {},
+              );
+            },
+            child: const Text('Abrir Sem Conta'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir Sem Conta'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('aviso_login_alerta_via')), findsOneWidget);
+    expect(find.byKey(const Key('btn_confirmar_alerta_ativo')), findsNothing);
   });
 
   testWidgets('exibirModalReportarAlertaVia permite escolher categoria emoji e enviar detalhe opcional', (tester) async {

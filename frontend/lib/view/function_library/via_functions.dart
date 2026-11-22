@@ -13,6 +13,7 @@ import '../../widgets/via/barra_inferior_acoes_via.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../../widgets/via/cabecalho_e_heroi_via.dart';
 import '../../widgets/via/secoes_detalhes_via.dart';
+import '../../widgets/via/snackbar_flutuante_seguro.dart';
 import '../view_models/secao_caderneta_via_view_model.dart';
 import '../view_models/via_view_model.dart';
 
@@ -249,21 +250,24 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     super.dispose();
   }
 
+  double get _recuoDockInferior => _cadernetaViewModel.visivel ? 72.0 : 0.0;
+
   void _abrirRegistroCadena(BuildContext context) {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
     final registroVm = _cadernetaViewModel.criarViewModelRegistro();
     exibirModalRegistroCadena(
       context,
       viewModel: registroVm,
       onSalvo: (cadenaSalva) {
-        if (!context.mounted) return;
         final mensagem = cadenaSalva.isCadena
             ? 'Cadena salva na caderneta!'
             : 'Tentativa salva na caderneta!';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensagem),
-            duration: const Duration(seconds: 2),
-          ),
+        despachanteSnack.exibir(
+          texto: mensagem,
+          duracao: const Duration(seconds: 2),
         );
       },
     ).whenComplete(registroVm.dispose);
@@ -273,8 +277,10 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     BuildContext context,
     AlertaSegurancaVia alerta,
   ) {
-    final messenger = ScaffoldMessenger.of(context);
-    final cores = context.colors;
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
 
     exibirModalConfirmacaoAlertaVia(
       context,
