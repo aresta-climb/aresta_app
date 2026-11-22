@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../theme/cores_app.dart';
+import '../../view/view_models/formulario_alerta_via_view_model.dart';
 
 /// Cor vermelha de alta visibilidade usada nas bolhas de alerta estilo Waze sobre rocha e cartões escuros.
 const Color _corVermelhoAlerta = Color(0xFFD93829);
@@ -146,8 +147,12 @@ Future<void> exibirModalConfirmacaoAlertaVia(
   required Future<void> Function(bool aindaEstaLa) aoResponder,
 }) {
   final cores = context.colors;
-  final dia = alerta.criadoEm.day.toString().padLeft(2, '0');
-  final mes = alerta.criadoEm.month.toString().padLeft(2, '0');
+  final subtitulo = FormularioAlertaViaViewModel.formatarSubtituloConfirmacao(
+    alerta,
+  );
+  final citacaoDetalhe = FormularioAlertaViaViewModel.formatarCitacaoDetalhe(
+    alerta,
+  );
 
   return showModalBottomSheet<void>(
     context: context,
