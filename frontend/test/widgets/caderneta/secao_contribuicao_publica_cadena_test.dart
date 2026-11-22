@@ -3,11 +3,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/view_models/registro_cadena_view_model.dart';
 import 'package:frontend/widgets/caderneta/secao_contribuicao_publica_cadena.dart';
 
 void main() {
+  const opcoesPadrao = <OpcaoDeltaGrauApresentacao>[
+    OpcaoDeltaGrauApresentacao(delta: -2, rotulo: '-2 (6º)', selecionado: false),
+    OpcaoDeltaGrauApresentacao(delta: -1, rotulo: '-1 (6ºsup)', selecionado: false),
+    OpcaoDeltaGrauApresentacao(delta: 0, rotulo: 'Justo (7a)', selecionado: true),
+    OpcaoDeltaGrauApresentacao(delta: 1, rotulo: '+1 (7b)', selecionado: false),
+    OpcaoDeltaGrauApresentacao(delta: 2, rotulo: '+2 (7c)', selecionado: false),
+  ];
+
   Widget envolver(Widget filho) {
     return MaterialApp(
       theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -15,7 +23,7 @@ void main() {
     );
   }
 
-  testWidgets('renderiza seletor -2..+2 com Grau Justo (0) pré-marcado e campo de comentário quando autenticado', (tester) async {
+  testWidgets('renderiza chips pré-formatados de percepção de grau e campo de comentário quando autenticado', (tester) async {
     var deltaEscolhido = 0;
     final controlador = TextEditingController();
     addTearDown(controlador.dispose);
@@ -23,10 +31,8 @@ void main() {
     await tester.pumpWidget(
       envolver(
         SecaoContribuicaoPublicaAscensao(
-          deltaSelecionado: 0,
+          opcoesDelta: opcoesPadrao,
           aoSelecionarDelta: (novo) => deltaEscolhido = novo,
-          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-          ehBoulder: false,
           estaAutenticado: true,
           controladorComentario: controlador,
           contadorComentarioTexto: '280/280',
@@ -53,10 +59,14 @@ void main() {
     await tester.pumpWidget(
       envolver(
         SecaoContribuicaoPublicaAscensao(
-          deltaSelecionado: 1,
+          opcoesDelta: const [
+            OpcaoDeltaGrauApresentacao(
+              delta: 1,
+              rotulo: '+1 (7b)',
+              selecionado: true,
+            ),
+          ],
           aoSelecionarDelta: (_) {},
-          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-          ehBoulder: false,
           estaAutenticado: true,
           controladorComentario: controlador,
           contadorComentarioTexto: '16/280',
@@ -92,10 +102,8 @@ void main() {
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: SecaoContribuicaoPublicaAscensao(
-              deltaSelecionado: 0,
+              opcoesDelta: opcoesPadrao,
               aoSelecionarDelta: (_) {},
-              codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-              ehBoulder: false,
               estaAutenticado: false,
               controladorComentario: controlador,
               contadorComentarioTexto: '280/280',
