@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../../services/caderneta/estatisticas_caderneta.dart';
+import '../../data/modelos/estatisticas_caderneta.dart';
 import '../../theme/cores_app.dart';
 
 /// Card visual conciso para apresentação de métricas esportivas do perfil do escalador.

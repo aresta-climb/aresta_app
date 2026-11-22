@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/caderneta/estatisticas_caderneta.dart';
+import 'package:frontend/data/modelos/estatisticas_caderneta.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/widgets/caderneta/card_estatistica.dart';
 

@@ -161,6 +161,46 @@ void main() {
           stats.piramideBoulders.keys.toList(),
           equals(['VA', 'VZ', 'V3', 'V99']),
         );
+
+        final viasCustom = CompiladorEstatisticasCaderneta.compilar(
+          [
+            Cadena.criar(
+              escaladaUid: 'v1',
+              dataAscensao: DateTime(2026, 9, 1),
+              tipoAscensao: TipoAscensao.aVista,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+            Cadena.criar(
+              escaladaUid: 'v2',
+              dataAscensao: DateTime(2026, 9, 2),
+              tipoAscensao: TipoAscensao.aVista,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+            Cadena.criar(
+              escaladaUid: 'v3',
+              dataAscensao: DateTime(2026, 9, 3),
+              tipoAscensao: TipoAscensao.tentativa,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+            Cadena.criar(
+              escaladaUid: 'v4',
+              dataAscensao: DateTime(2026, 9, 4),
+              tipoAscensao: TipoAscensao.trabalhado,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+          ],
+          obterGrauDaVia: (uid) => switch (uid) {
+            'v1' => 'Projeto 50 B',
+            'v2' => 'Projeto 50 A',
+            'v4' => 'SemNumeroVia',
+            _ => null,
+          },
+        );
+        expect(viasCustom.totalTentativas, 1);
+        expect(
+          viasCustom.piramideVias.keys.toList(),
+          equals(['SemNumeroVia', 'Projeto 50 A', 'Projeto 50 B']),
+        );
       },
     );
   });

@@ -56,7 +56,7 @@ Ponte reativa (`ChangeNotifier`) entre a `RepositorioCaderneta` e o catálogo lo
 O módulo conta com cobertura completa de testes unitários e de widget (utilizando instâncias reais de Protobufs e SQLite FFI):
 - Testes unitários do adaptador de persistência: `test/services/caderneta/armazenamento_local_caderneta_test.dart`
 - Testes unitários do repositório: `test/services/caderneta/repositorio_caderneta_test.dart`
-- Testes unitários da entidade estatística: `test/services/caderneta/estatisticas_caderneta_test.dart`
+- Testes unitários da entidade estatística pura: `test/data/modelos/estatisticas_caderneta_test.dart`
 - Testes unitários do compilador estatístico e fallback `grauSugerido`: `test/services/caderneta/compilador_estatisticas_test.dart`
 - Testes de integração com `catalogo.db` e croquis em memória: `test/services/caderneta/catalogo_vias_caderneta_test.dart`
 - Testes unitários de autenticação e sincronização Supabase: `test/services/autenticacao/servico_autenticacao_test.dart` e `test/services/autenticacao/cliente_supabase_autenticacao_test.dart`

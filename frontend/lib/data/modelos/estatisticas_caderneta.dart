@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../../data/modelos/cadena.dart';
-import '../../data/modelos/tipo_ascensao.dart';
-import 'compilador_estatisticas.dart';
+import 'package:flutter/foundation.dart';
+import 'tipo_ascensao.dart';
 
-/// Consolidação analítica e métricas de desempenho esportivo da caderneta do escalador.
+/// Consolidação analítica imutável das métricas de desempenho esportivo da caderneta do escalador.
 ///
-/// Apresenta dados agregados de ascensões, taxas de encadenamento rápido (À Vista e Flash)
-/// e a distribuição em pirâmide de graduação para vias de falésia e blocos de boulder.
+/// Modelo de valor puro da camada de domínio (`data/modelos`), isento de dependências de
+/// serviços ou interface gráfica, representando contagens por estilo, taxas de encadenamento
+/// rápido (À Vista e Flash) e pirâmides de graduação para vias e blocos de boulder.
+@immutable
 class EstatisticasCaderneta {
   /// Quantidade total de registros efetuados (cadenas e tentativas combinadas).
   final int totalAscensoes;
@@ -37,7 +38,7 @@ class EstatisticasCaderneta {
   final String? maiorGrauBoulder;
 
   /// Porcentagem de cadenas conquistadas no primeiro contato (À Vista + Flash)
-  /// em relação ao total de cadenas conquistadas (0.0 a 100.0%).
+  /// em relação ao total de cadenas conquistadas (`0.0` a `100.0%`).
   final double taxaAVistaFlash;
 
   /// Construtor imutável com todos os campos de estatística esportiva.
@@ -64,16 +65,6 @@ class EstatisticasCaderneta {
     maiorGrauVia: null,
     maiorGrauBoulder: null,
     taxaAVistaFlash: 0.0,
-  );
-
-  /// Processa a lista de [cadenas] e compila as estatísticas consolidadas delegando
-  /// a lógica de cálculo ao [CompiladorEstatisticasCaderneta].
-  factory EstatisticasCaderneta.calcular(
-    List<Cadena> cadenas, {
-    String? Function(String escaladaUid)? obterGrauDaVia,
-  }) => CompiladorEstatisticasCaderneta.compilar(
-    cadenas,
-    obterGrauDaVia: obterGrauDaVia,
   );
 
   /// Retorna uma cópia das estatísticas com campos seletivamente substituídos.

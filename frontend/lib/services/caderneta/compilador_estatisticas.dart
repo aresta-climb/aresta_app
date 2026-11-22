@@ -3,10 +3,10 @@
 
 import '../../aresta_api/proto/generated/croqui.pbenum.dart';
 import '../../data/modelos/cadena.dart';
+import '../../data/modelos/estatisticas_caderneta.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/filtro_grau_escalada.dart';
 import '../../utils/formatador_escalada.dart';
-import 'estatisticas_caderneta.dart';
 
 /// Algoritmo dedicado para compilação analítica e agregação de métricas da caderneta.
 ///

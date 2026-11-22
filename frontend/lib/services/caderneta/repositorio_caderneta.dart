@@ -5,13 +5,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/cadena.dart';
+import '../../data/modelos/estatisticas_caderneta.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../utils/gerador_uid.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../firebase/app_logger.dart';
 import 'armazenamento_local_caderneta.dart';
 import 'cliente_cadenas_supabase.dart';
-import 'estatisticas_caderneta.dart';
+import 'compilador_estatisticas.dart';
 
 /// Contrato abstrato do repositório reativo da caderneta pessoal de cadenas e perfil.
 ///
@@ -354,7 +355,7 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
   EstatisticasCaderneta calcularEstatisticas({
     String? Function(String escaladaUid)? obterGrauDaVia,
   }) {
-    return EstatisticasCaderneta.calcular(
+    return CompiladorEstatisticasCaderneta.compilar(
       _cadenas,
       obterGrauDaVia: obterGrauDaVia,
     );

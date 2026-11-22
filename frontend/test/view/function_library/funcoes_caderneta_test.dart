@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
-import 'package:frontend/services/caderneta/estatisticas_caderneta.dart';
+import 'package:frontend/data/modelos/estatisticas_caderneta.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/funcoes_caderneta.dart';
 
