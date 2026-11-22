@@ -20,6 +20,11 @@ import 'package:frontend/services/dataset/normalizador_croqui.dart';
 import 'package:frontend/widgets/badges_modalidades.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
+import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89,
@@ -4346,6 +4351,86 @@ void main() {
         },
       );
     });
+
+    testWidgets(
+      'exibe bolha vermelha de alerta estilo Waze sobre a via diretamente no mapa interativo do setor',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        final repoFake = RepositorioInteracoesViaFake()
+          ..semearDados(
+            'faraoUid123456',
+            DadosComunidadeVia(
+              alertasAtivos: [
+                AlertaSegurancaVia.criar(
+                  uid: 'alertaFarao001',
+                  escaladaUid: 'faraoUid123456',
+                  categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+                  detalhe: 'Enxame próximo à parada',
+                ),
+              ],
+            ),
+          );
+        RepositorioInteracoesViaMemoria.instancia = repoFake;
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          RepositorioInteracoesViaMemoria.redefinirParaTestes();
+        });
+
+        final viaFarao = Escalada(
+          uid: 'faraoUid123456',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Faraó',
+            dificuldade: GrauVia_GrauVia.BR_8A,
+          ),
+        );
+        final mapaSetor = Mapa(
+          caminhoImagemMapa: 'mapas/setor_2_andar.png',
+          larguraMapa: 400,
+          alturaMapa: 400,
+          pontosDeInteresse: [
+            Mapa_PontoDeInteresse(
+              uid: 'poi_28',
+              circulo: BoundingCirculo(x: 200, y: 200, raio: 20),
+            ),
+          ],
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'faraoUid123456',
+              pontosUids: ['poi_28'],
+            ),
+          ],
+        );
+        final setor = Setor(
+          uid: 'setor2Andar001',
+          nome: 'Setor 2º Andar',
+          escaladas: [viaFarao],
+          mapas: [mapaSetor],
+        );
+        final pico = Pico(
+          nome: 'Gruta do Baú',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              pico: pico,
+              mapa: mapaSetor,
+              cragId: 'gruta_do_bau',
+              setorContext: setor,
+              imageProviderOverride: MemoryImage(kTransparentImage),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(repoFake.escaladasSincronizadas, contains('faraoUid123456'));
+        expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+        expect(find.text('🐝'), findsOneWidget);
+      },
+    );
   });
 }
 

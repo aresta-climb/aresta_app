@@ -153,5 +153,7 @@ void main() {
 
       await tester.tap(find.text('Desfazer'));
       await tester.pumpAndSettle();
-  });
+      expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+    },
+  );
 }
