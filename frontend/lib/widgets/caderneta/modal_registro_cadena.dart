@@ -4,24 +4,24 @@
 import 'package:flutter/material.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
-import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/registro_cadena_view_model.dart';
 import 'controles_formulario_cadena.dart';
 import 'secao_contribuicao_publica_cadena.dart';
 
-/// Exibe o modal de registro ou edição de cadena em formato Bottom Sheet.
+/// Exibe o modal de registro ou edição de cadena em formato Bottom Sheet (Dumb UI).
 ///
-/// Aceita diretamente um [viewModel] ou instancia um automaticamente a partir
-/// dos parâmetros fornecidos.
+/// Aceita diretamente um [viewModel], uma fábrica tardia [construtorViewModel] ou
+/// instancia um [RegistroCadenaViewModel] padrão a partir dos metadados da escalada,
+/// mantendo a camada de widgets desacoplada de repositórios de `services/`.
 Future<void> exibirModalRegistroCadena(
   BuildContext context, {
   String? escaladaUid,
   String? nomeEscalada,
   TipoEscalada tipoEscaladaPadrao = TipoEscalada.guiado,
   int? grauSugerido,
-  RepositorioCaderneta? repositorio,
   RegistroCadenaViewModel? viewModel,
+  RegistroCadenaViewModel Function()? construtorViewModel,
   void Function(Cadena cadenaSalva)? onSalvo,
 }) {
   return showModalBottomSheet<void>(
@@ -39,11 +39,11 @@ Future<void> exibirModalRegistroCadena(
         ),
         child: ModalRegistroCadena(
           viewModel: viewModel,
+          construtorViewModel: construtorViewModel,
           escaladaUid: escaladaUid,
           nomeEscalada: nomeEscalada,
           tipoEscaladaPadrao: tipoEscaladaPadrao,
           grauSugerido: grauSugerido,
-          repositorio: repositorio,
           onSalvo: onSalvo,
         ),
       );
@@ -54,26 +54,26 @@ Future<void> exibirModalRegistroCadena(
 /// Interface gráfica declarativa (Dumb UI) para o registro e edição de ascensões e cadenas.
 ///
 /// Todas as regras de negócio, persistência e estados de formulário são delegados ao
-/// [RegistroCadenaViewModel], enquanto os controles visuais são compostos a partir de
-/// [controles_formulario_cadena.dart].
+/// [RegistroCadenaViewModel], sem qualquer importação direta de serviços ou repositórios.
 class ModalRegistroCadena extends StatefulWidget {
-  /// ViewModel injetado contendo a lógica e o estado da tela.
+  /// ViewModel injetado externamente (cujo ciclo de vida pertence ao chamador).
   final RegistroCadenaViewModel? viewModel;
 
-  /// Identificador NanoID 14c estável da via associada (usado se [viewModel] for omitido).
+  /// Fábrica tardia opcional para instanciar o ViewModel em [State.initState],
+  /// cujo ciclo de vida passa a ser descartado por este modal em [State.dispose].
+  final RegistroCadenaViewModel Function()? construtorViewModel;
+
+  /// Identificador NanoID 14c estável da via associada (usado quando [viewModel] e [construtorViewModel] forem omitidos).
   final String? escaladaUid;
 
-  /// Nome legível da escalada (usado se [viewModel] for omitido).
+  /// Nome legível da escalada (usado quando [viewModel] e [construtorViewModel] forem omitidos).
   final String? nomeEscalada;
 
-  /// Modalidade padrão da via de escalada (usada se [viewModel] for omitido).
+  /// Modalidade padrão da via de escalada.
   final TipoEscalada tipoEscaladaPadrao;
 
   /// Grau sugerido oficial ou pré-calculado.
   final int? grauSugerido;
-
-  /// Repositório opcional de caderneta para testes.
-  final RepositorioCaderneta? repositorio;
 
   /// Callback opcional executado imediatamente após o salvamento.
   final void Function(Cadena cadenaSalva)? onSalvo;
@@ -81,11 +81,11 @@ class ModalRegistroCadena extends StatefulWidget {
   const ModalRegistroCadena({
     super.key,
     this.viewModel,
+    this.construtorViewModel,
     this.escaladaUid,
     this.nomeEscalada,
     this.tipoEscaladaPadrao = TipoEscalada.guiado,
     this.grauSugerido,
-    this.repositorio,
     this.onSalvo,
   });
 
@@ -105,13 +105,14 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
     } else {
-      _viewModel = RegistroCadenaViewModel(
-        escaladaUid: widget.escaladaUid ?? '',
-        nomeEscalada: widget.nomeEscalada ?? '',
-        tipoEscaladaPadrao: widget.tipoEscaladaPadrao,
-        grauSugerido: widget.grauSugerido,
-        repositorio: widget.repositorio,
-      );
+      _viewModel =
+          widget.construtorViewModel?.call() ??
+          RegistroCadenaViewModel(
+            escaladaUid: widget.escaladaUid ?? '',
+            nomeEscalada: widget.nomeEscalada ?? '',
+            tipoEscaladaPadrao: widget.tipoEscaladaPadrao,
+            grauSugerido: widget.grauSugerido,
+          );
       _criouViewModelInterno = true;
     }
 
@@ -224,10 +225,8 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
                             _viewModel.exibirContribuicaoPublica) ...[
                           const SizedBox(height: 20),
                           SecaoContribuicaoPublicaAscensao(
-                            deltaSelecionado: _viewModel.deltaGrau,
+                            opcoesDelta: _viewModel.opcoesDeltaGrau,
                             aoSelecionarDelta: _viewModel.definirDeltaGrau,
-                            codigoGrauOficial: _viewModel.codigoGrauOficial,
-                            ehBoulder: _viewModel.ehBoulder,
                             estaAutenticado:
                                 _viewModel.estaAutenticadoParaComunidade,
                             controladorComentario: _comentarioPublicoController,

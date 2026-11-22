@@ -25,6 +25,11 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
     await repositorio.inicializar();
+    RepositorioCadernetaLocal.instancia = repositorio;
+  });
+
+  tearDown(() {
+    RepositorioCadernetaLocal.instancia = null;
   });
 
   Widget criarWidgetDeTeste({
@@ -37,10 +42,12 @@ void main() {
       theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
       home: Scaffold(
         body: ModalRegistroCadena(
-          escaladaUid: escaladaUid,
-          nomeEscalada: nomeEscalada,
-          tipoEscaladaPadrao: tipoEscaladaPadrao,
-          repositorio: repositorio,
+          construtorViewModel: () => RegistroCadenaViewModel(
+            escaladaUid: escaladaUid,
+            nomeEscalada: nomeEscalada,
+            tipoEscaladaPadrao: tipoEscaladaPadrao,
+            repositorio: repositorio,
+          ),
           onSalvo: onSalvo,
         ),
       ),
@@ -191,7 +198,6 @@ void main() {
                     ctx,
                     escaladaUid: 'via-bottom-sheet',
                     nomeEscalada: 'Fenda da Ilusão',
-                    repositorio: repositorio,
                   ),
                   child: const Text('Abrir Modal'),
                 ),
@@ -293,11 +299,10 @@ void main() {
               ),
               child: child!,
             ),
-            home: Scaffold(
+            home: const Scaffold(
               body: ModalRegistroCadena(
                 escaladaUid: 'via-compacta-overflow',
                 nomeEscalada: 'Fissura Extrema do Crepúsculo dos Deuses',
-                repositorio: repositorio,
               ),
             ),
           ),

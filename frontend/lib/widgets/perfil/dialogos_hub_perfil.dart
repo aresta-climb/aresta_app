@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
 import '../../view/function_library/funcoes_hub_perfil_caderneta.dart';
+import '../../view/view_models/edicao_perfil_view_model.dart';
 
 /// Exibe o diálogo de edição do nome esportivo e foto de perfil do atleta.
 ///
@@ -24,10 +25,10 @@ Future<String?> exibirDialogoEditarPerfil(
   );
 }
 
-/// Diálogo com ciclo de vida gerenciado (`StatefulWidget`) para edição do nome e foto do atleta.
+/// Diálogo declarativo (Dumb UI) para edição do nome e foto do atleta.
 ///
-/// Encapsula e descarta apropriadamente seu [TextEditingController] em [State.dispose],
-/// evitando vazamentos de memória após o fechamento do modal.
+/// Delega o estado e a normalização ao [EdicaoPerfilViewModel] e gerencia apenas o ciclo
+/// de vida dos controladores visuais em [State.dispose].
 class DialogoEditarPerfil extends StatefulWidget {
   /// Nome atual exibido inicialmente no campo de texto.
   final String nomeAtual;
@@ -38,11 +39,15 @@ class DialogoEditarPerfil extends StatefulWidget {
   /// Callback opcional para selecionar e salvar uma nova foto de perfil a partir do diálogo.
   final Future<String?> Function()? aoSelecionarNovaFoto;
 
+  /// ViewModel opcional injetado externamente para testes.
+  final EdicaoPerfilViewModel? viewModel;
+
   const DialogoEditarPerfil({
     super.key,
     required this.nomeAtual,
     this.fotoUrlAtual,
     this.aoSelecionarNovaFoto,
+    this.viewModel,
   });
 
   @override
