@@ -539,13 +539,20 @@ class SecaoMapaCroquiVia extends StatelessWidget {
                         horizontal: 9,
                         vertical: 5,
                       ),
-                    ),
-                    child: Text(
-                      'Linha #${estadoCroqui.rotuloLinhaNoMapa}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Text(
+                        'Linha #${estadoCroqui.rotuloLinhaNoMapa}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

@@ -185,6 +185,31 @@ void main() {
       );
       expect(find.byType(MapaThumbnail), findsOneWidget);
       expect(find.text('Linha #4'), findsOneWidget);
+
+      // Em largura móvel padrão (360px), valor oficial e Sem votos permanecem alinhados horizontalmente
+      await tester.pumpWidget(
+        envolver(
+          const SizedBox(
+            width: 360,
+            child: CartaoGrauVia(
+              rotuloGrauOficial: 'GRAU OFICIAL',
+              grauOficial: '8a',
+              complementoGrauOficial: 'Guia Oficial / Conquistador',
+              apresentacaoConsenso: ApresentacaoConsensoGrauVia.semVotos(),
+            ),
+          ),
+        ),
+      );
+      final centroGrauY = tester.getCenter(find.text('8a')).dy;
+      final centroSemVotosY = tester.getCenter(find.text('Sem votos')).dy;
+      expect((centroGrauY - centroSemVotosY).abs(), lessThanOrEqualTo(4.0));
+      final topoSubOficialY = tester
+          .getTopLeft(find.text('Guia Oficial / Conquistador'))
+          .dy;
+      final topoSubComunidadeY = tester
+          .getTopLeft(find.text('Registre sua ascensão para avaliar'))
+          .dy;
+      expect((topoSubOficialY - topoSubComunidadeY).abs(), lessThanOrEqualTo(2.0));
     },
   );
 }

@@ -141,9 +141,14 @@ class _PintorBolhaChatVermelha extends CustomPainter {
 }
 
 /// Abre o modal estilo Waze perguntando *"Ainda está lá?"* quando o escalador toca na bolha vermelha.
+///
+/// Respeita [estadoUsuario] para exigir login antes de interações mutáveis e impedir mais de
+/// uma confirmação positiva (`+1`) pelo mesmo perfil.
 Future<void> exibirModalConfirmacaoAlertaVia(
   BuildContext context, {
   required AlertaSegurancaVia alerta,
+  EstadoInteracaoAlertaUsuario estadoUsuario =
+      EstadoInteracaoAlertaUsuario.podeConfirmar,
   required Future<void> Function(bool aindaEstaLa) aoResponder,
 }) {
   final cores = context.colors;
@@ -231,6 +236,37 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                 ),
               ],
               const SizedBox(height: 20),
+              if (estadoUsuario ==
+                  EstadoInteracaoAlertaUsuario.requerAutenticacao)
+                Container(
+                  key: const Key('aviso_login_alerta_via'),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cores.caveShadow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cores.graniteEdge),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lock_outline_rounded,
+                        size: 18,
+                        color: cores.rustIron,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Entre na sua conta na aba Perfil para confirmar ou atualizar este alerta.',
+                          style: TextStyle(
+                            color: cores.ashGrey,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(
                 'Ainda está lá?',
                 textAlign: TextAlign.center,
