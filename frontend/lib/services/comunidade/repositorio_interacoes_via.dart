@@ -228,6 +228,8 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         }
       }
       _votosLocaisPorAutor[uidVia] = mapaVotos;
+      _atualizarCacheAlertasDaVia(uidVia, combinados);
+      await _persistirCacheAlertasUsuario();
 
       _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
         combinados,
@@ -236,8 +238,65 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       );
       _versaoNotifier.value++;
     } catch (e, stackTrace) {
-      _registrarFalhaRede(
+      DespachanteFilaInteracoes.registrarFalhaRede(
         'Falha ao consultar fila_interacoes para $uidVia',
+        e,
+        stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<void> sincronizarEscaladasEmLote(
+    Iterable<String> escaladaUids,
+  ) async {
+    final cliente = _clienteFila;
+    if (cliente == null) return;
+    final uidsValidos = escaladaUids
+        .map((u) => u.trim())
+        .where(validarUid)
+        .toSet()
+        .toList(growable: false);
+    if (uidsValidos.isEmpty) return;
+
+    await _hidratarEstadoLocalSeNecessario();
+    await _despachante.drenar(cliente);
+
+    try {
+      final remotos = await cliente.buscarInteracoesPendentesEmLote(uidsValidos);
+      final porVia = <String, List<ItemFilaInteracao>>{
+        for (final uid in uidsValidos) uid: <ItemFilaInteracao>[],
+      };
+      for (final item in remotos) {
+        porVia[item.escaladaUid]?.add(item);
+      }
+      for (final pendente in _despachante.itensPendentes) {
+        porVia[pendente.escaladaUid]?.add(pendente);
+      }
+
+      for (final entrada in porVia.entries) {
+        final uid = entrada.key;
+        final itens = entrada.value
+          ..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
+        _atualizarCacheAlertasDaVia(uid, itens);
+        final consolidado = consolidarItensFilaEmDadosComunidade(
+          itens,
+          ehBoulder: false,
+        );
+        final anterior = _dadosPorEscalada[uid];
+        _dadosPorEscalada[uid] = DadosComunidadeVia(
+          consensoGrau: anterior != null && anterior.consensoGrau.possuiVotos
+              ? anterior.consensoGrau
+              : consolidado.consensoGrau,
+          alertasAtivos: consolidado.alertasAtivos,
+          comentarios: consolidado.comentarios,
+        );
+      }
+      await _persistirCacheAlertasUsuario();
+      _versaoNotifier.value++;
+    } catch (e, stackTrace) {
+      DespachanteFilaInteracoes.registrarFalhaRede(
+        'Falha ao consultar fila_interacoes em lote (${uidsValidos.length} vias)',
         e,
         stackTrace,
       );
@@ -276,9 +335,10 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         deslocarCodigoGrau(codigoGrauOficial, deltaGrau, ehBoulder: ehBoulder);
 
     final atual = obterDadosEscalada(uidVia);
-    final votosPorAutor = Map<String, ({int? deltaGrau, int? grauSugerido})>.from(
-      _votosLocaisPorAutor[uidVia] ?? const {},
-    );
+    final votosPorAutor =
+        Map<String, ({int? deltaGrau, int? grauSugerido})>.from(
+          _votosLocaisPorAutor[uidVia] ?? const {},
+        );
     votosPorAutor[perfil.autorIdPublico] = (
       deltaGrau: deltaGrau,
       grauSugerido: codEfetivo,
@@ -315,7 +375,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         perfil.estaAutenticado &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico)) {
-      final itensParaEnviar = <ItemFilaInteracao>[
+      await _despachante.enfileirarEDespachar(cliente, [
         ItemFilaInteracao.votoGrau(
           autorIdPublico: perfil.autorIdPublico,
           autorNomePublico: perfil.autorNomePublico,
@@ -334,8 +394,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
             tipoAscensao: estiloAscensao,
             criadoEm: novoComentario.criadoEm,
           ),
-      ];
-      await _enfileirarEDespachar(cliente, itensParaEnviar);
+      ]);
     }
   }
 
@@ -360,11 +419,19 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     final indiceExistente = alertas.indexWhere((a) => a.categoria == categoria);
 
     final AlertaSegurancaVia resultado;
+    var jaContribuira = false;
     if (indiceExistente >= 0) {
       final anterior = alertas[indiceExistente];
+      jaContribuira = anterior.jaConfirmadoPor(perfil.autorIdPublico);
       final detalheLimpo = detalhe?.trim();
       resultado = anterior.copyWith(
-        confirmacoesAtivas: anterior.confirmacoesAtivas + 1,
+        confirmacoesAtivas: jaContribuira
+            ? anterior.confirmacoesAtivas
+            : anterior.confirmacoesAtivas + 1,
+        confirmadoresUids: {
+          ...anterior.confirmadoresUids,
+          perfil.autorIdPublico,
+        },
         detalhe: (detalheLimpo != null && detalheLimpo.isNotEmpty)
             ? detalheLimpo
             : anterior.detalhe,
@@ -375,6 +442,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         escaladaUid: uidVia,
         categoria: categoria,
         detalhe: detalhe,
+        autorIdPublico: perfil.autorIdPublico,
         autorNomePublico: perfil.autorNomePublico,
       );
       alertas.insert(0, resultado);
@@ -383,10 +451,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     _dadosPorEscalada[uidVia] = atual.copyWith(
       alertasAtivos: List.unmodifiable(alertas),
     );
-    _versaoNotifier.value++;
-
-    final cliente = _clienteFila;
-    if (cliente != null &&
+    if (!jaContribuira &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
         validarUid(resultado.uid)) {
