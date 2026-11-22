@@ -111,4 +111,17 @@ void exibirSnackBarFlutuanteSeguro(
   BuildContext context, {
   required String texto,
   Duration duracao = const Duration(seconds: 2),
-});
+  double recuoExtraInferior = 0.0,
+  String? rotuloAcao,
+  VoidCallback? aoAcionar,
+}) {
+  capturarDespachanteSnackBarSeguro(
+    context,
+    recuoExtraInferior: recuoExtraInferior,
+  ).exibir(
+    texto: texto,
+    duracao: duracao,
+    rotuloAcao: rotuloAcao,
+    aoAcionar: aoAcionar,
+  );
+}
