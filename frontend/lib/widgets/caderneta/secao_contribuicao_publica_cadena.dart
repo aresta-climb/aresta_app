@@ -3,27 +3,18 @@
 
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
-import '../../utils/calculadora_delta_grau.dart';
+import '../../view/view_models/registro_cadena_view_model.dart';
 
-/// Bloco declarativo de **Contribuição Pública** exibido no `ModalRegistroCadena`.
+/// Bloco puramente declarativo (Dumb UI) de **Contribuição Pública** exibido no `ModalRegistroCadena`.
 ///
-/// Unifica a avaliação de percepção de grau (`-2` a `+2`, com `0` pré-selecionado) e
-/// o campo opcional de dicas públicas de beta/equipamento em uma única tela de baixa fricção.
+/// Renderiza as opções de percepção de grau já formatadas pelo [RegistroCadenaViewModel] e o campo
+/// opcional de dicas públicas de beta/equipamento sem executar cálculos de domínio.
 class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
-  /// Valores de delta suportados em relação ao grau oficial da escalada.
-  static const List<int> deltasDisponiveis = [-2, -1, 0, 1, 2];
-
-  /// Delta atualmente selecionado (`-2` a `+2`).
-  final int deltaSelecionado;
+  /// Opções pré-formatadas de percepção de grau (`-2` a `+2`) fornecidas pelo ViewModel.
+  final List<OpcaoDeltaGrauApresentacao> opcoesDelta;
 
   /// Callback acionado quando o escalador escolhe um delta de grau.
   final ValueChanged<int> aoSelecionarDelta;
-
-  /// Código numérico Protobuf do grau oficial da escalada, quando definido.
-  final int? codigoGrauOficial;
-
-  /// Indica se a escalada pertence à modalidade boulder.
-  final bool ehBoulder;
 
   /// Indica se o escalador está autenticado para publicar voto e comentário no guia comunitário.
   final bool estaAutenticado;
@@ -43,10 +34,8 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
   /// Cria uma instância de [SecaoContribuicaoPublicaAscensao].
   const SecaoContribuicaoPublicaAscensao({
     super.key,
-    required this.deltaSelecionado,
+    required this.opcoesDelta,
     required this.aoSelecionarDelta,
-    required this.codigoGrauOficial,
-    required this.ehBoulder,
     required this.estaAutenticado,
     required this.controladorComentario,
     required this.contadorComentarioTexto,
@@ -97,17 +86,12 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: deltasDisponiveis.map((delta) {
-              final selecionado = delta == deltaSelecionado;
-              final rotulo = rotuloOpcaoDeltaGrau(
-                delta,
-                codigoOficial: codigoGrauOficial,
-                ehBoulder: ehBoulder,
-              );
+            children: opcoesDelta.map((opcao) {
+              final selecionado = opcao.selecionado;
               return ChoiceChip(
-                key: Key('chip_delta_grau_$delta'),
+                key: Key('chip_delta_grau_${opcao.delta}'),
                 label: Text(
-                  rotulo,
+                  opcao.rotulo,
                   style: TextStyle(
                     color: selecionado ? cores.chalkWhite : cores.ashGrey,
                     fontWeight: selecionado
@@ -123,7 +107,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
                   color: selecionado ? cores.rustIron : cores.graniteEdge,
                 ),
                 onSelected: (ativo) {
-                  if (ativo) aoSelecionarDelta(delta);
+                  if (ativo) aoSelecionarDelta(opcao.delta);
                 },
               );
             }).toList(),

@@ -10,9 +10,31 @@ import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../utils/calculadora_delta_grau.dart';
 
+/// Item imutável de apresentação de um chip de percepção de grau (`-2` a `+2`) para a Dumb UI.
+@immutable
+class OpcaoDeltaGrauApresentacao {
+  /// Deslocamento numérico em relação ao grau oficial (`-2` a `+2`).
+  final int delta;
+
+  /// Rótulo formatado pronto para exibição no chip (ex.: `'Justo (7a)'`, `'+1 (7b)'`).
+  final String rotulo;
+
+  /// Indica se esta opção está atualmente selecionada pelo escalador.
+  final bool selecionado;
+
+  /// Cria uma instância constante de [OpcaoDeltaGrauApresentacao].
+  const OpcaoDeltaGrauApresentacao({
+    required this.delta,
+    required this.rotulo,
+    required this.selecionado,
+  });
+}
+
 /// ViewModel que encapsula o estado e as regras de negócio do registro e edição de ascensões e cadenas,
 /// unificando os dados privados da caderneta com a contribuição pública de grau (`-2..+2`) e dicas de beta.
 class RegistroCadenaViewModel extends ChangeNotifier {
+  /// Sequência canônica de deltas de grau exibida no formulário de contribuição pública.
+  static const List<int> deltasDisponiveis = [-2, -1, 0, 1, 2];
   /// Limite máximo de caracteres permitido nas anotações técnicas privadas.
   static const int limiteNotasPrivadas = 200;
 
@@ -143,6 +165,23 @@ class RegistroCadenaViewModel extends ChangeNotifier {
 
   /// Deslocamento selecionado em relação ao grau oficial (`-2` a `+2`, padrão `0`).
   int get deltaGrau => _deltaGrau;
+
+  /// Opções pré-formatadas dos chips de percepção de grau (`-2..+2`) prontas para a Dumb UI.
+  List<OpcaoDeltaGrauApresentacao> get opcoesDeltaGrau {
+    return deltasDisponiveis
+        .map(
+          (delta) => OpcaoDeltaGrauApresentacao(
+            delta: delta,
+            rotulo: rotuloOpcaoDeltaGrau(
+              delta,
+              codigoOficial: codigoGrauOficial,
+              ehBoulder: ehBoulder,
+            ),
+            selecionado: delta == _deltaGrau,
+          ),
+        )
+        .toList(growable: false);
+  }
 
   /// Texto opcional de dica/beta pública para o guia comunitário.
   String get comentarioPublico => _comentarioPublico;

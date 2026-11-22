@@ -256,6 +256,15 @@ void main() {
         );
 
         expect(vm.deltaGrau, 0);
+        expect(vm.opcoesDeltaGrau, hasLength(5));
+        expect(
+          vm.opcoesDeltaGrau.firstWhere((o) => o.delta == 0).selecionado,
+          isTrue,
+        );
+        expect(
+          vm.opcoesDeltaGrau.firstWhere((o) => o.delta == 1).rotulo,
+          '+1 (7b)',
+        );
         expect(vm.estaAutenticadoParaComunidade, isTrue);
         expect(vm.rotuloBotaoSalvar, 'Salvar Cadena & Contribuir');
         expect(vm.contadorComentarioPublicoTexto, '0/280');
