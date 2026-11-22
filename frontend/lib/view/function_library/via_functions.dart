@@ -20,29 +20,8 @@ export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
 String getEscaladaNome(Escalada escalada) => obterNomeEscalada(escalada);
 
 /// Retorna o rótulo da modalidade da escalada (`'Esportiva'`, `'Mista'`, `'Móvel'`, `'Boulder'`, `'Multienfiada'`, `'Highline'`).
-String getModalidadeEscalada(Escalada escalada) {
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      return 'Esportiva';
-    case Escalada_Tipo.viaMovel:
-      if (escalada.viaMovel.quantidadeProtecoesIntermediarias > 0) {
-        return 'Mista';
-      }
-      return 'Móvel';
-    case Escalada_Tipo.boulder:
-      return 'Boulder';
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      if (escalada.viaMultiplasEnfiadas.tipoViaMultiplasEnfiadas ==
-          ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA) {
-        return 'Mista';
-      }
-      return 'Multienfiada';
-    case Escalada_Tipo.highline:
-      return 'Highline';
-    case Escalada_Tipo.notSet:
-      return '';
-  }
-}
+String getModalidadeEscalada(Escalada escalada) =>
+    ExtratorDetalhesTecnicosVia.extrairModalidade(escalada);
 
 /// Retorna a string formatada de proteções na notação `X+Y` (`<intermediárias>+<parada>`).
 String getProtecoesString(Escalada escalada) {
