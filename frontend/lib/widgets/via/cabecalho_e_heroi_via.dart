@@ -168,4 +168,93 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
 
   /// Subtítulo abaixo do grau oficial.
   final String complementoGrauOficial;
+
+  /// Apresentação pré-calculada do consenso de grau da comunidade.
+  final ApresentacaoConsensoGrauVia? apresentacaoConsenso;
+
+  /// Alertas ativos exibidos como bolhas vermelhas flutuantes no canto superior direito.
+  final List<AlertaSegurancaVia> alertasAtivos;
+
+  /// Callback acionado ao tocar em uma bolha de alerta.
+  final ValueChanged<AlertaSegurancaVia> aoTocarAlerta;
+
+  /// Cria uma instância de [AreaHeroiTopoGrauVia].
+  const AreaHeroiTopoGrauVia({
+    super.key,
+    required this.estadoCroqui,
+    required this.cragId,
+    required this.nomeEscalada,
+    this.setor,
+    this.grupo,
+    required this.aoAbrirCroquiInterativo,
+    required this.exibirCartaoGrau,
+    required this.rotuloGrauOficial,
+    required this.grauOficial,
+    required this.complementoGrauOficial,
+    required this.apresentacaoConsenso,
+    required this.alertasAtivos,
+    required this.aoTocarAlerta,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final filhos = <Widget>[
+      SecaoMapaCroquiVia(
+        estadoCroqui: estadoCroqui,
+        cragId: cragId,
+        nomeEscalada: nomeEscalada,
+        setor: setor,
+        grupo: grupo,
+        aoAbrirCroquiInterativo: aoAbrirCroquiInterativo,
+      ),
+      if (exibirCartaoGrau)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: CartaoGrauVia(
+            rotuloGrauOficial: rotuloGrauOficial,
+            grauOficial: grauOficial,
+            complementoGrauOficial: complementoGrauOficial,
+            apresentacaoConsenso: apresentacaoConsenso,
+          ),
+        ),
+    ];
+
+    if (alertasAtivos.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: filhos,
+      );
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: exibirCartaoGrau ? 14 : 44),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: filhos,
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 4,
+          child: BolhasFlutuantesAlertaVia(
+            alertas: alertasAtivos,
+            aoSelecionarAlerta: aoTocarAlerta,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Cartão declarativo (Dumb UI) exibindo o Grau Oficial ao lado do Consenso da Comunidade.
+class CartaoGrauVia extends StatelessWidget {
+  /// Rótulo superior da coluna oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
+  final String rotuloGrauOficial;
+
+  /// Valor textual do grau oficial, ou `null` quando indefinido.
+  final String? grauOficial;
+
 }
