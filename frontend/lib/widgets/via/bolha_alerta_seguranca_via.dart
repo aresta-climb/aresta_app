@@ -438,52 +438,50 @@ class _FormularioReportarAlertaViaState
                   style: TextStyle(color: cores.ashGrey, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-            TextField(
-              key: const Key('campo_detalhe_alerta_via'),
-              controller: _detalheController,
-              maxLength: AlertaSegurancaVia.limiteCaracteresDetalhe,
-              style: TextStyle(color: cores.chalkWhite, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Detalhe rápido (opcional)',
-                labelStyle: TextStyle(color: cores.ashGrey),
-                hintText: 'Ex.: Colmeia próxima à 3ª costura',
-                hintStyle: TextStyle(color: cores.ashGrey.withValues(alpha: 0.6)),
-                filled: true,
-                fillColor: cores.caveShadow,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: cores.graniteEdge),
+                TextField(
+                  key: const Key('campo_detalhe_alerta_via'),
+                  controller: _detalheController,
+                  maxLength: AlertaSegurancaVia.limiteCaracteresDetalhe,
+                  style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Detalhe rápido (opcional)',
+                    labelStyle: TextStyle(color: cores.ashGrey),
+                    hintText: 'Ex.: Colmeia próxima à 3ª costura',
+                    hintStyle: TextStyle(
+                      color: cores.ashGrey.withValues(alpha: 0.6),
+                    ),
+                    filled: true,
+                    fillColor: cores.caveShadow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cores.graniteEdge),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              key: const Key('btn_enviar_alerta_via'),
-              onPressed: () async {
-                final detalhe = _detalheController.text.trim();
-                Navigator.of(context).pop();
-                await widget.aoReportar(
-                  _categoriaSelecionada,
-                  detalhe.isNotEmpty ? detalhe : null,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _corVermelhoAlerta,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  key: const Key('btn_enviar_alerta_via'),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _viewModel.submeter(widget.aoReportar);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _corVermelhoAlerta,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Enviar Alerta',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Enviar Alerta',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
       },
     );
   }
