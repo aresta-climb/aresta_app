@@ -83,9 +83,61 @@ void main() {
         escaladaUid: 'x8siJek3FiG3aB',
         categoria: CategoriaAlertaSeguranca.viaMolhada,
         detalhe: '   ',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        confirmadoresUids: {'  confirmadorExtra1  ', ''},
       );
       expect(semDetalhe.detalhe, isNull);
       expect(semDetalhe.autorNomePublico, 'Escalador Aresta');
+      expect(semDetalhe.autorIdPublico, 'c3Lk9P1x4Vw8Mn');
+      expect(semDetalhe.foiCriadoPor('c3Lk9P1x4Vw8Mn'), isTrue);
+      expect(semDetalhe.foiCriadoPor('outroAutor0001'), isFalse);
+      expect(semDetalhe.jaConfirmadoPor('c3Lk9P1x4Vw8Mn'), isTrue);
+      expect(semDetalhe.jaConfirmadoPor(null), isFalse);
+
+      expect(
+        semDetalhe.resolverEstadoParaUsuario(
+          estaAutenticado: false,
+          autorIdPublicoUsuario: 'outroAutor0001',
+        ),
+        EstadoInteracaoAlertaUsuario.requerAutenticacao,
+      );
+      expect(
+        semDetalhe.resolverEstadoParaUsuario(
+          estaAutenticado: true,
+          autorIdPublicoUsuario: 'c3Lk9P1x4Vw8Mn',
+        ),
+        EstadoInteracaoAlertaUsuario.criadoPorMim,
+      );
+      expect(
+        semDetalhe.resolverEstadoParaUsuario(
+          estaAutenticado: true,
+          autorIdPublicoUsuario: 'outroAutor0001',
+        ),
+        EstadoInteracaoAlertaUsuario.podeConfirmar,
+      );
+      final comOutroConfirmador = semDetalhe.copyWith(
+        confirmacoesAtivas: 2,
+        confirmadoresUids: {'c3Lk9P1x4Vw8Mn', 'outroAutor0001'},
+      );
+      expect(
+        comOutroConfirmador.resolverEstadoParaUsuario(
+          estaAutenticado: true,
+          autorIdPublicoUsuario: 'outroAutor0001',
+        ),
+        EstadoInteracaoAlertaUsuario.jaConfirmadoPorMim,
+      );
+
+      final contribuidoCriado = AlertaContribuidoCaderneta(
+        alerta: comOutroConfirmador,
+        papel: PapelContribuicaoAlerta.criadoPorMim,
+        ativo: true,
+        ultimaInteracaoEm: agora,
+      );
+      expect(contribuidoCriado.papel.rotuloSelo, 'CRIADO POR VOCÊ');
+      expect(
+        PapelContribuicaoAlerta.confirmadoPorMim.rotuloSelo,
+        'CONFIRMADO (+1)',
+      );
     });
 
     test('rejeita detalhe de alerta acima de 100 caracteres', () {

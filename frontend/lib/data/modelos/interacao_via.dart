@@ -253,11 +253,39 @@ class AlertaSegurancaVia {
       escaladaUid: escaladaUid,
       categoria: categoria,
       detalhe: detalhe ?? this.detalhe,
+      autorIdPublico: autorIdPublico,
       autorNomePublico: autorNomePublico,
       criadoEm: criadoEm,
       confirmacoesAtivas: confirmacoesAtivas ?? this.confirmacoesAtivas,
+      confirmadoresUids: confirmadoresUids != null
+          ? Set.unmodifiable(confirmadoresUids)
+          : this.confirmadoresUids,
     );
   }
+}
+
+/// Registro consolidado de um alerta criado ou confirmado pelo usuário para acesso rápido na Caderneta.
+@immutable
+class AlertaContribuidoCaderneta {
+  /// Dados do alerta de segurança associado.
+  final AlertaSegurancaVia alerta;
+
+  /// Distingue se o alerta foi criado pelo próprio usuário ou confirmado (`+1`) por ele.
+  final PapelContribuicaoAlerta papel;
+
+  /// Indica se o alerta segue ativo na rocha (`true`) ou já foi marcado como resolvido (`false`).
+  final bool ativo;
+
+  /// Instante da última interação relevante do usuário ou da comunidade sobre este alerta.
+  final DateTime ultimaInteracaoEm;
+
+  /// Cria uma instância imutável de [AlertaContribuidoCaderneta].
+  const AlertaContribuidoCaderneta({
+    required this.alerta,
+    required this.papel,
+    required this.ativo,
+    required this.ultimaInteracaoEm,
+  });
 }
 
 /// Consolida a percepção democrática da comunidade sobre o grau técnico de uma escalada,

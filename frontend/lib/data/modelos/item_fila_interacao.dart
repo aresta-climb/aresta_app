@@ -28,10 +28,8 @@ enum TipoFilaInteracao {
   const TipoFilaInteracao(this.codigoBanco);
 
   /// Indica se a política RLS (`fila_interacoes_insercao_autenticada`) exige JWT autenticado
-  /// e vínculo válido em `public.perfis` (`VOTO_GRAU` e `COMENTARIO`).
-  bool get exigeContaAutenticada =>
-      this == TipoFilaInteracao.votoGrau ||
-      this == TipoFilaInteracao.comentario;
+  /// e vínculo válido em `public.perfis` (obrigatório para todos os tipos de escrita comunitária).
+  bool get exigeContaAutenticada => true;
 
   /// Resolve [codigo] proveniente do PostgREST/JSON para [TipoFilaInteracao].
   static TipoFilaInteracao deCodigoBanco(String codigo) {
