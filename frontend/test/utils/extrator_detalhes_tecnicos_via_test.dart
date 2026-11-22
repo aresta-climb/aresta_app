@@ -166,6 +166,40 @@ void main() {
           texto: 'Ótima linha!',
         ),
       ]);
+      expect(notas.single.cabecalhoAutorData, 'Carlos • 05/09/2026');
+      expect(notas.single.rotuloEstilo, 'FLASH ★');
+
+      // Resolução de EstadoCroquiVia por nome (sem uid) com mapa próprio e pico
+      final viaSemUidComMapa = Escalada(
+        viaEsportiva: ViaEsportiva(nome: 'Via Local'),
+        mapas: [
+          Mapa(
+            caminhoImagemMapa: 'mapas/local.webp',
+            larguraMapa: 600,
+            alturaMapa: 600,
+          ),
+        ],
+      );
+      final picoComVia = Pico(
+        nome: 'Pico Local',
+        setoresOuGrupos: [
+          SetorOuGrupo(
+            setor: ArquivoSetor(
+              conteudo: Setor(
+                nome: 'Setor Local',
+                escaladas: [viaSemUidComMapa],
+              ),
+            ),
+          ),
+        ],
+      );
+      final estadoComPico = ExtratorDetalhesTecnicosVia.resolverEstadoCroqui(
+        escalada: viaSemUidComMapa,
+        pico: picoComVia,
+        setor: Setor(nome: 'Setor Local'),
+      );
+      expect(estadoComPico.mapasMiniatura, hasLength(1));
+      expect(estadoComPico.aspectRatioMiniatura, 1.0);
     },
   );
 }

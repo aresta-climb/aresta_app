@@ -12,59 +12,9 @@ import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../services/controlador_interacoes_usuario.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../utils/formatador_escalada.dart';
+import '../../utils/extrator_detalhes_tecnicos_via.dart';
 
-/// Identificadores semânticos de ícones técnicos desacoplados de `Icons` concretos no ViewModel.
-enum TipoIconeAtributoVia {
-  extensao,
-  protecoes,
-  parede,
-  exposicao,
-  enfiadas,
-  duracao,
-  modalidade,
-  distancia,
-}
-
-/// Par rótulo/valor exibido na grade responsiva de especificações técnicas da escalada.
-@immutable
-class AtributoTecnicoVia {
-  /// Categoria visual do ícone associado ao atributo.
-  final TipoIconeAtributoVia icone;
-
-  /// Rótulo curto em caixa alta (ex.: `'EXTENSÃO'`, `'PROTEÇÕES'`).
-  final String rotulo;
-
-  /// Valor formatado pronto para exibição (ex.: `'28m'`, `'11+2'`).
-  final String valor;
-
-  /// Cria uma instância imutável de [AtributoTecnicoVia].
-  const AtributoTecnicoVia({
-    required this.icone,
-    required this.rotulo,
-    required this.valor,
-  });
-}
-
-/// Bloco textual estruturado da escalada (descrição oficial em Markdown, rack móvel, acesso, etc.).
-@immutable
-class SecaoTextoVia {
-  /// Título da seção exibido acima do conteúdo.
-  final String titulo;
-
-  /// Conteúdo textual bruto ou em sintaxe Markdown.
-  final String conteudo;
-
-  /// Indica se o conteúdo deve ser renderizado via `OfflineMarkdown`.
-  final bool ehMarkdown;
-
-  /// Cria uma instância imutável de [SecaoTextoVia].
-  const SecaoTextoVia({
-    required this.titulo,
-    required this.conteudo,
-    required this.ehMarkdown,
-  });
-}
-
+export '../../utils/extrator_detalhes_tecnicos_via.dart';
 /// Resumo limpo e estruturado de uma enfiada individual em uma `ViaMultiplasEnfiadas`.
 @immutable
 class ResumoEnfiadaVia {
