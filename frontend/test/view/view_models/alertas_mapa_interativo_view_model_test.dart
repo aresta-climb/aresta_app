@@ -141,6 +141,92 @@ void main() {
             tipo: TipoEntidadeResolved.escalada,
             escalada: viaFarao,
           ),
-      });
+          refSetor: ResolvedDataset(
+            tipo: TipoEntidadeResolved.setor,
+            setor: setor2Andar,
+          ),
+          refGrupo: ResolvedDataset(
+            tipo: TipoEntidadeResolved.grupo,
+            grupo: grupoNorte,
+          ),
+          refBotao: ResolvedDataset(tipo: TipoEntidadeResolved.botao),
+        },
+        repositorioInteracoes: repoFake,
+        duracaoJanelaDesfazer: const Duration(milliseconds: 50),
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        repoFake.escaladasSincronizadas,
+        containsAll([uidFarao, uidSetorVia, uidGrupoVia]),
+      );
+
+      final bolhas = vm.bolhasNoMapa;
+      expect(bolhas, hasLength(3));
+
+      final bolhaFarao = bolhas.firstWhere((b) => b.escaladaUid == uidFarao);
+      expect(bolhaFarao.relX, closeTo(0.20, 0.001));
+      expect(bolhaFarao.relY, closeTo(0.70, 0.001));
+      expect(bolhaFarao.nomeEscalada, 'Faraó');
+      expect(vm.obterAlertasDaEscalada(uidFarao), hasLength(1));
+      expect(vm.obterAlertasDaEscalada('   '), isEmpty);
+      expect(vm.obterAlertasDoSetor(setor2Andar), hasLength(1));
+
+      // Iniciar resolução com Desfazer oculta no mapa imediatamente e restaura ao desfazer
+      vm.iniciarResolucaoAlertaComDesfazer(uidFarao, 'alertaAbelha01');
+      expect(vm.bolhasNoMapa.any((b) => b.escaladaUid == uidFarao), isFalse);
+
+      vm.desfazerResolucaoAlerta('alertaAbelha01');
+      expect(vm.bolhasNoMapa.any((b) => b.escaladaUid == uidFarao), isTrue);
+
+      // Confirmar que ainda está lá incrementa contagem; falha retorna false
+      expect(
+        await vm.confirmarAlerta(
+          uidFarao,
+          'alertaAbelha01',
+          aindaEstaLa: true,
+        ),
+        isTrue,
+      );
+      expect(
+        vm.obterAlertasDaEscalada(uidFarao).single.confirmacoesAtivas,
+        2,
+      );
+      repoFake.erroSimulado = StateError('Erro de confirmação');
+      expect(
+        await vm.confirmarAlerta(
+          uidFarao,
+          'alertaAbelha01',
+          aindaEstaLa: true,
+        ),
+        isFalse,
+      );
+
+      // atualizarContextoMapa lida com falha de sync e projeta retângulo, polígono e linhas alternativas
+      const uidRet = 'viaRetangulo01';
+      const uidPol = 'viaPoligono002';
+      const uidCaixa = 'viaLinhaCaixa3';
+      const uidNos = 'viaLinhaNos004';
+      const uidSit = 'boulderSit0005';
+      repoFake.erroSimulado = null;
+      for (final u in [uidRet, uidPol, uidCaixa, uidNos, uidSit]) {
+        repoFake.semearDados(
+          u,
+          DadosComunidadeVia(
+            alertasAtivos: [
+              AlertaSegurancaVia.criar(
+                escaladaUid: u,
+                categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+              ),
+            ],
+          ),
+        );
+      }
+      repoFake.erroSimulado = StateError('Sync adiado');
+
+      final refRet = Mapa_Referencia(alvoUid: uidRet, pontosUids: ['p_ret']);
+      final refPol = Mapa_Referencia(alvoUid: uidPol, pontosUids: ['p_pol']);
+      final refPolVazio = Mapa_Referencia(alvoUid: uidPol, pontosUids: ['p_pol_vazio']);
+      final refCaixa = Mapa_Referencia(alvoUid: uidCaixa, pontosUids: ['p_caixa']);
   });
 }
