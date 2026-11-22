@@ -290,5 +290,104 @@ class ApresentacaoConsensoGrauVia {
       delta,
       ehBoulder: ehBoulder,
     );
+    final grau = formatarGrauPorCodigo(codigo, ehBoulder: ehBoulder);
+    if (grau != null) return '$grau ($textoDelta)';
+    return delta == 0 ? 'Justo (0)' : textoDelta;
+  }
+}
+
+/// Estado imutável resolvido para a seção de miniatura/botão de croqui interativo da `ViaPage`.
+@immutable
+class EstadoCroquiVia {
+  /// Mapas válidos embutidos diretamente na escalada para `MapaThumbnail`.
+  final List<Mapa> mapasMiniatura;
+
+  /// Proporção largura/altura do primeiro mapa de miniatura.
+  final double aspectRatioMiniatura;
+
+  /// Itens de carrossel pré-resolvidos para `MapaThumbnail`.
+  final List<CarrosselItemData> itensCarrosselMiniatura;
+
+  /// Itens de carrossel referenciados no setor/pico para o botão `'VER NO CROQUI INTERATIVO'`.
+  final List<CarrosselItemData> itensNavegacaoCroqui;
+
+  /// Cria uma instância constante de [EstadoCroquiVia].
+  const EstadoCroquiVia({
+    this.mapasMiniatura = const [],
+    this.aspectRatioMiniatura = 1.0,
+    this.itensCarrosselMiniatura = const [],
+    this.itensNavegacaoCroqui = const [],
+  });
+
+  /// Resolve a miniatura ou itens de carrossel de croqui para a [escalada] sem lógica na UI.
+  factory EstadoCroquiVia.resolver({
+    required Escalada escalada,
+    Pico? pico,
+    Setor? setor,
+    Grupo? grupo,
+    DatasetResolver? resolvedorExterno,
+  }) {
+    final nome = obterNomeEscalada(escalada);
+    ResolvedDataset? resolved;
+    if (pico != null) {
+      final resolver = resolvedorExterno ?? DatasetResolver(pico: pico);
+      resolved = escalada.uid.isNotEmpty
+          ? resolver.obterPorUid(escalada.uid)
+          : resolver.buscarPorNome(
+              grupoNome: grupo?.nome,
+              setorNome: setor?.nome,
+              escaladaNome: nome,
+            );
+    }
+
+    final mapasValidos = escalada.mapas
+        .where(
+          (m) =>
+              m.caminhoImagemMapa.isNotEmpty &&
+              m.larguraMapa > 0 &&
+              m.alturaMapa > 0,
+        )
+        .toList(growable: false);
+
+    if (mapasValidos.isNotEmpty) {
+      final itensMiniatura = resolved != null
+          ? resolved.resolverCarrosselUnificado()
+          : mapasValidos
+                .map(
+                  (m) => CarrosselItemData(
+                    mapaCaminhoImagem: m.caminhoImagemMapa,
+                    setorContextNome: setor?.nome,
+                    grupoContextNome: grupo?.nome,
+                    escaladaContextNome: nome,
+                  ),
+                )
+                .toList(growable: false);
+
+      return EstadoCroquiVia(
+        mapasMiniatura: mapasValidos,
+        aspectRatioMiniatura:
+            mapasValidos.first.larguraMapa / mapasValidos.first.alturaMapa,
+        itensCarrosselMiniatura: itensMiniatura,
+      );
+    }
+
+    final referencias = resolved?.referencias ?? const [];
+    if (referencias.isEmpty) return const EstadoCroquiVia();
+
+    final itensNavegacao = referencias
+        .map(
+          (refNoMapa) => CarrosselItemData(
+            mapaCaminhoImagem: refNoMapa.mapa.caminhoImagemMapa,
+            setorContextNome: refNoMapa.setorContexto?.nome,
+            grupoContextNome: refNoMapa.grupoContexto?.nome,
+            escaladaContextNome: nome,
+            initialSelectedId: refNoMapa.referencia.pontosUids.isNotEmpty
+                ? refNoMapa.referencia.pontosUids.first
+                : null,
+          ),
+        )
+        .toList(growable: false);
+
+    return EstadoCroquiVia(itensNavegacaoCroqui: itensNavegacao);
   }
 }
