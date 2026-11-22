@@ -417,7 +417,92 @@ List<_EpisodioAlertaConsolidado> _consolidarEpisodiosDeAlerta(
       );
       if (idxAtivo >= 0) {
         final ep = episodios[idxAtivo];
+        aliasParaPrincipal[uid] = ep.alerta.uid;
+        final jaContou = ep.alerta.jaConfirmadoPor(ev.autorIdPublico);
+        ep.alerta = ep.alerta.copyWith(
+          confirmacoesAtivas: jaContou
+              ? ep.alerta.confirmacoesAtivas
+              : ep.alerta.confirmacoesAtivas + 1,
+          confirmadoresUids: {...ep.alerta.confirmadoresUids, ev.autorIdPublico},
+          detalhe: ev.textoComentario ?? ep.alerta.detalhe,
+        );
+        if (ev.autorIdPublico == autorFoco) {
+          ep.ultimaInteracaoEm = ev.criadoEm;
+        }
+      } else {
+        aliasParaPrincipal[uid] = uid;
+        episodios.add(
+          _EpisodioAlertaConsolidado(
+            alerta: AlertaSegurancaVia.criar(
+              uid: uid,
+              escaladaUid: ev.escaladaUid,
+              categoria: cat,
+              detalhe: ev.textoComentario,
+              autorIdPublico: ev.autorIdPublico,
+              autorNomePublico: ev.autorNomePublico,
+              criadoEm: ev.criadoEm,
+            ),
+            ultimaInteracaoEm: ev.criadoEm,
+          ),
+        );
+      }
+    } else if (ev.tipo == TipoFilaInteracao.confirmacaoAlerta) {
+      final alvoBruto = ev.alertaAlvoUid;
+      final ativo = ev.alertaAtivo;
+      if (alvoBruto == null || ativo == null) continue;
+      final alvoUid = aliasParaPrincipal[alvoBruto] ?? alvoBruto;
+      final idx = episodios.lastIndexWhere(
+        (ep) => ep.ativo && ep.alerta.uid == alvoUid,
+      );
+      if (idx >= 0) {
+        final ep = episodios[idx];
+        if (ativo) {
+          if (!ep.alerta.jaConfirmadoPor(ev.autorIdPublico)) {
+            ep.alerta = ep.alerta.copyWith(
+              confirmacoesAtivas: ep.alerta.confirmacoesAtivas + 1,
+              confirmadoresUids: {
+                ...ep.alerta.confirmadoresUids,
+                ev.autorIdPublico,
+              },
+            );
+          }
+          if (ev.autorIdPublico == autorFoco) {
+            ep.ultimaInteracaoEm = ev.criadoEm;
+          }
+        } else {
+          ep.ativo = false;
+          ep.ultimaInteracaoEm = ev.criadoEm;
+        }
       }
     }
+  }
+  return episodios;
+}
+
+/// Consolida todos os alertas criados (`CRIADO POR VOCÊ`) ou confirmados (`CONFIRMADO (+1)`) por
+/// [autorIdPublico] para exibição rápida na `CadernetaPage`, ordenando ativos primeiro.
+List<AlertaContribuidoCaderneta> consolidarAlertasContribuidosPeloAutor(
+  Iterable<ItemFilaInteracao> itens, {
+  required String autorIdPublico,
+}) {
+  final autorLimpo = autorIdPublico.trim();
+  if (autorLimpo.isEmpty) return const [];
+
+  final porVia = <String, List<ItemFilaInteracao>>{};
+  for (final item in itens) {
+    if (item.tipo == TipoFilaInteracao.alertaSeguranca ||
+        item.tipo == TipoFilaInteracao.confirmacaoAlerta) {
+      porVia.putIfAbsent(item.escaladaUid, () => <ItemFilaInteracao>[]).add(item);
+    }
+  }
+
+  final resultado = <AlertaContribuidoCaderneta>[];
+
+  for (final eventosVia in porVia.values) {
+    eventosVia.sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
+    final episodios = _consolidarEpisodiosDeAlerta(
+      eventosVia,
+      autorFoco: autorLimpo,
+    );
   }
 }
