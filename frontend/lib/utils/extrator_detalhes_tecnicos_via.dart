@@ -87,5 +87,98 @@ abstract final class ExtratorDetalhesTecnicosVia {
             : 'Artificial $artificial',
       );
     }
+    return partes.isEmpty ? 'Guia Oficial / Conquistador' : partes.join(' • ');
+  }
+
+  /// Extrai a descrição do tipo de parada/ancoragem quando preenchida.
+  static String? extrairTipoAncoragem(Escalada escalada) {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.tipoAncoragem.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.tipoAncoragem.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Extrai os atributos técnicos aplicáveis à modalidade da [escalada].
+  static List<AtributoTecnicoVia> extrairAtributosTecnicos(Escalada escalada) {
+    final itens = <AtributoTecnicoVia>[];
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        final v = escalada.viaEsportiva;
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeProtecoesIntermediarias,
+          v.quantidadeProtecoesParada,
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(v.tipoParede.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+      case Escalada_Tipo.viaMovel:
+        final v = escalada.viaMovel;
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeProtecoesIntermediarias,
+          v.quantidadeProtecoesParada,
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(v.tipoParede.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+      case Escalada_Tipo.boulder:
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(escalada.boulder.tipoParede.name),
+        );
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        final v = escalada.viaMultiplasEnfiadas;
+        if (v.numeroEnfiadas > 0) {
+          itens.add(
+            AtributoTecnicoVia(
+              icone: TipoIconeAtributoVia.enfiadas,
+              rotulo: 'ENFIADAS',
+              valor: '${v.numeroEnfiadas}',
+            ),
+          );
+        }
+        _adicionarMetros(
+          itens,
+          TipoIconeAtributoVia.extensao,
+          'COMPRIMENTO',
+          v.comprimentoTotal,
+        );
+        _adicionarMetros(
+          itens,
+          TipoIconeAtributoVia.distancia,
+          'MAIOR ENFIADA',
+          v.comprimentoMaiorEnfiada,
+        );
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeCosturasIntermediarias,
+          v.quantidadeEquipamentosParada,
+        );
+    }
   }
 }
