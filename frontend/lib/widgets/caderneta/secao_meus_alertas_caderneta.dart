@@ -248,12 +248,54 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
                           ),
                           if (alerta.detalhe != null) ...[
                             const SizedBox(height: 4),
+                            Text(
+                              '“${alerta.detalhe}”',
+                              style: TextStyle(
+                                color: cores.chalkWhite,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           ],
                         ],
                       ),
                     ),
                   ],
                 ),
+                if (aoResolver != null) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      key: Key('btn_resolver_meu_alerta_${alerta.uid}'),
+                      onPressed: aoResolver,
+                      icon: Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 15,
+                        color: cores.fernGreen,
+                      ),
+                      label: Text(
+                        'Marcar resolvido',
+                        style: TextStyle(
+                          color: cores.chalkWhite,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: cores.graniteEdge),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

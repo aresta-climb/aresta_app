@@ -1,23 +1,33 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/estatisticas_caderneta.dart';
+import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/comunidade/repositorio_interacoes_via.dart';
+import '../../services/firebase/app_logger.dart';
 import '../../services/repositorio_dataset.dart';
 import 'registro_cadena_view_model.dart';
 
 /// ViewModel da tela de Caderneta Esportiva do Escalador ([CadernetaPage]).
 ///
-/// Gerencia a interação reativa com o [RepositorioCaderneta], provendo os dados de identidade
-/// esportiva pública ([PerfilEscalador]), histórico de cadenas, métricas analíticas, textos
-/// formatados prontos para exibição na Dumb UI e callbacks de intenção de navegação/ação.
+/// Gerencia a interação reativa com o [RepositorioCaderneta] e o [RepositorioInteracoesVia],
+/// provendo os dados de identidade esportiva pública ([PerfilEscalador]), histórico de cadenas,
+/// alertas criados/confirmados pelo usuário, métricas analíticas e textos prontos para a Dumb UI.
 class PerfilViewModel extends ChangeNotifier {
   /// Repositório da caderneta esportiva utilizado para persistência e consultas.
   final RepositorioCaderneta repositorio;
+
+  /// Repositório comunitário utilizado para listar e resolver alertas acompanhados na Caderneta.
+  final RepositorioInteracoesVia repositorioInteracoes;
+
+  /// Duração da janela de desfazer antes de persistir a resolução de um alerta.
+  final Duration duracaoJanelaDesfazer;
 
   /// Função opcional para obter o grau textual oficial da via a partir de seu `escaladaUid`.
   final String? Function(String escaladaUid)? obterGrauDaVia;
@@ -25,26 +35,22 @@ class PerfilViewModel extends ChangeNotifier {
   /// Função opcional para obter o nome legível da via a partir de seu `escaladaUid`.
   final String? Function(String escaladaUid)? obterNomeDaVia;
 
-  /// Callback opcional invocado quando o usuário solicita editar uma ascensão.
   final ValueChanged<Cadena>? _aoEditarCadena;
-
-  /// Callback opcional invocado quando o usuário solicita excluir uma ascensão.
   final ValueChanged<Cadena>? _aoExcluirCadena;
-
-  /// Callback opcional invocado quando o usuário toca em uma ascensão para abrir sua via.
   final ValueChanged<Cadena>? _aoTocarVia;
-
-  /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
-
-  /// Catálogo de vias instanciado e gerenciado internamente quando criado via [comCatalogo].
   final CatalogoViasCaderneta? _catalogoViasProprio;
+  final Map<String, ({String escaladaUid, Timer timer})>
+  _resolucoesAlertasPendentes = {};
 
   bool _modoVias = true;
+  bool _descartado = false;
 
-  /// Construtor que aceita o repositório injetado ou utiliza a instância padrão local.
+  /// Construtor que aceita os repositórios injetados ou utiliza as instâncias padrão locais.
   PerfilViewModel({
     RepositorioCaderneta? repositorio,
+    RepositorioInteracoesVia? repositorioInteracoes,
+    this.duracaoJanelaDesfazer = const Duration(seconds: 4),
     this.obterGrauDaVia,
     this.obterNomeDaVia,
     ValueChanged<Cadena>? aoEditarCadena,
@@ -53,6 +59,8 @@ class PerfilViewModel extends ChangeNotifier {
     Listenable? escutaMetadados,
     CatalogoViasCaderneta? catalogoViasProprio,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
+       repositorioInteracoes =
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
        _aoEditarCadena = aoEditarCadena,
        _aoExcluirCadena = aoExcluirCadena,
        _aoTocarVia = aoTocarVia,
@@ -60,13 +68,26 @@ class PerfilViewModel extends ChangeNotifier {
        _catalogoViasProprio = catalogoViasProprio {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
     this.repositorio.perfilNotifier.addListener(_aoAtualizarRepositorio);
+    this.repositorioInteracoes.alteracoesListenable.addListener(
+      _aoAtualizarRepositorio,
+    );
     _escutaMetadados?.addListener(_aoAtualizarRepositorio);
+    unawaited(
+      this.repositorioInteracoes.sincronizarMeusAlertasContribuidos().catchError(
+        (Object e) {
+          AppLogger.instance.logAviso(
+            'Sincronização de alertas na Caderneta adiada: $e',
+          );
+        },
+      ),
+    );
   }
 
   /// Cria o ViewModel conectado automaticamente ao catálogo local ([CatalogoViasCaderneta]),
   /// assumindo a responsabilidade de descartar o catálogo em [dispose].
   factory PerfilViewModel.comCatalogo({
     RepositorioCaderneta? repositorio,
+    RepositorioInteracoesVia? repositorioInteracoes,
     DatasetRepository? datasetRepo,
     ValueChanged<Cadena>? aoEditarCadena,
     ValueChanged<Cadena>? aoExcluirCadena,
@@ -79,6 +100,7 @@ class PerfilViewModel extends ChangeNotifier {
     );
     return PerfilViewModel(
       repositorio: repo,
+      repositorioInteracoes: repositorioInteracoes,
       obterNomeDaVia: catalogoVias.obterNomeDaVia,
       obterGrauDaVia: catalogoVias.obterGrauDaVia,
       aoEditarCadena: aoEditarCadena,
