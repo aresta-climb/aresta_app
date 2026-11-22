@@ -468,4 +468,99 @@ abstract final class ExtratorDetalhesTecnicosVia {
       );
     }
   }
+
+  static void _adicionarProtecoes(
+    List<AtributoTecnicoVia> itens,
+    int intermediarias,
+    int parada,
+  ) {
+    if (intermediarias > 0 || parada > 0) {
+      itens.add(
+        AtributoTecnicoVia(
+          icone: TipoIconeAtributoVia.protecoes,
+          rotulo: 'PROTEÇÕES',
+          valor: '$intermediarias+$parada',
+        ),
+      );
+    }
+  }
+
+  static void _adicionarSePreenchido(
+    List<AtributoTecnicoVia> itens,
+    TipoIconeAtributoVia icone,
+    String rotulo,
+    String valor,
+  ) {
+    if (valor.isNotEmpty) {
+      itens.add(AtributoTecnicoVia(icone: icone, rotulo: rotulo, valor: valor));
+    }
+  }
+
+  static void _adicionarTexto(
+    List<SecaoTextoVia> secoes,
+    String titulo,
+    String conteudo,
+    bool ehMarkdown,
+  ) {
+    final limpo = conteudo.trim();
+    if (limpo.isNotEmpty) {
+      secoes.add(
+        SecaoTextoVia(titulo: titulo, conteudo: limpo, ehMarkdown: ehMarkdown),
+      );
+    }
+  }
+
+  static String _formatarEnumSimples(String nome) {
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
+    final minusculo = nome.replaceAll('_', ' ').toLowerCase();
+    return minusculo[0].toUpperCase() + minusculo.substring(1);
+  }
+
+  static String _formatarEnumCodigo(String nome) {
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
+    return nome;
+  }
+
+  static String? _extrairExtensaoEnfiada(Escalada enf) {
+    final metros = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.extensao,
+      Escalada_Tipo.viaMovel => enf.viaMovel.extensao,
+      _ => 0,
+    };
+    return metros > 0 ? '${metros}m' : null;
+  }
+
+  static String? _extrairProtecoesEnfiada(Escalada enf) {
+    final (inter, par) = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => (
+        enf.viaEsportiva.quantidadeProtecoesIntermediarias,
+        enf.viaEsportiva.quantidadeProtecoesParada,
+      ),
+      Escalada_Tipo.viaMovel => (
+        enf.viaMovel.quantidadeProtecoesIntermediarias,
+        enf.viaMovel.quantidadeProtecoesParada,
+      ),
+      _ => (0, 0),
+    };
+    return (inter > 0 || par > 0) ? '$inter+$par' : null;
+  }
+
+  static String? _extrairDescricaoSimples(Escalada enf) {
+    final texto = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.descricao.trim(),
+      Escalada_Tipo.viaMovel => enf.viaMovel.descricao.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  static String _rotuloFonteMidia(FonteMidia_Enum fonte) {
+    return switch (fonte) {
+      FonteMidia_Enum.YOUTUBE => 'YouTube',
+      FonteMidia_Enum.INSTAGRAM => 'Instagram',
+      FonteMidia_Enum.BLOG => 'Blog',
+      FonteMidia_Enum.TIKTOK => 'TikTok',
+      _ => 'Beta',
+    };
+  }
 }
