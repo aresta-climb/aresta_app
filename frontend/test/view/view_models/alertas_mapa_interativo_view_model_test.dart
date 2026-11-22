@@ -54,5 +54,93 @@ void main() {
         ..semearDados(uidFarao, DadosComunidadeVia(alertasAtivos: [alertaAbelha]))
         ..semearDados(uidSetorVia, DadosComunidadeVia(alertasAtivos: [alertaBloco]))
         ..semearDados(uidGrupoVia, DadosComunidadeVia(alertasAtivos: [alertaMolhada]));
+
+      final viaFarao = Escalada(
+        uid: uidFarao,
+        viaEsportiva: ViaEsportiva(nome: 'Faraó'),
+      );
+      final viaDoSetor = Escalada(
+        uid: uidSetorVia,
+        viaEsportiva: ViaEsportiva(nome: 'Cleópatra'),
+      );
+      final setor2Andar = Setor(
+        uid: 'setor2AndarUid',
+        nome: 'Setor 2º Andar',
+        escaladas: [viaDoSetor],
+      );
+      final grupoNorte = Grupo(
+        uid: 'grupoNorteUid1',
+        nome: 'Face Norte',
+        setores: [
+          ArquivoSetor(
+            conteudo: Setor(
+              uid: 'setorInterno01',
+              nome: 'Setor Interno',
+              escaladas: [
+                Escalada(
+                  uid: uidGrupoVia,
+                  viaEsportiva: ViaEsportiva(nome: 'Aresta Norte'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+
+      final poiLinha = Mapa_PontoDeInteresse(
+        uid: 'poi_linha_28',
+        linha: LinhaTrajeto(
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 200 700 L 200 300',
+            marcadores: [
+              MarcadorCompilado(
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                x: 200,
+                y: 700,
+                rotulo: '28',
+              ),
+            ],
+          ),
+        ),
+      );
+      final poiSetor = Mapa_PontoDeInteresse(
+        uid: 'poi_setor_2',
+        circulo: BoundingCirculo(x: 500, y: 400, raio: 40),
+      );
+      final poiGrupo = Mapa_PontoDeInteresse(
+        uid: 'poi_grupo_n',
+        quadrado: BoundingQuadrado(x: 800, y: 200, lado: 50),
+      );
+      final refBotao = Mapa_Referencia(alvoUid: 'btn1', pontosUids: ['poi_inex']);
+
+      final refVia = Mapa_Referencia(
+        alvoUid: uidFarao,
+        pontosUids: ['poi_linha_28'],
+      );
+      final refSetor = Mapa_Referencia(
+        alvoUid: 'setor2AndarUid',
+        pontosUids: ['poi_setor_2'],
+      );
+      final refGrupo = Mapa_Referencia(
+        alvoUid: 'grupoNorteUid1',
+        pontosUids: ['poi_grupo_n'],
+      );
+
+      final mapa = Mapa(
+        caminhoImagemMapa: 'mapas/bau_2andar.webp',
+        larguraMapa: 1000,
+        alturaMapa: 1000,
+        pontosDeInteresse: [poiLinha, poiSetor, poiGrupo],
+        referencias: [refVia, refSetor, refGrupo, refBotao],
+      );
+
+      final vm = AlertasMapaInterativoViewModel(
+        mapa: mapa,
+        referenciasResolvidas: {
+          refVia: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: viaFarao,
+          ),
+      });
   });
 }
