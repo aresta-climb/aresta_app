@@ -424,4 +424,92 @@ class _BlocoConsensoComunidade extends StatelessWidget {
 class SecaoMapaCroquiVia extends StatelessWidget {
   /// Estado pré-resolvido de mapas e referências da escalada.
   final EstadoCroquiVia estadoCroqui;
+
+  /// Identificador do croqui.
+  final String cragId;
+
+  /// Nome da escalada para contexto do carrossel.
+  final String nomeEscalada;
+
+  /// Setor pai opcional.
+  final Setor? setor;
+
+  /// Grupo pai opcional.
+  final Grupo? grupo;
+
+  /// Callback acionado ao tocar em `'VER NO CROQUI INTERATIVO'`.
+  final VoidCallback aoAbrirCroquiInterativo;
+
+  /// Cria uma instância de [SecaoMapaCroquiVia].
+  const SecaoMapaCroquiVia({
+    super.key,
+    required this.estadoCroqui,
+    required this.cragId,
+    required this.nomeEscalada,
+    this.setor,
+    this.grupo,
+    required this.aoAbrirCroquiInterativo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (estadoCroqui.mapasMiniatura.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AspectRatio(
+            aspectRatio: estadoCroqui.aspectRatioMiniatura,
+            child: MapaThumbnail(
+              mapas: estadoCroqui.mapasMiniatura,
+              cragId: cragId,
+              setorContext: setor,
+              grupoContext: grupo,
+              nomeContexto: nomeEscalada,
+              carrosselItensOverride: estadoCroqui.itensCarrosselMiniatura,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (estadoCroqui.itensNavegacaoCroqui.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: aoAbrirCroquiInterativo,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.brandColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.explore_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'VER NO CROQUI INTERATIVO',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
