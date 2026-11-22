@@ -112,50 +112,32 @@ class _PintorAnelConsenso extends CustomPainter {
   }
 }
 
-/// Gráfico de barras horizontais exibindo a distribuição democrática de votos (`-2` a `+2`)
-/// com os respectivos graus resolvidos ao lado do Grau Oficial do Conquistador.
+/// Gráfico declarativo (Dumb UI) de barras horizontais exibindo as faixas pré-calculadas
+/// de votos (`-2` a `+2`) junto ao Grau Oficial do Conquistador.
 class BarrasDistribuicaoGrauVia extends StatelessWidget {
-  /// Sequência canônica de deltas exibida no gráfico.
-  static const List<int> deltasOrdenados = [-2, -1, 0, 1, 2];
-
-  /// Consenso consolidado da escalada.
-  final ConsensoGrauVia consenso;
-
-  /// Código numérico Protobuf do grau oficial para rotular cada faixa com o grau correspondente.
-  final int? codigoGrauOficial;
-
-  /// Indica se a escalada pertence à escala V de boulder.
-  final bool ehBoulder;
+  /// Apresentação pré-calculada das faixas de consenso.
+  final ApresentacaoConsensoGrauVia apresentacao;
 
   /// Cria uma instância de [BarrasDistribuicaoGrauVia].
   const BarrasDistribuicaoGrauVia({
     super.key,
-    required this.consenso,
-    required this.codigoGrauOficial,
-    required this.ehBoulder,
+    required this.apresentacao,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (!consenso.possuiVotos || consenso.distribuicaoDeltas.isEmpty) {
+    if (!apresentacao.possuiVotos || apresentacao.faixasDistribuicao.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final cores = context.colors;
-    var maiorContagem = 1;
-    for (final delta in deltasOrdenados) {
-      final qtd = consenso.distribuicaoDeltas[delta] ?? 0;
-      if (qtd > maiorContagem) {
-        maiorContagem = qtd;
-      }
-    }
 
     return Column(
       key: const Key('grafico_distribuicao_grau_via'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'DISTRIBUIÇÃO DE VOTOS (${consenso.totalVotos})',
+          apresentacao.tituloDistribuicao,
           style: TextStyle(
             color: cores.ashGrey,
             fontSize: 10,
@@ -164,33 +146,27 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        ...deltasOrdenados.map((delta) {
-          final contagem = consenso.distribuicaoDeltas[delta] ?? 0;
-          final ehModa = contagem == maiorContagem && contagem > 0;
-          final corBarra = delta < 0
+        ...apresentacao.faixasDistribuicao.map((faixa) {
+          final corBarra = faixa.delta < 0
               ? cores.fernGreen
-              : (delta == 0 ? cores.beastHide : cores.rustIron);
-          final rotulo = _formatarRotuloFaixa(
-            delta,
-            codigoGrauOficial: codigoGrauOficial,
-            ehBoulder: ehBoulder,
-          );
+              : (faixa.delta == 0 ? cores.beastHide : cores.rustIron);
 
           return Padding(
-            key: Key('barra_delta_grau_$delta'),
+            key: Key('barra_delta_grau_${faixa.delta}'),
             padding: const EdgeInsets.symmetric(vertical: 3),
             child: Row(
               children: [
                 Expanded(
                   flex: 5,
                   child: Text(
-                    rotulo,
+                    faixa.rotulo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: ehModa ? cores.chalkWhite : cores.ashGrey,
+                      color: faixa.ehModa ? cores.chalkWhite : cores.ashGrey,
                       fontSize: 11,
-                      fontWeight: ehModa ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight:
+                          faixa.ehModa ? FontWeight.w800 : FontWeight.w600,
                     ),
                   ),
                 ),
@@ -205,7 +181,7 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
                     ),
                     alignment: Alignment.centerLeft,
                     child: FractionallySizedBox(
-                      widthFactor: contagem / maiorContagem,
+                      widthFactor: faixa.fatorLargura,
                       child: Container(
                         decoration: BoxDecoration(
                           color: corBarra,
@@ -219,12 +195,13 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(minWidth: 18),
                   child: Text(
-                    '$contagem',
+                    '${faixa.contagem}',
                     textAlign: TextAlign.right,
                     style: TextStyle(
-                      color: ehModa ? cores.chalkWhite : cores.ashGrey,
+                      color: faixa.ehModa ? cores.chalkWhite : cores.ashGrey,
                       fontSize: 11,
-                      fontWeight: ehModa ? FontWeight.w800 : FontWeight.w500,
+                      fontWeight:
+                          faixa.ehModa ? FontWeight.w800 : FontWeight.w500,
                     ),
                   ),
                 ),

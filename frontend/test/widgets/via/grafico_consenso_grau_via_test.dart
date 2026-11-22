@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/utils/extrator_detalhes_tecnicos_via.dart';
 import 'package:frontend/widgets/via/grafico_consenso_grau_via.dart';
 
 void main() {
@@ -16,23 +17,24 @@ void main() {
     );
   }
 
-  testWidgets('AnelConsensoGrauVia e BarrasDistribuicaoGrauVia renderizam distribuição por grau (-2..+2) e repintam ao atualizar votos', (tester) async {
-    const consensoInicial = ConsensoGrauVia(
-      grauSugerido: '7b',
-      totalVotos: 10,
-      distribuicaoDeltas: {-1: 1, 0: 2, 1: 7},
-    );
+  testWidgets('AnelConsensoGrauVia e BarrasDistribuicaoGrauVia renderizam distribuição (-2..+2) e repintam ao atualizar votos', (tester) async {
+    final apresentacaoInicial =
+        ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
+          const ConsensoGrauVia(
+            grauSugerido: '7b',
+            totalVotos: 10,
+            distribuicaoDeltas: {-1: 1, 0: 2, 1: 7},
+          ),
+          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+          ehBoulder: false,
+        );
 
     await tester.pumpWidget(
       envolver(
         Column(
           children: [
-            const AnelConsensoGrauVia(consenso: consensoInicial),
-            BarrasDistribuicaoGrauVia(
-              consenso: consensoInicial,
-              codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-              ehBoulder: false,
-            ),
+            AnelConsensoGrauVia(apresentacao: apresentacaoInicial),
+            BarrasDistribuicaoGrauVia(apresentacao: apresentacaoInicial),
           ],
         ),
       ),
