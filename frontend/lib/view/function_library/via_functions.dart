@@ -380,45 +380,49 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
         final resumoAscensao = _cadernetaViewModel.resumoAscensao;
         final citacaoNotas = _cadernetaViewModel.citacaoNotasPrivadas;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              CabecalhoIdentidadeVia(
-                nomeEscalada: _viewModel.nomeEscalada,
-                modalidade: _viewModel.modalidade,
-                ehDestaque: _viewModel.ehDestaque,
-                cragId: widget.cragId,
-                escalada: widget.escalada,
-                setor: widget.setor,
-                grupo: widget.grupo,
-              ),
-              AreaHeroiTopoGrauVia(
-                estadoCroqui: estadoCroqui,
-                cragId: widget.cragId,
-                nomeEscalada: _viewModel.nomeEscalada,
-                setor: widget.setor,
-                grupo: widget.grupo,
-                aoAbrirCroquiInterativo: () =>
-                    _abrirCroquiInterativo(context, estadoCroqui),
-                exibirCartaoGrau: _viewModel.exibirCartaoGrau,
-                rotuloGrauOficial: _viewModel.rotuloGrauOficial,
-                grauOficial: _viewModel.grauOficialExibicao,
-                complementoGrauOficial: _viewModel.complementoGrauOficial,
-                apresentacaoConsenso: _viewModel.apresentacaoConsenso,
-                alertasAtivos: _viewModel.alertasAtivos,
-                aoTocarAlerta: (alerta) =>
-                    _abrirConfirmacaoAlerta(context, alerta),
-              ),
-              SecaoCadernetaVia(
-                escalada: widget.escalada,
-                viewModel: widget.cadernetaViewModel,
-              ),
-              GradeAtributosTecnicosVia(
-                atributos: _viewModel.atributosTecnicos,
-                tipoAncoragem: _viewModel.tipoAncoragem,
-              ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CabecalhoIdentidadeVia(
+                      nomeEscalada: _viewModel.nomeEscalada,
+                      modalidade: _viewModel.modalidade,
+                      ehDestaque: _viewModel.ehDestaque,
+                      cragId: widget.cragId,
+                      escalada: widget.escalada,
+                      setor: widget.setor,
+                      grupo: widget.grupo,
+                    ),
+                    AreaHeroiTopoGrauVia(
+                      estadoCroqui: estadoCroqui,
+                      cragId: widget.cragId,
+                      nomeEscalada: _viewModel.nomeEscalada,
+                      setor: widget.setor,
+                      grupo: widget.grupo,
+                      aoAbrirCroquiInterativo: () =>
+                          _abrirCroquiInterativo(context, estadoCroqui),
+                      exibirCartaoGrau: _viewModel.exibirCartaoGrau,
+                      rotuloGrauOficial: _viewModel.rotuloGrauOficial,
+                      grauOficial: _viewModel.grauOficialExibicao,
+                      complementoGrauOficial: _viewModel.complementoGrauOficial,
+                      apresentacaoConsenso: _viewModel.apresentacaoConsenso,
+                      alertasAtivos: _viewModel.alertasAtivos,
+                      aoTocarAlerta: (alerta) =>
+                          _abrirConfirmacaoAlerta(context, alerta),
+                    ),
+                    SecaoCadernetaVia(
+                      escalada: widget.escalada,
+                      viewModel: widget.cadernetaViewModel,
+                    ),
+                    GradeAtributosTecnicosVia(
+                      atributos: _viewModel.atributosTecnicos,
+                      tipoAncoragem: _viewModel.tipoAncoragem,
+                    ),
                     SecaoTextosETecnicasVia(
                       cragId: widget.cragId,
                       secoes: _viewModel.secoesTexto,
@@ -438,8 +442,11 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                       chavePixManutencao: _viewModel.chavePixManutencao,
                       aoCopiarPix: () => _copiarPix(context),
                     ),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
