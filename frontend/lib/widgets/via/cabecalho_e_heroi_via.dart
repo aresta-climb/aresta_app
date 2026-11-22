@@ -434,37 +434,45 @@ class _BlocoConsensoComunidade extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        if (apresentacao.possuiVotos)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnelConsensoGrauVia(apresentacao: apresentacao, tamanho: 26),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  apresentacao.grauSugerido!,
+        Container(
+          height: 34,
+          alignment: Alignment.centerLeft,
+          child: apresentacao.possuiVotos
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnelConsensoGrauVia(
+                      apresentacao: apresentacao,
+                      tamanho: 26,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        apresentacao.grauSugerido!,
+                        style: TextStyle(
+                          color: cores.chalkWhite,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  'Sem votos',
                   style: TextStyle(
-                    color: cores.chalkWhite,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
+                    color: cores.ashGrey,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
                   ),
                 ),
-              ),
-            ],
-          )
-        else
-          Text(
-            'Sem votos',
-            style: TextStyle(
-              color: cores.ashGrey,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+        ),
         const SizedBox(height: 2),
         Text(
           apresentacao.subtituloTendencia,
-          style: TextStyle(color: cores.ashGrey, fontSize: 11),
+          style: TextStyle(color: cores.ashGrey, fontSize: 11, height: 1.25),
         ),
       ],
     );
@@ -509,34 +517,27 @@ class SecaoMapaCroquiVia extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: Stack(
             children: [
-              AspectRatio(
-                aspectRatio: estadoCroqui.aspectRatioMiniatura.clamp(1.2, 2.2),
-                child: MapaThumbnail(
-                  mapas: estadoCroqui.mapasMiniatura,
-                  cragId: cragId,
-                  setorContext: setor,
-                  grupoContext: grupo,
-                  nomeContexto: nomeEscalada,
-                  carrosselItensOverride: estadoCroqui.itensCarrosselMiniatura,
-                ),
+              MapaThumbnail(
+                mapas: estadoCroqui.mapasMiniatura,
+                cragId: cragId,
+                setorContext: setor,
+                grupoContext: grupo,
+                nomeContexto: nomeEscalada,
+                carrosselItensOverride: estadoCroqui.itensCarrosselMiniatura,
+                onTapOverride: aoAbrirCroquiInterativo,
               ),
               if (estadoCroqui.rotuloLinhaNoMapa != null)
                 Positioned(
                   top: 10,
                   left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.16),
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
                       ),
                     ),
                     child: Text(
