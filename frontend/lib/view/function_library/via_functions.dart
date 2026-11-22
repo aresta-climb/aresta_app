@@ -6,14 +6,15 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../navigation/construtor_reativo_pagina.dart';
 import '../../navigation/funcoes_navegacao.dart';
+import '../../theme/cores_app.dart';
 import '../../utils/formatador_escalada.dart';
+import '../../widgets/caderneta/modal_registro_cadena.dart';
 import '../../widgets/caderneta/secao_caderneta_via.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../../widgets/via/cabecalho_e_heroi_via.dart';
 import '../../widgets/via/secoes_detalhes_via.dart';
 import '../view_models/secao_caderneta_via_view_model.dart';
 import '../view_models/via_view_model.dart';
-
 
 export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
 
@@ -248,6 +249,26 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     super.dispose();
   }
 
+  void _abrirRegistroCadena(BuildContext context) {
+    final registroVm = _cadernetaViewModel.criarViewModelRegistro();
+    exibirModalRegistroCadena(
+      context,
+      viewModel: registroVm,
+      onSalvo: (cadenaSalva) {
+        if (!context.mounted) return;
+        final mensagem = cadenaSalva.isCadena
+            ? 'Cadena salva na caderneta!'
+            : 'Tentativa salva na caderneta!';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(mensagem),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+    ).whenComplete(registroVm.dispose);
+  }
+
   void _abrirConfirmacaoAlerta(
     BuildContext context,
     AlertaSegurancaVia alerta,
@@ -285,6 +306,32 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     );
   }
 
+  Future<void> _votarGrauDireto(BuildContext context, int delta) async {
+    final resultado = await _viewModel.votarGrauComunidade(delta);
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (resultado == ResultadoVotoGrauVia.requerAutenticacao) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Entre na sua conta na aba Perfil para votar no grau da via.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+    } else if (resultado == ResultadoVotoGrauVia.registrado) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Voto de grau atualizado!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+    }
+  }
 
   void _abrirCroquiInterativo(
     BuildContext context,
@@ -319,8 +366,10 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
 
   @override
   Widget build(BuildContext context) {
+    final cores = context.colors;
+
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: Listenable.merge([_viewModel, _cadernetaViewModel]),
       builder: (context, _) {
         final estadoCroqui = _viewModel.resolverEstadoCroqui(
           pico: widget.pico,
@@ -328,6 +377,8 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
           grupo: widget.grupo,
           resolvedorExterno: PageListenableBuilder.resolverOf(context),
         );
+        final resumoAscensao = _cadernetaViewModel.resumoAscensao;
+        final citacaoNotas = _cadernetaViewModel.citacaoNotasPrivadas;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -368,25 +419,25 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                 atributos: _viewModel.atributosTecnicos,
                 tipoAncoragem: _viewModel.tipoAncoragem,
               ),
-              SecaoTextosETecnicasVia(
-                cragId: widget.cragId,
-                secoes: _viewModel.secoesTexto,
-              ),
-              SecaoEnfiadasVia(enfiadas: _viewModel.enfiadas),
-              SecaoBetasMidiaVia(
-                midias: _viewModel.midiasBeta,
-                aoAbrirMidia: _viewModel.abrirMidiaBeta,
-              ),
-              SecaoNotasComunidadeVia(
-                notas: _viewModel.notasComunidadeApresentacao,
-              ),
-              SecaoHistoricoEPixVia(
-                conquistadoresTexto: _viewModel.conquistadoresTexto,
-                dataAbertura: _viewModel.dataAbertura,
-                dataManutencao: _viewModel.dataManutencao,
-                chavePixManutencao: _viewModel.chavePixManutencao,
-                aoCopiarPix: () => _copiarPix(context),
-              ),
+                    SecaoTextosETecnicasVia(
+                      cragId: widget.cragId,
+                      secoes: _viewModel.secoesTexto,
+                    ),
+                    SecaoEnfiadasVia(enfiadas: _viewModel.enfiadas),
+                    SecaoBetasMidiaVia(
+                      midias: _viewModel.midiasBeta,
+                      aoAbrirMidia: _viewModel.abrirMidiaBeta,
+                    ),
+                    SecaoNotasComunidadeVia(
+                      notas: _viewModel.notasComunidadeApresentacao,
+                    ),
+                    SecaoHistoricoEPixVia(
+                      conquistadoresTexto: _viewModel.conquistadoresTexto,
+                      dataAbertura: _viewModel.dataAbertura,
+                      dataManutencao: _viewModel.dataManutencao,
+                      chavePixManutencao: _viewModel.chavePixManutencao,
+                      aoCopiarPix: () => _copiarPix(context),
+                    ),
             ],
           ),
         );
