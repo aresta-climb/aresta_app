@@ -394,50 +394,50 @@ class _FormularioReportarAlertaViaState
                       key: Key('opcao_alerta_${cat.codigoBanco}'),
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _viewModel.selecionarCategoria(cat),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: selecionado
-                          ? _corVermelhoAlerta.withValues(alpha: 0.18)
-                          : cores.caveShadow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: selecionado
-                            ? _corVermelhoAlerta
-                            : cores.graniteEdge,
-                        width: selecionado ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(cat.emoji, style: const TextStyle(fontSize: 18)),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            cat.rotulo,
-                            style: TextStyle(
-                              color: cores.chalkWhite,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selecionado
+                              ? _corVermelhoAlerta.withValues(alpha: 0.18)
+                              : cores.caveShadow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selecionado
+                                ? _corVermelhoAlerta
+                                : cores.graniteEdge,
+                            width: selecionado ? 1.5 : 1,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _categoriaSelecionada.descricaoCurta,
-              style: TextStyle(color: cores.ashGrey, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(cat.emoji, style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                cat.rotulo,
+                                style: TextStyle(
+                                  color: cores.chalkWhite,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _viewModel.descricaoCategoriaSelecionada,
+                  style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
             TextField(
               key: const Key('campo_detalhe_alerta_via'),
               controller: _detalheController,
