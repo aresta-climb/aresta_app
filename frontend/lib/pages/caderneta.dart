@@ -92,20 +92,34 @@ class _CadernetaPageState extends State<CadernetaPage> {
     ).whenComplete(vmEdicao.dispose);
   }
 
+  void _navegarParaEscaladaUid(String escaladaUid) {
+    final navegou = AppNav.toViaPorUid(context, escaladaUid);
+    if (!navegou && mounted) {
+      exibirSnackBarFlutuanteSeguro(
+        context,
+        texto: 'Via não disponível offline no momento.',
+      );
+    }
+  }
+
   void _aoTocarVia(Cadena cadena) {
     if (_viewModel.possuiCallbackTocarVia) {
       _viewModel.tocarVia(cadena);
       return;
     }
-    final navegou = AppNav.toViaPorUid(context, cadena.escaladaUid);
-    if (!navegou && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Via não disponível offline no momento.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    _navegarParaEscaladaUid(cadena.escaladaUid);
+  }
+
+  void _aoResolverMeuAlerta(AlertaContribuidoCaderneta item) {
+    final uidAlerta = item.alerta.uid;
+    _viewModel.iniciarResolucaoMeuAlertaComDesfazer(item.alerta);
+    exibirSnackBarFlutuanteSeguro(
+      context,
+      texto: 'Alerta marcado como resolvido.',
+      duracao: const Duration(seconds: 4),
+      rotuloAcao: 'Desfazer',
+      aoAcionar: () => _viewModel.desfazerResolucaoMeuAlerta(uidAlerta),
+    );
   }
 
   @override
@@ -137,6 +151,15 @@ class _CadernetaPageState extends State<CadernetaPage> {
                     onAlternarModo: _viewModel.alternarModoModalidade,
                   ),
                   const SizedBox(height: 24),
+                  SecaoMeusAlertasCaderneta(
+                    tituloSecao: _viewModel.tituloSecaoMeusAlertas,
+                    alertas: _viewModel.meusAlertas,
+                    obterNomeVia: _viewModel.obterNomeEscalada,
+                    obterGrauVia: _viewModel.obterGrauEscalada,
+                    formatarData: _viewModel.formatarDataAscensao,
+                    aoTocarVia: _navegarParaEscaladaUid,
+                    aoResolverAlerta: _aoResolverMeuAlerta,
+                  ),
                   SecaoHistoricoCadenas(
                     tituloSecao: _viewModel.tituloSecaoHistorico,
                     historico: _viewModel.historicoCadenas,
