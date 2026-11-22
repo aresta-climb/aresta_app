@@ -11,8 +11,11 @@ import '../mapa_thumbnail.dart';
 import 'bolha_alerta_seguranca_via.dart';
 import 'grafico_consenso_grau_via.dart';
 
+/// Cor âmbar-dourada de destaque para o selo e a estrela de vias clássicas (`★ CLÁSSICA`).
+const Color _corEstrelaClassica = Color(0xFFFBBF24);
+
 /// Cabeçalho declarativo (Dumb UI) da `ViaPage` exibindo nome completo, modalidade,
-/// selo `CLÁSSICA` e o atalho hierárquico `Grupo > Setor`.
+/// selo dourado `★ CLÁSSICA` e o atalho hierárquico `Grupo > Setor`.
 class CabecalhoIdentidadeVia extends StatelessWidget {
   /// Nome completo da escalada.
   final String nomeEscalada;
@@ -93,28 +96,31 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
                 ),
               if (ehDestaque)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
+                  key: const Key('selo_via_classica'),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: _corEstrelaClassica.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Colors.amber.withValues(alpha: 0.4),
+                      color: _corEstrelaClassica.withValues(alpha: 0.55),
                     ),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.star_rounded, size: 15, color: Colors.amber),
+                      Icon(
+                        Icons.star_rounded,
+                        size: 15,
+                        color: _corEstrelaClassica,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'CLÁSSICA',
                         style: TextStyle(
-                          color: Colors.amber,
-                          fontSize: 11,
+                          color: Color(0xFFFDE68A),
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ],
@@ -137,7 +143,7 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
   }
 }
 
-/// Área heroica superior (Dumb UI) combinando croqui/mapa, cartão de grau e bolhas flutuantes de alerta.
+/// Área heroica superior (Dumb UI) combinando croqui/mapa, cartão de grau, votação e bolhas de alerta.
 class AreaHeroiTopoGrauVia extends StatelessWidget {
   /// Estado pré-resolvido de miniatura ou navegação do croqui.
   final EstadoCroquiVia estadoCroqui;
@@ -154,7 +160,7 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
   /// Grupo pai opcional.
   final Grupo? grupo;
 
-  /// Callback acionado ao tocar em `'VER NO CROQUI INTERATIVO'`.
+  /// Callback acionado ao tocar para abrir o croqui interativo.
   final VoidCallback aoAbrirCroquiInterativo;
 
   /// Indica se o cartão de grau deve ser renderizado.
@@ -171,6 +177,9 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
 
   /// Apresentação pré-calculada do consenso de grau da comunidade.
   final ApresentacaoConsensoGrauVia? apresentacaoConsenso;
+
+  /// Callback opcional para voto direto em uma das 5 pílulas de grau (`-2` a `+2`).
+  final ValueChanged<int>? aoVotarGrau;
 
   /// Alertas ativos exibidos como bolhas vermelhas flutuantes no canto superior direito.
   final List<AlertaSegurancaVia> alertasAtivos;
@@ -192,6 +201,7 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
     required this.grauOficial,
     required this.complementoGrauOficial,
     required this.apresentacaoConsenso,
+    this.aoVotarGrau,
     required this.alertasAtivos,
     required this.aoTocarAlerta,
   });
@@ -208,14 +218,12 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
         aoAbrirCroquiInterativo: aoAbrirCroquiInterativo,
       ),
       if (exibirCartaoGrau)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: CartaoGrauVia(
-            rotuloGrauOficial: rotuloGrauOficial,
-            grauOficial: grauOficial,
-            complementoGrauOficial: complementoGrauOficial,
-            apresentacaoConsenso: apresentacaoConsenso,
-          ),
+        CartaoGrauVia(
+          rotuloGrauOficial: rotuloGrauOficial,
+          grauOficial: grauOficial,
+          complementoGrauOficial: complementoGrauOficial,
+          apresentacaoConsenso: apresentacaoConsenso,
+          aoVotarGrau: aoVotarGrau,
         ),
     ];
 
@@ -230,15 +238,19 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Padding(
-          padding: EdgeInsets.only(top: exibirCartaoGrau ? 14 : 44),
+          padding: EdgeInsets.only(
+            top: estadoCroqui.mapasMiniatura.isNotEmpty
+                ? 0
+                : (exibirCartaoGrau ? 14 : 44),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: filhos,
           ),
         ),
         Positioned(
-          top: 0,
-          right: 4,
+          top: estadoCroqui.mapasMiniatura.isNotEmpty ? 10 : 0,
+          right: estadoCroqui.mapasMiniatura.isNotEmpty ? 10 : 4,
           child: BolhasFlutuantesAlertaVia(
             alertas: alertasAtivos,
             aoSelecionarAlerta: aoTocarAlerta,
@@ -249,7 +261,8 @@ class AreaHeroiTopoGrauVia extends StatelessWidget {
   }
 }
 
-/// Cartão declarativo (Dumb UI) exibindo o Grau Oficial ao lado do Consenso da Comunidade.
+/// Cartão declarativo (Dumb UI) exibindo o Grau Oficial, o Consenso da Comunidade,
+/// o gráfico de distribuição e as 5 pílulas interativas de votação (Opção 2).
 class CartaoGrauVia extends StatelessWidget {
   /// Rótulo superior da coluna oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
   final String rotuloGrauOficial;
@@ -263,6 +276,9 @@ class CartaoGrauVia extends StatelessWidget {
   /// Apresentação pré-calculada do consenso comunitário (quando habilitado).
   final ApresentacaoConsensoGrauVia? apresentacaoConsenso;
 
+  /// Callback opcional para votação direta nas 5 pílulas de percepção de grau.
+  final ValueChanged<int>? aoVotarGrau;
+
   /// Cria uma instância de [CartaoGrauVia].
   const CartaoGrauVia({
     super.key,
@@ -270,6 +286,7 @@ class CartaoGrauVia extends StatelessWidget {
     required this.grauOficial,
     required this.complementoGrauOficial,
     this.apresentacaoConsenso,
+    this.aoVotarGrau,
   });
 
   @override
@@ -284,7 +301,7 @@ class CartaoGrauVia extends StatelessWidget {
           rotuloGrauOficial,
           style: TextStyle(
             color: cores.ashGrey,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.6,
           ),

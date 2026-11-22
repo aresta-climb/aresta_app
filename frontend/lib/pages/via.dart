@@ -159,13 +159,21 @@ class _ViaPageState extends State<ViaPage> {
               if (_viewModel.podeReportarAlerta)
                 IconButton(
                   key: const Key('btn_reportar_alerta_via'),
-                  icon: const Icon(Icons.campaign_outlined),
+                  icon: Icon(
+                    Icons.flag_outlined,
+                    color: cores.ashGrey,
+                    size: 20,
+                  ),
                   tooltip: 'Reportar alerta de segurança',
                   onPressed: () => _abrirModalReportarAlerta(context),
                 ),
               if (_viewModel.possuiUid)
                 IconButton(
-                  icon: const Icon(Icons.share_outlined),
+                  icon: Icon(
+                    Icons.share_outlined,
+                    color: cores.chalkWhite,
+                    size: 20,
+                  ),
                   tooltip: 'Compartilhar escalada',
                   onPressed: () {
                     _viewModel.compartilharEscalada(
