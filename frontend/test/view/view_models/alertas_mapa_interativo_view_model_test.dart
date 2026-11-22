@@ -228,5 +228,93 @@ void main() {
       final refPol = Mapa_Referencia(alvoUid: uidPol, pontosUids: ['p_pol']);
       final refPolVazio = Mapa_Referencia(alvoUid: uidPol, pontosUids: ['p_pol_vazio']);
       final refCaixa = Mapa_Referencia(alvoUid: uidCaixa, pontosUids: ['p_caixa']);
+      final refNos = Mapa_Referencia(alvoUid: uidNos, pontosUids: ['p_nos']);
+      final refSit = Mapa_Referencia(alvoUid: uidSit, pontosUids: ['p_sit']);
+      final refNotSet = Mapa_Referencia(alvoUid: uidNos, pontosUids: ['p_vazio', 'p_linha_vazia']);
+
+      final mapa2 = Mapa(
+        larguraMapa: 500,
+        alturaMapa: 500,
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(
+            uid: 'p_ret',
+            retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 20, largura: 20),
+          ),
+          Mapa_PontoDeInteresse(
+            uid: 'p_pol',
+            poligono: BoundingPoligono(coordenadas: [200, 200, 300, 300]),
+          ),
+          Mapa_PontoDeInteresse(
+            uid: 'p_pol_vazio',
+            poligono: BoundingPoligono(coordenadas: [10]),
+          ),
+          Mapa_PontoDeInteresse(
+            uid: 'p_caixa',
+            linha: LinhaTrajeto(
+              compilado: DadosCompiladosLinha(
+                caixaDelimitadora: BoundingRetangulo(x: 150, y: 250),
+              ),
+            ),
+          ),
+          Mapa_PontoDeInteresse(
+            uid: 'p_sit',
+            linha: LinhaTrajeto(
+              compilado: DadosCompiladosLinha(
+                marcadores: [
+                  MarcadorCompilado(
+                    tipo: NoTrajeto_TipoNo.INICIO_AGACHADO,
+                    x: 180,
+                    y: 420,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Mapa_PontoDeInteresse(
+            uid: 'p_nos',
+            linha: LinhaTrajeto(
+              conteudo: DadosConteudoLinha(
+                nos: [NoTrajeto(x: 350, y: 150)],
+              ),
+            ),
+          ),
+          Mapa_PontoDeInteresse(uid: 'p_vazio'),
+          Mapa_PontoDeInteresse(uid: 'p_linha_vazia', linha: LinhaTrajeto()),
+        ],
+      );
+
+      vm.atualizarContextoMapa(
+        mapa: mapa2,
+        referenciasResolvidas: {
+          refRet: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidRet, viaEsportiva: ViaEsportiva(nome: 'R1')),
+          ),
+          refPol: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidPol, viaEsportiva: ViaEsportiva(nome: 'R2')),
+          ),
+          refPolVazio: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidPol, viaEsportiva: ViaEsportiva(nome: 'R2')),
+          ),
+          refCaixa: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidCaixa, viaEsportiva: ViaEsportiva(nome: 'R3')),
+          ),
+          refSit: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidSit, boulder: Boulder(nome: 'B5')),
+          ),
+          refNos: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidNos, viaEsportiva: ViaEsportiva(nome: 'R4')),
+          ),
+          refNotSet: ResolvedDataset(
+            tipo: TipoEntidadeResolved.escalada,
+            escalada: Escalada(uid: uidNos, viaEsportiva: ViaEsportiva(nome: 'R4')),
+          ),
+        },
+      );
   });
 }
