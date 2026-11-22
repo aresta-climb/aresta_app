@@ -88,4 +88,92 @@ class SecaoMeusAlertasCaderneta extends StatelessWidget {
 
 class _CartaoMeuAlertaCaderneta extends StatelessWidget {
   final AlertaContribuidoCaderneta item;
+  final String nomeVia;
+  final String? grauVia;
+  final String dataFormatada;
+  final VoidCallback aoTocar;
+  final VoidCallback? aoResolver;
+
+  const _CartaoMeuAlertaCaderneta({
+    required this.item,
+    required this.nomeVia,
+    required this.grauVia,
+    required this.dataFormatada,
+    required this.aoTocar,
+    required this.aoResolver,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    final alerta = item.alerta;
+    final criadoPorMim = item.papel == PapelContribuicaoAlerta.criadoPorMim;
+    final corPapel = criadoPorMim ? _corDestaqueCriado : cores.mossRock;
+    final textoStatus = item.ativo
+        ? 'Ativo • ${alerta.confirmacoesAtivas} ${alerta.confirmacoesAtivas == 1 ? 'confirmação' : 'confirmações'}'
+        : 'Resolvido';
+
+    return Opacity(
+      opacity: item.ativo ? 1.0 : 0.68,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: Key('item_meu_alerta_${alerta.uid}'),
+          onTap: aoTocar,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: item.ativo
+                    ? corPapel.withValues(alpha: 0.45)
+                    : cores.graniteEdge,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: corPapel.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: corPapel.withValues(alpha: 0.55),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            criadoPorMim
+                                ? Icons.flag_rounded
+                                : Icons.verified_outlined,
+                            size: 12,
+                            color: criadoPorMim
+                                ? const Color(0xFFFCA5A5)
+                                : cores.mossRock,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
