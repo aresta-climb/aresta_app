@@ -380,10 +380,12 @@ abstract final class ExtratorDetalhesTecnicosVia {
     ConsensoGrauVia consenso, {
     required int? codigoGrauOficial,
     required bool ehBoulder,
+    int? deltaVotoUsuario,
   }) => ApresentacaoConsensoGrauVia.deConsenso(
     consenso,
     codigoGrauOficial: codigoGrauOficial,
     ehBoulder: ehBoulder,
+    deltaVotoUsuario: deltaVotoUsuario,
   );
 
   /// Formata comentários públicos em [NotaComunidadeApresentacao] para Dumb UI.

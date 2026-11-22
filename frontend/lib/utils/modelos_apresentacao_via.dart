@@ -21,7 +21,7 @@ enum TipoIconeAtributoVia {
   distancia,
 }
 
-/// Par rótulo/valor exibido na grade responsiva de especificações técnicas da escalada.
+/// Par rótulo/valor exibido nos chips compactos de especificações técnicas da escalada.
 @immutable
 class AtributoTecnicoVia {
   /// Categoria visual do ícone associado ao atributo.
@@ -117,7 +117,7 @@ class ItemMidiaBetaVia {
   });
 }
 
-/// Modelo imutável de apresentação de uma nota pública da comunidade pronto para Dumb UI.
+/// Modelo imutável de apresentação de um beta público da comunidade pronto para Dumb UI.
 @immutable
 class NotaComunidadeApresentacao {
   /// Cabeçalho pré-formatado contendo autor e data (`'Mariana • 19/11/2026'`).
@@ -126,7 +126,7 @@ class NotaComunidadeApresentacao {
   /// Rótulo opcional do estilo esportivo (`'FLASH ★'`, `'À VISTA ★'`, etc.).
   final String? rotuloEstilo;
 
-  /// Corpo textual da dica pública.
+  /// Corpo textual do beta público.
   final String texto;
 
   /// Cria uma instância constante de [NotaComunidadeApresentacao].
@@ -165,7 +165,31 @@ class FaixaDistribuicaoGrauApresentacao {
   });
 }
 
-/// Estado visual pré-calculado do bloco e dos gráficos de Consenso da Comunidade na `ViaPage`.
+/// Modelo imutável de uma pílula interativa (`-2` a `+2`) para votação direta no grau comunitário.
+@immutable
+class OpcaoPilulaVotoGrauVia {
+  /// Deslocamento relativo ao grau oficial (`-2` a `+2`).
+  final int delta;
+
+  /// Grau principal exibido no topo da pílula (ex.: `'7b'`, ou `'+1'` sem grau oficial).
+  final String grauExibicao;
+
+  /// Subtítulo curto do deslocamento (`'-2'`, `'-1'`, `'Justo'`, `'+1'`, `'+2'`).
+  final String subtituloDelta;
+
+  /// Indica se esta pílula corresponde ao voto ativo do escalador.
+  final bool selecionada;
+
+  /// Cria uma instância constante de [OpcaoPilulaVotoGrauVia].
+  const OpcaoPilulaVotoGrauVia({
+    required this.delta,
+    required this.grauExibicao,
+    required this.subtituloDelta,
+    required this.selecionada,
+  });
+}
+
+/// Estado visual pré-calculado do bloco, gráfico e pílulas de Consenso da Comunidade na `ViaPage`.
 @immutable
 class ApresentacaoConsensoGrauVia {
   static const List<int> _deltasOrdenados = [-2, -1, 0, 1, 2];
@@ -191,8 +215,14 @@ class ApresentacaoConsensoGrauVia {
   /// Total de votos mais duros (`delta > 0`) para o anel vetorial.
   final int votosDuros;
 
-  /// Faixas ordenadas (`-2` a `+2`) prontas para renderização sem cálculos na UI.
+  /// Delta atualmente votado pelo escalador (`-2` a `+2`), ou `null` quando ainda não votou.
+  final int? deltaVotoUsuario;
+
+  /// Faixas ordenadas (`-2` a `+2`) prontas para renderização do gráfico.
   final List<FaixaDistribuicaoGrauApresentacao> faixasDistribuicao;
+
+  /// Cinco pílulas explícitas (`-2` a `+2`) para votação direta em 1 toque no cartão.
+  final List<OpcaoPilulaVotoGrauVia> pilulasVoto;
 
   /// Cria uma instância constante de [ApresentacaoConsensoGrauVia].
   const ApresentacaoConsensoGrauVia({
@@ -204,9 +234,11 @@ class ApresentacaoConsensoGrauVia {
     required this.votosJustos,
     required this.votosDuros,
     required this.faixasDistribuicao,
+    this.deltaVotoUsuario,
+    this.pilulasVoto = const [],
   });
 
-  /// Cria o estado inicial sem votos para vias ainda não avaliadas.
+  /// Cria o estado inicial constante sem votos para vias ainda não avaliadas.
   const ApresentacaoConsensoGrauVia.semVotos()
     : possuiVotos = false,
       grauSugerido = null,
@@ -215,16 +247,41 @@ class ApresentacaoConsensoGrauVia {
       votosSuaves = 0,
       votosJustos = 0,
       votosDuros = 0,
-      faixasDistribuicao = const [];
+      deltaVotoUsuario = null,
+      faixasDistribuicao = const [],
+      pilulasVoto = const [];
 
-  /// Constrói a apresentação completa a partir do agregado [ConsensoGrauVia].
+  /// Constrói a apresentação completa (gráfico + 5 pílulas de voto) a partir de [ConsensoGrauVia].
   factory ApresentacaoConsensoGrauVia.deConsenso(
     ConsensoGrauVia consenso, {
     required int? codigoGrauOficial,
     required bool ehBoulder,
+    int? deltaVotoUsuario,
   }) {
+    final pilulas = List<OpcaoPilulaVotoGrauVia>.unmodifiable(
+      _deltasOrdenados.map(
+        (delta) => _construirPilula(
+          delta,
+          codigoGrauOficial: codigoGrauOficial,
+          ehBoulder: ehBoulder,
+          deltaVotoUsuario: deltaVotoUsuario,
+        ),
+      ),
+    );
+
     if (!consenso.possuiVotos) {
-      return const ApresentacaoConsensoGrauVia.semVotos();
+      return ApresentacaoConsensoGrauVia(
+        possuiVotos: false,
+        grauSugerido: null,
+        subtituloTendencia: 'Registre sua ascensão para avaliar',
+        tituloDistribuicao: '',
+        votosSuaves: 0,
+        votosJustos: 0,
+        votosDuros: 0,
+        deltaVotoUsuario: deltaVotoUsuario,
+        faixasDistribuicao: const [],
+        pilulasVoto: pilulas,
+      );
     }
 
     var votosSuaves = 0;
@@ -275,7 +332,30 @@ class ApresentacaoConsensoGrauVia {
       votosSuaves: votosSuaves,
       votosJustos: votosJustos,
       votosDuros: votosDuros,
+      deltaVotoUsuario: deltaVotoUsuario,
       faixasDistribuicao: List.unmodifiable(faixas),
+      pilulasVoto: pilulas,
+    );
+  }
+
+  static OpcaoPilulaVotoGrauVia _construirPilula(
+    int delta, {
+    required int? codigoGrauOficial,
+    required bool ehBoulder,
+    required int? deltaVotoUsuario,
+  }) {
+    final textoDelta = delta == 0 ? 'Justo' : (delta > 0 ? '+$delta' : '$delta');
+    final codigo = deslocarCodigoGrau(
+      codigoGrauOficial,
+      delta,
+      ehBoulder: ehBoulder,
+    );
+    final grau = formatarGrauPorCodigo(codigo, ehBoulder: ehBoulder);
+    return OpcaoPilulaVotoGrauVia(
+      delta: delta,
+      grauExibicao: grau ?? (delta == 0 ? '0' : textoDelta),
+      subtituloDelta: textoDelta,
+      selecionada: deltaVotoUsuario == delta,
     );
   }
 
