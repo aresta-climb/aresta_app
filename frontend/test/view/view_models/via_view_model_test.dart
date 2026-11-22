@@ -567,6 +567,23 @@ void main() {
     expect(vm.alertasAtivos, isEmpty);
     expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, hasLength(1));
 
+    vm.desfazerResolucaoAlerta(alertaId);
+    expect(vm.alertasAtivos, hasLength(1));
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, hasLength(1));
+
+    // 5. Sem desfazer, expiração do timer efetiva a resolução no repositório
+    vm.iniciarResolucaoAlertaComDesfazer(alertaId);
+    expect(vm.alertasAtivos, isEmpty);
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, isEmpty);
+
+    // 6. Se dispose ocorrer durante janela pendente, efetiva a resolução imediatamente
+    await vm.reportarAlerta(CategoriaAlertaSeguranca.viaMolhada);
+    final segundoAlertaId = vm.alertasAtivos.single.uid;
+    vm.iniciarResolucaoAlertaComDesfazer(segundoAlertaId);
     vm.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, isEmpty);
   });
 }

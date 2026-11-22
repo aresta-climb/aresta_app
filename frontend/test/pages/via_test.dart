@@ -490,4 +490,71 @@ void main() {
     await tester.pumpAndSettle();
     expect(repoFake.obterDeltaVotoUsuario('x8siJek3FiG3aB'), -1);
   });
+
+  testWidgets('ViaPage exibe selo de Tentativa clicável no Passaporte e permite voltar pelo botão do AppBar', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    final escalada = Escalada(
+      uid: 'uidProjeto99',
+      viaEsportiva: ViaEsportiva(
+        nome: 'Projeto Impossível',
+        dificuldade: GrauVia_GrauVia.BR_9A,
+      ),
+    );
+    final repoCaderneta = RepositorioCadernetaLocal();
+    await repoCaderneta.salvarCadena(
+      Cadena.criar(
+        escaladaUid: 'uidProjeto99',
+        dataAscensao: DateTime(2026, 10, 1),
+        tipoAscensao: TipoAscensao.tentativa,
+        tentativas: 3,
+      ),
+    );
+    final cadernetaVm = SecaoCadernetaViaViewModel(
+      escalada: escalada,
+      repositorio: repoCaderneta,
+    );
+    addTearDown(cadernetaVm.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ViaPage(
+                      escalada: escalada,
+                      cragId: 'crag1',
+                      cadernetaViewModel: cadernetaVm,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Abrir Via'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir Via'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Tentativa em 01/10'), findsOneWidget);
+
+    // Tocar no selo pessoal dentro do Passaporte abre o ModalRegistroCadena
+    await tester.tap(find.textContaining('Tentativa em 01/10'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ModalRegistroCadena), findsOneWidget);
+    Navigator.of(tester.element(find.byType(ModalRegistroCadena))).pop();
+    await tester.pumpAndSettle();
+
+    // Tocar na seta de retorno do AppBar desempilha a ViaPage
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.byType(ViaPage), findsNothing);
+    expect(find.text('Abrir Via'), findsOneWidget);
+  });
 }
