@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../data/modelos/cadena.dart';
+import '../data/modelos/interacao_via.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_caderneta.dart';
@@ -10,13 +11,14 @@ import '../view/view_models/perfil_view_model.dart';
 import '../widgets/caderneta/card_estatistica.dart';
 import '../widgets/caderneta/grafico_piramide_graus.dart';
 import '../widgets/caderneta/modal_registro_cadena.dart';
+import '../widgets/caderneta/secao_meus_alertas_caderneta.dart';
+import '../widgets/via/snackbar_flutuante_seguro.dart';
 
 /// Página dedicada à exibição da Caderneta Esportiva pessoal do atleta (Dumb UI).
 ///
-/// Apresenta o painel de resumo estatístico, o gráfico da pirâmide de graduação
-/// (vias e boulders) e o histórico cronológico detalhado de ascensões com suporte
-/// a edição, exclusão e navegação direta para a via, delegando todo o estado e a
-/// formatação de apresentação ao [PerfilViewModel].
+/// Apresenta o painel de resumo estatístico, o gráfico da pirâmide de graduação,
+/// a seção de acesso rápido aos alertas criados/confirmados pelo usuário e o histórico
+/// cronológico detalhado de ascensões, delegando todo o estado ao [PerfilViewModel].
 class CadernetaPage extends StatefulWidget {
   /// ViewModel injetado externamente (cujo ciclo de vida pertence ao chamador).
   final PerfilViewModel? viewModel;
@@ -76,17 +78,15 @@ class _CadernetaPageState extends State<CadernetaPage> {
       _viewModel.editarCadena(cadena);
       return;
     }
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(context);
     final vmEdicao = _viewModel.criarViewModelEdicao(cadena);
     exibirModalRegistroCadena(
       context,
       viewModel: vmEdicao,
       onSalvo: (_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ascensão atualizada na caderneta!'),
-            duration: Duration(seconds: 2),
-          ),
+        despachanteSnack.exibir(
+          texto: 'Ascensão atualizada na caderneta!',
+          duracao: const Duration(seconds: 2),
         );
       },
     ).whenComplete(vmEdicao.dispose);

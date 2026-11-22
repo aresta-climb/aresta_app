@@ -112,13 +112,33 @@ class PerfilViewModel extends ChangeNotifier {
   }
 
   void _aoAtualizarRepositorio() {
-    notifyListeners();
+    if (!_descartado) {
+      notifyListeners();
+    }
   }
 
   @override
   void dispose() {
+    _descartado = true;
+    final pendentes = _resolucoesAlertasPendentes.entries.toList(
+      growable: false,
+    );
+    _resolucoesAlertasPendentes.clear();
+    for (final p in pendentes) {
+      p.value.timer.cancel();
+      unawaited(
+        repositorioInteracoes.confirmarAlerta(
+          escaladaUid: p.value.escaladaUid,
+          alertaUid: p.key,
+          aindaEstaLa: false,
+        ),
+      );
+    }
     repositorio.cadenasNotifier.removeListener(_aoAtualizarRepositorio);
     repositorio.perfilNotifier.removeListener(_aoAtualizarRepositorio);
+    repositorioInteracoes.alteracoesListenable.removeListener(
+      _aoAtualizarRepositorio,
+    );
     _escutaMetadados?.removeListener(_aoAtualizarRepositorio);
     _catalogoViasProprio?.dispose();
     super.dispose();
@@ -133,6 +153,53 @@ class PerfilViewModel extends ChangeNotifier {
   /// Retorna o título formatado da seção de histórico com a contagem atual de registros.
   String get tituloSecaoHistorico =>
       'Histórico de Ascensões (${historicoCadenas.length})';
+
+  /// Retorna os alertas criados (`CRIADO POR VOCÊ`) e confirmados (`CONFIRMADO (+1)`) pelo perfil atual.
+  List<AlertaContribuidoCaderneta> get meusAlertas => repositorioInteracoes
+      .obterMeusAlertasContribuidos()
+      .map(
+        (item) => _resolucoesAlertasPendentes.containsKey(item.alerta.uid)
+            ? AlertaContribuidoCaderneta(
+                alerta: item.alerta,
+                papel: item.papel,
+                ativo: false,
+                ultimaInteracaoEm: item.ultimaInteracaoEm,
+              )
+            : item,
+      )
+      .toList(growable: false);
+
+  /// Título formatado da seção de alertas na Caderneta.
+  String get tituloSecaoMeusAlertas =>
+      'Meus Alertas na Rocha (${meusAlertas.length})';
+
+  /// Marca otimisticamente [alerta] como resolvido na Caderneta e agenda o envio após [duracaoJanelaDesfazer].
+  void iniciarResolucaoMeuAlertaComDesfazer(AlertaSegurancaVia alerta) {
+    _resolucoesAlertasPendentes.remove(alerta.uid)?.timer.cancel();
+    _resolucoesAlertasPendentes[alerta.uid] = (
+      escaladaUid: alerta.escaladaUid,
+      timer: Timer(duracaoJanelaDesfazer, () {
+        _resolucoesAlertasPendentes.remove(alerta.uid);
+        unawaited(
+          repositorioInteracoes.confirmarAlerta(
+            escaladaUid: alerta.escaladaUid,
+            alertaUid: alerta.uid,
+            aindaEstaLa: false,
+          ),
+        );
+      }),
+    );
+    _aoAtualizarRepositorio();
+  }
+
+  /// Cancela a resolução pendente de [alertaUid], restaurando o estado ativo na Caderneta.
+  void desfazerResolucaoMeuAlerta(String alertaUid) {
+    final pendente = _resolucoesAlertasPendentes.remove(alertaUid);
+    if (pendente != null) {
+      pendente.timer.cancel();
+      _aoAtualizarRepositorio();
+    }
+  }
 
   /// Retorna as estatísticas agregadas atualizadas.
   EstatisticasCaderneta get estatisticas =>
