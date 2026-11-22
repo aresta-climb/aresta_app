@@ -7,6 +7,7 @@ import '../data/modelos/interacao_via.dart';
 import '../navigation/arvore_navegacao.dart';
 import 'calculadora_delta_grau.dart';
 import 'consulta_dataset.dart';
+import 'extrator_rotulos_referencia.dart';
 import 'formatador_escalada.dart';
 
 /// Identificadores semânticos de ícones técnicos desacoplados de `Icons` concretos no ViewModel.
@@ -376,10 +377,10 @@ class ApresentacaoConsensoGrauVia {
   }
 }
 
-/// Estado imutável resolvido para a seção de miniatura/botão de croqui interativo da `ViaPage`.
+/// Estado imutável resolvido para a seção de miniatura e croqui interativo da `ViaPage`.
 @immutable
 class EstadoCroquiVia {
-  /// Mapas válidos embutidos diretamente na escalada para `MapaThumbnail`.
+  /// Mapas válidos (próprios da via ou herdados do setor) para `MapaThumbnail`.
   final List<Mapa> mapasMiniatura;
 
   /// Proporção largura/altura do primeiro mapa de miniatura.
@@ -388,8 +389,15 @@ class EstadoCroquiVia {
   /// Itens de carrossel pré-resolvidos para `MapaThumbnail`.
   final List<CarrosselItemData> itensCarrosselMiniatura;
 
-  /// Itens de carrossel referenciados no setor/pico para o botão `'VER NO CROQUI INTERATIVO'`.
+  /// Itens de carrossel referenciados para abrir o croqui interativo.
   final List<CarrosselItemData> itensNavegacaoCroqui;
+
+  /// Rótulo identificador da linha no mapa do setor (ex.: `'4'` ou `'M1 • 7'`), quando presente.
+  final String? rotuloLinhaNoMapa;
+
+  /// Indica se existe croqui interativo disponível para navegação.
+  bool get possuiCroqui =>
+      mapasMiniatura.isNotEmpty || itensNavegacaoCroqui.isNotEmpty;
 
   /// Cria uma instância constante de [EstadoCroquiVia].
   const EstadoCroquiVia({
@@ -397,9 +405,10 @@ class EstadoCroquiVia {
     this.aspectRatioMiniatura = 1.0,
     this.itensCarrosselMiniatura = const [],
     this.itensNavegacaoCroqui = const [],
+    this.rotuloLinhaNoMapa,
   });
 
-  /// Resolve a miniatura ou itens de carrossel de croqui para a [escalada] sem lógica na UI.
+  /// Resolve a miniatura (incluindo mapa do setor) e o rótulo da linha para a [escalada].
   factory EstadoCroquiVia.resolver({
     required Escalada escalada,
     Pico? pico,
@@ -418,6 +427,16 @@ class EstadoCroquiVia {
               setorNome: setor?.nome,
               escaladaNome: nome,
             );
+    }
+
+    final referencias = resolved?.referencias ?? const [];
+    String? rotuloLinha;
+    if (referencias.isNotEmpty) {
+      final primeira = referencias.first;
+      final extraido = extrairRotuloReferencia(primeira.mapa, primeira.referencia);
+      if (extraido.isNotEmpty) {
+        rotuloLinha = extraido;
+      }
     }
 
     final mapasValidos = escalada.mapas
@@ -448,10 +467,11 @@ class EstadoCroquiVia {
         aspectRatioMiniatura:
             mapasValidos.first.larguraMapa / mapasValidos.first.alturaMapa,
         itensCarrosselMiniatura: itensMiniatura,
+        itensNavegacaoCroqui: itensMiniatura,
+        rotuloLinhaNoMapa: rotuloLinha,
       );
     }
 
-    final referencias = resolved?.referencias ?? const [];
     if (referencias.isEmpty) return const EstadoCroquiVia();
 
     final itensNavegacao = referencias
@@ -468,6 +488,31 @@ class EstadoCroquiVia {
         )
         .toList(growable: false);
 
-    return EstadoCroquiVia(itensNavegacaoCroqui: itensNavegacao);
+    final mapasSetorValidos = referencias
+        .map((r) => r.mapa)
+        .where(
+          (m) =>
+              m.caminhoImagemMapa.isNotEmpty &&
+              m.larguraMapa > 0 &&
+              m.alturaMapa > 0,
+        )
+        .toList(growable: false);
+
+    if (mapasSetorValidos.isNotEmpty) {
+      return EstadoCroquiVia(
+        mapasMiniatura: mapasSetorValidos,
+        aspectRatioMiniatura:
+            mapasSetorValidos.first.larguraMapa /
+            mapasSetorValidos.first.alturaMapa,
+        itensCarrosselMiniatura: itensNavegacao,
+        itensNavegacaoCroqui: itensNavegacao,
+        rotuloLinhaNoMapa: rotuloLinha,
+      );
+    }
+
+    return EstadoCroquiVia(
+      itensNavegacaoCroqui: itensNavegacao,
+      rotuloLinhaNoMapa: rotuloLinha,
+    );
   }
 }

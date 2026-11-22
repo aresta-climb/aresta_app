@@ -8,16 +8,23 @@ import 'package:frontend/utils/modelos_apresentacao_via.dart';
 
 void main() {
   test(
-    'ApresentacaoConsensoGrauVia.deConsenso computa proporções do anel e faixas (-2..+2)',
+    'ApresentacaoConsensoGrauVia.deConsenso computa proporções do anel, faixas e 5 pílulas de voto (-2..+2)',
     () {
-      expect(
-        ApresentacaoConsensoGrauVia.deConsenso(
-          const ConsensoGrauVia.vazio(),
-          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-          ehBoulder: false,
-        ).possuiVotos,
-        isFalse,
+      // ignore: prefer_const_constructors
+      final semVotos = ApresentacaoConsensoGrauVia.semVotos();
+      expect(semVotos.possuiVotos, isFalse);
+      expect(semVotos.pilulasVoto, isEmpty);
+
+      final vazio = ApresentacaoConsensoGrauVia.deConsenso(
+        const ConsensoGrauVia.vazio(),
+        codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+        ehBoulder: false,
       );
+      expect(vazio.possuiVotos, isFalse);
+      expect(vazio.pilulasVoto, hasLength(5));
+      expect(vazio.pilulasVoto[2].grauExibicao, '7a');
+      expect(vazio.pilulasVoto[2].subtituloDelta, 'Justo');
+      expect(vazio.pilulasVoto.any((p) => p.selecionada), isFalse);
 
       final apresentacao = ApresentacaoConsensoGrauVia.deConsenso(
         const ConsensoGrauVia(
@@ -27,14 +34,20 @@ void main() {
         ),
         codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
         ehBoulder: false,
+        deltaVotoUsuario: 1,
       );
 
       expect(apresentacao.votosSuaves, 1);
       expect(apresentacao.votosJustos, 2);
       expect(apresentacao.votosDuros, 7);
+      expect(apresentacao.deltaVotoUsuario, 1);
       expect(apresentacao.faixasDistribuicao, hasLength(5));
       expect(
         apresentacao.faixasDistribuicao.firstWhere((f) => f.delta == 1).ehModa,
+        isTrue,
+      );
+      expect(
+        apresentacao.pilulasVoto.firstWhere((p) => p.delta == 1).selecionada,
         isTrue,
       );
     },
