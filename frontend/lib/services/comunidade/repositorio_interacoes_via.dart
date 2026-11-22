@@ -10,9 +10,9 @@ import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/repositorio_caderneta.dart';
-import '../firebase/app_logger.dart';
 import 'armazenamento_fila_interacoes.dart';
 import 'cliente_fila_interacoes_supabase.dart';
+import 'despachante_fila_interacoes.dart';
 
 /// Contrato reativo da camada de dados comunitários e alertas de segurança estilo Waze por via.
 ///
@@ -22,8 +22,11 @@ abstract interface class RepositorioInteracoesVia {
   /// Notificador que incrementa sempre que alertas, votos ou comentários sofrem alteração.
   ValueListenable<int> get alteracoesListenable;
 
-  /// Indica se o escalador atual possui sessão autenticada para registrar votos e betas públicos.
+  /// Indica se o escalador atual possui sessão autenticada para registrar interações públicas.
   bool get usuarioEstaAutenticado;
+
+  /// Retorna o identificador público NanoID 14c do perfil atual do escalador.
+  String get autorIdPublicoAtual;
 
   /// Retorna o deslocamento de grau (`-2` a `+2`) votado pelo usuário atual em [escaladaUid], se houver.
   int? obterDeltaVotoUsuario(String escaladaUid);
@@ -31,12 +34,21 @@ abstract interface class RepositorioInteracoesVia {
   /// Retorna o agregado comunitário atual ([DadosComunidadeVia]) para [escaladaUid].
   DadosComunidadeVia obterDadosEscalada(String escaladaUid);
 
+  /// Retorna todos os alertas criados (`CRIADO POR VOCÊ`) ou confirmados (`CONFIRMADO (+1)`) pelo perfil atual.
+  List<AlertaContribuidoCaderneta> obterMeusAlertasContribuidos();
+
+  /// Sincroniza com o Supabase e o cache local os alertas criados ou confirmados pelo perfil atual.
+  Future<void> sincronizarMeusAlertasContribuidos();
+
   /// Drena interações offline pendentes e sincroniza o estado ativo de [escaladaUid] com o Supabase.
   Future<void> sincronizarEscalada(
     String escaladaUid, {
     int? codigoGrauOficial,
     bool ehBoulder = false,
   });
+
+  /// Drena a fila offline e sincroniza em lote os alertas e interações de múltiplas vias de um mapa/setor.
+  Future<void> sincronizarEscaladasEmLote(Iterable<String> escaladaUids);
 
   /// Registra a avaliação de grau (`-2` a `+2`) e eventual dica pública submetida junto a uma ascensão.
   Future<void> registrarAvaliacaoAscensao({

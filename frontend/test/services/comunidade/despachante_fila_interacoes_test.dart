@@ -34,5 +34,75 @@ void main() {
       );
 
       final authFake = ServicoAutenticacaoFake(repositorio: repoCaderneta);
-  });
+      final clienteFake = ClienteFilaInteracoesFake();
+      final armazenamento = ArmazenamentoFilaInteracoes(preferencias: prefs);
+      final despachante = DespachanteFilaInteracoes(
+        repositorioCaderneta: repoCaderneta,
+        servicoAutenticacao: authFake,
+        armazenamentoFila: armazenamento,
+      );
+
+      await despachante.drenar(clienteFake);
+      expect(despachante.itensPendentes, isEmpty);
+
+      // 1. Conflito 409 no envio inicial é descartado de forma idempotente
+      clienteFake.filaErrosInsercao.add(
+        const ExcecaoHttpFilaInteracoes(
+          codigoStatusHttp: 409,
+          message: 'Conflito 23505 duplicado',
+        ),
+      );
+      await despachante.enfileirarEDespachar(clienteFake, [
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaAbelha01',
+          alertaAtivo: true,
+        ),
+      ]);
+      expect(despachante.itensPendentes, isEmpty);
+
+      // 2. Erro 401 seguido de 409 na retentativa também descarta sem reter na fila
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(
+          codigoStatusHttp: 401,
+          message: 'JWT expirado',
+        ),
+        const ExcecaoHttpFilaInteracoes(
+          codigoStatusHttp: 409,
+          message: 'Já registrado na retentativa',
+        ),
+      ]);
+      await despachante.enfileirarEDespachar(clienteFake, [
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaAbelha01',
+          alertaAtivo: true,
+        ),
+      ]);
+      expect(despachante.itensPendentes, isEmpty);
+
+      // 3. Queda real de rede preserva a ordem dos itens subsequentes
+      clienteFake.erroSimulado = const SocketException('Sem sinal');
+      await despachante.enfileirarEDespachar(clienteFake, [
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaRocha002',
+          categoriaAlerta: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+        ),
+        ItemFilaInteracao.votoGrau(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          deltaGrau: 0,
+        ),
+      ]);
+      expect(despachante.itensPendentes, hasLength(2));
+    },
+  );
 }
