@@ -5,14 +5,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../aresta_api/proto/generated/beta.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../services/compartilhamento/servico_compartilhamento.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../services/controlador_interacoes_usuario.dart';
 import '../../services/firebase/app_logger.dart';
-import '../../utils/formatador_escalada.dart';
+import '../../services/firebase/telemetria.dart';
+import '../../utils/consulta_dataset.dart';
 import '../../utils/extrator_detalhes_tecnicos_via.dart';
+import '../../utils/formatador_escalada.dart';
 
 export '../../utils/extrator_detalhes_tecnicos_via.dart';
 
@@ -29,6 +31,8 @@ class ViaViewModel extends ChangeNotifier {
   /// Controlador de visibilidade dos recursos de perfil/comunidade.
   final ControladorInteracoesUsuario controladorInteracoes;
 
+  final ServicoCompartilhamento? _servicoCompartilhamento;
+  final TelemetryService? _telemetria;
   final Future<void> Function(String texto) _copiadorAreaTransferencia;
   final Future<bool> Function(Uri uri) _lancadorUrlExterna;
   bool _descartado = false;
@@ -38,12 +42,16 @@ class ViaViewModel extends ChangeNotifier {
     required this.escalada,
     RepositorioInteracoesVia? repositorioInteracoes,
     ControladorInteracoesUsuario? controladorInteracoes,
+    ServicoCompartilhamento? servicoCompartilhamento,
+    TelemetryService? telemetria,
     Future<void> Function(String texto)? copiadorAreaTransferencia,
     Future<bool> Function(Uri uri)? lancadorUrlExterna,
   }) : repositorioInteracoes =
            repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
        controladorInteracoes =
            controladorInteracoes ?? ControladorInteracoesUsuario.instancia,
+       _servicoCompartilhamento = servicoCompartilhamento,
+       _telemetria = telemetria,
        _copiadorAreaTransferencia =
            copiadorAreaTransferencia ??
            ((texto) => Clipboard.setData(ClipboardData(text: texto))),
@@ -117,6 +125,19 @@ class ViaViewModel extends ChangeNotifier {
   /// Indica se o botão de reportar alerta deve aparecer na barra superior da página.
   bool get podeReportarAlerta => exibirRecursosComunidade && possuiUid;
 
+  /// Modalidade formatada em português (`'Esportiva'`, `'Móvel'`, `'Mista'`, `'Boulder'`, `'Multienfiada'`, `'Highline'`).
+  String get modalidade => ExtratorDetalhesTecnicosVia.extrairModalidade(escalada);
+
+  /// Indica se a linha é marcada como clássica/destaque do setor.
+  bool get ehDestaque => ExtratorDetalhesTecnicosVia.extrairDestaque(escalada);
+
+  /// Rótulo do bloco de grau oficial do conquistador.
+  String get rotuloGrauOficial =>
+      escalada.whichTipo() == Escalada_Tipo.viaMultiplasEnfiadas
+      ? 'GRAU MÁXIMO'
+      : 'GRAU OFICIAL';
+
+  /// Grau oficial formatado (ou `'Projeto'`), retornando `null` quando indefinido ou em highline.
   /// Copia [chavePixManutencao] para a área de transferência do dispositivo.
   Future<bool> copiarChavePix() async {
     final chave = chavePixManutencao;
@@ -267,75 +288,4 @@ class ViaViewModel extends ChangeNotifier {
     }
   }
 
-  static void _adicionarTexto(
-    List<SecaoTextoVia> secoes,
-    String titulo,
-    String conteudo,
-    bool ehMarkdown,
-  ) {
-    final limpo = conteudo.trim();
-    if (limpo.isNotEmpty) {
-      secoes.add(
-        SecaoTextoVia(
-          titulo: titulo,
-          conteudo: limpo,
-          ehMarkdown: ehMarkdown,
-        ),
-      );
-    }
-  }
-
-  static String _formatarEnumSimples(String nome) {
-    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
-    final minusculo = nome.replaceAll('_', ' ').toLowerCase();
-    return minusculo[0].toUpperCase() + minusculo.substring(1);
-  }
-
-  static String _formatarEnumCodigo(String nome) {
-    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
-    return nome;
-  }
-
-  static String? _extrairExtensaoEnfiada(Escalada enf) {
-    final metros = switch (enf.whichTipo()) {
-      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.extensao,
-      Escalada_Tipo.viaMovel => enf.viaMovel.extensao,
-      _ => 0,
-    };
-    return metros > 0 ? '${metros}m' : null;
-  }
-
-  static String? _extrairProtecoesEnfiada(Escalada enf) {
-    final (inter, par) = switch (enf.whichTipo()) {
-      Escalada_Tipo.viaEsportiva => (
-        enf.viaEsportiva.quantidadeProtecoesIntermediarias,
-        enf.viaEsportiva.quantidadeProtecoesParada,
-      ),
-      Escalada_Tipo.viaMovel => (
-        enf.viaMovel.quantidadeProtecoesIntermediarias,
-        enf.viaMovel.quantidadeProtecoesParada,
-      ),
-      _ => (0, 0),
-    };
-    return (inter > 0 || par > 0) ? '$inter+$par' : null;
-  }
-
-  static String? _extrairDescricaoSimples(Escalada enf) {
-    final texto = switch (enf.whichTipo()) {
-      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.descricao.trim(),
-      Escalada_Tipo.viaMovel => enf.viaMovel.descricao.trim(),
-      _ => '',
-    };
-    return texto.isNotEmpty ? texto : null;
-  }
-
-  static String _rotuloFonteMidia(FonteMidia_Enum fonte) {
-    return switch (fonte) {
-      FonteMidia_Enum.YOUTUBE => 'YouTube',
-      FonteMidia_Enum.INSTAGRAM => 'Instagram',
-      FonteMidia_Enum.BLOG => 'Blog',
-      FonteMidia_Enum.TIKTOK => 'TikTok',
-      _ => 'Beta',
-    };
-  }
 }
