@@ -55,31 +55,34 @@ class DialogoEditarPerfil extends StatefulWidget {
 }
 
 class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
+  late final EdicaoPerfilViewModel _viewModel;
   late final TextEditingController _controladorNome;
-  String? _fotoUrlExibida;
+  bool _gerenciaViewModel = false;
 
   @override
   void initState() {
     super.initState();
-    _controladorNome = TextEditingController(text: widget.nomeAtual);
-    _fotoUrlExibida = widget.fotoUrlAtual;
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+    } else {
+      _viewModel = EdicaoPerfilViewModel(
+        nomeInicial: widget.nomeAtual,
+        fotoUrlInicial: widget.fotoUrlAtual,
+        aoSelecionarNovaFoto: widget.aoSelecionarNovaFoto,
+      );
+      _gerenciaViewModel = true;
+    }
+    _controladorNome = TextEditingController(text: _viewModel.nomeDigitado)
+      ..addListener(() => _viewModel.definirNome(_controladorNome.text));
   }
 
   @override
   void dispose() {
     _controladorNome.dispose();
-    super.dispose();
-  }
-
-  Future<void> _selecionarFoto() async {
-    final callback = widget.aoSelecionarNovaFoto;
-    if (callback == null) return;
-    final novaFoto = await callback();
-    if (novaFoto != null && mounted) {
-      setState(() {
-        _fotoUrlExibida = novaFoto;
-      });
+    if (_gerenciaViewModel) {
+      _viewModel.dispose();
     }
+    super.dispose();
   }
 
   @override
