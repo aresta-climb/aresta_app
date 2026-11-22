@@ -221,7 +221,18 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
           ),
         );
       } else {
-        lista.removeAt(idx);
+        final removido = lista.removeAt(idx);
+        final idxMeu = _meusAlertas.indexWhere(
+          (m) => m.alerta.uid == removido.uid,
+        );
+        if (idxMeu >= 0) {
+          _meusAlertas[idxMeu] = AlertaContribuidoCaderneta(
+            alerta: removido,
+            papel: _meusAlertas[idxMeu].papel,
+            ativo: false,
+            ultimaInteracaoEm: DateTime.now().toUtc(),
+          );
+        }
       }
       _dados[escaladaUid] = atual.copyWith(
         alertasAtivos: List.unmodifiable(lista),

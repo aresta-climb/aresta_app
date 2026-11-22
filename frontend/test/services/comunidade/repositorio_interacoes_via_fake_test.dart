@@ -36,7 +36,19 @@ void main() {
       fake.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos,
       hasLength(1),
     );
+    expect(fake.obterMeusAlertasContribuidos(), hasLength(1));
 
+    // Mesmo autor não duplica +1; segundo autor incrementa 1 vez
+    await fake.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: alerta.uid,
+      aindaEstaLa: true,
+    );
+    expect(
+      fake.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos.first.confirmacoesAtivas,
+      1,
+    );
+    fake.autorIdSimulado = 'segundoAutor01';
     await fake.confirmarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       alertaUid: alerta.uid,
@@ -47,6 +59,10 @@ void main() {
       2,
     );
 
+    await fake.sincronizarMeusAlertasContribuidos();
+    expect(fake.sincronizacoesMeusAlertas, 1);
+    fake.semearMeusAlertas(fake.obterMeusAlertasContribuidos());
+
     await fake.confirmarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       alertaUid: alerta.uid,
@@ -56,6 +72,12 @@ void main() {
 
     await fake.sincronizarEscalada('x8siJek3FiG3aB');
     expect(fake.escaladasSincronizadas, contains('x8siJek3FiG3aB'));
+
+    await fake.sincronizarEscaladasEmLote(['viaLote0000001', 'viaLote0000002']);
+    expect(
+      fake.escaladasSincronizadas,
+      containsAll(['viaLote0000001', 'viaLote0000002']),
+    );
 
     await fake.registrarAvaliacaoAscensao(
       escaladaUid: 'x8siJek3FiG3aB',
@@ -70,6 +92,14 @@ void main() {
     fake.erroSimulado = StateError('Falha determinística de rede');
     await expectLater(
       () => fake.sincronizarEscalada('x8siJek3FiG3aB'),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.sincronizarEscaladasEmLote(['x8siJek3FiG3aB']),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.sincronizarMeusAlertasContribuidos(),
       throwsStateError,
     );
     await expectLater(

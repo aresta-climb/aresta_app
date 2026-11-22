@@ -66,29 +66,49 @@ void main() {
     expect(dados.alertasAtivos.first.uid, alerta.uid);
   });
 
-  test('reportarAlerta na mesma categoria incrementa confirmações sem duplicar bolha', () async {
-    final repo = RepositorioInteracoesViaMemoria();
+  test('reportarAlerta na mesma categoria incrementa apenas para novo perfil e deduplica o mesmo autor', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+    await repoCaderneta.inicializar();
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'autorUm0000001',
+        autorNomePublico: 'Ana',
+      ),
+    );
+    final repo = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      preferencias: prefs,
+    );
     await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       categoria: CategoriaAlertaSeguranca.viaMolhada,
     );
-    final atualizado = await repo.reportarAlerta(
+    // Mesmo perfil reportando novamente atualiza detalhe, mas NÃO infla confirmacoesAtivas
+    final mesmoAutor = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       categoria: CategoriaAlertaSeguranca.viaMolhada,
       detalhe: 'Ainda escorrendo água',
     );
+    expect(mesmoAutor.confirmacoesAtivas, 1);
+    expect(mesmoAutor.detalhe, 'Ainda escorrendo água');
 
-    final alertas = repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos;
-    expect(alertas, hasLength(1));
-    expect(atualizado.confirmacoesAtivas, 2);
-    expect(atualizado.detalhe, 'Ainda escorrendo água');
-
-    final semNovoDetalhe = await repo.reportarAlerta(
+    // Segundo perfil diferente incrementa para 2 sem duplicar bolha
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'autorDois00002',
+        autorNomePublico: 'Bruno',
+      ),
+    );
+    final segundoAutor = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
       categoria: CategoriaAlertaSeguranca.viaMolhada,
     );
-    expect(semNovoDetalhe.confirmacoesAtivas, 3);
-    expect(semNovoDetalhe.detalhe, 'Ainda escorrendo água');
+    final alertas = repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos;
+    expect(alertas, hasLength(1));
+    expect(segundoAutor.confirmacoesAtivas, 2);
+    expect(segundoAutor.detalhe, 'Ainda escorrendo água');
   });
 
   test('confirmarAlerta incrementa contagem quando ativo e remove alerta quando resolvido', () async {
