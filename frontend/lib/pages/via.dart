@@ -3,15 +3,15 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
 import '../widgets/via/bolha_alerta_seguranca_via.dart';
 
-/// Página declarativa (MVVM) que exibe os detalhes técnicos, croqui interativo,
-/// consenso comunitário de grau, bolhas de alerta estilo Waze e caderneta de uma [Escalada].
+/// Página declarativa (Dumb UI / MVVM) que exibe os detalhes técnicos, croqui interativo,
+/// consenso comunitário de grau, bolhas de alerta estilo Waze e caderneta de uma [Escalada],
+/// delegando todos os comandos e estados ao [ViaViewModel].
 class ViaPage extends StatefulWidget {
   /// Escalada Protobuf exibida.
   final Escalada escalada;
@@ -143,14 +143,11 @@ class _ViaPageState extends State<ViaPage> {
                   icon: const Icon(Icons.share_outlined),
                   tooltip: 'Compartilhar escalada',
                   onPressed: () {
-                    ServicoCompartilhamento.instancia.compartilharEscalada(
-                      idCroqui: widget.cragId,
-                      uid: widget.escalada.uid,
-                      nomeEscalada: nome,
-                      grau: getGrauString(widget.escalada),
-                      nomeSetor:
-                          widget.setor?.nome ?? widget.grupo?.nome ?? 'Geral',
-                      nomePico: widget.pico?.nome ?? widget.cragId,
+                    _viewModel.compartilharEscalada(
+                      cragId: widget.cragId,
+                      nomePico: widget.pico?.nome,
+                      nomeSetor: widget.setor?.nome,
+                      nomeGrupo: widget.grupo?.nome,
                     );
                   },
                 ),

@@ -2,17 +2,15 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../data/modelos/interacao_via.dart';
 import '../../theme/cores_app.dart';
-import '../../utils/calculadora_delta_grau.dart';
+import '../../utils/extrator_detalhes_tecnicos_via.dart';
 
-/// Anel vetorial compacto (estilo *donut*) que resume a proporção de votos mais suaves (`< 0`),
-/// justos (`0`) e mais duros (`> 0`) ao lado do grau sugerido pela comunidade na `ViaPage`.
+/// Anel vetorial compacto (Dumb UI) que desenha a proporção pré-calculada de votos mais suaves,
+/// justos e mais duros ao lado do grau sugerido pela comunidade na `ViaPage`.
 class AnelConsensoGrauVia extends StatelessWidget {
-  /// Agregado de consenso comunitário da escalada.
-  final ConsensoGrauVia consenso;
+  /// Modelo visual imutável do consenso comunitário da escalada.
+  final ApresentacaoConsensoGrauVia apresentacao;
 
   /// Dimensão lateral do anel em pixels lógicos.
   final double tamanho;
@@ -20,7 +18,7 @@ class AnelConsensoGrauVia extends StatelessWidget {
   /// Cria uma instância de [AnelConsensoGrauVia].
   const AnelConsensoGrauVia({
     super.key,
-    required this.consenso,
+    required this.apresentacao,
     this.tamanho = 30,
   });
 
@@ -32,7 +30,9 @@ class AnelConsensoGrauVia extends StatelessWidget {
       dimension: tamanho,
       child: CustomPaint(
         painter: _PintorAnelConsenso(
-          distribuicaoDeltas: consenso.distribuicaoDeltas,
+          votosSuaves: apresentacao.votosSuaves,
+          votosJustos: apresentacao.votosJustos,
+          votosDuros: apresentacao.votosDuros,
           corMaisSuave: cores.fernGreen,
           corJusto: cores.beastHide,
           corMaisDuro: cores.rustIron,
@@ -44,14 +44,18 @@ class AnelConsensoGrauVia extends StatelessWidget {
 }
 
 class _PintorAnelConsenso extends CustomPainter {
-  final Map<int, int> distribuicaoDeltas;
+  final int votosSuaves;
+  final int votosJustos;
+  final int votosDuros;
   final Color corMaisSuave;
   final Color corJusto;
   final Color corMaisDuro;
   final Color corTrilhaVazia;
 
   const _PintorAnelConsenso({
-    required this.distribuicaoDeltas,
+    required this.votosSuaves,
+    required this.votosJustos,
+    required this.votosDuros,
     required this.corMaisSuave,
     required this.corJusto,
     required this.corMaisDuro,
@@ -71,19 +75,6 @@ class _PintorAnelConsenso extends CustomPainter {
       ..color = corTrilhaVazia;
     canvas.drawCircle(centro, raio, pincelBase);
 
-    var votosSuaves = 0;
-    var votosJustos = 0;
-    var votosDuros = 0;
-    distribuicaoDeltas.forEach((delta, contagem) {
-      if (delta < 0) {
-        votosSuaves += contagem;
-      } else if (delta == 0) {
-        votosJustos += contagem;
-      } else {
-        votosDuros += contagem;
-      }
-    });
-
     final total = votosSuaves + votosJustos + votosDuros;
     if (total == 0) return;
 
@@ -102,14 +93,22 @@ class _PintorAnelConsenso extends CustomPainter {
         ..strokeWidth = espessura
         ..strokeCap = StrokeCap.butt
         ..color = cor;
-      canvas.drawArc(retanguloArco, anguloInicial, varredura, false, pincelSegmento);
+      canvas.drawArc(
+        retanguloArco,
+        anguloInicial,
+        varredura,
+        false,
+        pincelSegmento,
+      );
       anguloInicial += varredura;
     }
   }
 
   @override
   bool shouldRepaint(covariant _PintorAnelConsenso oldDelegate) {
-    return !mapEquals(oldDelegate.distribuicaoDeltas, distribuicaoDeltas);
+    return oldDelegate.votosSuaves != votosSuaves ||
+        oldDelegate.votosJustos != votosJustos ||
+        oldDelegate.votosDuros != votosDuros;
   }
 }
 
@@ -135,22 +134,6 @@ class BarrasDistribuicaoGrauVia extends StatelessWidget {
     required this.codigoGrauOficial,
     required this.ehBoulder,
   });
-
-  static String _formatarRotuloFaixa(
-    int delta, {
-    required int? codigoGrauOficial,
-    required bool ehBoulder,
-  }) {
-    final textoDelta = delta > 0 ? '+$delta' : '$delta';
-    final codigo = deslocarCodigoGrau(
-      codigoGrauOficial,
-      delta,
-      ehBoulder: ehBoulder,
-    );
-    final grau = formatarGrauPorCodigo(codigo, ehBoulder: ehBoulder);
-    if (grau != null) return '$grau ($textoDelta)';
-    return delta == 0 ? 'Justo (0)' : textoDelta;
-  }
 
   @override
   Widget build(BuildContext context) {
