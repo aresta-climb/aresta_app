@@ -96,3 +96,101 @@ class ResumoEnfiadaVia {
     this.descricao,
   });
 }
+
+/// Item clicável de mídia externa ou vídeo demonstrativo de beta da via.
+@immutable
+class ItemMidiaBetaVia {
+  /// Título descritivo do vídeo, postagem ou artigo.
+  final String titulo;
+
+  /// URL de destino validada.
+  final String url;
+
+  /// Rótulo amigável da plataforma de origem (`'YouTube'`, `'Instagram'`, `'Blog'`, `'Vídeo'`).
+  final String origemRotulo;
+
+  /// Cria uma instância imutável de [ItemMidiaBetaVia].
+  const ItemMidiaBetaVia({
+    required this.titulo,
+    required this.url,
+    required this.origemRotulo,
+  });
+}
+
+/// Modelo imutável de apresentação de uma nota pública da comunidade pronto para Dumb UI.
+@immutable
+class NotaComunidadeApresentacao {
+  /// Cabeçalho pré-formatado contendo autor e data (`'Mariana • 19/11/2026'`).
+  final String cabecalhoAutorData;
+
+  /// Rótulo opcional do estilo esportivo (`'FLASH ★'`, `'À VISTA ★'`, etc.).
+  final String? rotuloEstilo;
+
+  /// Corpo textual da dica pública.
+  final String texto;
+
+  /// Cria uma instância constante de [NotaComunidadeApresentacao].
+  const NotaComunidadeApresentacao({
+    required this.cabecalhoAutorData,
+    this.rotuloEstilo,
+    required this.texto,
+  });
+}
+
+/// Modelo imutável de uma faixa individual (`-2` a `+2`) do gráfico de consenso para Dumb UI.
+@immutable
+class FaixaDistribuicaoGrauApresentacao {
+  /// Deslocamento em relação ao grau oficial (`-2` a `+2`).
+  final int delta;
+
+  /// Rótulo resolvido pronto para exibição (ex.: `'7b (+1)'` ou `'Justo (0)'`).
+  final String rotulo;
+
+  /// Quantidade absoluta de votos registrados nesta faixa.
+  final int contagem;
+
+  /// Fração de preenchimento horizontal normalizada (`0.0` a `1.0`).
+  final double fatorLargura;
+
+  /// Indica se esta faixa empatou ou venceu como moda estatística dos votos.
+  final bool ehModa;
+
+  /// Cria uma instância constante de [FaixaDistribuicaoGrauApresentacao].
+  const FaixaDistribuicaoGrauApresentacao({
+    required this.delta,
+    required this.rotulo,
+    required this.contagem,
+    required this.fatorLargura,
+    required this.ehModa,
+  });
+}
+
+/// Estado visual pré-calculado do bloco e dos gráficos de Consenso da Comunidade na `ViaPage`.
+@immutable
+class ApresentacaoConsensoGrauVia {
+  static const List<int> _deltasOrdenados = [-2, -1, 0, 1, 2];
+
+  /// Indica se já há votos contabilizados na escalada.
+  final bool possuiVotos;
+
+  /// Grau sugerido consolidado (quando [possuiVotos] for `true`).
+  final String? grauSugerido;
+
+  /// Subtítulo contextual de tendência ou convite inicial para votação.
+  final String subtituloTendencia;
+
+  /// Título pré-formatado do gráfico de barras (`'DISTRIBUIÇÃO DE VOTOS (10)'`).
+  final String tituloDistribuicao;
+
+  /// Total de votos mais suaves (`delta < 0`) para o anel vetorial.
+  final int votosSuaves;
+
+  /// Total de votos justos (`delta == 0`) para o anel vetorial.
+  final int votosJustos;
+
+  /// Total de votos mais duros (`delta > 0`) para o anel vetorial.
+  final int votosDuros;
+
+  /// Faixas ordenadas (`-2` a `+2`) prontas para renderização sem cálculos na UI.
+  final List<FaixaDistribuicaoGrauApresentacao> faixasDistribuicao;
+}
