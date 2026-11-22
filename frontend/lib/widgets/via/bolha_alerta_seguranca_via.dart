@@ -303,6 +303,43 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                       ),
                     ),
                     const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        key: const Key('btn_confirmar_alerta_ativo'),
+                        onPressed:
+                            estadoUsuario ==
+                                EstadoInteracaoAlertaUsuario.podeConfirmar
+                            ? () async {
+                                Navigator.of(modalCtx).pop();
+                                await aoResponder(true);
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _corVermelhoAlerta,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: cores.caveShadow,
+                          disabledForegroundColor: cores.ashGrey,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 13,
+                            horizontal: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          switch (estadoUsuario) {
+                            EstadoInteracaoAlertaUsuario.criadoPorMim =>
+                              '✓ Reportado por você',
+                            EstadoInteracaoAlertaUsuario.jaConfirmadoPorMim =>
+                              '✓ Confirmado por você',
+                            _ => 'Sim, ainda está lá',
+                          },
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],

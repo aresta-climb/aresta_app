@@ -112,6 +112,44 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
     await tester.pumpAndSettle();
     expect(respostaConfirmada, isFalse);
+
+    // Quando criado ou já confirmado pelo usuário, bloqueia novo +1 mas mantém resolução ativa
+    for (final estado in [
+      EstadoInteracaoAlertaUsuario.criadoPorMim,
+      EstadoInteracaoAlertaUsuario.jaConfirmadoPorMim,
+    ]) {
+      await tester.pumpWidget(
+        envolverComTema(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                exibirModalConfirmacaoAlertaVia(
+                  context,
+                  alerta: alerta,
+                  estadoUsuario: estado,
+                  aoResponder: (_) async {},
+                );
+              },
+              child: const Text('Abrir Bloqueado'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir Bloqueado'));
+      await tester.pumpAndSettle();
+      final btnAtivo = tester.widget<ElevatedButton>(
+        find.byKey(const Key('btn_confirmar_alerta_ativo')),
+      );
+      expect(btnAtivo.onPressed, isNull);
+      expect(
+        find.text(
+          estado == EstadoInteracaoAlertaUsuario.criadoPorMim
+              ? '✓ Reportado por você'
+              : '✓ Confirmado por você',
+        ),
+        findsOneWidget,
+      );
+      }
   });
 
   testWidgets('exibirModalReportarAlertaVia permite escolher categoria emoji e enviar detalhe opcional', (tester) async {
