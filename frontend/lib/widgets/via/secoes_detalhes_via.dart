@@ -432,99 +432,9 @@ class _BlocoConsensoComunidade extends StatelessWidget {
                 ),
               ),
             ],
-          )
-        else
-          Text(
-            'Sem votos',
-            style: TextStyle(
-              color: cores.ashGrey,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        const SizedBox(height: 4),
-        Text(
-          possuiVotos
-              ? (consenso.resumoTendencia ?? '${consenso.totalVotos} avaliações')
-              : 'Registre sua ascensão para avaliar',
-          style: TextStyle(color: cores.ashGrey, fontSize: 12),
         ),
       ],
     );
-  }
-}
-
-/// Renderiza a miniatura interativa do croqui (`MapaThumbnail`) ou o botão `'VER NO CROQUI INTERATIVO'`
-/// para qualquer modalidade mapeada (incluindo Highlines).
-class SecaoMapaCroquiVia extends StatelessWidget {
-  /// Escalada exibida.
-  final Escalada escalada;
-
-  /// Identificador do croqui.
-  final String cragId;
-
-  /// Pico pai usado para localizar referências em mapas.
-  final Pico? pico;
-
-  /// Setor pai.
-  final Setor? setor;
-
-  /// Grupo pai.
-  final Grupo? grupo;
-
-  /// Indica se a tela atual foi aberta diretamente a partir da `MapaPage`.
-  final bool fromMapaPage;
-
-  /// Cria uma instância de [SecaoMapaCroquiVia].
-  const SecaoMapaCroquiVia({
-    super.key,
-    required this.escalada,
-    required this.cragId,
-    this.pico,
-    this.setor,
-    this.grupo,
-    this.fromMapaPage = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final nome = obterNomeEscalada(escalada);
-    ResolvedDataset? resolved;
-    if (pico != null) {
-      final resolver =
-          PageListenableBuilder.resolverOf(context) ??
-          DatasetResolver(pico: pico!);
-      resolved = escalada.uid.isNotEmpty
-          ? resolver.obterPorUid(escalada.uid)
-          : resolver.buscarPorNome(
-              grupoNome: grupo?.nome,
-              setorNome: setor?.nome,
-              escaladaNome: nome,
-            );
-    }
-
-    final mapasValidos = escalada.mapas
-        .where(
-          (m) =>
-              m.caminhoImagemMapa.isNotEmpty &&
-              m.larguraMapa > 0 &&
-              m.alturaMapa > 0,
-        )
-        .toList();
-
-    if (mapasValidos.isNotEmpty) {
-      final carrosselItens = resolved != null
-          ? resolved.resolverCarrosselUnificado()
-          : mapasValidos
-                .map(
-                  (m) => CarrosselItemData(
-                    mapaCaminhoImagem: m.caminhoImagemMapa,
-                    setorContextNome: setor?.nome,
-                    grupoContextNome: grupo?.nome,
-                    escaladaContextNome: nome,
-                  ),
-      );
-    }
   }
 }
 /// Grade responsiva de especificações técnicas (`EXTENSÃO`, `PROTEÇÕES`, `PAREDE`, etc.) + tipo de ancoragem.
