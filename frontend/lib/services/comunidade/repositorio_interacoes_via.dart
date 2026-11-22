@@ -61,14 +61,14 @@ abstract interface class RepositorioInteracoesVia {
     String? comentarioPublico,
   });
 
-  /// Registra um novo alerta de segurança na via (ou reforça alerta ativo da mesma categoria).
+  /// Registra um novo alerta de segurança na via (ou reforça alerta ativo da mesma categoria, 1x por perfil).
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
     required CategoriaAlertaSeguranca categoria,
     String? detalhe,
   });
 
-  /// Registra a resposta do escalador à pergunta *"Ainda está lá?"* sobre [alertaUid].
+  /// Registra a resposta do escalador à pergunta *"Ainda está lá?"* sobre [alertaUid] (1 `+1` por perfil).
   Future<void> confirmarAlerta({
     required String escaladaUid,
     required String alertaUid,
@@ -103,15 +103,15 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   final RepositorioCaderneta _repositorioCaderneta;
-  final ServicoAutenticacao _servicoAutenticacao;
   final ClienteFilaInteracoes? _clienteFila;
   final ArmazenamentoFilaInteracoes _armazenamentoFila;
-  bool _filaCarregada = false;
+  final DespachanteFilaInteracoes _despachante;
+  bool _cacheCarregado = false;
 
   final Map<String, DadosComunidadeVia> _dadosPorEscalada = {};
   final Map<String, Map<String, ({int? deltaGrau, int? grauSugerido})>>
   _votosLocaisPorAutor = {};
-  final List<ItemFilaInteracao> _filaPendente = [];
+  final Map<String, List<ItemFilaInteracao>> _eventosAlertasPorVia = {};
   final ValueNotifier<int> _versaoNotifier = ValueNotifier<int>(0);
 
   /// Cria uma instância de [RepositorioInteracoesViaMemoria].
@@ -123,12 +123,19 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     SharedPreferences? preferencias,
   }) : _repositorioCaderneta =
            repositorioCaderneta ?? RepositorioCadernetaLocal.instancia,
-       _servicoAutenticacao =
-           servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
        _clienteFila = clienteFila,
        _armazenamentoFila =
            armazenamentoFila ??
-           ArmazenamentoFilaInteracoes(preferencias: preferencias);
+           ArmazenamentoFilaInteracoes(preferencias: preferencias),
+       _despachante = DespachanteFilaInteracoes(
+         repositorioCaderneta:
+             repositorioCaderneta ?? RepositorioCadernetaLocal.instancia,
+         servicoAutenticacao:
+             servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
+         armazenamentoFila:
+             armazenamentoFila ??
+             ArmazenamentoFilaInteracoes(preferencias: preferencias),
+       );
 
   @override
   ValueListenable<int> get alteracoesListenable => _versaoNotifier;
@@ -138,15 +145,57 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       _repositorioCaderneta.obterPerfil().estaAutenticado;
 
   @override
-  int? obterDeltaVotoUsuario(String escaladaUid) {
-    final uidVia = escaladaUid.trim();
-    final autorId = _repositorioCaderneta.obterPerfil().autorIdPublico;
-    return _votosLocaisPorAutor[uidVia]?[autorId]?.deltaGrau;
+  String get autorIdPublicoAtual =>
+      _repositorioCaderneta.obterPerfil().autorIdPublico;
+
+  @override
+  int? obterDeltaVotoUsuario(String escaladaUid) =>
+      _votosLocaisPorAutor[escaladaUid.trim()]?[autorIdPublicoAtual]?.deltaGrau;
+
+  @override
+  DadosComunidadeVia obterDadosEscalada(String escaladaUid) =>
+      _dadosPorEscalada[escaladaUid] ?? const DadosComunidadeVia.vazio();
+
+  @override
+  List<AlertaContribuidoCaderneta> obterMeusAlertasContribuidos() {
+    final todos = <String, ItemFilaInteracao>{
+      for (final lista in _eventosAlertasPorVia.values)
+        for (final item in lista) item.id: item,
+      for (final pendente in _despachante.itensPendentes) pendente.id: pendente,
+    };
+    return consolidarAlertasContribuidosPeloAutor(
+      todos.values,
+      autorIdPublico: autorIdPublicoAtual,
+    );
   }
 
   @override
-  DadosComunidadeVia obterDadosEscalada(String escaladaUid) {
-    return _dadosPorEscalada[escaladaUid] ?? const DadosComunidadeVia.vazio();
+  Future<void> sincronizarMeusAlertasContribuidos() async {
+    await _hidratarEstadoLocalSeNecessario();
+    final cliente = _clienteFila;
+    final autorId = autorIdPublicoAtual.trim();
+    if (cliente == null || !validarUid(autorId)) {
+      _versaoNotifier.value++;
+      return;
+    }
+
+    await _despachante.drenar(cliente);
+    try {
+      final remotos = await cliente.buscarInteracoesRelacionadasAoAutor(autorId);
+      final porVia = <String, List<ItemFilaInteracao>>{};
+      for (final item in remotos) {
+        porVia.putIfAbsent(item.escaladaUid, () => <ItemFilaInteracao>[]).add(item);
+      }
+      _eventosAlertasPorVia.addAll(porVia);
+      await _persistirCacheAlertasUsuario();
+      _versaoNotifier.value++;
+    } catch (e, stackTrace) {
+      DespachanteFilaInteracoes.registrarFalhaRede(
+        'Falha ao sincronizar alertas contribuídos da Caderneta',
+        e,
+        stackTrace,
+      );
+    }
   }
 
   @override
@@ -157,18 +206,16 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }) async {
     final uidVia = escaladaUid.trim();
     final cliente = _clienteFila;
-    if (cliente == null || !validarUid(uidVia)) {
-      return;
-    }
+    if (cliente == null || !validarUid(uidVia)) return;
 
-    await _carregarFilaPendenteSeNecessario();
-    await _drenarFilaPendente(cliente);
+    await _hidratarEstadoLocalSeNecessario();
+    await _despachante.drenar(cliente);
 
     try {
       final remotos = await cliente.buscarInteracoesPendentes(uidVia);
       final combinados = <ItemFilaInteracao>[
         ...remotos,
-        ..._filaPendente.where((i) => i.escaladaUid == uidVia),
+        ..._despachante.itensPendentes.where((i) => i.escaladaUid == uidVia),
       ]..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
 
       final mapaVotos = <String, ({int? deltaGrau, int? grauSugerido})>{};
