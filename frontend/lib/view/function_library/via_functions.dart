@@ -14,6 +14,7 @@ import '../../widgets/via/secoes_detalhes_via.dart';
 import '../view_models/secao_caderneta_via_view_model.dart';
 import '../view_models/via_view_model.dart';
 
+
 export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
 
 /// Retorna o nome da escalada com base em sua modalidade ativa.
@@ -117,7 +118,7 @@ int getProtecoesValue(Escalada escalada) {
   }
 }
 
-/// Constrói o corpo rolável declarativo da página de detalhes da Via.
+/// Constrói o corpo declarativo da página de detalhes da Via.
 Widget buildViaBody(
   BuildContext context,
   Escalada escalada,
@@ -142,8 +143,8 @@ Widget buildViaBody(
   );
 }
 
-/// Corpo rolável reativo (Dumb UI) que compõe todas as seções modulares da `ViaPage`
-/// a partir do estado exposto pelo [ViaViewModel].
+/// Corpo reativo (Dumb UI) no estilo *Passaporte da Via + Barra no Polegar*, compondo
+/// o cartão unificado superior, as seções modulares abaixo da dobra e o dock inferior.
 class CorpoDetalhesVia extends StatefulWidget {
   /// Escalada Protobuf exibida.
   final Escalada escalada;
@@ -188,41 +189,62 @@ class CorpoDetalhesVia extends StatefulWidget {
 
 class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
   late ViaViewModel _viewModel;
-  bool _gerenciaCicloVida = false;
+  late SecaoCadernetaViaViewModel _cadernetaViewModel;
+  bool _gerenciaViaVm = false;
+  bool _gerenciaCadernetaVm = false;
 
   @override
   void initState() {
     super.initState();
-    _vincularViewModel();
+    _vincularViewModels();
   }
 
   @override
   void didUpdateWidget(covariant CorpoDetalhesVia oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final mudouEscaladas = widget.escalada != oldWidget.escalada;
     if (widget.viewModel != oldWidget.viewModel ||
-        (_gerenciaCicloVida && widget.escalada != oldWidget.escalada)) {
-      if (_gerenciaCicloVida) {
-        _viewModel.dispose();
-      }
-      _vincularViewModel();
+        (_gerenciaViaVm && mudouEscaladas) ||
+        widget.cadernetaViewModel != oldWidget.cadernetaViewModel ||
+        (_gerenciaCadernetaVm && mudouEscaladas)) {
+      _descartarProprios();
+      _vincularViewModels();
     }
   }
 
-  void _vincularViewModel() {
+  void _vincularViewModels() {
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
-      _gerenciaCicloVida = false;
+      _gerenciaViaVm = false;
     } else {
       _viewModel = ViaViewModel(escalada: widget.escalada);
-      _gerenciaCicloVida = true;
+      _gerenciaViaVm = true;
+    }
+
+    if (widget.cadernetaViewModel != null) {
+      _cadernetaViewModel = widget.cadernetaViewModel!;
+      _gerenciaCadernetaVm = false;
+    } else {
+      _cadernetaViewModel = SecaoCadernetaViaViewModel(
+        escalada: widget.escalada,
+        repositorioInteracoes: _viewModel.repositorioInteracoes,
+      );
+      _gerenciaCadernetaVm = true;
+    }
+  }
+
+  void _descartarProprios() {
+    if (_gerenciaViaVm) {
+      _viewModel.dispose();
+    }
+    if (_gerenciaCadernetaVm) {
+      _cadernetaViewModel.dispose();
     }
   }
 
   @override
   void dispose() {
-    if (_gerenciaCicloVida) {
-      _viewModel.dispose();
-    }
+    _descartarProprios();
     super.dispose();
   }
 
@@ -230,17 +252,39 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     BuildContext context,
     AlertaSegurancaVia alerta,
   ) {
+    final messenger = ScaffoldMessenger.of(context);
+    final cores = context.colors;
+
     exibirModalConfirmacaoAlertaVia(
       context,
       alerta: alerta,
       aoResponder: (aindaEstaLa) async {
-        await _viewModel.confirmarAlerta(
-          alerta.uid,
-          aindaEstaLa: aindaEstaLa,
-        );
+        if (aindaEstaLa) {
+          await _viewModel.confirmarAlerta(
+            alerta.uid,
+            aindaEstaLa: true,
+          );
+          return;
+        }
+
+        _viewModel.iniciarResolucaoAlertaComDesfazer(alerta.uid);
+        messenger
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              content: const Text('Alerta marcado como resolvido.'),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Desfazer',
+                textColor: cores.rustIron,
+                onPressed: () => _viewModel.desfazerResolucaoAlerta(alerta.uid),
+              ),
+            ),
+          );
       },
     );
   }
+
 
   void _abrirCroquiInterativo(
     BuildContext context,
