@@ -330,56 +330,61 @@ class CartaoGrauVia extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cores.caveShadow,
+        color: cores.deepBasalt.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: cores.graniteEdge),
       ),
-      child: consenso == null
-          ? blocoOficial
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LayoutBuilder(
-                  builder: (context, restricoes) {
-                    final empilhar = restricoes.maxWidth < 260;
-                    final blocoComunidade = _BlocoConsensoComunidade(
-                      apresentacao: consenso,
-                    );
-                    if (empilhar) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          blocoOficial,
-                          Divider(color: cores.graniteEdge, height: 24),
-                          blocoComunidade,
-                        ],
-                      );
-                    }
-                    return IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: blocoOficial),
-                          VerticalDivider(
-                            color: cores.graniteEdge,
-                            width: 24,
-                            thickness: 1,
-                          ),
-                          Expanded(child: blocoComunidade),
-                        ],
-                      ),
-                    );
-                  },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, restricoes) {
+              final empilhar = restricoes.maxWidth < 260;
+              final blocoComunidade = _BlocoConsensoComunidade(
+                apresentacao: consenso,
+              );
+              if (empilhar) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    blocoOficial,
+                    Divider(color: cores.graniteEdge, height: 20),
+                    blocoComunidade,
+                  ],
+                );
+              }
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: blocoOficial),
+                    VerticalDivider(
+                      color: cores.graniteEdge,
+                      width: 24,
+                      thickness: 1,
+                    ),
+                    Expanded(child: blocoComunidade),
+                  ],
                 ),
-                if (consenso.possuiVotos &&
-                    consenso.faixasDistribuicao.isNotEmpty) ...[
-                  Divider(color: cores.graniteEdge, height: 24),
-                  BarrasDistribuicaoGrauVia(apresentacao: consenso),
-                ],
-              ],
+              );
+            },
+          ),
+          if (consenso.possuiVotos &&
+              consenso.faixasDistribuicao.isNotEmpty) ...[
+            Divider(color: cores.graniteEdge, height: 20),
+            BarrasDistribuicaoGrauVia(apresentacao: consenso),
+          ],
+          if (aoVotarGrau != null && consenso.pilulasVoto.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SeletorPilulasVotoGrauVia(
+              pilulas: consenso.pilulasVoto,
+              aoSelecionarDelta: aoVotarGrau!,
             ),
+          ],
+        ],
+      ),
     );
   }
 }
