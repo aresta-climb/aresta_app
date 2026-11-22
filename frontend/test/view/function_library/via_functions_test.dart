@@ -578,7 +578,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(MapaThumbnail), findsOneWidget);
-        expect(find.byKey(const Key('btn_dock_croqui_via')), findsOneWidget);
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+        expect(find.byKey(const Key('btn_dock_croqui_via')), findsNothing);
       },
     );
 

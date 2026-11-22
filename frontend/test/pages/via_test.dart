@@ -111,6 +111,17 @@ void main() {
     );
     addTearDown(vm.dispose);
 
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(400, 840);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+    tester.view.padding = const FakeViewPadding(bottom: 48);
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetViewPadding();
+      tester.view.resetPadding();
+    });
+
     await tester.pumpWidget(
       envolver(
         ViaPage(
@@ -144,6 +155,17 @@ void main() {
     );
     addTearDown(vm.dispose);
 
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(400, 840);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+    tester.view.padding = const FakeViewPadding(bottom: 48);
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetViewPadding();
+      tester.view.resetPadding();
+    });
+
     await tester.pumpWidget(
       envolver(
         ViaPage(
@@ -173,17 +195,26 @@ void main() {
     ScaffoldMessenger.of(tester.element(find.byType(ViaPage))).clearSnackBars();
     await tester.pumpAndSettle();
 
-    // 2. Tocar na bolha vermelha, primeiro confirmar que ainda está lá (+1) e depois marcar como resolvido
+    // 2. Criador vê "+1" bloqueado ("✓ Reportado por você"); segundo perfil confirma 1 vez e vê "✓ Confirmado por você"
+    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.pumpAndSettle();
+    expect(find.text('✓ Reportado por você'), findsOneWidget);
+    Navigator.of(tester.element(find.text('✓ Reportado por você'))).pop();
+    await tester.pumpAndSettle();
+
+    repoFake.autorIdSimulado = 'segundoEscalad1';
     await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('btn_confirmar_alerta_ativo')));
     await tester.pumpAndSettle();
     expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
     await tester.pumpAndSettle();
 
     expect(find.text('Ainda está lá?'), findsOneWidget);
+    expect(find.text('✓ Confirmado por você'), findsOneWidget);
     expect(find.textContaining('Colmeia ativa no diedro'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
@@ -192,6 +223,20 @@ void main() {
     expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
     expect(find.text('Alerta marcado como resolvido.'), findsOneWidget);
     expect(find.text('Desfazer'), findsOneWidget);
+    final pillSnackVia = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    final topoBotaoDock = tester.getTopLeft(
+      find.byKey(const Key('btn_registrar_cadena')),
+    );
+    // Garante que o SnackBar flutua acima dos 48px dos botões do SO E acima do botão inferior da via
+    expect(pillSnackVia.bottom, lessThanOrEqualTo(840.0 - 48.0 - 16.0));
+    expect(pillSnackVia.bottom, lessThan(topoBotaoDock.dy));
 
     // 3. Tocar em Desfazer restaura imediatamente a bolha de alerta na ViaPage
     await tester.tap(find.text('Desfazer'));
@@ -207,8 +252,14 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     expect(repoFake.obterDadosEscalada('via-uid-alerta1').alertasAtivos, isEmpty);
 
-    // 5. Voto direto sem conta autenticada exibe aviso orientativo
+    // 5. Sem conta autenticada: tanto voto direto quanto reporte de alerta orientam login na aba Perfil
     repoFake.autenticadoSimulado = false;
+    await tester.tap(find.byKey(const Key('btn_reportar_alerta_via')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Entre na sua conta na aba Perfil para reportar alertas'),
+      findsOneWidget,
+    );
     await tester.ensureVisible(find.byKey(const Key('pilula_voto_grau_0')));
     await tester.tap(find.byKey(const Key('pilula_voto_grau_0')));
     await tester.pumpAndSettle();
@@ -393,7 +444,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Travessia Aérea do Abismo'), findsOneWidget);
     expect(find.text('HIGHLINE'), findsOneWidget);
-    expect(find.byKey(const Key('btn_dock_croqui_via')), findsOneWidget);
+    expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+    expect(find.byKey(const Key('btn_dock_croqui_via')), findsNothing);
     expect(find.text('90m'), findsOneWidget);
   });
 

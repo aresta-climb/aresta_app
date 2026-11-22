@@ -9,6 +9,7 @@ import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
 import '../widgets/via/bolha_alerta_seguranca_via.dart';
+import '../widgets/via/snackbar_flutuante_seguro.dart';
 
 /// Página declarativa (Dumb UI / MVVM) que exibe o Passaporte unificado da via, croqui interativo,
 /// consenso comunitário com votação direta, bolhas de alerta com desfazer e dock de caderneta,
@@ -100,6 +101,21 @@ class _ViaPageState extends State<ViaPage> {
   }
 
   void _abrirModalReportarAlerta(BuildContext context) {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior:
+          _viewModel.exibirRecursosComunidade && !_viewModel.ehHighline
+          ? 72
+          : 0,
+    );
+    if (!_viewModel.usuarioEstaAutenticado) {
+      despachanteSnack.exibir(
+        texto:
+            'Entre na sua conta na aba Perfil para reportar alertas de segurança.',
+        duracao: const Duration(seconds: 3),
+      );
+      return;
+    }
     exibirModalReportarAlertaVia(
       context,
       aoReportar: (categoria, detalhe) async {
@@ -107,12 +123,10 @@ class _ViaPageState extends State<ViaPage> {
           categoria,
           detalhe: detalhe,
         );
-        if (sucesso && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Alerta de segurança registrado!'),
-              duration: Duration(seconds: 2),
-            ),
+        if (sucesso) {
+          despachanteSnack.exibir(
+            texto: 'Alerta de segurança registrado!',
+            duracao: const Duration(seconds: 2),
           );
         }
       },
