@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/interacao_via.dart';
@@ -12,6 +11,7 @@ import '../../utils/gerador_uid.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/repositorio_caderneta.dart';
 import '../firebase/app_logger.dart';
+import 'armazenamento_fila_interacoes.dart';
 import 'cliente_fila_interacoes_supabase.dart';
 
 /// Contrato reativo da camada de dados comunitários e alertas de segurança estilo Waze por via.
@@ -61,7 +61,8 @@ abstract interface class RepositorioInteracoesVia {
 /// Implementação reativa local-first de [RepositorioInteracoesVia] integrada ao Supabase e fila offline.
 class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   /// Chave usada no `SharedPreferences` para persistir a fila de envio offline (*outbox*).
-  static const String chaveFilaPendente = 'fila_pendente_interacoes_via_v1';
+  static const String chaveFilaPendente =
+      ArmazenamentoFilaInteracoes.chaveFilaPendente;
 
   static RepositorioInteracoesVia? _instanciaCompartilhada;
 
@@ -86,7 +87,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   final RepositorioCaderneta _repositorioCaderneta;
   final ServicoAutenticacao _servicoAutenticacao;
   final ClienteFilaInteracoes? _clienteFila;
-  SharedPreferences? _preferencias;
+  final ArmazenamentoFilaInteracoes _armazenamentoFila;
   bool _filaCarregada = false;
 
   final Map<String, DadosComunidadeVia> _dadosPorEscalada = {};
@@ -100,13 +101,16 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     RepositorioCaderneta? repositorioCaderneta,
     ServicoAutenticacao? servicoAutenticacao,
     ClienteFilaInteracoes? clienteFila,
+    ArmazenamentoFilaInteracoes? armazenamentoFila,
     SharedPreferences? preferencias,
   }) : _repositorioCaderneta =
            repositorioCaderneta ?? RepositorioCadernetaLocal.instancia,
        _servicoAutenticacao =
            servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
        _clienteFila = clienteFila,
-       _preferencias = preferencias;
+       _armazenamentoFila =
+           armazenamentoFila ??
+           ArmazenamentoFilaInteracoes(preferencias: preferencias);
 
   @override
   ValueListenable<int> get alteracoesListenable => _versaoNotifier;
@@ -372,29 +376,13 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   Future<void> _carregarFilaPendenteSeNecessario() async {
     if (_filaCarregada) return;
     _filaCarregada = true;
-    final prefs = _preferencias ??= await SharedPreferences.getInstance();
-    final bruto = prefs.getString(chaveFilaPendente);
-    if (bruto == null || bruto.isEmpty) return;
-
-    final lista = jsonDecode(bruto) as List<dynamic>;
     _filaPendente
       ..clear()
-      ..addAll(
-        lista.whereType<Map<String, dynamic>>().map(ItemFilaInteracao.fromJson),
-      );
+      ..addAll(await _armazenamentoFila.carregarItensPendentes());
   }
 
-  Future<void> _persistirFilaPendente() async {
-    final prefs = _preferencias ??= await SharedPreferences.getInstance();
-    if (_filaPendente.isEmpty) {
-      await prefs.remove(chaveFilaPendente);
-      return;
-    }
-    final serializado = jsonEncode(
-      _filaPendente.map((i) => i.toJson()).toList(growable: false),
-    );
-    await prefs.setString(chaveFilaPendente, serializado);
-  }
+  Future<void> _persistirFilaPendente() =>
+      _armazenamentoFila.salvarItensPendentes(_filaPendente);
 
   Future<void> _enfileirarEDespachar(
     ClienteFilaInteracoes cliente,
