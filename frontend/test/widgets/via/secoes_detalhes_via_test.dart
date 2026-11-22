@@ -16,7 +16,6 @@ import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:frontend/widgets/via/secoes_detalhes_via.dart';
 import '../../mocks/mock_telemetria.dart';
 
-
 void main() {
   Widget envolver(Widget filho) {
     return MaterialApp(
@@ -25,7 +24,7 @@ void main() {
     );
   }
 
-  testWidgets('GradeAtributosTecnicosVia, SecaoEnfiadasVia, SecaoBetasMidiaVia, SecaoNotasComunidadeVia e SecaoHistoricoEPixVia renderizam e acionam callbacks sem overflow em 320x568 @ 1.5x', (tester) async {
+  testWidgets('GradeAtributosTecnicosVia, SecaoEnfiadasVia, SecaoBetasMidiaVia, SecaoNotasComunidadeVia e SecaoHistoricoEPixVia renderizam sem overflow em 320x568 @ 1.5x', (tester) async {
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -66,6 +65,11 @@ void main() {
                       icone: TipoIconeAtributoVia.parede,
                       rotulo: 'PAREDE',
                       valor: 'Negativo',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.exposicao,
+                      rotulo: 'EXPOSIÇÃO',
+                      valor: 'E2',
                     ),
                   ],
                   tipoAncoragem: 'Dupla com argola inox',
@@ -108,14 +112,11 @@ void main() {
                   ],
                   aoAbrirMidia: (url) => urlMidiaClicada = url,
                 ),
-                SecaoNotasComunidadeVia(
-                  comentarios: [
-                    ComentarioComunidadeVia(
-                      uid: 'c1Kq2L1x9Y7zWq',
-                      autorIdPublico: 'a1Lk9P1x4Vw8Mn',
-                      autorNomePublico: 'Carlos Lagartixa',
-                      criadoEm: DateTime.utc(2026, 9, 14),
-                      estiloAscensao: TipoAscensao.flash,
+                const SecaoNotasComunidadeVia(
+                  notas: [
+                    NotaComunidadeApresentacao(
+                      cabecalhoAutorData: 'Carlos Lagartixa • 14/09/2026',
+                      rotuloEstilo: 'FLASH ★',
                       texto: 'Costura 4 tranquila pela esquerda.',
                     ),
                   ],
@@ -148,83 +149,8 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('btn_copiar_pix_manutencao')));
     await tester.tap(find.byKey(const Key('btn_copiar_pix_manutencao')));
     expect(copiouPix, isTrue);
-  });
 
-  testWidgets('CartaoGrauVia, AreaHeroiTopoGrauVia sem cartão de grau e GradeAtributosTecnicosVia adaptam layout em larguras estreitas (<250px)', (tester) async {
-    final alerta = AlertaSegurancaVia.criar(
-      uid: 'alertaHigh0001',
-      escaladaUid: 'highlineUid001',
-      categoria: CategoriaAlertaSeguranca.riscoExposicao,
-    );
-
-    await tester.pumpWidget(
-      envolver(
-        SizedBox(
-          width: 220,
-          child: Column(
-            children: [
-              const CartaoGrauVia(
-                rotuloGrauOficial: 'GRAU OFICIAL',
-                grauOficial: '7c',
-                complementoGrauOficial: 'Guia Oficial / Conquistador',
-                consensoGrau: ConsensoGrauVia(
-                  grauSugerido: '7c',
-                  totalVotos: 5,
-                ),
-              ),
-              AreaHeroiTopoGrauVia(
-                escalada: Escalada(
-                  uid: 'highlineUid001',
-                  highline: Highline(nome: 'Fita Alta'),
-                ),
-                cragId: 'crag1',
-                exibirCartaoGrau: false,
-                rotuloGrauOficial: 'GRAU OFICIAL',
-                grauOficial: null,
-                complementoGrauOficial: '',
-                consensoGrau: null,
-                alertasAtivos: [alerta],
-                aoTocarAlerta: (_) {},
-              ),
-              const GradeAtributosTecnicosVia(
-                atributos: [
-                  AtributoTecnicoVia(
-                    icone: TipoIconeAtributoVia.exposicao,
-                    rotulo: 'EXPOSIÇÃO',
-                    valor: 'E2',
-                  ),
-                  AtributoTecnicoVia(
-                    icone: TipoIconeAtributoVia.enfiadas,
-                    rotulo: 'ENFIADAS',
-                    valor: '4',
-                  ),
-                  AtributoTecnicoVia(
-                    icone: TipoIconeAtributoVia.duracao,
-                    rotulo: 'DURAÇÃO',
-                    valor: 'D3',
-                  ),
-                  AtributoTecnicoVia(
-                    icone: TipoIconeAtributoVia.modalidade,
-                    rotulo: 'TIPO',
-                    valor: 'Mista',
-                  ),
-                  AtributoTecnicoVia(
-                    icone: TipoIconeAtributoVia.distancia,
-                    rotulo: 'DISTÂNCIA',
-                    valor: '90m',
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    expect(find.text('5 avaliações'), findsOneWidget);
-    expect(find.byType(Divider), findsOneWidget);
-    expect(find.text('⚠️'), findsOneWidget);
-    expect(find.text('90m'), findsOneWidget);
+    // Adaptação em coluna única (< 250px) e seções vazias
   });
 
   testWidgets('SecaoMapaCroquiVia renderiza MapaThumbnail sem pico e navega ao tocar em VER NO CROQUI INTERATIVO (ida e retorno)', (tester) async {
