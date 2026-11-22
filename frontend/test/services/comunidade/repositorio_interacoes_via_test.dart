@@ -327,6 +327,9 @@ void main() {
       deltaGrau: 1,
       codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
     );
+    expect(repo.usuarioEstaAutenticado, isTrue);
+    expect(repo.obterDeltaVotoUsuario('x8siJek3FiG3aB'), 1);
+    expect(repo.obterDeltaVotoUsuario('outraViaNaoVotada'), isNull);
     expect(prefs.getString(RepositorioInteracoesViaMemoria.chaveFilaPendente), isNotNull);
   });
 }

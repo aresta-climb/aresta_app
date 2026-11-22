@@ -86,6 +86,7 @@ class RegistroCadenaViewModel extends ChangeNotifier {
     String notasIniciais = '',
     int? grauSugerido,
     this.codigoGrauOficial,
+    int deltaGrauInicial = 0,
     bool? ehBoulder,
     this.exibirContribuicaoPublica = false,
     this.cadenaOriginal,
@@ -98,7 +99,14 @@ class RegistroCadenaViewModel extends ChangeNotifier {
        _notasPrivadas = notasIniciais.length > limiteNotasPrivadas
            ? notasIniciais.substring(0, limiteNotasPrivadas)
            : notasIniciais,
-       _grauSugerido = grauSugerido ?? codigoGrauOficial,
+       _deltaGrau = deltaGrauInicial.clamp(-2, 2),
+       _grauSugerido = deltaGrauInicial != 0 && codigoGrauOficial != null
+           ? deslocarCodigoGrau(
+               codigoGrauOficial,
+               deltaGrauInicial.clamp(-2, 2),
+               ehBoulder: ehBoulder ?? tipoEscaladaPadrao.isBoulder,
+             )
+           : (grauSugerido ?? codigoGrauOficial),
        ehBoulder = ehBoulder ?? tipoEscaladaPadrao.isBoulder,
        repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
        repositorioInteracoes =

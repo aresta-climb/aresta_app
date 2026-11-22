@@ -249,16 +249,17 @@ void main() {
           nomeEscalada: 'Via Deslize',
           grauSugerido: GrauVia_GrauVia.BR_7A.value,
           codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
-          ehBoulder: false,
+          deltaGrauInicial: -1,
           exibirContribuicaoPublica: true,
           repositorio: repositorio,
           repositorioInteracoes: interacoesFake,
         );
 
-        expect(vm.deltaGrau, 0);
+        expect(vm.deltaGrau, -1);
+        expect(vm.grauSugerido, GrauVia_GrauVia.BR_6SUP.value);
         expect(vm.opcoesDeltaGrau, hasLength(5));
         expect(
-          vm.opcoesDeltaGrau.firstWhere((o) => o.delta == 0).selecionado,
+          vm.opcoesDeltaGrau.firstWhere((o) => o.delta == -1).selecionado,
           isTrue,
         );
         expect(

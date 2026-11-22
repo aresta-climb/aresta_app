@@ -22,6 +22,12 @@ abstract interface class RepositorioInteracoesVia {
   /// Notificador que incrementa sempre que alertas, votos ou comentários sofrem alteração.
   ValueListenable<int> get alteracoesListenable;
 
+  /// Indica se o escalador atual possui sessão autenticada para registrar votos e betas públicos.
+  bool get usuarioEstaAutenticado;
+
+  /// Retorna o deslocamento de grau (`-2` a `+2`) votado pelo usuário atual em [escaladaUid], se houver.
+  int? obterDeltaVotoUsuario(String escaladaUid);
+
   /// Retorna o agregado comunitário atual ([DadosComunidadeVia]) para [escaladaUid].
   DadosComunidadeVia obterDadosEscalada(String escaladaUid);
 
@@ -114,6 +120,17 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
 
   @override
   ValueListenable<int> get alteracoesListenable => _versaoNotifier;
+
+  @override
+  bool get usuarioEstaAutenticado =>
+      _repositorioCaderneta.obterPerfil().estaAutenticado;
+
+  @override
+  int? obterDeltaVotoUsuario(String escaladaUid) {
+    final uidVia = escaladaUid.trim();
+    final autorId = _repositorioCaderneta.obterPerfil().autorIdPublico;
+    return _votosLocaisPorAutor[uidVia]?[autorId]?.deltaGrau;
+  }
 
   @override
   DadosComunidadeVia obterDadosEscalada(String escaladaUid) {

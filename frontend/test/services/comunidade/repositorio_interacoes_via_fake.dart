@@ -14,16 +14,26 @@ import 'package:frontend/utils/gerador_uid.dart';
 /// além de inspecionar sincronizações e simular falhas determinísticas sem frameworks de mock.
 class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   final Map<String, DadosComunidadeVia> _dados = {};
+  final Map<String, int> _votosUsuario = {};
   final ValueNotifier<int> _versao = ValueNotifier<int>(0);
 
   /// Lista de `escaladaUid` sincronizados via [sincronizarEscalada].
   final List<String> escaladasSincronizadas = [];
+
+  /// Indica se o usuário simulado está autenticado para votar em graus comunitários.
+  bool autenticadoSimulado = true;
 
   /// Quando preenchido, faz com que operações mutáveis e de sincronização lancem este erro.
   Object? erroSimulado;
 
   @override
   ValueListenable<int> get alteracoesListenable => _versao;
+
+  @override
+  bool get usuarioEstaAutenticado => autenticadoSimulado;
+
+  @override
+  int? obterDeltaVotoUsuario(String escaladaUid) => _votosUsuario[escaladaUid];
 
   /// Semeia de forma síncrona e determinística o estado comunitário de [escaladaUid].
   void semearDados(String escaladaUid, DadosComunidadeVia dados) {
@@ -63,8 +73,15 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
     }
     final atual = obterDadosEscalada(escaladaUid);
     final dist = Map<int, int>.from(atual.consensoGrau.distribuicaoDeltas);
+    final votoAnterior = _votosUsuario[escaladaUid];
+    if (votoAnterior != null && (dist[votoAnterior] ?? 0) > 0) {
+      dist[votoAnterior] = dist[votoAnterior]! - 1;
+    }
     dist[deltaGrau] = (dist[deltaGrau] ?? 0) + 1;
-    final total = atual.consensoGrau.totalVotos + 1;
+    _votosUsuario[escaladaUid] = deltaGrau;
+    final total = votoAnterior != null
+        ? atual.consensoGrau.totalVotos
+        : atual.consensoGrau.totalVotos + 1;
     final codEfetivo =
         grauSugerido ??
         deslocarCodigoGrau(codigoGrauOficial, deltaGrau, ehBoulder: ehBoulder);

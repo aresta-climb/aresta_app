@@ -101,6 +101,9 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
     final ehHighline = escalada.whichTipo() == Escalada_Tipo.highline;
     final tipoEscalada = ehBoulder ? TipoEscalada.boulder : TipoEscalada.guiado;
     final codigoOficial = obterCodigoGrauOficial(escalada);
+    final deltaExistente = escalada.hasUid() && escalada.uid.isNotEmpty
+        ? (repositorioInteracoes.obterDeltaVotoUsuario(escalada.uid) ?? 0)
+        : 0;
 
     return RegistroCadenaViewModel(
       escaladaUid: escalada.uid,
@@ -108,6 +111,7 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
       tipoEscaladaPadrao: tipoEscalada,
       grauSugerido: codigoOficial,
       codigoGrauOficial: codigoOficial,
+      deltaGrauInicial: deltaExistente,
       ehBoulder: ehBoulder,
       exibirContribuicaoPublica:
           !ehHighline && escalada.hasUid() && escalada.uid.trim().isNotEmpty,

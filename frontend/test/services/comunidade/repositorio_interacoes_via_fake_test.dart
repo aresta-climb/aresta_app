@@ -62,6 +62,8 @@ void main() {
       deltaGrau: 1,
       comentarioPublico: 'Crux técnico!',
     );
+    expect(fake.usuarioEstaAutenticado, isTrue);
+    expect(fake.obterDeltaVotoUsuario('x8siJek3FiG3aB'), 1);
     expect(fake.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.totalVotos, 6);
     expect(fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios, hasLength(1));
 

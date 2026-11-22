@@ -201,6 +201,23 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
                           estiloSelecionado: _viewModel.tipoAscensao,
                           aoSelecionar: _viewModel.definirTipoAscensao,
                         ),
+                        if (!_viewModel.editando &&
+                            _viewModel.exibirContribuicaoPublica) ...[
+                          const SizedBox(height: 20),
+                          SecaoContribuicaoPublicaAscensao(
+                            opcoesDelta: _viewModel.opcoesDeltaGrau,
+                            aoSelecionarDelta: _viewModel.definirDeltaGrau,
+                            estaAutenticado:
+                                _viewModel.estaAutenticadoParaComunidade,
+                            controladorComentario: _comentarioPublicoController,
+                            contadorComentarioTexto:
+                                _viewModel.contadorComentarioPublicoTexto,
+                            atingiuLimiteComentario:
+                                _viewModel.atingiuLimiteComentarioPublico,
+                            limiteCaracteresComentario: RegistroCadenaViewModel
+                                .limiteComentarioPublico,
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         ContadorTentativasAscensao(
                           tentativas: _viewModel.tentativas,
@@ -221,23 +238,6 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
                           limiteCaracteres:
                               RegistroCadenaViewModel.limiteNotasPrivadas,
                         ),
-                        if (!_viewModel.editando &&
-                            _viewModel.exibirContribuicaoPublica) ...[
-                          const SizedBox(height: 20),
-                          SecaoContribuicaoPublicaAscensao(
-                            opcoesDelta: _viewModel.opcoesDeltaGrau,
-                            aoSelecionarDelta: _viewModel.definirDeltaGrau,
-                            estaAutenticado:
-                                _viewModel.estaAutenticadoParaComunidade,
-                            controladorComentario: _comentarioPublicoController,
-                            contadorComentarioTexto:
-                                _viewModel.contadorComentarioPublicoTexto,
-                            atingiuLimiteComentario:
-                                _viewModel.atingiuLimiteComentarioPublico,
-                            limiteCaracteresComentario: RegistroCadenaViewModel
-                                .limiteComentarioPublico,
-                          ),
-                        ],
                       ],
                     ),
                   ),
