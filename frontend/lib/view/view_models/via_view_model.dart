@@ -18,9 +18,21 @@ import '../../utils/formatador_escalada.dart';
 
 export '../../utils/extrator_detalhes_tecnicos_via.dart';
 
+/// Resultado semântico de uma tentativa de votação direta nas pílulas de grau comunitário.
+enum ResultadoVotoGrauVia {
+  /// Voto computado localmente e enfileirado com sucesso.
+  registrado,
+
+  /// O escalador precisa entrar em sua conta antes de publicar votos comunitários.
+  requerAutenticacao,
+
+  /// Falha inesperada ao persistir o voto.
+  falha,
+}
+
 /// ViewModel (MVVM) responsável pelo estado reativo, comandos de negócio (compartilhamento,
-/// Pix, links externos, telemetria de croqui e alertas estilo Waze) e modelos de apresentação
-/// imutáveis consumidos pela Dumb UI da `ViaPage`.
+/// Pix, voto direto de grau, janela de desfazer em alertas e telemetria de croqui) e modelos
+/// de apresentação imutáveis consumidos pela Dumb UI da `ViaPage`.
 class ViaViewModel extends ChangeNotifier {
   /// Escalada Protobuf exibida na página.
   final Escalada escalada;
@@ -31,10 +43,14 @@ class ViaViewModel extends ChangeNotifier {
   /// Controlador de visibilidade dos recursos de perfil/comunidade.
   final ControladorInteracoesUsuario controladorInteracoes;
 
+  /// Duração da janela de desfazer antes de efetivar a resolução de um alerta de segurança.
+  final Duration duracaoJanelaDesfazer;
+
   final ServicoCompartilhamento? _servicoCompartilhamento;
   final TelemetryService? _telemetria;
   final Future<void> Function(String texto) _copiadorAreaTransferencia;
   final Future<bool> Function(Uri uri) _lancadorUrlExterna;
+  final Map<String, Timer> _timersResolucaoPendente = {};
   bool _descartado = false;
 
   /// Cria uma instância de [ViaViewModel].
@@ -46,6 +62,7 @@ class ViaViewModel extends ChangeNotifier {
     TelemetryService? telemetria,
     Future<void> Function(String texto)? copiadorAreaTransferencia,
     Future<bool> Function(Uri uri)? lancadorUrlExterna,
+    this.duracaoJanelaDesfazer = const Duration(seconds: 4),
   }) : repositorioInteracoes =
            repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
        controladorInteracoes =
@@ -96,6 +113,11 @@ class ViaViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _descartado = true;
+    final pendentes = _timersResolucaoPendente.keys.toList(growable: false);
+    for (final alertaUid in pendentes) {
+      _timersResolucaoPendente.remove(alertaUid)?.cancel();
+      unawaited(confirmarAlerta(alertaUid, aindaEstaLa: false));
+    }
     repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
     controladorInteracoes.interacoesAtivasNotifier.removeListener(
       _aoMudarVisibilidadeInteracoes,
@@ -118,7 +140,7 @@ class ViaViewModel extends ChangeNotifier {
   /// Código numérico Protobuf do grau oficial da escalada, quando definido.
   int? get codigoGrauOficial => obterCodigoGrauOficial(escalada);
 
-  /// Indica se os recursos interativos (alertas Waze, consenso, caderneta e notas) estão ativos.
+  /// Indica se os recursos interativos (alertas Waze, consenso, caderneta e betas) estão ativos.
   bool get exibirRecursosComunidade =>
       controladorInteracoes.exibirElementosInterativos;
 
@@ -166,18 +188,25 @@ class ViaViewModel extends ChangeNotifier {
       consenso,
       codigoGrauOficial: codigoGrauOficial,
       ehBoulder: ehBoulder,
+      deltaVotoUsuario: repositorioInteracoes.obterDeltaVotoUsuario(escalada.uid),
     );
   }
 
-  /// Lista de alertas de segurança estilo Waze ativos para renderização das bolhas vermelhas flutuantes.
+  /// Lista de alertas de segurança ativos (filtrando alertas em janela temporária de desfazer).
   List<AlertaSegurancaVia> get alertasAtivos {
     if (!exibirRecursosComunidade || !possuiUid) {
       return const [];
     }
-    return repositorioInteracoes.obterDadosEscalada(escalada.uid).alertasAtivos;
+    final todos = repositorioInteracoes
+        .obterDadosEscalada(escalada.uid)
+        .alertasAtivos;
+    if (_timersResolucaoPendente.isEmpty) return todos;
+    return todos
+        .where((a) => !_timersResolucaoPendente.containsKey(a.uid))
+        .toList(growable: false);
   }
 
-  /// Lista de comentários e notas de beta públicas da comunidade.
+  /// Lista de comentários e betas públicos da comunidade.
   List<ComentarioComunidadeVia> get comentariosComunidade {
     if (!exibirRecursosComunidade || !possuiUid) {
       return const [];
@@ -185,7 +214,7 @@ class ViaViewModel extends ChangeNotifier {
     return repositorioInteracoes.obterDadosEscalada(escalada.uid).comentarios;
   }
 
-  /// Notas públicas pré-formatadas com autor, data e estilo prontas para a Dumb UI.
+  /// Betas públicos pré-formatados com autor, data e estilo prontos para a Dumb UI.
   List<NotaComunidadeApresentacao> get notasComunidadeApresentacao =>
       ExtratorDetalhesTecnicosVia.formatarNotasComunidade(comentariosComunidade);
 
@@ -231,7 +260,7 @@ class ViaViewModel extends ChangeNotifier {
   String? get chavePixManutencao =>
       ExtratorDetalhesTecnicosVia.extrairChavePix(escalada);
 
-  /// Resolve os mapas e itens de carrossel do croqui para a Dumb UI.
+  /// Resolve os mapas, rótulo de linha e itens de carrossel do croqui para a Dumb UI.
   EstadoCroquiVia resolverEstadoCroqui({
     Pico? pico,
     Setor? setor,
@@ -277,6 +306,48 @@ class ViaViewModel extends ChangeNotifier {
       nomeSetor: nomeSetor ?? nomeGrupo ?? 'Geral',
       nomePico: nomePico ?? cragId,
     );
+  }
+
+  /// Registra o voto direto do escalador em uma das 5 pílulas de percepção de grau (`-2` a `+2`).
+  Future<ResultadoVotoGrauVia> votarGrauComunidade(int delta) async {
+    if (!repositorioInteracoes.usuarioEstaAutenticado) {
+      return ResultadoVotoGrauVia.requerAutenticacao;
+    }
+    try {
+      await repositorioInteracoes.registrarAvaliacaoAscensao(
+        escaladaUid: escalada.uid,
+        deltaGrau: delta,
+        codigoGrauOficial: codigoGrauOficial,
+        ehBoulder: ehBoulder,
+      );
+      return ResultadoVotoGrauVia.registrado;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao registrar voto direto de grau na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return ResultadoVotoGrauVia.falha;
+    }
+  }
+
+  /// Oculta imediatamente [alertaUid] na UI e agenda sua resolução definitiva após [duracaoJanelaDesfazer].
+  void iniciarResolucaoAlertaComDesfazer(String alertaUid) {
+    _timersResolucaoPendente.remove(alertaUid)?.cancel();
+    _timersResolucaoPendente[alertaUid] = Timer(duracaoJanelaDesfazer, () {
+      _timersResolucaoPendente.remove(alertaUid);
+      unawaited(confirmarAlerta(alertaUid, aindaEstaLa: false));
+    });
+    _notificar();
+  }
+
+  /// Cancela a resolução pendente de [alertaUid], restaurando imediatamente a bolha na UI.
+  void desfazerResolucaoAlerta(String alertaUid) {
+    final timer = _timersResolucaoPendente.remove(alertaUid);
+    if (timer != null) {
+      timer.cancel();
+      _notificar();
+    }
   }
 
   /// Copia [chavePixManutencao] para a área de transferência do dispositivo.
