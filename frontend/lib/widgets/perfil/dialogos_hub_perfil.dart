@@ -137,46 +137,47 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
                 ),
                 const SizedBox(height: 8),
               ],
-          TextField(
-            key: const Key('campo_editar_perfil_nome'),
-            controller: _controladorNome,
-            autofocus: true,
-            style: TextStyle(color: cores.chalkWhite),
-            decoration: InputDecoration(
-              labelText: 'Nome do atleta',
-              labelStyle: TextStyle(color: cores.ashGrey),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: cores.graniteEdge),
+              TextField(
+                key: const Key('campo_editar_perfil_nome'),
+                controller: _controladorNome,
+                autofocus: true,
+                style: TextStyle(color: cores.chalkWhite),
+                decoration: InputDecoration(
+                  labelText: 'Nome do atleta',
+                  labelStyle: TextStyle(color: cores.ashGrey),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: cores.graniteEdge),
+                  ),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFE05A47)),
+                  ),
+                ),
               ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFFE05A47)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Color(0xFF94A3B8)),
               ),
             ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
-            'Cancelar',
-            style: TextStyle(color: Color(0xFF94A3B8)),
-          ),
-        ),
-        ElevatedButton(
-          key: const Key('btn_salvar_editar_perfil'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFE05A47),
-            foregroundColor: cores.chalkWhite,
-          ),
-          onPressed: () {
-            final texto = _controladorNome.text.trim();
-            Navigator.of(context).pop(texto.isNotEmpty ? texto : null);
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
-    );
+            ElevatedButton(
+              key: const Key('btn_salvar_editar_perfil'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE05A47),
+                foregroundColor: cores.chalkWhite,
+              ),
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pop(_viewModel.obterNomeNormalizadoParaSalvar());
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
       },
     );
   }

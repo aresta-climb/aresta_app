@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/view_models/edicao_perfil_view_model.dart';
 import 'package:frontend/widgets/perfil/dialogos_hub_perfil.dart';
 
 void main() {
@@ -104,6 +105,16 @@ void main() {
         await tester.pumpAndSettle();
         expect(resultado, isNull);
         expect(tester.takeException(), isNull);
+
+        // Caso 3: Suporta EdicaoPerfilViewModel injetado externamente sem descartá-lo
+        final vmExterno = EdicaoPerfilViewModel(nomeInicial: 'Injetado');
+        addTearDown(vmExterno.dispose);
+        await tester.pumpWidget(
+          envolverComTema(
+            DialogoEditarPerfil(nomeAtual: 'Ignorado', viewModel: vmExterno),
+          ),
+        );
+        expect(find.text('Injetado'), findsOneWidget);
       },
     );
   });
