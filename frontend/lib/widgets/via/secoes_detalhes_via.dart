@@ -2,24 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../data/modelos/interacao_via.dart';
-import '../../navigation/arvore_navegacao.dart';
-import '../../navigation/construtor_reativo_pagina.dart';
-import '../../navigation/funcoes_navegacao.dart';
-import '../../services/firebase/telemetria.dart';
 import '../../theme/cores_app.dart';
-import '../../utils/consulta_dataset.dart';
-import '../../utils/formatador_escalada.dart';
+import '../../utils/extrator_detalhes_tecnicos_via.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../view/function_library/markdown_offline.dart';
-import '../../view/view_models/via_view_model.dart';
-import '../linha_localizacao_setor.dart';
-import '../mapa_thumbnail.dart';
-import 'bolha_alerta_seguranca_via.dart';
-import 'grafico_consenso_grau_via.dart';
 
-/// Grade responsiva de especificações técnicas (`EXTENSÃO`, `PROTEÇÕES`, `PAREDE`, etc.) + tipo de ancoragem.
+/// Grade responsiva declarativa (Dumb UI) de especificações técnicas e ancoragem da via.
 class GradeAtributosTecnicosVia extends StatelessWidget {
   /// Lista de atributos técnicos extraídos pelo `ViaViewModel`.
   final List<AtributoTecnicoVia> atributos;
@@ -116,7 +104,7 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
   }
 }
 
-/// Seções textuais de descrição oficial, peças móveis, rack e acesso.
+/// Seções textuais declarativas (Dumb UI) de descrição oficial, peças móveis, rack e acesso.
 class SecaoTextosETecnicasVia extends StatelessWidget {
   /// Identificador do croqui para resolução de imagens locais no `OfflineMarkdown`.
   final String cragId;
@@ -164,7 +152,7 @@ class SecaoTextosETecnicasVia extends StatelessWidget {
   }
 }
 
-/// Linha do tempo vertical detalhando cada enfiada de uma via de múltiplas enfiadas.
+/// Linha do tempo vertical declarativa (Dumb UI) detalhando cada enfiada de uma via multienfiada.
 class SecaoEnfiadasVia extends StatelessWidget {
   /// Lista de enfiadas resumidas pelo `ViaViewModel`.
   final List<ResumoEnfiadaVia> enfiadas;
@@ -241,7 +229,7 @@ class SecaoEnfiadasVia extends StatelessWidget {
   }
 }
 
-/// Lista de cartões clicáveis para vídeos e postagens curadas de beta (`escalada.betas` e `urlVideoBeta`).
+/// Lista declarativa (Dumb UI) de cartões clicáveis para vídeos e postagens curadas de beta.
 class SecaoBetasMidiaVia extends StatelessWidget {
   /// Mídias disponíveis para a escalada.
   final List<ItemMidiaBetaVia> midias;
@@ -312,7 +300,11 @@ class SecaoBetasMidiaVia extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Icon(Icons.open_in_new_rounded, size: 18, color: cores.ashGrey),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 18,
+                        color: cores.ashGrey,
+                      ),
                     ],
                   ),
                 ),
@@ -325,17 +317,17 @@ class SecaoBetasMidiaVia extends StatelessWidget {
   }
 }
 
-/// Feed de notas e dicas públicas de beta registradas por escaladores da comunidade.
+/// Feed declarativo (Dumb UI) de notas e dicas públicas pré-formatadas pelo `ViaViewModel`.
 class SecaoNotasComunidadeVia extends StatelessWidget {
-  /// Comentários públicos da via.
-  final List<ComentarioComunidadeVia> comentarios;
+  /// Notas públicas pré-formatadas para exibição direta.
+  final List<NotaComunidadeApresentacao> notas;
 
   /// Cria uma instância de [SecaoNotasComunidadeVia].
-  const SecaoNotasComunidadeVia({super.key, required this.comentarios});
+  const SecaoNotasComunidadeVia({super.key, required this.notas});
 
   @override
   Widget build(BuildContext context) {
-    if (comentarios.isEmpty) return const SizedBox.shrink();
+    if (notas.isEmpty) return const SizedBox.shrink();
     final cores = context.colors;
 
     return Padding(
@@ -344,13 +336,11 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _TituloSecaoVia(
-            titulo: 'Notas da Comunidade (${comentarios.length})',
+            titulo: 'Notas da Comunidade (${notas.length})',
           ),
           const SizedBox(height: 10),
-          ...comentarios.map((c) {
-            final dia = c.criadoEm.day.toString().padLeft(2, '0');
-            final mes = c.criadoEm.month.toString().padLeft(2, '0');
-            final estilo = c.rotuloEstilo;
+          ...notas.map((nota) {
+            final estilo = nota.rotuloEstilo;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -369,7 +359,7 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        '${c.autorNomePublico} • $dia/$mes/${c.criadoEm.year}',
+                        nota.cabecalhoAutorData,
                         style: TextStyle(
                           color: cores.ashGrey,
                           fontSize: 12,
@@ -381,7 +371,7 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    c.texto,
+                    nota.texto,
                     style: TextStyle(
                       color: cores.chalkWhite,
                       fontSize: 14,
@@ -398,7 +388,7 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
   }
 }
 
-/// Cartão de histórico de conquista/manutenção e botão funcional de cópia da chave Pix.
+/// Cartão declarativo (Dumb UI) de histórico de conquista/manutenção e cópia da chave Pix.
 class SecaoHistoricoEPixVia extends StatelessWidget {
   /// Nomes dos conquistadores formatados.
   final String? conquistadoresTexto;

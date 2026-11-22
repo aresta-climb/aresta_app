@@ -4,9 +4,12 @@
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../navigation/construtor_reativo_pagina.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import '../../utils/formatador_escalada.dart';
 import '../../widgets/caderneta/secao_caderneta_via.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
+import '../../widgets/via/cabecalho_e_heroi_via.dart';
 import '../../widgets/via/secoes_detalhes_via.dart';
 import '../view_models/secao_caderneta_via_view_model.dart';
 import '../view_models/via_view_model.dart';
@@ -260,6 +263,25 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     );
   }
 
+  void _abrirCroquiInterativo(
+    BuildContext context,
+    EstadoCroquiVia estadoCroqui,
+  ) {
+    _viewModel.registrarVisualizacaoCroqui(
+      cragId: widget.cragId,
+      nomeSetor: widget.setor?.nome,
+    );
+    if (widget.fromMapaPage) {
+      AppNav.back(context);
+      return;
+    }
+    AppNav.toMapas(
+      context,
+      cragId: widget.cragId,
+      mapas: estadoCroqui.itensNavegacaoCroqui,
+    );
+  }
+
   Future<void> _copiarPix(BuildContext context) async {
     final copiou = await _viewModel.copiarChavePix();
     if (copiou && context.mounted) {
@@ -277,6 +299,13 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
+        final estadoCroqui = _viewModel.resolverEstadoCroqui(
+          pico: widget.pico,
+          setor: widget.setor,
+          grupo: widget.grupo,
+          resolvedorExterno: PageListenableBuilder.resolverOf(context),
+        );
+
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: Column(
@@ -292,19 +321,18 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                 grupo: widget.grupo,
               ),
               AreaHeroiTopoGrauVia(
-                escalada: widget.escalada,
+                estadoCroqui: estadoCroqui,
                 cragId: widget.cragId,
-                pico: widget.pico,
+                nomeEscalada: _viewModel.nomeEscalada,
                 setor: widget.setor,
                 grupo: widget.grupo,
-                fromMapaPage: widget.fromMapaPage,
+                aoAbrirCroquiInterativo: () =>
+                    _abrirCroquiInterativo(context, estadoCroqui),
                 exibirCartaoGrau: _viewModel.exibirCartaoGrau,
                 rotuloGrauOficial: _viewModel.rotuloGrauOficial,
                 grauOficial: _viewModel.grauOficialExibicao,
-                codigoGrauOficial: _viewModel.codigoGrauOficial,
-                ehBoulder: _viewModel.ehBoulder,
                 complementoGrauOficial: _viewModel.complementoGrauOficial,
-                consensoGrau: _viewModel.consensoGrau,
+                apresentacaoConsenso: _viewModel.apresentacaoConsenso,
                 alertasAtivos: _viewModel.alertasAtivos,
                 aoTocarAlerta: (alerta) =>
                     _abrirConfirmacaoAlerta(context, alerta),
@@ -327,7 +355,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                 aoAbrirMidia: _viewModel.abrirMidiaBeta,
               ),
               SecaoNotasComunidadeVia(
-                comentarios: _viewModel.comentariosComunidade,
+                notas: _viewModel.notasComunidadeApresentacao,
               ),
               SecaoHistoricoEPixVia(
                 conquistadoresTexto: _viewModel.conquistadoresTexto,
