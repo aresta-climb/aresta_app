@@ -10,7 +10,9 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.drawable.ColorDrawable
 import android.media.ExifInterface
+import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -45,6 +47,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private var resultadoPendenteFoto: MethodChannel.Result? = null
+    private var resultadoPendenteOAuthPkce: MethodChannel.Result? = null
+    private var esquemaCallbackOAuthPendente: String = "aresta"
+    private var jaSaiuParaNavegadorOAuth: Boolean = false
     private val escopoPrincipal = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
@@ -146,8 +151,49 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
+    override fun onNewIntent(intent: Intent) {
+        val uri = intent.data
+        val callbackOAuth = resultadoPendenteOAuthPkce
+        if (callbackOAuth != null &&
+            uri != null &&
+            uri.scheme.equals(esquemaCallbackOAuthPendente, ignoreCase = true)
+        ) {
+            limparEstadoOAuthPkce()
+            callbackOAuth.success(
+                mapOf(
+                    "callbackUrl" to uri.toString(),
+                    "cancelado" to false
+                )
+            )
+            return
+        }
         super.onNewIntent(intent)
         setIntent(intent)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (resultadoPendenteOAuthPkce != null) {
+            jaSaiuParaNavegadorOAuth = true
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (resultadoPendenteOAuthPkce != null && jaSaiuParaNavegadorOAuth) {
+            window.decorView.postDelayed({
+                val pendente = resultadoPendenteOAuthPkce
+                if (pendente != null && jaSaiuParaNavegadorOAuth) {
+                    limparEstadoOAuthPkce()
+                    pendente.success(mapOf("cancelado" to true))
+                }
+            }, 250L)
+        }
+    }
+
+    private fun limparEstadoOAuthPkce() {
+        resultadoPendenteOAuthPkce = null
+        jaSaiuParaNavegadorOAuth = false
     }
 
     private fun ehEmuladorAndroid(): Boolean {
@@ -266,6 +312,31 @@ class MainActivity : FlutterActivity() {
             } catch (e: Exception) {
                 result.success(mapOf("erro" to (e.message ?: e.javaClass.simpleName)))
             }
+        }
+    }
+
+    private fun iniciarSessaoWebGooglePkce(
+        urlAutorizacaoPkce: String,
+        esquemaCallback: String,
+        erroAnterior: Exception,
+        result: MethodChannel.Result
+    ) {
+        try {
+            resultadoPendenteOAuthPkce?.success(mapOf("cancelado" to true))
+            resultadoPendenteOAuthPkce = result
+            esquemaCallbackOAuthPendente = esquemaCallback
+            jaSaiuParaNavegadorOAuth = false
+
+            val uriAuth = Uri.parse(urlAutorizacaoPkce)
+            val intentCustomTab = Intent(Intent.ACTION_VIEW, uriAuth).apply {
+                val extras = Bundle()
+                extras.putBinder("android.support.customtabs.extra.SESSION", null)
+                putExtras(extras)
+            }
+            startActivity(intentCustomTab)
+        } catch (_: Exception) {
+            limparEstadoOAuthPkce()
+            result.success(mapOf("erro" to (erroAnterior.message ?: erroAnterior.javaClass.simpleName)))
         }
     }
 

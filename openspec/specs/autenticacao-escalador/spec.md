@@ -41,14 +41,14 @@ O sistema MUST apresentar provedores sociais de acordo com a plataforma de execu
 
 #### Scenario: Tela de login no Android oculta botão da Apple
 - **WHEN** a tela de login é renderizada na plataforma Android
-- **THEN** o sistema MUST exibir o botão **Continuar com o Google**, o cartão de código por e-mail e o botão **Continuar sem conta / Offline**, ocultando o botão **Continuar com a Apple**
+- **THEN** o sistema MUST exibir o botão **Continuar com o Google**, o cartão de código por e-mail e o botão **Abrir configurações do app**, ocultando o botão **Continuar com a Apple**
 
 #### Scenario: Tela de login no iOS exibe Google e Apple
 - **WHEN** a tela de login é renderizada na plataforma iOS
-- **THEN** o sistema MUST exibir os botões **Continuar com o Google** e **Continuar com a Apple**, além do cartão de código por e-mail e do botão **Continuar sem conta / Offline**
+- **THEN** o sistema MUST exibir os botões **Continuar com o Google** e **Continuar com a Apple**, além do cartão de código por e-mail e do botão **Abrir configurações do app**
 
 ### Requirement: Tratamento Silencioso de Cancelamento Voluntário
-Quando o escalador cancelar ou fechar voluntariamente o seletor nativo do Google, a folha `ASWebAuthenticationSession` ou o modal do Face ID/Touch ID da Apple (`cancelado == true`), o sistema MUST encerrar imediatamente o estado de carregamento sem abrir navegador de fallback, sem exibir banner de erro na interface e sem registrar exceção na observabilidade.
+Quando o escalador cancelar ou fechar voluntariamente o seletor nativo do Google, a sessão web OAuth PKCE ou o modal do Face ID/Touch ID da Apple (`cancelado == true`), o sistema MUST encerrar imediatamente o estado de carregamento sem exibir banner de erro na interface e sem registrar exceção na observabilidade.
 
 #### Scenario: Escalador cancela o modal de autenticação social
 - **WHEN** o escalador fecha ou cancela voluntariamente o modal de login do Google ou da Apple
@@ -59,7 +59,7 @@ Quando o escalador cancelar ou fechar voluntariamente o seletor nativo do Google
 - **THEN** o `LoginViewModel` MUST ignorar notificações subsequentes sem lançar `FlutterError` de uso após `dispose`
 
 ### Requirement: Proibição de Contas Sintéticas de Fallback em Produção
-O sistema MUST NOT gerar contas locais fictícias (`usr_*`) quando a chave pública do servidor estiver ausente ou quando um provedor de autenticação falhar. O uso offline desautenticado MUST ocorrer exclusivamente por escolha explícita do escalador na opção **Continuar sem conta / Offline**.
+O sistema MUST NOT gerar contas locais fictícias (`usr_*`) quando a chave pública do servidor estiver ausente ou quando um provedor de autenticação falhar. Sem autenticação concluída, o atalho **Abrir configurações do app** MUST abrir diretamente `SettingsPage` saltando `PerfilPage` na ida e no retorno.
 
 #### Scenario: Ausência de configuração do servidor falha explicitamente
 - **WHEN** uma tentativa de login social ou por código OTP ocorre sem chave pública do servidor configurada ou com retorno nulo do canal nativo

@@ -122,6 +122,13 @@ void main() {
       expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
       expect(find.text('🐝'), findsOneWidget);
 
+      // A ponta da cauda (0.24 * largura, base inferior) aponta para a borda superior-direita do nó (200, 200) sem cobri-lo
+      final retanguloBolha = tester.getRect(find.byType(BolhaEmojiAlertaVia));
+      final pontaCaudaX = retanguloBolha.left + retanguloBolha.width * 0.24;
+      final pontaCaudaY = retanguloBolha.bottom;
+      expect(pontaCaudaX, closeTo(205.0, 2.0));
+      expect(pontaCaudaY, closeTo(190.0, 2.0));
+
       // 1. Confirmar que ainda está lá (+1)
       await tester.tap(find.byType(BolhaEmojiAlertaVia));
       await tester.pumpAndSettle();
