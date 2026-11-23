@@ -61,13 +61,17 @@ class ArvoreNavegacao {
     }
   }
 
-  /// Retorna um novo estado retrocedendo para o nó pai (`parent`).
+  /// Retorna um novo estado retrocedendo para o nó pai (`parent`), saltando [PerfilNode]
+  /// intermediários quando [pularPerfil] for `true` (usuário sem conta autenticada).
   ///
   /// Retorna `null` se a navegação já estiver na raiz da árvore.
-  ArvoreNavegacao? voltar() {
-    final parentNode = noAtual.parent;
-    if (parentNode != null) {
-      return ArvoreNavegacao(noAtual: parentNode);
+  ArvoreNavegacao? voltar({bool pularPerfil = false}) {
+    NavNode? destino = noAtual.parent;
+    while (pularPerfil && destino is PerfilNode) {
+      destino = destino.parent;
+    }
+    if (destino != null) {
+      return ArvoreNavegacao(noAtual: destino);
     }
     return null;
   }

@@ -105,7 +105,10 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "solicitarIdTokenGoogle" -> {
                     val webClientId = call.argument<String>("webClientId")?.trim().orEmpty()
-                    if (webClientId.isEmpty()) {
+                    val urlAutorizacaoPkce = call.argument<String>("urlAutorizacaoPkce")?.trim().orEmpty()
+                    val esquemaCallback = call.argument<String>("esquemaCallback")?.trim()
+                        ?.takeIf { it.isNotEmpty() } ?: "aresta"
+                    if (webClientId.isEmpty() && urlAutorizacaoPkce.isEmpty()) {
                         result.success(mapOf("erro" to "webClientId ausente"))
                         return@setMethodCallHandler
                     }
@@ -116,7 +119,12 @@ class MainActivity : FlutterActivity() {
                             return@setMethodCallHandler
                         }
                     }
-                    iniciarLoginNativoGoogle(webClientId, result)
+                    iniciarLoginNativoGoogle(
+                        webClientId = webClientId,
+                        urlAutorizacaoPkce = urlAutorizacaoPkce,
+                        esquemaCallback = esquemaCallback,
+                        result = result
+                    )
                 }
                 "solicitarIdTokenApple" -> {
                     result.success(null)
@@ -150,7 +158,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
     override fun onNewIntent(intent: Intent) {
         val uri = intent.data
         val callbackOAuth = resultadoPendenteOAuthPkce
@@ -271,11 +278,16 @@ class MainActivity : FlutterActivity() {
 
     private fun iniciarLoginNativoGoogle(
         webClientId: String,
+        urlAutorizacaoPkce: String,
+        esquemaCallback: String,
         result: MethodChannel.Result
     ) {
         val contexto = this
         escopoPrincipal.launch {
             try {
+                if (webClientId.isEmpty()) {
+                    throw IllegalStateException("webClientId ausente")
+                }
                 val opcaoGoogle = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
                     .setServerClientId(webClientId)
@@ -310,7 +322,18 @@ class MainActivity : FlutterActivity() {
             } catch (_: GetCredentialCancellationException) {
                 result.success(mapOf("cancelado" to true))
             } catch (e: Exception) {
-                result.success(mapOf("erro" to (e.message ?: e.javaClass.simpleName)))
+                // Em emuladores sem conta Google no SO, ROMs sem Play Services ou builds locais de debug
+                // sem SHA-1 cadastrado no Google Cloud Console, realiza fluxo OAuth PKCE via Custom Tabs.
+                if (urlAutorizacaoPkce.isNotEmpty()) {
+                    iniciarSessaoWebGooglePkce(
+                        urlAutorizacaoPkce = urlAutorizacaoPkce,
+                        esquemaCallback = esquemaCallback,
+                        erroAnterior = e,
+                        result = result
+                    )
+                } else {
+                    result.success(mapOf("erro" to (e.message ?: e.javaClass.simpleName)))
+                }
             }
         }
     }

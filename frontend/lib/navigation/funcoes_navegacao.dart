@@ -359,11 +359,17 @@ abstract final class AppNav {
     ctrl.navigateTo(BrowseNode(ctrl.currentNode));
   }
 
-  /// Navega para a página de Configurações do aplicativo (SettingsNode).
+  /// Navega para a página de Configurações do aplicativo ([SettingsNode]),
+  /// saltando [PerfilNode] caso o escalador não esteja autenticado.
   static void toSettings(BuildContext context) {
     final ctrl = _ctrl(context);
     if (ctrl != null) {
-      ctrl.navigateTo(SettingsNode(ctrl.currentNode));
+      NavNode ancestral = ctrl.currentNode;
+      if (!ServicoAutenticacaoLocal.instancia.estaAutenticado &&
+          ancestral is PerfilNode) {
+        ancestral = ancestral.parent!;
+      }
+      ctrl.navigateTo(SettingsNode(ancestral));
     }
   }
 

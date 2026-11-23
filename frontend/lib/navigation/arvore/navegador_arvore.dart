@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../services/autenticacao/servico_autenticacao.dart';
 import 'modelo_arvore_navegacao.dart';
 import 'no_navegacao.dart';
 
@@ -11,14 +12,20 @@ import 'no_navegacao.dart';
 /// notificando ouvintes (`notifyListeners`) a cada transição de tela.
 class NavegadorArvore extends ChangeNotifier {
   ArvoreNavegacao _arvore;
+  final bool Function() _verificarUsuarioAutenticado;
 
   /// Permite que uma página intercepte o botão voltar do sistema ou da AppBar.
   ///
   /// Se retornar `true`, a navegação padrão da árvore é cancelada pois a página já tratou a ação.
   bool Function()? onBackInterceptor;
 
-  NavegadorArvore({ArvoreNavegacao? estadoInicial})
-      : _arvore = estadoInicial ?? const ArvoreNavegacao();
+  NavegadorArvore({
+    ArvoreNavegacao? estadoInicial,
+    bool Function()? verificarUsuarioAutenticado,
+  }) : _arvore = estadoInicial ?? const ArvoreNavegacao(),
+       _verificarUsuarioAutenticado =
+           verificarUsuarioAutenticado ??
+           (() => ServicoAutenticacaoLocal.instancia.estaAutenticado);
 
   /// Retorna o modelo de árvore atual.
   ArvoreNavegacao get arvore => _arvore;
@@ -44,7 +51,9 @@ class NavegadorArvore extends ChangeNotifier {
       return true;
     }
 
-    final proximaArvore = _arvore.voltar();
+    final proximaArvore = _arvore.voltar(
+      pularPerfil: !_verificarUsuarioAutenticado(),
+    );
     if (proximaArvore != null) {
       _arvore = proximaArvore;
       notifyListeners();

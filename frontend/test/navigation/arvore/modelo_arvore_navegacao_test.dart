@@ -94,6 +94,18 @@ void main() {
       expect(arvoreVoltou, isNotNull);
       expect(arvoreVoltou!.noAtual, isA<HomeNode>());
       expect(arvoreVoltou.profundidade, 1);
+
+      const arvoreComPerfil = ArvoreNavegacao(
+        noAtual: SettingsNode(PerfilNode(HomeNode())),
+      );
+      expect(
+        arvoreComPerfil.voltar(pularPerfil: false)!.noAtual,
+        isA<PerfilNode>(),
+      );
+      expect(
+        arvoreComPerfil.voltar(pularPerfil: true)!.noAtual,
+        isA<HomeNode>(),
+      );
     });
 
     test('irParaRaiz retorna diretamente para o nó Home raiz', () {
