@@ -123,10 +123,21 @@ void main() {
       final reqOtp = requisicoes.first;
       expect(reqOtp.url.toString(), equals('$urlBase/auth/v1/otp'));
       expect(reqOtp.headers['apikey'], equals(anonKey));
-      expect(reqOtp.headers['Authorization'], equals('Bearer $anonKey'));
+      expect(reqOtp.headers.containsKey('Authorization'), isFalse);
       expect(
         jsonDecode(reqOtp.body),
         equals({'email': 'atleta@aresta.com', 'create_user': true}),
+      );
+
+      // Chave anon legada em formato JWT (3 segmentos eyJ...) continua enviando Authorization: Bearer
+      const anonJwtLegado = 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.assinatura';
+      await cliente.solicitarCodigoOtpEmail(
+        email: 'atleta@aresta.com',
+        anonKey: anonJwtLegado,
+      );
+      expect(
+        requisicoes.last.headers['Authorization'],
+        equals('Bearer $anonJwtLegado'),
       );
 
       // Cooldown OTP -> ehErroUsuario = true e codigoStatusHttp = 429

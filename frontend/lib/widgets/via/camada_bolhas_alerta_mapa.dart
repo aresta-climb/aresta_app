@@ -6,6 +6,18 @@ import '../../view/view_models/alertas_mapa_interativo_view_model.dart';
 import 'bolha_alerta_seguranca_via.dart';
 import 'snackbar_flutuante_seguro.dart';
 
+/// Coordenada normalizada da ponta da cauda em `_PintorBolhaChatVermelha` (`x = 0.24`, `y = 1.0`).
+const Alignment _alinhamentoPontaCauda = Alignment(-0.52, 1.0);
+
+/// Deslocamento em pixels lógicos de tela para apoiar a ponta da cauda na borda superior-direita do nó.
+const double _deslocamentoTelaCaudaX = 5.0;
+const double _deslocamentoTelaCaudaY = -10.0;
+
+/// Caixa envolvente centrada na proporção `0.24` (`24 / 100`) para preservar área integral de toque em qualquer zoom.
+const double _larguraCaixaAncora = 100.0;
+const double _alturaCaixaAncora = 60.0;
+const double _ancoraHorizontalPonta = 24.0;
+
 /// Camada reativa (Dumb UI) que renderiza bolhas de alerta estilo Waze sobre o `MapaInterativoPage`,
 /// compensando inversamente o fator de zoom para manter tamanho constante de toque na tela.
 class CamadaBolhasAlertaMapa extends StatelessWidget {
@@ -87,16 +99,18 @@ class CamadaBolhasAlertaMapa extends StatelessWidget {
           children: bolhas.map((item) {
             final ancX = item.relX * larguraCanvas;
             final ancY = item.relY * alturaCanvas;
+            final pontaX = ancX + _deslocamentoTelaCaudaX * escalaInversa;
+            final pontaY = ancY + _deslocamentoTelaCaudaY * escalaInversa;
             return Positioned(
-              left: ancX - 40,
-              top: ancY - 48,
-              width: 80,
-              height: 48,
+              left: pontaX - _ancoraHorizontalPonta,
+              top: pontaY - _alturaCaixaAncora,
+              width: _larguraCaixaAncora,
+              height: _alturaCaixaAncora,
               child: Align(
-                alignment: Alignment.bottomCenter,
+                alignment: _alinhamentoPontaCauda,
                 child: Transform.scale(
                   scale: escalaInversa,
-                  alignment: Alignment.bottomCenter,
+                  alignment: _alinhamentoPontaCauda,
                   child: BolhaEmojiAlertaVia(
                     key: Key(
                       'bolha_mapa_${item.escaladaUid}_${item.alerta.categoria.codigoBanco}',

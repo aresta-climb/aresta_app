@@ -49,6 +49,22 @@ class ClienteSupabaseAutenticacao {
   String get _baseUrl =>
       _obterUrlSupabase().trim().replaceAll(RegExp(r'/+$'), '');
 
+  /// Monta os cabeçalhos de chamadas públicas do GoTrue (`/auth/v1/otp`, `/verify`, `/token`).
+  ///
+  /// Chaves opacas `sb_publishable_...` não são JWTs e devem ser enviadas apenas em `apikey`;
+  /// o cabeçalho `Authorization: Bearer` só é incluído quando a chave pública é um JWT legado (`eyJ...`).
+  static Map<String, String> _cabecalhosPublicosAuth(String anonKey) {
+    final chave = anonKey.trim();
+    return {
+      'apikey': chave,
+      if (_ehFormatoJwt(chave)) 'Authorization': 'Bearer $chave',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  static bool _ehFormatoJwt(String valor) =>
+      valor.split('.').length == 3 && valor.startsWith('eyJ');
+
   static Map<String, dynamic> _decodificarJsonSeguro(String corpo) {
     final limpo = corpo.trim();
     if (limpo.isEmpty) {
@@ -74,11 +90,7 @@ class ClienteSupabaseAutenticacao {
     final baseUrl = _baseUrl;
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/otp'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $anonKey',
-        'Content-Type': 'application/json',
-      },
+      headers: _cabecalhosPublicosAuth(anonKey),
       body: jsonEncode({
         'email': email.trim(),
         'create_user': true,
@@ -111,11 +123,7 @@ class ClienteSupabaseAutenticacao {
     final emailLimpo = email.trim();
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/verify'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $anonKey',
-        'Content-Type': 'application/json',
-      },
+      headers: _cabecalhosPublicosAuth(anonKey),
       body: jsonEncode({
         'type': 'email',
         'email': emailLimpo,
@@ -265,11 +273,7 @@ class ClienteSupabaseAutenticacao {
     final baseUrl = _baseUrl;
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/token?grant_type=id_token'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $anonKey',
-        'Content-Type': 'application/json',
-      },
+      headers: _cabecalhosPublicosAuth(anonKey),
       body: jsonEncode({
         'provider': provedor,
         'id_token': idToken,
@@ -356,11 +360,7 @@ class ClienteSupabaseAutenticacao {
 
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/token?grant_type=pkce'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $anonKey',
-        'Content-Type': 'application/json',
-      },
+      headers: _cabecalhosPublicosAuth(anonKey),
       body: jsonEncode({
         'auth_code': codigoPkce,
         'code_verifier': codeVerifier,
@@ -404,11 +404,7 @@ class ClienteSupabaseAutenticacao {
     final tokenLimpo = refreshToken.trim();
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/token?grant_type=refresh_token'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $anonKey',
-        'Content-Type': 'application/json',
-      },
+      headers: _cabecalhosPublicosAuth(anonKey),
       body: jsonEncode({'refresh_token': tokenLimpo}),
     );
 
