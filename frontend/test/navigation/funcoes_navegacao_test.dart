@@ -476,7 +476,24 @@ void main() {
         expect(controller.currentNode, isA<PerfilNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());
 
+        // Desautenticado em PerfilNode: toSettings salta PerfilNode reancorando em HomeNode
+        AppNav.toSettings(context);
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+        AppNav.back(context);
+        expect(controller.currentNode, isA<HomeNode>());
+
+        // A partir de HomeNode -> LoginNode, toSettings vai direto a SettingsNode pulando PerfilNode
+        AppNav.toLogin(context);
+        expect(controller.currentNode, isA<LoginNode>());
+        AppNav.toSettings(context);
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<LoginNode>());
+        AppNav.back(context);
+        expect(controller.currentNode, isA<LoginNode>());
+
         // A partir de PerfilNode, toLogin substitui pelo LoginNode reancorando no pai
+        AppNav.toPerfil(context);
         AppNav.toLogin(context);
         expect(controller.currentNode, isA<LoginNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/navigation/arvore/modelo_arvore_navegacao.dart';
 import 'package:frontend/navigation/arvore/navegador_arvore.dart';
 import 'package:frontend/navigation/arvore/nos_globais.dart';
 import 'package:frontend/navigation/arvore/nos_pico.dart';
@@ -88,6 +89,28 @@ void main() {
         expect(notificacoes, equals(1));
         expect(controller.currentNode, isA<SettingsNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());
+      },
+    );
+
+    test(
+      'goBack pula PerfilNode intermediário quando o escalador não está autenticado e mantém quando autenticado',
+      () {
+        var autenticado = false;
+        final controller = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: SettingsNode(PerfilNode(HomeNode())),
+          ),
+          verificarUsuarioAutenticado: () => autenticado,
+        );
+
+        expect(controller.goBack(), isTrue);
+        expect(controller.currentNode, isA<HomeNode>());
+
+        autenticado = true;
+        controller.navigateTo(PerfilNode(controller.currentNode));
+        controller.navigateTo(SettingsNode(controller.currentNode));
+        expect(controller.goBack(), isTrue);
+        expect(controller.currentNode, isA<PerfilNode>());
       },
     );
   });

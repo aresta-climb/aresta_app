@@ -23,7 +23,7 @@ Este diretório contém as telas e páginas principais de interação do usuári
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
 | `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |
 | `TermosDeUsoPage` | `termos_de_uso.dart` | Apresentação e aceite formal dos termos legais de uso do aplicativo. |
-| `LoginPage` | `login.dart` | Tela de autenticação sem senha protegida atrás de `ConfiguracaoRecursos.perfilHabilitado`, com suporte a Google (Android/iOS), Apple (apenas iOS), Magic Code OTP de 6 dígitos por e-mail e opção de continuar sem conta no modo offline. |
+| `LoginPage` | `login.dart` | Tela de autenticação sem senha protegida atrás de `ConfiguracaoRecursos.perfilHabilitado`, com suporte a Google (Android/iOS), Apple (apenas iOS), Magic Code OTP de 6 dígitos por e-mail e atalho `"Abrir configurações do app"` que salta a página de perfil na ida e na volta enquanto deslogado. |
 | `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Hub principal de identidade esportiva do atleta, exibindo avatar com botão de câmera para seleção e upload de foto no Supabase Storage, nome editável, métricas rápidas (cadenas, tentativas, picos, vias) e menu de navegação modular (entrar na conta, minha caderneta, configurações, dados/privacidade e saída). |
 | `CadernetaPage` | `caderneta.dart` | Visão detalhada da caderneta esportiva pessoal com gráfico da pirâmide de graduação (vias/boulders), histórico de ascensões e exclusão de registros. |
 | `PerfilPage` | `perfil.dart` | Exportação e alias canônico de compatibilidade para `HubPerfilCadernetaPage`. |

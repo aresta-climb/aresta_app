@@ -39,7 +39,7 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 
 | Widget | Responsabilidade |
 |---|---|
-| `BarraTopoLogin`, `CabecalhoTelaLogin`, `BotaoProvedorOAuthLogin`, `DivisorSecaoLogin`, `BannerAvisoLogin`, `CartaoCodigoEmailLogin`, `BotaoContinuarSemContaLogin` (`autenticacao/componentes_login.dart`) | Componentes visuais declarativos (Dumb UI) que compõem a tela de autenticação sem senha (`LoginPage`), desacoplando botões OAuth, banners de erro/informação e cartão em duas etapas do código OTP de 6 dígitos da lógica do `LoginViewModel`. |
+| `BarraTopoLogin`, `CabecalhoTelaLogin`, `BotaoProvedorOAuthLogin`, `DivisorSecaoLogin`, `BannerAvisoLogin`, `CartaoCodigoEmailLogin`, `BotaoAbrirConfiguracoesLogin` (`autenticacao/componentes_login.dart`) | Componentes visuais declarativos (Dumb UI) que compõem a tela de autenticação sem senha (`LoginPage`), desacoplando botões OAuth, banners de erro/informação, cartão em duas etapas do código OTP de 6 dígitos e atalho direto de configurações da lógica do `LoginViewModel`. |
 | `DialogoEditarPerfil` (`perfil/dialogos_hub_perfil.dart`) | Diálogo de edição do nome esportivo e seleção de nova foto de perfil com miniatura de pré-visualização ao vivo e descarte automático de `TextEditingController`. |
 | `ModalDadosPrivacidade` (`perfil/dialogos_hub_perfil.dart`) | Modal inferior exibindo a política de soberania de dados da caderneta e o identificador público NanoID 14c com botão de cópia rápida. |
 | `DialogoConfirmarSaida` e `DialogoConfirmarExclusaoConta` (`perfil/dialogos_hub_perfil.dart`) | Diálogos de confirmação de encerramento de sessão (preservando a caderneta local) e de exclusão permanente da conta autenticada e backup em nuvem (LGPD & Apple App Store 5.1.1(v)). |
