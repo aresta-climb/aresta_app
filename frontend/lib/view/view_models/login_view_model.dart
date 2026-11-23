@@ -25,8 +25,8 @@ class LoginViewModel extends ChangeNotifier {
   /// Callback opcional invocado após autenticação bem-sucedida.
   final VoidCallback? aoAutenticarComSucesso;
 
-  /// Callback opcional invocado quando o escalador opta por continuar sem conta (offline).
-  final VoidCallback? aoContinuarSemConta;
+  /// Callback opcional invocado quando o escalador abre as configurações do aplicativo sem conta.
+  final VoidCallback? aoAbrirConfiguracoes;
 
   final DateTime Function() _obterAgora;
   final List<DateTime> _historicoEnviosOtp = <DateTime>[];
@@ -44,7 +44,7 @@ class LoginViewModel extends ChangeNotifier {
   LoginViewModel({
     ServicoAutenticacao? servicoAutenticacao,
     this.aoAutenticarComSucesso,
-    this.aoContinuarSemConta,
+    this.aoAbrirConfiguracoes,
     DateTime Function()? obterAgora,
   }) : servicoAutenticacao =
            servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
@@ -290,10 +290,10 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
-  /// Aciona o fluxo de navegação para continuar usando o aplicativo sem conta (modo offline).
-  void continuarSemConta() {
+  /// Limpa alertas transitórios e aciona o atalho para abrir diretamente as configurações do aplicativo.
+  void abrirConfiguracoes() {
     _mensagemErro = null;
-    aoContinuarSemConta?.call();
+    aoAbrirConfiguracoes?.call();
   }
 
   @override

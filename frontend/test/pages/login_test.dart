@@ -74,7 +74,7 @@ void main() {
       expect(find.byKey(const Key('btn_login_apple')), findsNothing);
       expect(find.byKey(const Key('campo_login_email')), findsOneWidget);
       expect(find.textContaining('Senha'), findsNothing);
-      expect(find.text('Continuar sem conta / Offline'), findsOneWidget);
+      expect(find.text('Abrir configurações do app'), findsOneWidget);
     });
 
     testWidgets('no iOS exibe tanto Continuar com o Google quanto Continuar com a Apple e não exibe alerta quando cancelado', (tester) async {
@@ -153,7 +153,7 @@ void main() {
       expect(servicoFake.estaAutenticado, isTrue);
     });
 
-    testWidgets('navega para PerfilNode ao autenticar via Google, Apple (iOS) ou OTP e ao continuar sem conta', (tester) async {
+    testWidgets('navega direto para SettingsNode pulando PerfilNode ao abrir configurações sem conta (ida e volta) e para PerfilNode ao autenticar', (tester) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final syncService = SyncService(datasetRepository: datasetRepo);
       final treeController = TreeNavigationController(
@@ -182,12 +182,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 1. Continuar sem conta / Offline
-      await tester.ensureVisible(find.byKey(const Key('btn_continuar_sem_conta')));
-      await tester.tap(find.byKey(const Key('btn_continuar_sem_conta')));
+      // 1. Abrir configurações do app -> vai direto para SettingsNode pulando PerfilNode
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_abrir_configuracoes_login')),
+      );
+      await tester.tap(find.byKey(const Key('btn_abrir_configuracoes_login')));
       await tester.pumpAndSettle();
-      expect(treeController.currentNode, isA<PerfilNode>());
+      expect(treeController.currentNode, isA<SettingsNode>());
+      expect(treeController.currentNode.parent, isA<LoginNode>());
       expect(servicoFake.estaAutenticado, isFalse);
+
+      // Na volta deslogado, também pula PerfilNode (SettingsNode -> LoginNode -> HomeNode)
+      treeController.goBack();
+      expect(treeController.currentNode, isA<LoginNode>());
+      treeController.goBack();
+      expect(treeController.currentNode, isA<HomeNode>());
 
       // 2. Google -> PerfilNode
       treeController.navigateTo(const LoginNode(HomeNode()));

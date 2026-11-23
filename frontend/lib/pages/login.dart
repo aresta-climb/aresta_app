@@ -11,7 +11,7 @@ import '../widgets/autenticacao/componentes_login.dart';
 ///
 /// Apresenta provedores sociais in-app adequados à plataforma atual (Google em Android e iOS;
 /// Apple exclusivamente em iOS), autenticação por código OTP numérico de 6 dígitos enviado por e-mail
-/// e atalho explícito para continuar sem conta (modo offline), delegando estado ao [LoginViewModel].
+/// e atalho direto para abrir as configurações do aplicativo sem conta, delegando estado ao [LoginViewModel].
 class LoginPage extends StatefulWidget {
   /// ViewModel opcional injetado para testes ou controle externo.
   final LoginViewModel? viewModel;
@@ -99,10 +99,10 @@ class _LoginPageState extends State<LoginPage> {
     _vm.alterarEmailOtp();
   }
 
-  void _executarContinuarSemConta() {
-    _vm.continuarSemConta();
-    if (_vm.aoContinuarSemConta == null) {
-      AppNav.toPerfil(context);
+  void _executarAbrirConfiguracoes() {
+    _vm.abrirConfiguracoes();
+    if (_vm.aoAbrirConfiguracoes == null) {
+      AppNav.toSettings(context);
     }
   }
 
@@ -192,8 +192,8 @@ class _LoginPageState extends State<LoginPage> {
                           aoAlterarEmailOtp: _executarAlterarEmailOtp,
                         ),
                         const SizedBox(height: 10),
-                        BotaoContinuarSemContaLogin(
-                          aoPressionar: _executarContinuarSemConta,
+                        BotaoAbrirConfiguracoesLogin(
+                          aoPressionar: _executarAbrirConfiguracoes,
                         ),
                       ],
                     ),

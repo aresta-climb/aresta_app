@@ -163,10 +163,10 @@ void main() {
     });
 
     test('trata ExcecaoAutenticacaoCancelada silenciosamente e diferencia offline (logAviso) de erro real (logError)', () async {
-      var continuouOffline = 0;
+      var abriuConfiguracoes = 0;
       final vm = LoginViewModel(
         servicoAutenticacao: servicoFake,
-        aoContinuarSemConta: () => continuouOffline++,
+        aoAbrirConfiguracoes: () => abriuConfiguracoes++,
       );
 
       // 1. Cancelamento voluntário no Google/Apple: sem mensagemErro e sem logError
@@ -222,8 +222,8 @@ void main() {
       );
       expect(mockLogger.recordedErrors.length, equals(2));
 
-      vm.continuarSemConta();
-      expect(continuouOffline, equals(1));
+      vm.abrirConfiguracoes();
+      expect(abriuConfiguracoes, equals(1));
       expect(vm.mensagemErro, isNull);
 
       vm.dispose();

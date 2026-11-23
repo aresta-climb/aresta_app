@@ -478,13 +478,13 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
   }
 }
 
-/// Botão declarativo para continuar usando o aplicativo sem conta (modo offline).
-class BotaoContinuarSemContaLogin extends StatelessWidget {
-  /// Callback acionado ao escolher continuar sem conta.
+/// Botão declarativo da tela de login para abrir diretamente as configurações do aplicativo sem conta.
+class BotaoAbrirConfiguracoesLogin extends StatelessWidget {
+  /// Callback acionado ao escolher abrir as configurações do aplicativo.
   final VoidCallback aoPressionar;
 
-  /// Cria uma instância de [BotaoContinuarSemContaLogin].
-  const BotaoContinuarSemContaLogin({
+  /// Cria uma instância de [BotaoAbrirConfiguracoesLogin].
+  const BotaoAbrirConfiguracoesLogin({
     super.key,
     required this.aoPressionar,
   });
@@ -493,7 +493,7 @@ class BotaoContinuarSemContaLogin extends StatelessWidget {
   Widget build(BuildContext context) {
     final cores = context.colors;
     return TextButton(
-      key: const Key('btn_continuar_sem_conta'),
+      key: const Key('btn_abrir_configuracoes_login'),
       onPressed: aoPressionar,
       style: TextButton.styleFrom(
         foregroundColor: cores.ashGrey,
@@ -507,14 +507,14 @@ class BotaoContinuarSemContaLogin extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.offline_bolt_outlined,
+            Icons.settings_outlined,
             size: 18,
             color: cores.dryMoss,
           ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              'Continuar sem conta / Offline',
+              'Abrir configurações do app',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: cores.chalkWhite.withValues(alpha: 0.9),

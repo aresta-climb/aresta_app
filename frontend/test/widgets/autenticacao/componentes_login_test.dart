@@ -15,9 +15,9 @@ void main() {
   }
 
   group('Componentes declarativos da tela de Login Sem Senha (Dumb UI)', () {
-    testWidgets('BarraTopoLogin, CabecalhoTelaLogin, DivisorSecaoLogin, BannerAvisoLogin e BotaoContinuarSemContaLogin renderizam e acionam callbacks', (tester) async {
+    testWidgets('BarraTopoLogin, CabecalhoTelaLogin, DivisorSecaoLogin, BannerAvisoLogin e BotaoAbrirConfiguracoesLogin renderizam e acionam callbacks', (tester) async {
       var voltou = false;
-      var continuouOffline = false;
+      var abriuConfiguracoes = false;
 
       await tester.pumpWidget(
         envolverComTema(
@@ -35,8 +35,8 @@ void main() {
                 icone: Icons.info_outline,
                 corDestaque: Colors.orange,
               ),
-              BotaoContinuarSemContaLogin(
-                aoPressionar: () => continuouOffline = true,
+              BotaoAbrirConfiguracoesLogin(
+                aoPressionar: () => abriuConfiguracoes = true,
               ),
             ],
           ),
@@ -48,12 +48,16 @@ void main() {
       expect(find.text('Subtítulo sem senha'), findsOneWidget);
       expect(find.text('ou receba um código por e-mail'), findsOneWidget);
       expect(find.text('Mensagem de alerta'), findsOneWidget);
+      expect(find.text('Abrir configurações do app'), findsOneWidget);
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('btn_voltar_login')));
       expect(voltou, isTrue);
 
-      await tester.tap(find.byKey(const Key('btn_continuar_sem_conta')));
-      expect(continuouOffline, isTrue);
+      await tester.tap(
+        find.byKey(const Key('btn_abrir_configuracoes_login')),
+      );
+      expect(abriuConfiguracoes, isTrue);
     });
 
     testWidgets('BotaoProvedorOAuthLogin renderiza distintivo, rótulo e dispara callback quando habilitado', (tester) async {
