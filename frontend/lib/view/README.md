@@ -1,60 +1,59 @@
-# Camada de Apresentação e Visualização (`lib/view/`)
+# Camada de Apresentação (`lib/view/`)
 
-Este diretório concentra a camada de apresentação e visualização da aplicação Aresta Climb, organizada segundo o padrão de arquitetura **MVVM (Model-View-ViewModel)** e o princípio **Feature-First**.
-
-A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos e focados na composição do Scaffold, ciclo de vida do Flutter e integração com o sistema de navegação reativa (`PageListenableBuilder`). Todo o trabalho de montagem de componentes visuais, callbacks, cálculo de dados derivados de tela e formatação é delegado a este módulo.
+Este diretório contém os construtores de interface (`function_library/`) e os ViewModels (`view_models/`) segundo o padrão **MVVM**. As páginas em `lib/pages/` delegam formatação, estado e comandos para esta camada.
 
 ---
 
-## Estrutura de Diretórios
+## Estrutura
 
 ```text
 lib/view/
-├── function_library/             - Biblioteca de funções construtoras de UI e callbacks
-│   ├── biblioteca_funcoes_comuns.dart - Componentes base, menus suspensos e barras de navegação
-│   ├── funcoes_explorar.dart     - Construtores de tela e lógica da página Explorar
-│   ├── funcoes_home.dart         - Renderizadores da tela inicial e carrossel
-│   ├── pico_functions.dart       - Cabeçalho, botões e seções da página do Pico
-│   ├── setor_functions.dart      - Listagem de vias, badges FEMEMG e itens de setor
-│   ├── via_functions.dart        - Corpo declarativo da ViaPage (`CorpoDetalhesVia`) e utilitários puros de ordenação/formatação de grau e proteções
-│   ├── comunidade_functions.dart - Links e ações do hub comunitário
-│   ├── grupo_functions.dart      - Resumo e listagem de subsetores
-│   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
-│   ├── funcoes_caderneta.dart    - Seção de histórico, cards de ascensão e diálogo de exclusão
-│   ├── funcoes_hub_perfil_caderneta.dart - Avatar/câmera, cabeçalho, métricas em cards e menu do Hub de Perfil
-│   ├── funcoes_configuracoes.dart - Conexão com Editor Desktop, QR Code e temas
-│   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
-│   ├── markdown_offline.dart     - Renderização de Markdown com imagens em disco
-│   ├── sintaxe_tag_small.dart    - Sintaxe inline para reconhecimento de tags <small>
-│   ├── construtor_elemento_small.dart - Construtor visual de elementos de fonte reduzida
-│   ├── gps_functions.dart        - Utilitários de geolocalização e mapas
+├── function_library/                     - Funções e widgets declarativos por tela
+│   ├── biblioteca_funcoes_comuns.dart    - AppBar padrão (com BotaoVoltarComRetornoInicio), barra inferior, busca e feedback
+│   ├── funcoes_home.dart                 - Seções e abertura de croquis da Home
+│   ├── funcoes_explorar.dart             - Lista, ordenação e progresso de download do Explorar
+│   ├── pico_functions.dart               - Cabeçalhos, cartões e PicoSearchDelegate
+│   ├── grupo_functions.dart              - Listagem de subsetores de um grupo
+│   ├── setor_functions.dart              - Itens de vias e rótulos de setor
+│   ├── via_functions.dart                - CorpoDetalhesVia e conversão de graus/proteções
+│   ├── meus_croquis_functions.dart       - Lista de croquis baixados
+│   ├── comunidade_functions.dart         - Cartões e links da aba Comunidade
+│   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho com avatar/câmera, métricas e menu do Perfil
+│   ├── funcoes_caderneta.dart            - Histórico de ascensões e confirmação de exclusão
+│   ├── funcoes_configuracoes.dart        - Tema, preferências e conexão com Editor Desktop
+│   ├── sobre_time_functions.dart         - Cartões e dados dos integrantes
+│   ├── gps_functions.dart                - Auxiliares da tela de GPS
+│   ├── markdown_offline.dart             - Renderizador Markdown com leitura de imagens em disco
+│   ├── sintaxe_tag_small.dart            - Parser da tag <small> em Markdown
+│   ├── construtor_elemento_small.dart    - Renderização da tag <small> (escala 80%)
 │   └── mapa/
-│       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
-│       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
-└── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
-    ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google e Apple OAuth, e-mail/senha, criação de conta e modo offline)
-    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão, exclusão de conta e métricas
-    ├── edicao_perfil_view_model.dart - Estado e normalização do diálogo de edição de nome e foto do perfil
-    ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
-    ├── via_view_model.dart       - Estado reativo da ViaPage, comandos de compartilhamento/telemetria/Pix/alertas e modelos visuais delegados ao `ExtratorDetalhesTecnicosVia`
-    ├── formulario_alerta_via_view_model.dart - Estado e formatação do formulário e modal de alertas estilo Waze na ViaPage
-    ├── secao_caderneta_via_view_model.dart - Estado reativo do bloco pessoal de ascensões dentro da ViaPage
-    ├── registro_cadena_view_model.dart - Estado unificado de registro/edição de cadena pessoal + opções pré-formatadas de grau (`-2..+2`) e comentário público
-    ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
-    ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
-    ├── comunidade_view_model.dart - Estado de links e mídias sociais comunitárias
-    ├── home_view_model.dart      - Estado do carrossel principal e listas locais
-    ├── mapa_global_view_model.dart - Estado dos marcadores e coordenadas do mapa global
-    ├── mapa_pico_view_model.dart - Apresentação e coordenadas de picos para o Google Maps
-    ├── meus_croquis_view_model.dart - Estado de filtragem e remoção de croquis baixados
-    ├── pico_proximo_view_model.dart - Cálculo de distâncias e proximidade do usuário
-    ├── pico_view_model.dart      - Estado de subpáginas e estatísticas do pico ativo
-    └── configuracoes_view_model.dart - Estado do modo de desenvolvedor e preferências
+│       ├── mapa_global_functions.dart    - Marcadores, faixas de zoom e bottom sheet do Mapa Global
+│       └── mapa_marker.dart              - Desenho via Canvas dos marcadores de mapa
+└── view_models/                          - Gerenciamento de estado e comandos de tela
+    ├── login_view_model.dart             - Fluxo sem senha (OTP de 6 dígitos por e-mail, Google e Apple)
+    ├── hub_perfil_caderneta_view_model.dart - Estado do perfil, foto, métricas, saída e exclusão de conta
+    ├── edicao_perfil_view_model.dart     - Estado do diálogo de edição de nome e foto
+    ├── perfil_view_model.dart            - Estatísticas, histórico de cadenas e alertas do usuário na Caderneta
+    ├── via_view_model.dart               - Estado da ViaPage, votação de grau, alertas com desfazer, Pix e compartilhamento
+    ├── formulario_alerta_via_view_model.dart - Seleção de categoria (`Fauna` padrão) e formatação dos modais de alerta
+    ├── alertas_mapa_interativo_view_model.dart - Projeção e confirmação de bolhas de alerta sobre o croqui interativo
+    ├── secao_caderneta_via_view_model.dart - Resumo pessoal de ascensões dentro da ViaPage
+    ├── registro_cadena_view_model.dart   - Registro/edição de cadena, voto de grau e nota pública opcional
+    ├── home_view_model.dart              - Estado da Home e picos próximos
+    ├── explorar_view_model.dart          - Busca, ordenação e downloads da aba Explorar
+    ├── meus_croquis_view_model.dart      - Listagem e exclusão de croquis locais
+    ├── pico_view_model.dart              - Estado online/offline, polling ETag e ações do Pico
+    ├── mapa_global_view_model.dart       - Marcadores e estado do Mapa Global
+    ├── mapa_pico_view_model.dart         - Coordenadas e título de pico para o Google Maps
+    ├── card_croqui_view_model.dart       - Dados de apresentação de cartões de croqui
+    ├── pico_proximo_view_model.dart      - Distância geográfica até o usuário e status offline
+    ├── comunidade_view_model.dart        - Links comunitários
+    └── configuracoes_view_model.dart     - Preferências e modo de desenvolvedor
 ```
 
 ---
 
-## 1. Biblioteca de Funções (`function_library/`)
+## 1. `function_library/`
 
 Os arquivos da `function_library` são coleções de funções e construtores de widgets (`build...`) que recebem dados fortemente tipados e o `BuildContext`, retornando a árvore de widgets correspondente:
 
