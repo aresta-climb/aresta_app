@@ -1,54 +1,32 @@
-# Testes de Serviços
+# Testes de Serviços (`test/services/`)
 
-Esta pasta contém os testes unitários dos serviços principais da aplicação. Os serviços testados aqui são responsáveis por lógica de negócio central, autenticação com o Supabase, seleção nativa de mídia, gerenciamento de configuração e sincronização de dados.
+Este diretório contém os testes unitários dos serviços de `lib/services/` e das bibliotecas de Fakes determinísticos (`*_fake.dart`) usadas nos testes de camadas superiores.
 
-## Arquivos
+## Principais Suítes
 
-| Arquivo | Serviço testado | Descrição |
-|---|---|---|
-| `autenticacao/autenticador_nativo_test.dart` | `AutenticadorNativoCanal` | Testa o canal nativo `app.escalada.croquis/autenticacao_nativa` para obtenção de `id_token` (`CredentialManager` / Apple) e `callbackUrl` PKCE in-app (`ASWebAuthenticationSession`), cancelamento voluntário e diagnóstico de erros nativos |
-| `autenticacao/cliente_supabase_autenticacao_test.dart` | `ClienteSupabaseAutenticacao` | Testa os fluxos sem senha com o Supabase GoTrue (`/auth/v1/otp`, `/auth/v1/verify`, `grant_type=id_token` e `grant_type=pkce`), cancelamento voluntário (`ExcecaoAutenticacaoCancelada`) e classificação `ExcecaoComStatusHttp` |
-| `autenticacao/sincronizador_perfil_supabase_test.dart` | `SincronizadorPerfilSupabase` | Testa consulta e upsert em `public.perfis`, upload de fotos WebP no Supabase Storage, atualização no GoTrue (`PUT /auth/v1/user`) e encaminhamento de erros com `StackTrace` ao `AppLogger` |
-| `autenticacao/tradutor_erros_autenticacao_test.dart` | `tradutor_erros_autenticacao.dart` | Testa tradução de códigos OTP/cooldown/OAuth para português, classificação `ehErroEntradaUsuarioServidor` e desafios PKCE (`S256`) |
-| `autenticacao/servico_autenticacao_test.dart` | `ServicoAutenticacaoLocal` | Testa validação de e-mail e código OTP de 6 dígitos, falha explícita (*Fail-Fast*) sem `anonKey`, preservação do `autorIdPublico` (NanoID 14c), sincronização remota e encerramento de sessão |
-| `autenticacao/servico_autenticacao_fake_test.dart` | `ServicoAutenticacaoFake` | Valida a biblioteca `test-only` de Fake determinístico em memória de autenticação sem senha |
-| `midia/seletor_foto_perfil_test.dart` | `SeletorFotoPerfilNativo` | Testa a invocação do canal nativo `app.escalada.croquis/seletor_midia`, retorno e conversão para o Data URI `data:image/webp;base64,...`, cancelamento pelo usuário e resiliência a `PlatformException` |
-| `caderneta/repositorio_caderneta_test.dart` | `RepositorioCadernetaLocal` | Testa persistência e reatividade de cadenas e perfil do escalador |
-| `caderneta/armazenamento_local_caderneta_test.dart` | `ArmazenamentoLocalCaderneta` | Testa serialização em `SharedPreferences` e recuperação contra payloads corrompidos |
-| `caderneta/compilador_estatisticas_test.dart` | `CompiladorEstatisticasCaderneta` | Testa cálculo de pirâmides de graus (vias e boulders), recordes pessoais e fallback por `grauSugerido` |
-| `caderneta/catalogo_vias_caderneta_test.dart` | `CatalogoViasCaderneta` | Testa hidratação reativa de nomes, graus e contagem de picos a partir de `catalogo.db` e croquis em memória |
-| `editor_croqui_test.dart` | `EditorDeCroqui` | Testa lógica de modos (oficial, editor, experimental), cálculo de caminhos (`downloadsPath`, `indicePath`) e notificadores de estado |
-| `experimental_mode_test.dart` | `EditorDeCroqui` | Testa o comportamento do Modo Experimental: persistência de URL na desconexão e limpeza total (Nuke) |
-| `repositorio_dataset_test.dart` | `DatasetRepository` | Testa estado público do repositório, mapeamento de propriedades (ex: descrição) e inicializações tipadas |
-| `sync_rede_test.dart` | `SyncNetwork` | Testa a leitura HTTP com retentativas, ETags (304 Not Modified) e timeouts |
-| `sync_armazenamento_test.dart` | `SyncStorage` | Testa a persistência atômica usando arquivos `.tmp` e a extração do `indice.binarypb` |
-| `sync_status_timer_test.dart` | `SyncStatusTimer` | Testa o debouncer do status de sync que previne *flickering* rápido na UI |
-| `sync_service_test.dart` | `SyncService` | Testes de sincronização atômica, checagem de hashes SHA-256 e extração de imagens Markdown |
-| `configuracao_recursos_test.dart` | `ConfiguracaoRecursos` | Testa leitura de variáveis de compilação (`--dart-define`), validação de chaves de acesso secretas e controle de ativação de recursos |
-| `firebase/remote_config_test.dart` | `RemoteConfigService` | Testa fallbacks de configuração remota (incluindo `supabaseUrl` e `supabaseAnonKey`), cache e resiliência offline |
-| `feedback/feedback_queue_service_test.dart` | `FeedbackQueueService` | Testa o enfileiramento na fila local e a integração com o repositório de persistência |
-| `feedback/feedback_metadata_collector_test.dart` | `FeedbackMetadataCollector` | Testa a coleta correta dos metadados de telemetria do dispositivo e auditoria de hashes |
-| `feedback/feedback_network_service_test.dart` | `FeedbackNetworkService` | Testa envio multipart protegido por App Check para o backend Supabase |
-| `feedback/gatilho_feedback_rede_test.dart` | `NetworkFeedbackTrigger` | Testa disparo automático de envio quando a conectividade é restabelecida |
-| `feedback/tarefa_feedback_test.dart` | `TarefaFeedback` | Testa modelo de tarefas da fila de persistência atômica em disco |
-| `dataset/gerenciador_arquivos_locais_test.dart` | `GerenciadorArquivosLocais` | Testa operações diretas de arquivos e diretórios de croquis no disco local |
-| `dataset/gerenciador_sessao_online_test.dart` | `GerenciadorSessaoOnline` | Testa gestão de croquis em memória RAM e cache volátil sob demanda |
-| `dataset/metadados/extrator_metadados_croqui_test.dart` | `ExtratorMetadadosCroqui` | Testa vinculação de entidades `Croqui`/`Pico` ao `ResumoPico` sem I/O antecipado de capas e extração de caminhos de capa em Markdown |
+| Pasta / Arquivo | Escopo |
+|---|---|
+| `autenticacao/` | `AutenticadorNativoCanal`, `ClienteSupabaseAutenticacao` (OTP, `id_token`, PKCE e chaves `sb_publishable_...`), `SincronizadorPerfilSupabase`, `tradutor_erros_autenticacao.dart`, `ServicoAutenticacaoLocal` e `ServicoAutenticacaoFake` |
+| `midia/` | `SeletorFotoPerfilNativo` e `SeletorFotoPerfilFake` no canal `app.escalada.croquis/seletor_midia` |
+| `caderneta/` | `ArmazenamentoLocalCaderneta`, `RepositorioCadernetaLocal`, `ClienteCadenasSupabase`, `CompiladorEstatisticasCaderneta` e `CatalogoViasCaderneta` |
+| `comunidade/` | `ArmazenamentoFilaInteracoes`, `ClienteFilaInteracoesSupabase`, `ClienteFilaInteracoesFake`, `RepositorioInteracoesViaMemoria` e `RepositorioInteracoesViaFake` |
+| `catalogo/` | `RepositorioCatalogo` (`catalogo.db` em SQLite, sincronização incremental e buscas por texto/UID) |
+| `dataset/` e `repositorio_dataset_test.dart` | `DatasetRepository`, `GerenciadorArquivosLocais`, `GerenciadorSessaoOnline`, `NormalizadorCroqui` e `ExtratorMetadadosCroqui` |
+| `http/` e `sync_*_test.dart` | `ClienteHttpAresta`, `SyncService`, `SyncIsolate`, `SyncNetwork`, `SyncStorage`, `ServicoCroquiOnline` e `ServicoDownloadSegundoPlano` |
+| `editor_croqui_test.dart` e `experimental_mode_test.dart` | Alternância entre modo oficial e experimental, caminhos em disco e limpeza de sessão (`nukeExperimentalData`) |
+| `feedback/` | Fila local, coleta de metadados, auditoria de hashes SHA-256 e envio multipart |
+| `firebase/` | `AppLogger`, `RemoteConfigService`, `TelemetryService`, `ServicoPerformance`, `ClassificadorDispositivo` e `ValidadorApp` |
+| `configuracao_recursos_test.dart` e `controlador_interacoes_usuario_test.dart` | Flags de compilação e preferência local de exibição da caderneta |
 
-## Como executar
+## Execução
 
 ```bash
-# Todos os testes desta pasta
 flutter test test/services/
-
-# Testes de autenticação e Supabase
 flutter test test/services/autenticacao/
-
-# Um arquivo específico
-flutter test test/services/editor_croqui_test.dart
+flutter test test/services/comunidade/
 ```
 
 ## Notas
 
-- Os testes criam arquivos temporários em `Directory.systemTemp` e os removem após cada teste.
-- Testes que dependem de `getApplicationDocumentsDirectory()` utilizam diretórios temporários injetados ou binding explícito do Flutter.
+- Arquivos temporários usam `Directory.systemTemp` e são removidos em `tearDown`.
+- Testes de `SyncService` e `SyncIsolate` que cruzam fronteiras de `Isolate` utilizam `HttpServer.bind(InternetAddress.loopbackIPv4, 0)`.
