@@ -1,78 +1,50 @@
-# Arquitetura Principal do Aplicativo Aresta Climb
+# Arquitetura de `lib/` — Aresta Climb
 
-Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em como os dados são buscados, gerenciados e apresentados ao usuário. O aplicativo consiste em uma camada de **Serviços** para o gerenciamento de dados, uma camada de **Apresentação e Visualização** (`lib/view/`) contendo funções de interface (`function_library/`) e modelos de apresentação (`view_models/`), e uma camada de **Páginas** para roteamento e layout.
+Este documento descreve a organização dos módulos em `frontend/lib/`. O código segue o padrão **MVVM**: páginas e widgets apenas renderizam estado e encaminham eventos aos ViewModels, que consultam repositórios e serviços.
+
+---
 
 ## 1. Camada de Serviços (`lib/services/`)
 
-A camada de serviços é responsável pelo gerenciamento de estado do aplicativo e da arquitetura baseada em **MVVM**. Classes geradas via **Protobuf** (`ResumoCroqui`, `Indice`, `Croqui`) atuam como nossos **Models** fortemente tipados. O `DatasetRepository` atua como o repositório principal de guias.
+Gerencia persistência local, chamadas HTTP, sincronização em segundo plano, autenticação e telemetria. Mensagens Protobuf (`Indice`, `ResumoCroqui`, `Croqui`) e classes em `lib/data/modelos/` compõem os modelos de domínio.
 
 ### `DatasetRepository` (`repositorio_dataset.dart` e `dataset/`)
-O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local e das sessões online até as camadas reativas da interface. Foi decomposto em submódulos desacoplados de responsabilidade única:
+Repositório central dos guias de escalada:
+- **`dataset/modelos/`**: Estrutura `TopoDataset` e metadados em memória.
+- **`dataset/normalizador_croqui.dart`**: Normaliza estruturas `Croqui`, `Pico` e `Mapa` na leitura para o formato v5 (preenchendo `uid`, `rotulo`, `alvoUid` e `pontosUids`).
+- **`dataset/armazenamento/`**: Leitura e escrita em `<app_docs>/downloads/<pico_id>/`.
+- **`dataset/metadados/`**: Ordenação de acesso recente (`recent_picos.yaml`) e extração de metadados.
+- **`dataset/sessao_online/`**: Cache em RAM e em `/temp_cache` para croquis abertos sem download permanente.
 
-- **`dataset/modelos/`**: Modelo de dados em memória `TopoDataset` e tipos auxiliares fortemente tipados.
-- **`dataset/normalizador_croqui.dart`**: Utilitário central de normalização in-place (`NormalizadorCroqui`) executado na leitura de bytes ou desserialização de croquis (`Croqui`, `Pico`, `Mapa`). Garante que entidades legadas recebam UIDs canônicos sintéticos, mapas migrem `label` para `rotulo` e `id` para `uid`, e referências preencham `alvoUid` e `pontosUids`, assegurando que toda a UI opere exclusivamente na especificação v5 sem branches legados.
-- **`dataset/armazenamento/`**: `GerenciadorArmazenamento` responsável pela estrutura de diretórios em `<app_docs>/downloads/<pico_id>/` e integridade física.
-- **`dataset/metadados/`**: `FormatadorMetadados` e `GerenciadorPrioridade` para ordenação, normalização e manipulação de `recent_picos.yaml`.
-- **`dataset/sessao_online/`**: `GerenciadorSessaoOnline` responsável pelo gerenciamento de croquis visualizados sob demanda na RAM e cache volátil (`/temp_cache`), além de notificações de atualização de versão via ETag.
+### Autenticação, Mídia, Caderneta e Comunidade (`autenticacao/`, `midia/`, `caderneta/`, `comunidade/`)
+- **`ServicoAutenticacaoLocal`**: Coordena login sem senha (código OTP de 6 dígitos por e-mail, Google e Apple), atualização de perfil, saída e exclusão de conta, mantendo o `autorIdPublico` (NanoID 14c) e as cadenas locais.
+- **`ClienteSupabaseAutenticacao` e `SincronizadorPerfilSupabase`**: Comunicam-se com Supabase Auth (`/auth/v1`), tabela `public.perfis` (`/rest/v1/perfis`), RPC `excluir_minha_conta` e bucket `avatars` no Supabase Storage.
+- **`SeletorFotoPerfilNativo`**: Usa o canal `app.escalada.croquis/seletor_midia` (Android e iOS) para corrigir EXIF, recortar a imagem em `256x256` e comprimir em WebP (`data:image/webp;base64,...`).
+- **`RepositorioCadernetaLocal`, `ClienteCadenasSupabase` e `CatalogoViasCaderneta`**: Armazenam ascensões localmente, sincronizam com `public.cadenas`, calculam estatísticas (`CompiladorEstatisticasCaderneta`) e resolvem nomes/graus de vias pelo `catalogo.db` e memória.
+- **`RepositorioInteracoesViaMemoria` e `ClienteFilaInteracoesSupabase`**: Sincronizam votos de grau (`-2` a `+2`), comentários públicos e alertas de segurança (`FAUNA`, `ROCHA_AGARRA_INSTAVEL`, `PROTECAO_PRECARIA`, `EXPOSICAO_E4_MAIS`) com `public.fila_interacoes`, mantendo fila offline e deduplicação por `autorIdPublico`.
 
-### Autenticação, Mídia Nativa e Caderneta (`autenticacao/`, `midia/` e `caderneta/`)
-Subsistema responsável pela identidade esportiva do escalador, autenticação com o Supabase e gestão local-first da caderneta de ascensões:
-
-- **`ServicoAutenticacaoLocal` (`autenticacao/servico_autenticacao.dart`)**: Opera exclusivamente sem senha e sob filosofia *Fail-Fast* (sem contas fictícias em produção), coordenando Magic Code OTP de 6 dígitos por e-mail, login in-app Google/Apple e atualização remota de perfil, e persistindo o `PerfilEscalador` no `RepositorioCaderneta` preservando o `autorIdPublico` (NanoID 14c) e as cadenas registradas offline.
-- **`ClienteSupabaseAutenticacao` (`autenticacao/cliente_supabase_autenticacao.dart`)**: Isola os protocolos sem senha com o Supabase GoTrue (`/auth/v1/otp`, `/auth/v1/verify`, `/auth/v1/token?grant_type=id_token`, `/auth/v1/token?grant_type=pkce` via `ASWebAuthenticationSession` e `/auth/v1/user`), o espelhamento em `public.perfis` via PostgREST (`/rest/v1/perfis`) e o upload de fotos de perfil para o bucket `avatars` no Supabase Storage (`/storage/v1/object/avatars/<userId>/avatar.webp`).
-- **`SeletorFotoPerfilNativo` (`midia/seletor_foto_perfil.dart`)**: Aciona o canal nativo `app.escalada.croquis/seletor_midia` (implementado em Kotlin no Android via `GetContent` + `ExifInterface` + `Bitmap` e em Swift no iOS via `UIImagePickerController`) para selecionar uma imagem da galeria, corrigir sua orientação EXIF, recortá-la em quadrado central `256x256` e comprimi-la em WebP (`data:image/webp;base64,...`).
-- **`RepositorioCadernetaLocal` e `CatalogoViasCaderneta` (`caderneta/`)**: Gerenciam a persistência local de ascensões (`Cadena`) e perfil (`PerfilEscalador`), a compilação da pirâmide de graus (`CompiladorEstatisticasCaderneta`) e a resolução reativa de nomes de vias, graus e picos a partir do `catalogo.db` e dos croquis em memória.
-
-### Módulo HTTP e Conectividade (`http/`)
-Diretório isolado que retém todas as responsabilidades que interagem com tráfego de rede, conexões externas, downloads em background e streaming sob demanda.
-
-- **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Em `syncIndex()`, executa um fluxo em duas fases: na Fase 1 (rápida), aguarda apenas o download condicional de `indice.binarypb` e a sincronização delta de `catalogo.db` (`sincronizarCatalogoSeNecessario`), retornando imediatamente com deduplicação por janela de *cooldown* de 30s; na Fase 2 (em segundo plano via `tarefaMidiasEmSegundoPlano`), sincroniza *thumbnails*, atualiza picos baixados via `Isolate`, realiza o *commit* atômico dos arquivos `.tmp` antes de publicar o novo `activeDataset` e recarrega reativamente croquis abertos em sessão online cujo SHA-256 mudou. Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para que a UI notifique o usuário quando croquis forem alterados.
-- **`SyncIsolate` (`sync_isolate.dart`)**: Executa as validações pesadas de integridade (SHA256) e gere o fluxo das Delta Syncs (baixando apenas arquivos que mudaram) em uma thread separada para não causar travamentos ou "lag" na UI.
-- **`SyncNetwork` (`sync_rede.dart`)**: Responsável pela comunicação HTTP de sincronização, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
-- **`SyncStorage` (`sync_armazenamento.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
-- **`ServicoCroquiOnline` (`servico_croqui_online.dart`)**: Baixa arquivos `.binarypb` sob demanda em milissegundos para navegação imediata sem exigir download prévio e executa polling periódico leve de ETag.
-- **`ServicoDownloadSegundoPlano` (`servico_download_segundo_plano.dart`)**: Realiza downloads permanentes resilientes em segundo plano com notificações persistentes (`ongoing: true`).
-- **`UpdateDownloader` (`baixador_atualizacoes.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
+### Rede e Sincronização (`http/`)
+- **`ClienteHttpAresta`**: Único ponto de acesso ao pacote `http`, mantendo pool de conexões Keep-Alive.
+- **`SyncService`**: Executa sincronização em duas fases: Fase 1 valida `indice.binarypb` e atualiza `catalogo.db`; Fase 2 baixa miniaturas e atualiza croquis salvos em background.
+- **`SyncIsolate`, `SyncNetwork` e `SyncStorage`**: Executam download HTTP com suporte a ETag (`304`), validação SHA-256 em `Isolate` e gravação via arquivo `.tmp` antes da substituição final (`compilado.binarypb`).
+- **`ServicoCroquiOnline` e `ServicoDownloadSegundoPlano`**: Carregam croquis sob demanda com `?v=<sha256>` e gerenciam downloads em segundo plano com notificação nativa.
 
 ### `EditorDeCroqui` (`editor_croqui.dart`)
-O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.
+Alterna entre o contexto oficial (CDN) e o contexto experimental (Editor Desktop via WebSocket e diretórios isolados em `editor/experimental/`). Limpa os dados experimentais ao reiniciar o aplicativo ou encerrar a sessão.
 
-- **Modos de operação**:
-  - **Oficial**: Dados do servidor CDN/GitHub Pages. URL base: `https://aresta-climb.github.io/aresta_serving`.
-  - **Experimental / Live Reload**: Conexão com Editor Desktop via WebSocket e Live Reload.
-- **Persistência**: Salva o estado em `editor_config.yaml` para sobreviver reinicializações parciais e limpa dados experimentais ao reiniciar do zero.
-
-### Integração Firebase (`firebase/`)
-Subdiretório responsável por isolar o SDK do Firebase do restante da aplicação. Contém serviços para inicialização centralizada, Firebase App Check (atestação de integridade para Play Integrity / App Attest), Remote Config (incluindo fallbacks de URL e chave pública do Supabase), Telemetry (Analytics) e `ServicoPerformance` (`performance_telemetria.dart`). O `ServicoPerformance` instrumenta 8 jornadas críticas de usabilidade (`cold_start_home`, `cold_start_deep_link`, `warm_start_deep_link`, `sync_index_fase1`, `sync_index_fase2`, `abrir_croqui`, `navegacao_interna_croqui` e `abrir_mapa_interativo`) com dupla emissão (Custom Traces no Firebase Performance + parâmetro `duracao_ms` e dimensões de fatiamento como `modo_acesso`, `origem_imagem` e `status_http` no GA4/BigQuery/Looker Studio) e bloqueio estrito em modo debug (`kDebugMode == true`). Consulte o [`firebase/README.md`](services/firebase/README.md) para detalhes de arquitetura e testes de linter que previnem vazamento de dependências do Firebase para a UI.
+### Firebase e Logs (`firebase/`)
+Isola os pacotes do Firebase e do Sentry do restante do código (`AppLogger`, `TelemetryService`, `ServicoPerformance`, `RemoteConfigService`, `ValidadorApp`). Consulte [`services/firebase/README.md`](services/firebase/README.md).
 
 ---
 
 ## 2. Camada de Páginas (`lib/pages/`)
 
-A camada de páginas é responsável pelo roteamento de nível superior, estrutura do Scaffold e montagem dos widgets.
+Monta o `Scaffold`, conecta o ViewModel correspondente e delega a construção de seções para `lib/view/` e `lib/widgets/`.
 
-### Ponto de Entrada e Bootstrap (`main.dart` e `tela_splash_inicial.dart`)
-Inicializa os bindings do Flutter, executa tarefas independentes de *bootstrap* em paralelo (`Future.wait`), preserva o bloqueio de `DatabaseMigrationScreen` em mudanças estruturais (`needsMigration == true`), cria instâncias do `DatasetRepository` e `SyncService` e monta o widget raiz `MyApp`. Durante a abertura a frio (*Cold Start*), `MyApp` exibe a `TelaSplashInicial` (com a mesma identidade visual da splash nativa `#ffffff` + `assets/logo_splash.png`) enquanto `resolverDestinoInicialColdStart` verifica se o aplicativo foi aberto por um Deep Link (`getInitialLink()`) e resolve o `NavNode` de destino (com fallback automático ao `syncIndex()` quando um `uid` recém-publicado ainda não consta no `catalogo.db` local). Assim que resolvido, `MyApp` realiza um *cross-fade* suave via `AnimatedSwitcher` (~250ms, `Curves.easeOut`) diretamente para o `TreeNavigationWrapper` na página de destino (sem piscar a `HomePage`), registra o tempo até interatividade (`addPostFrameCallback`) via `ServicoPerformance` e `setupAppServices` aciona a sincronização em segundo plano.
-
-### Páginas de Nível Superior
-- **`home.dart`**: Exibe um carrossel dos picos de maior prioridade e uma lista suspensa de todos os picos disponíveis localmente.
-- **`explorar.dart`**: Lista todos os guias disponíveis no índice mestre com thumbnails dinâmicos, indicadores de download e ações de download inline.
-- **`mapa_global.dart`**: O "Mapa Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com marcadores escalonados por faixas de zoom (Macro, Regional e Local), balões compactos com truncamento automático de texto e interações de bottom sheet.
-- **`comunidade.dart`**: Hub central com mídias, apoios e links interativos (WhatsApp, Instagram, Discord, GitHub).
-- **`login.dart`**: Tela de autenticação sem senha protegida atrás de `ConfiguracaoRecursos.perfilHabilitado`, com Google (Android/iOS), Apple (apenas iOS), código OTP de 6 dígitos por e-mail e atalho direto para abrir as configurações do aplicativo saltando a página de perfil enquanto desautenticado.
-- **`hub_perfil_caderneta.dart`**: Hub do Perfil do Escalador, exibindo foto de perfil com botão de câmera para atualização instantânea, nome esportivo, 4 cartões de métricas rápidas (`CADENAS`, `TENTATIVAS`, `PICOS`, `VIAS`) e menu de ações (entrar na conta, minha caderneta, configurações, dados/privacidade e sair).
-- **`caderneta.dart`**: Página detalhada da caderneta esportiva pessoal com pirâmide de graduação (vias e boulders), estatísticas e histórico cronológico de ascensões.
-- **`configuracoes.dart`**: Gerenciamento do aplicativo, preferência de visibilidade da caderneta, cache e ferramentas de editor experimental.
-- **`termos_de_uso.dart`**: Exibe a interface de visualização dos documentos legais do aplicativo (Termos de Uso e Privacidade).
-
-### Páginas Hierárquicas de Guias
-Representam a estrutura topológica aninhada de um guia de escalada. O estado flui para baixo passando `DatasetRepository` e `cragId` por toda a hierarquia:
-
-- **`pico.dart`**: Nó raiz de um guia. Exibe resumo, informações logísticas e a lista de setores ou grupos.
-- **`mapas_carrossel.dart`**: Navegação em formato carrossel horizontal (swiping) contendo múltiplos `mapa_interativo.dart`, oferecendo transições de mapa mais fluidas entre hierarquias e subsetores do guia de escalada.
-- **`mapa_interativo.dart`**: Visualizador de mapas e croquis vetoriais com zoom livre, POIs interativos, card flutuante responsivo de detalhes e botão de recentralizar (GPS) dinamicamente posicionado acima do card para evitar sobreposição de elementos na interface.
-- **`grupo.dart` / `setor.dart`**: Subárea geográfica. Adapta a nomenclatura dinamicamente ("Vias" vs "Boulders") de acordo com o tipo de conteúdo do setor.
-- **`via.dart`**: Nó folha com beta, descrições, imagens croqui (topo) de alta resolução e seção interativa de registro de cadenas.
+- **Inicialização (`main.dart` e `tela_splash_inicial.dart`)**: Inicializa serviços locais em paralelo, exibe `DatabaseMigrationScreen` quando há migração pendente, resolve eventual deep link inicial durante a `TelaSplashInicial` e monta `TreeNavigationWrapper`.
+- **Abas Principais**: `home.dart`, `explorar.dart`, `meus_croquis.dart` e `comunidade.dart` permanecem em um `IndexedStack` na base do navegador.
+- **Telas Globais**: `mapa_global.dart`, `gps.dart`, `login.dart`, `hub_perfil_caderneta.dart`, `caderneta.dart`, `configuracoes.dart`, `sobre_time.dart`, `termos_de_uso.dart` e `qr_scanner.dart`.
+- **Hierarquia do Guia**: `pico.dart`, subpáginas em `pico_subpages/` (`setores_page.dart`, `explorar_local_page.dart`, `comunidade_pico_page.dart`, `apoie_pico_page.dart`), `grupo.dart`, `setor.dart`, `via.dart`, `mapas_carrossel.dart` e `mapa_interativo.dart`.
 
 ---
 
