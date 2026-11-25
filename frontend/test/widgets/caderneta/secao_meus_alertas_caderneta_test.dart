@@ -43,7 +43,7 @@ void main() {
         alerta: AlertaSegurancaVia.criar(
           uid: 'alertaCriado01',
           escaladaUid: 'viaFaraoUid001',
-          categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoria: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Colmeia próxima à 4ª chapeleta',
           autorIdPublico: 'c3Lk9P1x4Vw8Mn',
           confirmacoesAtivas: 3,

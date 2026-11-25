@@ -237,7 +237,7 @@ CREATE TABLE public.fila_interacoes (
     autor_nome_publico VARCHAR(50) NOT NULL DEFAULT 'Anônimo',
     escalada_uid VARCHAR(14) NOT NULL,            -- NanoID 14c da Via
     tipo TEXT NOT NULL,                           -- 'VOTO_GRAU' | 'COMENTARIO' | 'ALERTA_SEGURANCA' | 'CONFIRMACAO_ALERTA'
-    categoria_alerta TEXT,                        -- Presets Waze: 'ABELHAS_INSETOS' | 'ROCHA_AGARRA_INSTAVEL' | 'PROTECAO_PRECARIA' | 'VIA_MOLHADA' | 'RISCO_EXPOSICAO'
+    categoria_alerta TEXT,                        -- Presets Waze: 'FAUNA' | 'ROCHA_AGARRA_INSTAVEL' | 'PROTECAO_PRECARIA' | 'EXPOSICAO_E4_MAIS'
     alerta_alvo_uid VARCHAR(14),                  -- NanoID 14c do alerta sendo confirmado ("Ainda está lá?")
     alerta_ativo BOOLEAN,                         -- true = ainda ativo, false = resolvido
     grau_sugerido SMALLINT,                       -- Código numérico do grau sugerido

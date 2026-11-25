@@ -4364,7 +4364,7 @@ void main() {
                 AlertaSegurancaVia.criar(
                   uid: 'alertaFarao001',
                   escaladaUid: 'faraoUid123456',
-                  categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+                  categoria: CategoriaAlertaSeguranca.fauna,
                   detalhe: 'Enxame próximo à parada',
                 ),
               ],

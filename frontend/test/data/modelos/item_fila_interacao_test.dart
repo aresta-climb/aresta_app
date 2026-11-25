@@ -47,12 +47,12 @@ void main() {
         autorNomePublico: 'Carlos',
         escaladaUid: 'x8siJek3FiG3aB',
         alertaAlvoUid: 'a1B2c3D4e5F6g7',
-        categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
         detalhe: 'Colmeia na fenda',
         criadoEm: instante,
       );
       final alertaRestaurado = ItemFilaInteracao.fromJson(alerta.toJson());
-      expect(alertaRestaurado.categoriaAlerta, CategoriaAlertaSeguranca.abelhasInsetos);
+      expect(alertaRestaurado.categoriaAlerta, CategoriaAlertaSeguranca.fauna);
       expect(alertaRestaurado.alertaAlvoUid, 'a1B2c3D4e5F6g7');
 
       final confirmacao = ItemFilaInteracao.confirmacaoAlerta(
@@ -118,7 +118,7 @@ void main() {
           autorNomePublico: 'Ana',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'a1B2c3D4e5F6g7',
-          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
           detalhe: 'x' * 101,
         ),
         throwsArgumentError,
@@ -169,7 +169,7 @@ void main() {
           autorNomePublico: 'Mariana',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'alertaAbelha01',
-          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Enxame no diedro',
           criadoEm: t1,
         ),
@@ -178,7 +178,7 @@ void main() {
           autorNomePublico: 'Pedro',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'alertaAbelha02',
-          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Continua ativo',
           criadoEm: t1,
         ),
@@ -195,7 +195,7 @@ void main() {
           autorNomePublico: 'Pedro',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'alertaMolhada1',
-          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
           criadoEm: t2,
         ),
         ItemFilaInteracao.confirmacaoAlerta(
@@ -240,7 +240,7 @@ void main() {
           autorNomePublico: 'Mariana',
           escaladaUid: 'viaCriadaPorMi',
           alertaAlvoUid: 'alertaMeu00001',
-          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Colmeia ativa',
           criadoEm: t1,
         ),
@@ -250,7 +250,7 @@ void main() {
           autorNomePublico: 'Mariana',
           escaladaUid: 'viaCriadaPorMi',
           alertaAlvoUid: 'alertaMeuDup01',
-          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Colmeia ativa atualizada',
           criadoEm: t2,
         ),
@@ -260,7 +260,7 @@ void main() {
           autorNomePublico: 'Mariana',
           escaladaUid: 'viaCriadaRecen',
           alertaAlvoUid: 'alertaRecente3',
-          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
           criadoEm: t3,
         ),
         ItemFilaInteracao.confirmacaoAlerta(
@@ -361,6 +361,20 @@ void main() {
       expect(
         sql,
         contains('idx_fila_confirmacao_positiva_unica_por_autor'),
+      );
+      expect(sql, contains("'FAUNA'"));
+      expect(sql, contains("'EXPOSICAO_E4_MAIS'"));
+      expect(
+        sql,
+        contains("SET categoria_alerta = 'FAUNA'"),
+      );
+      expect(
+        sql,
+        contains("SET categoria_alerta = 'EXPOSICAO_E4_MAIS'"),
+      );
+      expect(
+        sql,
+        contains("DELETE FROM public.fila_interacoes\nWHERE categoria_alerta = 'VIA_MOLHADA';"),
       );
     });
   });

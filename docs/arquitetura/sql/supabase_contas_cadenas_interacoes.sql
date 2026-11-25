@@ -229,11 +229,11 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
     categoria_alerta TEXT
         CONSTRAINT chk_fila_categoria_alerta CHECK (
             categoria_alerta IS NULL OR categoria_alerta IN (
-                'ABELHAS_INSETOS',
+                'FAUNA',
                 'ROCHA_AGARRA_INSTAVEL',
                 'PROTECAO_PRECARIA',
                 'VIA_MOLHADA',
-                'RISCO_EXPOSICAO'
+                'EXPOSICAO_E4_MAIS'
             )
         ),
     -- NanoID 14c do alerta ativo sendo confirmado ou encerrado ("Ainda está lá?")
@@ -257,6 +257,29 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
 
 ALTER TABLE public.fila_interacoes
     ADD COLUMN IF NOT EXISTS tipo_ascensao SMALLINT;
+
+-- Migração idempotente das categorias de alerta renomeadas (ABELHAS_INSETOS -> FAUNA, RISCO_EXPOSICAO -> EXPOSICAO_E4_MAIS)
+ALTER TABLE public.fila_interacoes
+    DROP CONSTRAINT IF EXISTS chk_fila_categoria_alerta;
+
+UPDATE public.fila_interacoes
+SET categoria_alerta = 'FAUNA'
+WHERE categoria_alerta = 'ABELHAS_INSETOS';
+
+UPDATE public.fila_interacoes
+SET categoria_alerta = 'EXPOSICAO_E4_MAIS'
+WHERE categoria_alerta = 'RISCO_EXPOSICAO';
+
+ALTER TABLE public.fila_interacoes
+    ADD CONSTRAINT chk_fila_categoria_alerta CHECK (
+        categoria_alerta IS NULL OR categoria_alerta IN (
+            'FAUNA',
+            'ROCHA_AGARRA_INSTAVEL',
+            'PROTECAO_PRECARIA',
+            'VIA_MOLHADA',
+            'EXPOSICAO_E4_MAIS'
+        )
+    );
 
 ALTER TABLE public.fila_interacoes
     DROP CONSTRAINT IF EXISTS chk_fila_tipo_ascensao;

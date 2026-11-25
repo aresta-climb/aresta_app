@@ -30,7 +30,7 @@ void main() {
     final alertaInicial = AlertaSegurancaVia.criar(
       uid: 'alertaAbelha01',
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoria: CategoriaAlertaSeguranca.fauna,
       detalhe: 'Colmeia na terceira costura',
       confirmacoesAtivas: 1,
     );
@@ -60,7 +60,7 @@ void main() {
     expect(find.text('🐝'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     expect(selecionado?.uid, 'alertaAbelha01');
   });
 

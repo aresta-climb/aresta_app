@@ -36,7 +36,7 @@ void main() {
       final alertaAbelha = AlertaSegurancaVia.criar(
         uid: 'alertaAbelha01',
         escaladaUid: uidFarao,
-        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoria: CategoriaAlertaSeguranca.fauna,
         detalhe: 'Colmeia na 4ª chapeleta',
       );
       final alertaBloco = AlertaSegurancaVia.criar(
@@ -47,7 +47,7 @@ void main() {
       final alertaMolhada = AlertaSegurancaVia.criar(
         uid: 'alertaMolhada3',
         escaladaUid: uidGrupoVia,
-        categoria: CategoriaAlertaSeguranca.viaMolhada,
+        categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
       );
 
       repoFake

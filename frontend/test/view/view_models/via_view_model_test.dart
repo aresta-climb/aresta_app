@@ -497,7 +497,7 @@ void main() {
 
     expect(
       await vm.reportarAlerta(
-        CategoriaAlertaSeguranca.abelhasInsetos,
+        CategoriaAlertaSeguranca.fauna,
         detalhe: 'Enxame no diedro',
       ),
       isTrue,
@@ -514,7 +514,7 @@ void main() {
     // Simulação de falha determinística retorna false sem quebrar estado
     repoFake.erroSimulado = StateError('Erro simulado');
     expect(
-      await vm.reportarAlerta(CategoriaAlertaSeguranca.viaMolhada),
+      await vm.reportarAlerta(CategoriaAlertaSeguranca.exposicaoE4Mais),
       isFalse,
     );
     expect(
@@ -565,7 +565,7 @@ void main() {
     repoFake.erroSimulado = null;
 
     // 4. Resolver alerta com janela de Desfazer: ocultar imediatamente e restaurar ao desfazer
-    await vm.reportarAlerta(CategoriaAlertaSeguranca.abelhasInsetos);
+    await vm.reportarAlerta(CategoriaAlertaSeguranca.fauna);
     final alertaId = vm.alertasAtivos.single.uid;
 
     vm.iniciarResolucaoAlertaComDesfazer(alertaId);
@@ -584,7 +584,7 @@ void main() {
     expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, isEmpty);
 
     // 6. Se dispose ocorrer durante janela pendente, efetiva a resolução imediatamente
-    await vm.reportarAlerta(CategoriaAlertaSeguranca.viaMolhada);
+    await vm.reportarAlerta(CategoriaAlertaSeguranca.exposicaoE4Mais);
     final segundoAlertaId = vm.alertasAtivos.single.uid;
     vm.iniciarResolucaoAlertaComDesfazer(segundoAlertaId);
     vm.dispose();

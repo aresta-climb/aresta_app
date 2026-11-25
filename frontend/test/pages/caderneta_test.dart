@@ -431,13 +431,13 @@ void main() {
       final repoAlertas = RepositorioInteracoesViaFake();
       final criado = await repoAlertas.reportarAlerta(
         escaladaUid: 'via-1',
-        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoria: CategoriaAlertaSeguranca.fauna,
         detalhe: 'Colmeia ativa',
       );
       final alertaDeOutro = AlertaSegurancaVia.criar(
         uid: 'alertaOutro001',
         escaladaUid: 'via-2',
-        categoria: CategoriaAlertaSeguranca.viaMolhada,
+        categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
         autorIdPublico: 'outroAutor0001',
       );
       repoAlertas.semearDados(

@@ -350,7 +350,7 @@ void main() {
 
           final alerta1 = await repoAlertas.reportarAlerta(
             escaladaUid: 'viaFaraoUid001',
-            categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+            categoria: CategoriaAlertaSeguranca.fauna,
             detalhe: 'Colmeia na 4ª costura',
           );
           final alerta2 = await repoAlertas.reportarAlerta(

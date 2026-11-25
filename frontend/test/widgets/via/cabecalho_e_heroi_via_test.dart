@@ -86,7 +86,7 @@ void main() {
       final alerta = AlertaSegurancaVia.criar(
         uid: 'alertaTopo0001',
         escaladaUid: 'x8siJek3FiG3aB',
-        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoria: CategoriaAlertaSeguranca.fauna,
       );
       final consenso = ExtratorDetalhesTecnicosVia.construirApresentacaoConsenso(
         const ConsensoGrauVia(
@@ -127,7 +127,7 @@ void main() {
       await tester.tap(find.text('VER NO CROQUI INTERATIVO'));
       expect(clicouCroqui, isTrue);
 
-      await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+      await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
       expect(alertaTocado?.uid, 'alertaTopo0001');
 
       // Sem cartão de grau (ex.: Highline com alerta ativo)

@@ -29,7 +29,7 @@ void main() {
       final alerta = AlertaSegurancaVia.criar(
         uid: 'alertaMapa0001',
         escaladaUid: uidVia,
-        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoria: CategoriaAlertaSeguranca.fauna,
         detalhe: 'Marimbondos no diedro',
       );
       final repoFake = RepositorioInteracoesViaFake()
