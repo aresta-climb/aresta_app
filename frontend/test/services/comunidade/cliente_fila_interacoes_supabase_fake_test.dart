@@ -14,7 +14,7 @@ void main() {
       autorNomePublico: 'Mariana',
       escaladaUid: 'x8siJek3FiG3aB',
       alertaAlvoUid: 'alertaAbelha01',
-      categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoriaAlerta: CategoriaAlertaSeguranca.fauna,
     );
     fake.semearItens([alerta]);
 

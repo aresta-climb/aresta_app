@@ -8,9 +8,9 @@ import 'package:frontend/data/modelos/tipo_ascensao.dart';
 void main() {
   group('CategoriaAlertaSeguranca', () {
     test('mapeia códigos canônicos do banco de dados, emojis e rótulos em português', () {
-      expect(CategoriaAlertaSeguranca.abelhasInsetos.codigoBanco, 'ABELHAS_INSETOS');
-      expect(CategoriaAlertaSeguranca.abelhasInsetos.emoji, '🐝');
-      expect(CategoriaAlertaSeguranca.abelhasInsetos.rotulo, 'Abelhas ou Insetos');
+      expect(CategoriaAlertaSeguranca.fauna.codigoBanco, 'FAUNA');
+      expect(CategoriaAlertaSeguranca.fauna.emoji, '🐝');
+      expect(CategoriaAlertaSeguranca.fauna.rotulo, 'Fauna');
 
       expect(
         CategoriaAlertaSeguranca.rochaAgarraInstavel.codigoBanco,
@@ -24,14 +24,13 @@ void main() {
       );
       expect(CategoriaAlertaSeguranca.protecaoPrecaria.emoji, '🔩');
 
-      expect(CategoriaAlertaSeguranca.viaMolhada.codigoBanco, 'VIA_MOLHADA');
-      expect(CategoriaAlertaSeguranca.viaMolhada.emoji, '💧');
-
       expect(
-        CategoriaAlertaSeguranca.riscoExposicao.codigoBanco,
-        'RISCO_EXPOSICAO',
+        CategoriaAlertaSeguranca.exposicaoE4Mais.codigoBanco,
+        'EXPOSICAO_E4_MAIS',
       );
-      expect(CategoriaAlertaSeguranca.riscoExposicao.emoji, '⚠️');
+      expect(CategoriaAlertaSeguranca.exposicaoE4Mais.emoji, '⚠️');
+      expect(CategoriaAlertaSeguranca.exposicaoE4Mais.rotulo, 'Exposição E4+');
+      expect(CategoriaAlertaSeguranca.values, hasLength(4));
 
       for (final cat in CategoriaAlertaSeguranca.values) {
         expect(
@@ -41,6 +40,10 @@ void main() {
         expect(cat.descricaoCurta, isNotEmpty);
       }
 
+      expect(
+        () => CategoriaAlertaSeguranca.deCodigoBanco('VIA_MOLHADA'),
+        throwsArgumentError,
+      );
       expect(
         () => CategoriaAlertaSeguranca.deCodigoBanco('CODIGO_DESCONHECIDO'),
         throwsArgumentError,
@@ -53,7 +56,7 @@ void main() {
       final agora = DateTime.utc(2026, 11, 19, 12, 0);
       final alerta = AlertaSegurancaVia.criar(
         escaladaUid: 'x8siJek3FiG3aB',
-        categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+        categoria: CategoriaAlertaSeguranca.fauna,
         detalhe: '  Enxame próximo à terceira chapeleta  ',
         autorNomePublico: 'Mariana Silva',
         criadoEm: agora,
@@ -61,7 +64,7 @@ void main() {
 
       expect(alerta.uid.length, 14);
       expect(alerta.escaladaUid, 'x8siJek3FiG3aB');
-      expect(alerta.categoria, CategoriaAlertaSeguranca.abelhasInsetos);
+      expect(alerta.categoria, CategoriaAlertaSeguranca.fauna);
       expect(alerta.detalhe, 'Enxame próximo à terceira chapeleta');
       expect(alerta.autorNomePublico, 'Mariana Silva');
       expect(alerta.criadoEm, agora);
@@ -81,7 +84,7 @@ void main() {
 
       final semDetalhe = AlertaSegurancaVia.criar(
         escaladaUid: 'x8siJek3FiG3aB',
-        categoria: CategoriaAlertaSeguranca.viaMolhada,
+        categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
         detalhe: '   ',
         autorIdPublico: 'c3Lk9P1x4Vw8Mn',
         confirmadoresUids: {'  confirmadorExtra1  ', ''},

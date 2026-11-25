@@ -13,7 +13,7 @@ class FormularioAlertaViaViewModel extends ChangeNotifier {
   /// Cria uma instância de [FormularioAlertaViaViewModel].
   FormularioAlertaViaViewModel({
     CategoriaAlertaSeguranca categoriaInicial =
-        CategoriaAlertaSeguranca.abelhasInsetos,
+        CategoriaAlertaSeguranca.fauna,
   }) : _categoriaSelecionada = categoriaInicial;
 
   /// Lista imutável de categorias disponíveis para seleção visual.

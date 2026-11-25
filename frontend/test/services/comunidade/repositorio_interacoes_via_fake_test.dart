@@ -29,7 +29,7 @@ void main() {
 
     final alerta = await fake.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoria: CategoriaAlertaSeguranca.fauna,
       detalhe: 'Marimbondos na parada',
     );
     expect(
@@ -112,7 +112,7 @@ void main() {
     await expectLater(
       () => fake.reportarAlerta(
         escaladaUid: 'x8siJek3FiG3aB',
-        categoria: CategoriaAlertaSeguranca.viaMolhada,
+        categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
       ),
       throwsStateError,
     );

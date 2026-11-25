@@ -79,7 +79,7 @@ void main() {
       autorNomePublico: 'Anônimo',
       escaladaUid: 'x8siJek3FiG3aB',
       alertaAlvoUid: 'alertaAbelha01',
-      categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoriaAlerta: CategoriaAlertaSeguranca.fauna,
     );
     await cliente.inserirInteracao(alerta);
     expect(ultimoApikeyHeader, 'sb_publishable_teste123');
@@ -130,7 +130,7 @@ void main() {
         'autor_nome_publico': 'Mariana',
         'escalada_uid': 'x8siJek3FiG3aB',
         'tipo': 'ALERTA_SEGURANCA',
-        'categoria_alerta': 'ABELHAS_INSETOS',
+        'categoria_alerta': 'FAUNA',
         'alerta_alvo_uid': 'alertaAbelha01',
         'status': 'PENDENTE',
         'criado_em': '2026-11-19T18:00:00Z',

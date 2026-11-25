@@ -34,7 +34,7 @@ void main() {
           autorNomePublico: 'Mariana Silva',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'a9Rt3M2y0Z8aXr',
-          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
           detalhe: 'Colmeia na 3ª costura',
         ),
       ];

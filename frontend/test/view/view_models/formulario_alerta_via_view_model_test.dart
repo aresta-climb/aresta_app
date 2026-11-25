@@ -16,12 +16,12 @@ void main() {
       final vm = FormularioAlertaViaViewModel()
         ..addListener(() => notificacoes++);
 
-      expect(vm.categoriaSelecionada, CategoriaAlertaSeguranca.abelhasInsetos);
+      expect(vm.categoriaSelecionada, CategoriaAlertaSeguranca.fauna);
       expect(vm.opcoesCategorias, hasLength(CategoriaAlertaSeguranca.values.length));
       expect(vm.descricaoCategoriaSelecionada, isNotEmpty);
 
       // Reatribuir mesma categoria não dispara rebuild redundante
-      vm.selecionarCategoria(CategoriaAlertaSeguranca.abelhasInsetos);
+      vm.selecionarCategoria(CategoriaAlertaSeguranca.fauna);
       expect(notificacoes, 0);
 
       vm.selecionarCategoria(CategoriaAlertaSeguranca.protecaoPrecaria);
@@ -72,7 +72,7 @@ void main() {
     final semDetalhe = AlertaSegurancaVia(
       uid: 'alertaAgua0001',
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.viaMolhada,
+      categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
       autorNomePublico: 'Escalador',
       criadoEm: DateTime.utc(2026, 10, 12),
     );

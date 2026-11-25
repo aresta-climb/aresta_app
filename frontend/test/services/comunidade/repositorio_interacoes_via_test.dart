@@ -55,7 +55,7 @@ void main() {
 
     final alerta = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoria: CategoriaAlertaSeguranca.fauna,
       detalhe: 'Colmeia no crux',
     );
 
@@ -83,12 +83,12 @@ void main() {
     );
     await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.viaMolhada,
+      categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
     );
     // Mesmo perfil reportando novamente atualiza detalhe, mas NÃO infla confirmacoesAtivas
     final mesmoAutor = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.viaMolhada,
+      categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
       detalhe: 'Ainda escorrendo água',
     );
     expect(mesmoAutor.confirmacoesAtivas, 1);
@@ -103,7 +103,7 @@ void main() {
     );
     final segundoAutor = await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.viaMolhada,
+      categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
     );
     final alertas = repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos;
     expect(alertas, hasLength(1));
@@ -206,7 +206,7 @@ void main() {
     await expectLater(
       () => repo.reportarAlerta(
         escaladaUid: '  ',
-        categoria: CategoriaAlertaSeguranca.riscoExposicao,
+        categoria: CategoriaAlertaSeguranca.exposicaoE4Mais,
       ),
       throwsArgumentError,
     );
@@ -253,7 +253,7 @@ void main() {
           autorNomePublico: 'Pedro',
           escaladaUid: 'x8siJek3FiG3aB',
           alertaAlvoUid: 'alertaPedro001',
-          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
         ),
       ]);
 
@@ -282,7 +282,7 @@ void main() {
     );
     await repo.reportarAlerta(
       escaladaUid: 'x8siJek3FiG3aB',
-      categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+      categoria: CategoriaAlertaSeguranca.fauna,
       detalhe: 'Enxame na base',
     );
     await repo.confirmarAlerta(

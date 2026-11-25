@@ -9,7 +9,7 @@ import '../../view/view_models/formulario_alerta_via_view_model.dart';
 /// Cor vermelha de alta visibilidade usada nas bolhas de alerta estilo Waze sobre rocha e cartões escuros.
 const Color _corVermelhoAlerta = Color(0xFFD93829);
 
-/// Conjunto compacto de bolhas vermelhas em formato de balão de fala com emojis de risco (`🐝`, `🪨`, `🔩`, `💧`, `⚠️`),
+/// Conjunto compacto de bolhas vermelhas em formato de balão de fala com emojis de risco (`🐝`, `🪨`, `🔩`, `⚠️`),
 /// posicionado sobre o canto superior direito da área de croqui/grau da `ViaPage`.
 class BolhasFlutuantesAlertaVia extends StatelessWidget {
   /// Lista de alertas ativos a exibir como bolhas clicáveis.

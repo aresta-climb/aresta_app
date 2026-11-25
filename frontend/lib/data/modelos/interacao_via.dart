@@ -12,12 +12,13 @@ import 'tipo_ascensao.dart';
 /// na tabela `public.fila_interacoes` do Supabase, associando a cada categoria o emoji
 /// renderizado na bolha vermelha flutuante da `ViaPage`.
 enum CategoriaAlertaSeguranca {
-  /// Enxame ou colmeia de abelhas, marimbondos ou vespas na linha da via.
-  abelhasInsetos(
-    codigoBanco: 'ABELHAS_INSETOS',
+  /// Presença de abelhas, marimbondos, cobras, aves em ninho ou outros animais na via.
+  fauna(
+    codigoBanco: 'FAUNA',
     emoji: '🐝',
-    rotulo: 'Abelhas ou Insetos',
-    descricaoCurta: 'Colmeia, marimbondos ou enxame ativo próximo à via.',
+    rotulo: 'Fauna',
+    descricaoCurta:
+        'Abelhas, marimbondos, cobras, aves em ninho ou outros animais na via.',
   ),
 
   /// Bloco solto, laca oca ou agarra quebrando na linha de escalada.
@@ -36,20 +37,13 @@ enum CategoriaAlertaSeguranca {
     descricaoCurta: 'Chapeleta solta, corrosão severa ou ancoragem danificada.',
   ),
 
-  /// Infiltração, ressurgência de água ou agarras escorregadias na via.
-  viaMolhada(
-    codigoBanco: 'VIA_MOLHADA',
-    emoji: '💧',
-    rotulo: 'Via Molhada',
-    descricaoCurta: 'Infiltração ativa ou parede úmida e escorregadia.',
-  ),
-
-  /// Queda potencial no chão, lance exposto sem proteção ou acesso interditado.
-  riscoExposicao(
-    codigoBanco: 'RISCO_EXPOSICAO',
+  /// Lance exposto severo (E4+), risco de queda no chão ou proteção distante.
+  exposicaoE4Mais(
+    codigoBanco: 'EXPOSICAO_E4_MAIS',
     emoji: '⚠️',
-    rotulo: 'Risco de Exposição',
-    descricaoCurta: 'Lance exposto, risco de queda no chão ou acesso restrito.',
+    rotulo: 'Exposição E4+',
+    descricaoCurta:
+        'Lance exposto severo (E4+), risco de queda no chão ou proteção distante.',
   );
 
   /// Identificador textual persistido em `public.fila_interacoes.categoria_alerta`.
