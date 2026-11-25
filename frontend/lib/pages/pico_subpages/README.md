@@ -1,47 +1,32 @@
-# Subpáginas do Pico — Aresta Climb
+# Subpáginas do Pico (`lib/pages/pico_subpages/`)
 
-Este diretório reúne as subpáginas especializadas acessíveis a partir do Hub do Pico (`PicoDetailsPage`), projetadas com base nos princípios de **Componentes Independentes** e **Tudo em Português**.
-
----
-
-## 1. `SetoresPage` (`setores_page.dart`) — Exploração Unificada de Setores & Escaladas
-
-A `SetoresPage` é a tela central e única de exploração do catálogo de um pico, substituindo a antiga separação fragmentada entre "Setores" e "Índice de Escaladas".
-
-### Características Arquiteturais:
-
-1. **Ponto de Entrada Unificado no Hub**:
-   - No Hub (`PicoDetailsPage`), um card hero de largura total denominado **"Setores & Escaladas"** substitui os antigos botões lado a lado.
-   - Navega diretamente para o nó declarativo `SetoresNode`.
-
-2. **Abas Dinâmicas Integradas com Contadores**:
-   - **Aba Setores (fixa)**: Renderizada sempre como a primeira aba, listando os setores do pico acompanhados de miniaturas cartográficas (`MapaThumbnail`).
-   - **Abas de Modalidade**: Geradas dinamicamente com base nas modalidades cadastradas no pico (ex: `Esportivas`, `Boulders`, `Móveis`, `Multienfiadas`).
-   - **Contadores Reativos**: Exibem a contagem no formato `(total)` quando não há filtros aplicados, ou `(filtradas/total)` mediante filtragem ativa (ex: `Setores (4/13)` e `Esportivas (12/95)`).
-
-3. **Painel de Filtros Reativo e Compartilhado (`PainelFiltrosIndice`)**:
-   - Opera sobre uma única instância de `EstadoFiltrosUnificado`.
-   - **Modo Superset (Aba Setores)**: Permite ativar/desativar modalidades inteiras e ajustar múltiplos sliders de grau simultaneamente, além de grupos, conquistadores e clássicas.
-   - **Modo Contextual (Abas de Modalidade)**: Exibe slider dedicado daquela modalidade, seletor de setores, grupos, conquistadores e clássicas.
-
-4. **Tríade de Ordenação Padronizada (`BarraOrdenacaoExploracao`)**:
-   - Disponibiliza botões seletores `[ PADRÃO | GRAU | ALFABÉTICO ]` acompanhados do botão de inversão de sentido `[ ▲ / ▼ ]`.
-   - **Ordenação por Grau na Aba Setores**: Classifica os setores pela **mediana de dificuldade** normalizada das vias que atendem ao filtro ativo, tornando a visualização imune a outliers.
-
-5. **Enriquecimento e Ocultação Contextual de Setores**:
-   - Setores que não contenham vias correspondentes aos filtros ativos são automaticamente ocultados da listagem.
-   - Os cartões de setor exibem a faixa formatada de graus (ex: `"4º a 7b"`) e a quantidade de vias aprovadas no filtro (ex: `"3 vias no filtro (de 10)"`).
-
-6. **Navegação Declarativa e Retrocompatibilidade**:
-   - O construtor de rotas (`construtor_view_arvore.dart`) mapeia tanto `SetoresNode` quanto `IndiceEscaladasNode` para a `SetoresPage`.
-   - O parâmetro opcional `modalidadeInicial` permite que links externos ou históricos abram diretamente na aba correspondente, preservando total integridade de deep links.
+Este diretório contém as subpáginas abertas a partir de `PicoDetailsPage`. Todas utilizam `buildCommonAppBar` com `BotaoVoltarComRetornoInicio`.
 
 ---
 
-## 2. Demais Subpáginas do Pico
+## 1. `SetoresPage` (`setores_page.dart`)
 
-| Subpágina | Responsabilidade |
+Tela de consulta de setores e escaladas de um pico (atende `SetoresNode` e `IndiceEscaladasNode`):
+
+1. **Abas e Contadores**:
+   - Primeira aba fixa `Setores`, seguida pelas abas das modalidades existentes no pico (`Esportivas`, `Boulders`, `Móveis`, `Multienfiadas`, `Highlines`).
+   - Os títulos das abas exibem `(total)` sem filtro ativo ou `(filtradas/total)` com filtro ativo.
+2. **Filtros (`PainelFiltrosIndice`)**:
+   - Compartilha uma instância de `EstadoFiltrosUnificado` no escopo do croqui (`GerenciadorFiltrosCroqui`).
+   - Na aba `Setores`, filtra modalidades, faixas de grau por modalidade, grupos, conquistadores e vias clássicas.
+   - Nas abas de modalidade, aplica o intervalo de grau da modalidade ativa, setores, grupos, conquistadores e clássicas.
+3. **Ordenação (`BarraOrdenacaoExploracao`)**:
+   - Opções `[ PADRÃO | GRAU | ALFABÉTICO ]` com inversão `[ ▲ / ▼ ]`.
+   - Na aba `Setores`, a ordenação por grau usa a mediana dos pesos das escaladas filtradas de cada setor.
+4. **Ocultação Contextual**:
+   - Setores sem escaladas compatíveis com o filtro ativo são omitidos da lista.
+
+---
+
+## 2. Demais Subpáginas
+
+| Arquivo | Responsabilidade |
 |---|---|
-| `explorar_local_page.dart` | Informações práticas de acesso, infraestrutura, melhor época para escalar e croquis gerais de aproximação. Inclui automaticamente o card de navegação externa "Abrir no Google Maps" posicionado logo abaixo das instruções de como chegar, priorizando `urlGoogleMaps` e utilizando as coordenadas `localizacao` (E7) como fallback. |
-| `comunidade_pico_page.dart` | Links e contatos da comunidade local, guias cadastrados, canais de comunicação e fóruns. |
-| `apoie_pico_page.dart` | Informações e dados PIX para contribuição financeira e manutenção das trilhas e vias do pico. |
+| `explorar_local_page.dart` | Acesso, infraestrutura, época de escalada, mapas de aproximação e botão `"Abrir no Google Maps"` (usando `urlGoogleMaps` ou coordenadas `localizacao`). |
+| `comunidade_pico_page.dart` | Contatos locais, associações, guias e canais de comunicação do pico. |
+| `apoie_pico_page.dart` | Chaves Pix e informações de manutenção de vias e acessos do pico. |
