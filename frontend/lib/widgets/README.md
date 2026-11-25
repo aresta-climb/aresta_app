@@ -1,62 +1,37 @@
-# Widgets e Componentes Reutilizáveis — Aresta Climb
+# Widgets (`lib/widgets/`)
 
-Este diretório reúne os componentes visuais e utilitários de interface compartilhados por todo o aplicativo, estruturados segundo o princípio **Feature-First / Componentes Independentes**.
+Este diretório reúne os componentes visuais compartilhados entre as telas do aplicativo. Os subdiretórios `autenticacao/`, `caderneta/`, `navegacao/`, `perfil/` e `via/` não importam `lib/services/` (`isolamento_mvvm_modulos_test.dart`).
 
 ---
 
-## 1. Módulos de Imagem e Cache em Disco
+## 1. Resolução e Cache de Imagens
 
 ### `ProvedorImagemAresta` (`provedor_imagem_aresta.dart`)
-Fachada unificada e assíncrona para resolução e exibição de imagens em todo o ecossistema do Aresta Climb. Elimina dependências de pacotes externos pesados de cache HTTP e implementa persistência direta no sistema de arquivos do dispositivo.
-
-#### Pipeline de Resolução em Três Camadas:
-1. **Armazenamento Local Permanente (`$downloadsRoot/<picoId>/` ou `$downloadsRoot/thumbnails/`)**:
-   - Mídias de croquis baixados offline pelo usuário ou miniaturas persistentes sincronizadas do índice (onde `downloadsRoot = editorDeCroqui.downloadsPath(docsPath)`).
-   - Retorna uma instância de `ImagemArquivoAresta`.
-2. **Cache Volátil Endereçado por Conteúdo (`/temp_cache`)**:
-   - Verifica se o arquivo já foi baixado previamente em sessões online sob o padrão `<temp_cache>/<picoId>/<caminho>.<hash>` (ou `<temp_cache>/thumbnails/<picoId>.webp.<hash>` para miniaturas de catálogo).
-   - Se encontrado no disco, resolve imediatamente como `ImagemArquivoAresta`, evitando qualquer consumo de banda ou requisições HTTP.
-3. **Download Atômico da CDN e Persistência Volátil**:
-   - Caso a mídia não exista localmente, realiza o download HTTP a partir da URL base da CDN (`serverBase`) utilizando a instância compartilhada `ClienteHttpAresta.instancia` (com pool de conexões Keep-Alive de 120 segundos e timeout de 20 segundos por imagem, aceitando `clienteHttp` opcional via `ClienteHttpAresta.paraTestes` em testes).
-   - **Exigência de SHA-256 e Severidade Condicional**: O checksum SHA-256 é obrigatório para persistência em disco. Se ausente no índice/croqui, recorre a `NetworkImage` sem gravar no disco, emitindo `logError` no `AppLogger` caso o croqui esteja baixado offline (`isPicoDownloaded == true`) ou `logAviso` durante navegação online.
-   - **Gravação Atômica e Tratamento Rastreável**: Grava em arquivo temporário `.tmp` e aplica renomeação atômica para o arquivo final com extensão `.<hash>`, sem blocos `catch` silenciosos.
-   - **Expurgo de Versões Obsoletas**: Ao salvar com sucesso uma nova versão, varre o diretório pai e remove arquivos anteriores da mesma mídia que possuam hashes divergentes, evitando acúmulo de lixo.
-   - **Deduplicação de Requisições Concorrentes**: Mantém um mapa em memória (`_downloadsEmAndamento`) indexado pelo caminho de destino. Múltiplos widgets solicitando a mesma imagem concorrentemente compartilham o mesmo `Future`, disparando apenas uma requisição HTTP real.
-4. **Downsampling Opcional na Decodificação**:
-   - Caso `larguraAlvo` ou `alturaAlvo` sejam informados, encapsula o provedor resultante com `ResizeImage.resizeIfNeeded`.
-   - Utilizado de forma padronizada (`larguraAlvo: 300`) em cartões de picos (`CardPico`), fundos de lista (`_CragBackgroundWidget`) e carrosséis.
-
----
+Resolve imagens em três etapas:
+1. **Downloads Locais (`$downloadsRoot/<picoId>/` ou `$downloadsRoot/thumbnails/`)**: Retorna `ImagemArquivoAresta` para arquivos salvos no aparelho.
+2. **Cache Temporário (`/temp_cache/<picoId>/<caminho>.<hash>`)**: Retorna `ImagemArquivoAresta` se o arquivo correspondente ao SHA-256 já tiver sido baixado na sessão online.
+3. **Rede (CDN)**: Baixa via `ClienteHttpAresta.instancia` (timeout de 20s), grava em `.tmp`, renomeia para `.<hash>`, apaga hashes anteriores do mesmo arquivo e compartilha a mesma `Future` entre chamadas simultâneas para o mesmo destino. Se o SHA-256 não constar nos metadados, usa `NetworkImage` sem gravar em disco e registra no `AppLogger`.
+4. **Redimensionamento**: Quando `larguraAlvo` ou `alturaAlvo` são informados, aplica `ResizeImage.resizeIfNeeded` (padrão `larguraAlvo: 300` em cartões e carrosséis).
 
 ### `ImagemArquivoAresta` (`imagem_arquivo_aresta.dart`)
-Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave de igualdade (`operator ==` e `hashCode`).
-- **Garantia de Cache-Busting**: Quando o conteúdo de uma imagem é alterado no servidor ou via Live Reload, a alteração do checksum invalida a textura no `ImageCache` do Flutter automaticamente.
-- **Fallback Dinâmico**: Se o arquivo for modificado localmente e não possuir SHA-256 explícito, recorre ao timestamp de modificação `lastModifiedSync` para invalidar a chave na memória.
+Subclasse de `FileImage` que inclui `checksumSha256` em `operator ==` e `hashCode` para invalidar a entrada no `ImageCache` do Flutter quando o conteúdo do arquivo muda.
 
 ---
 
-## 2. Componentes de Navegação, Perfil e Modos Operacionais
+## 2. Componentes por Domínio
 
-| Widget | Responsabilidade |
-|---|---|
-| `BarraTopoLogin`, `CabecalhoTelaLogin`, `BotaoProvedorOAuthLogin`, `DivisorSecaoLogin`, `BannerAvisoLogin`, `CartaoCodigoEmailLogin`, `BotaoAbrirConfiguracoesLogin` (`autenticacao/componentes_login.dart`) | Componentes visuais declarativos (Dumb UI) que compõem a tela de autenticação sem senha (`LoginPage`), desacoplando botões OAuth, banners de erro/informação, cartão em duas etapas do código OTP de 6 dígitos e atalho direto de configurações da lógica do `LoginViewModel`. |
-| `DialogoEditarPerfil` (`perfil/dialogos_hub_perfil.dart`) | Diálogo de edição do nome esportivo e seleção de nova foto de perfil com miniatura de pré-visualização ao vivo e descarte automático de `TextEditingController`. |
-| `ModalDadosPrivacidade` (`perfil/dialogos_hub_perfil.dart`) | Modal inferior exibindo a política de soberania de dados da caderneta e o identificador público NanoID 14c com botão de cópia rápida. |
-| `DialogoConfirmarSaida` e `DialogoConfirmarExclusaoConta` (`perfil/dialogos_hub_perfil.dart`) | Diálogos de confirmação de encerramento de sessão (preservando a caderneta local) e de exclusão permanente da conta autenticada e backup em nuvem (LGPD & Apple App Store 5.1.1(v)). |
-| `ModalRegistroCadena` (`caderneta/modal_registro_cadena.dart`), `SecaoContribuicaoPublicaAscensao` (`caderneta/secao_contribuicao_publica_cadena.dart`) e `SecaoMeusAlertasCaderneta` (`caderneta/secao_meus_alertas_caderneta.dart`) | Formulário bottom sheet de registro pessoal de cadenas/tentativas com votação democrática de grau (`-2` a `+2`) e seção rápida na `CadernetaPage` que acompanha os alertas de segurança criados (`CRIADO POR VOCÊ`) e confirmados (`CONFIRMADO (+1)`) pelo escalador, com navegação direta e botão *Marcar resolvido* (*Desfazer*). |
-| `BolhasFlutuantesAlertaVia`, `BolhaEmojiAlertaVia`, `exibirModalConfirmacaoAlertaVia`, `exibirModalReportarAlertaVia` (`via/bolha_alerta_seguranca_via.dart`) e `CamadaBolhasAlertaMapa` (`via/camada_bolhas_alerta_mapa.dart`) | Bolhas vermelhas flutuantes em formato de balão de fala com emojis de risco (`🐝`, `🪨`, `🔩`, `💧`, `⚠️`) estilo Waze exibidas tanto na área heroica da `ViaPage` quanto projetadas diretamente sobre o croqui interativo (`MapaInterativoPage`), acompanhadas dos modais *"Ainda está lá?"* (com botão *Desfazer*) e de reporte rápido. |
-| `AnelConsensoGrauVia`, `BarrasDistribuicaoGrauVia` e `SeletorPilulasVotoGrauVia` (`via/grafico_consenso_grau_via.dart`) | Gráficos e pílulas interativas de consenso da comunidade exibidos junto ao Grau Oficial no `CartaoGrauVia`: anel proporcional (*donut*), barras horizontais de distribuição por faixa (`-2` a `+2`) e fileira responsiva de 5 pílulas de votação direta em 1 toque. |
-| `CabecalhoIdentidadeVia`, `AreaHeroiTopoGrauVia`, `CartaoGrauVia`, `SecaoMapaCroquiVia` (`via/cabecalho_e_heroi_via.dart`), `BarraInferiorAcoesVia` (`via/barra_inferior_acoes_via.dart`), `DespachanteSnackBarSeguro` (`via/snackbar_flutuante_seguro.dart`) e `GradeAtributosTecnicosVia`, `SecaoTextosETecnicasVia`, `SecaoEnfiadasVia`, `SecaoBetasMidiaVia`, `SecaoNotasComunidadeVia`, `SecaoHistoricoEPixVia` (`via/secoes_detalhes_via.dart`) | Bibliotecas modulares puramente declarativas (Dumb UI, livres de overflow em `320x568` a `1.5x` e sem importações de `services/`) que compõem o Passaporte da Via (com selo dourado `★ CLÁSSICA`), a seção *Betas da Comunidade*, a barra inferior de largura total e o despacho flutuante seguro de `SnackBar` acima dos botões de navegação do sistema operacional. |
-| `LinhaLocalizacaoSetor` (`linha_localizacao_setor.dart`) | Componente clicável com quebra fluida (`Wrap`) que exibe a hierarquia `Grupo > Setor` e o selo `"Ver no croqui"`, navegando para o `SetorNode` correspondente. |
-| `BannerModoExperimental` | Faixa fixa no topo da interface durante o Modo de Desenvolvimento/Live Reload, exibindo animação de pulso ao receber atualizações via WebSocket e botão de encerramento rápido. |
-| `ModalSessaoExperimentalEncerrada` | Diálogo modal exibido quando a sessão efêmera do Editor Desktop expira ou é encerrada remotamente (`HTTP 404`), informando o retorno automático ao catálogo oficial do Aresta Climb. |
-| `BannerModoOnline` | Alerta visual discreto indicando navegação em croqui sob demanda (sem download offline completo). |
-| `ModalConfirmacaoSaida` | Diálogo de confirmação que impede a perda de dados ou saída acidental de telas de exploração. |
-| `ModalCroquiSemConexao` | Modal *bottom sheet* (`bottom_sheets/modal_croqui_sem_conexao.dart`) exibido quando um Deep Link ou a Busca Global tenta abrir uma via, setor, grupo ou pico cujo croqui não está salvo offline nem em `/temp_cache` e o dispositivo está sem conexão, exibindo os dados da entidade/croqui do `catalogo.db` e o botão **"Tentar novamente"**. |
-| `CarrosselPicosProximos` | Carrossel horizontal de picos próximos com miniaturas otimizadas. |
-| `MapaThumbnail` | Visualização estática leve de mapa vetorial/satélite para pré-visualização rápida de setores. |
-| `BuscaGlobal` | Barra unificada de busca textual por picos, setores e vias alimentada pelo `catalogo.db` e pelo estado em memória. Ao selecionar qualquer item, ativa no milissegundo zero (`0 ms`) uma trava de concorrência (`_abrindoDestino = true`) e agenda um limiar visual de `150 ms` antes de abrir o diálogo modal bloqueante de carregamento (`"Abrindo <título>..."`, `barrierDismissible: false`), evitando piscadas de diálogo em resoluções locais ou falhas instantâneas em Modo Avião (`< 150 ms`) enquanto resolve o destino via `LocalizadorDestinoUid`. Além disso, recargas reativas do catálogo em segundo plano preservam os resultados visíveis sem exibir spinner (`CircularProgressIndicator`) quando `_allData` já está populado. |
-| `ArestaHomeAppBar` | Barra de aplicativo superior dedicada da tela inicial com identidade visual da marca, selo beta e ações de sincronização, feedback e alternância condicional sob `ConfiguracaoRecursos.perfilHabilitado` (exibindo o botão de Configurações na Home quando o recurso está oculto/desabilitado e substituindo-o pelo botão de Perfil/Login quando habilitado). |
-| `BarraOrdenacaoExploracao` | Barra consistente com a tríade de ordenação `[ PADRÃO | GRAU | ALFABÉTICO ]` e alternador bidirecional `[ ▲ / ▼ ]`, adaptando-se tanto à lista de setores quanto às listas de vias. |
-| `PainelFiltrosIndice` | Painel expansível compartilhado de filtros que opera sobre `EstadoFiltrosUnificado`, atuando como superset na aba Setores (com ativação de modalidades e faixas de grau unificadas para Vias e Boulders) e projeção contextual nas abas de modalidade. Implementado como card unificado coeso em coluna: linha superior clicável com rótulo "Filtros e Ordenação" e ícone indicador (`keyboard_arrow_down_rounded`), e área inferior com quebra de linha fluida (`Wrap(spacing: 8, runSpacing: 8)`) para os chips de filtros ativos, garantindo visual limpo sem corte ou scroll horizontal esmagado. O modal de controles é exibido via `showModalBottomSheet(useRootNavigator: true)`, assegurando que o botão Voltar do sistema operacional fecha exclusivamente o BottomSheet no primeiro toque e preserva a tela de exploração ativa intacta. Conta ainda com régua adaptativa de graduações baseada em `FaixaGrauDisponivel` e emite telemetria analítica detalhada de funil (`acao_indice_escaladas`) e ordenação global (`alterar_ordenacao`). |
-| `CardIndiceEscalada` | Cartão rico para renderização de vias e boulders nos catálogos de exploração (Pico, Grupo e Setor), exibindo grau ou rótulo de referência do croqui no badge, modalidade, proteções, localização opcional e animação de realce pulsante para navegação direta (`scrollToEscalada`). |
+| Componente | Arquivo | Responsabilidade |
+|---|---|---|
+| `BotaoVoltarComRetornoInicio` | `navegacao/botao_voltar_com_retorno_inicio.dart` | Botão de retorno usado nas páginas secundárias: toque rápido executa `aoVoltar` (`AppNav.back`); manter pressionado anima um arco de progresso, alterna o ícone para `Icons.home_rounded`, exibe a pílula `"Início"` via `OverlayPortal` e executa `aoIrParaInicio` (`AppNav.home`). |
+| `BarraTopoLogin`, `CabecalhoTelaLogin`, `BotaoProvedorOAuthLogin`, `DivisorSecaoLogin`, `BannerAvisoLogin`, `CartaoCodigoEmailLogin`, `BotaoAbrirConfiguracoesLogin` | `autenticacao/componentes_login.dart` | Componentes da `LoginPage` para provedores OAuth, solicitação/confirmação de código OTP de 6 dígitos, avisos e atalho de configurações. |
+| `DialogoEditarPerfil`, `ModalDadosPrivacidade`, `DialogoConfirmarSaida`, `DialogoConfirmarExclusaoConta` | `perfil/dialogos_hub_perfil.dart` | Diálogos do Hub de Perfil para edição de nome e foto, cópia do `autorIdPublico` (NanoID 14c), encerramento de sessão e exclusão de conta. |
+| `ModalRegistroCadena`, `SecaoContribuicaoPublicaAscensao`, `SecaoMeusAlertasCaderneta` | `caderneta/` | Formulário de registro de ascensões com voto opcional de grau/beta e seção da `CadernetaPage` que lista alertas criados (`CRIADO POR VOCÊ`) ou confirmados (`CONFIRMADO (+1)`) com ação de resolução e desfazer. |
+| `BolhasFlutuantesAlertaVia`, `BolhaEmojiAlertaVia`, `exibirModalConfirmacaoAlertaVia`, `exibirModalReportarAlertaVia`, `CamadaBolhasAlertaMapa` | `via/bolha_alerta_seguranca_via.dart`, `via/camada_bolhas_alerta_mapa.dart` | Balões de alerta com emojis (`🐝`, `🪨`, `🔩`, `⚠️`) exibidos na `ViaPage` e sobre os nós do `MapaInterativoPage`, além dos modais *"Ainda está lá?"* e de reporte. |
+| `AnelConsensoGrauVia`, `BarrasDistribuicaoGrauVia`, `SeletorPilulasVotoGrauVia` | `via/grafico_consenso_grau_via.dart` | Gráficos de distribuição de votos e fileira de 5 pílulas (`-2` a `+2`) para votação de grau na `ViaPage`. |
+| `CabecalhoIdentidadeVia`, `AreaHeroiTopoGrauVia`, `CartaoGrauVia`, `SecaoMapaCroquiVia`, `BarraInferiorAcoesVia`, `DespachanteSnackBarSeguro`, `GradeAtributosTecnicosVia`, `SecaoTextosETecnicasVia`, `SecaoEnfiadasVia`, `SecaoBetasMidiaVia`, `SecaoNotasComunidadeVia`, `SecaoHistoricoEPixVia` | `via/` | Seções da `ViaPage` (identidade, grau oficial/consenso, atributos técnicos, enfiadas, betas, notas, Pix, barra inferior e `SnackBar` posicionado acima dos controles do sistema). |
+| `LinhaLocalizacaoSetor` | `linha_localizacao_setor.dart` | Exibe `Grupo > Setor` e o atalho `"Ver no croqui"`, navegando para o `SetorNode`. |
+| `BannerModoExperimental`, `ModalSessaoExperimentalEncerrada` | `banner_modo_experimental.dart`, `modal_sessao_experimental_encerrada.dart` | Indicador de sessão experimental ativa com botão `[ SAIR ✕ ]` e diálogo de encerramento por expiração (`HTTP 404`). |
+| `BannerModoOnline`, `ModalConfirmacaoSaida`, `ModalCroquiSemConexao` | `banner_modo_online.dart`, `modal_confirmacao_saida.dart`, `bottom_sheets/modal_croqui_sem_conexao.dart` | Aviso de leitura sem download local, confirmação de salvamento ao sair e modal exibido quando um croqui não baixado é aberto sem rede. |
+| `BuscaGlobal` | `busca_global.dart` | Barra de busca textual sobre `catalogo.db` e dados em memória para picos, grupos, setores e vias, abrindo o destino via `LocalizadorDestinoUid`. |
+| `ArestaHomeAppBar`, `CarrosselPicosProximos`, `CardPico`, `MapaThumbnail` | `widgets/` | Barra superior da Home, carrossel horizontal de picos próximos, cartão de pico e miniatura de mapa. |
+| `BarraOrdenacaoExploracao`, `PainelFiltrosIndice`, `CardIndiceEscalada`, `BadgesModalidades` | `widgets/` | Ordenação `[ PADRÃO | GRAU | ALFABÉTICO ]`, painel de filtros sobre `EstadoFiltrosUnificado`, cartão de escalada e badges de contagem por modalidade. |
