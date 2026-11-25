@@ -1,80 +1,54 @@
 # Testes — Aresta Climb Frontend
 
-Esta pasta contém todos os testes automatizados do frontend do aplicativo Aresta Climb.
+Este diretório contém a suíte de testes automatizados de `frontend/`.
 
 ## Estrutura
 
 ```text
 test/
-├── application_managers/ Testes dos orquestradores de background, feedback e migração
-├── architecture/         Testes arquiteturais e de convenção de código (isolamento de pacotes)
-├── caos/                 Robô Caótico de testes exploratórios determinísticos, shrinking (ddmin) e regressão JSON
-├── constants/            Testes de validação de constantes de rede e URLs
-├── data/                 Testes de modelos de domínio (PerfilEscalador, Cadena, FeedbackMetadata)
-├── integration/          Testes de integração de fluxos completos (download, leitura, hot reload)
-├── legal/                Testes para validação e extração de datas de documentos legais
-├── navigation/           Testes unitários da árvore de navegação, deep links, callbacks OAuth e PageListenableBuilder
-├── pages/                Testes de widget de todas as páginas de navegação
-├── protobuf/             Testes de serialização/desserialização dos objetos Protobuf
-├── services/             Testes unitários dos serviços centrais (Autenticacao, Midia, Caderneta, DatasetRepository, SyncService, etc.)
-├── theme/                Testes unitários do gerenciamento de temas e persistência
-├── utils/                Testes de funções utilitárias isoladas (FormatadorCreditos, ConstrutorCaminhoTrajeto, etc.)
-├── view/                 Testes unitários da camada de apresentação (function_library e view_models)
-└── widgets/              Testes de componentes e widgets reutilizáveis da interface
+├── application_managers/ Orquestradores de background, feedback e migração
+├── architecture/         Regras de isolamento de pacotes, logs, HTTP, smoke_ci e MVVM
+├── caos/                 Testes exploratórios determinísticos (Robô Caótico), ddmin e regressão JSON
+├── constants/            Constantes de rede e URLs
+├── data/                 Modelos de domínio e serialização JSON
+├── integration/          Fluxos integrados de sincronização e persistência
+├── legal/                Datas e versões dos documentos legais
+├── navigation/           Árvore de navegação, AppNav, deep links e PageListenableBuilder
+├── pages/                Testes de widget das páginas
+├── protobuf/             Serialização e desserialização Protobuf
+├── services/             Serviços e Fakes determinísticos (autenticação, mídia, caderneta, comunidade, HTTP/Sync)
+├── theme/                Paleta de cores e alternância de tema
+├── utils/                Geometria vetorial, graus, filtros, UIDs e extratores
+├── view/                 function_library e view_models
+└── widgets/              Componentes reutilizáveis de UI
 ```
 
-Cada pasta tem seu próprio `README.md` com detalhes sobre os arquivos e os cenários cobertos.
-
-## Como executar
+## Execução (a partir de `frontend/`)
 
 ```bash
-# Rodar TODOS os testes (executa todos os testes e as receitas salvas de regressão; faz skip automático da campanha exploratória aleatória)
+# Executar toda a suíte (inclui regressões JSON; ignora a campanha aleatória longa por padrão)
 flutter test
 
-# Rodar uma pasta específica
-flutter test test/caos/
-flutter test test/services/
-flutter test test/view/
-flutter test test/navigation/
-flutter test test/theme/
-flutter test test/protobuf/
-flutter test test/integration/
-flutter test test/widgets/
-flutter test test/utils/
-flutter test test/pages/
+# Executar com relatório de cobertura LCOV
+flutter test --coverage
 
-# Rodar apenas a suíte permanente de receitas JSON de regressão de caos (< 1s)
+# Executar uma pasta ou arquivo específico
+flutter test test/services/
+flutter test test/navigation/
+flutter test test/widgets/navegacao/botao_voltar_com_retorno_inicio_test.dart
+
+# Executar apenas as receitas salvas de regressão do Robô Caótico
 flutter test test/caos/regressao_caminhos_test.dart
 
-# Rodar campanha do Robô Caótico no terminal (ex: 60s; SENTRY_DSN e REPORTAR_SENTRY_CAOS=true já ficam ativos por padrão)
+# Executar campanha exploratória do Robô Caótico no terminal (ex.: 60s)
 flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=60
 
-# Assistir o Robô Caótico agindo ao vivo na tela (emulador ou celular conectado, padrão 60s)
+# Executar campanha em dispositivo ou emulador conectado
 flutter test integration_test/robo_caotico_dispositivo_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=60
-
-# Rodar campanha de release (5 minutos)
-flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --timeout=10m
-
-# Rodar um arquivo específico
-flutter test test/services/editor_croqui_test.dart
 ```
-
-## Resumo dos testes
-
-| Módulo | Descrição | Status |
-|---|---|---|
-| `caos/` | Robô Caótico exploratório, shrinking por busca binária (`ddmin`), datasets normal/tóxico e regressão `.json` | Aprovado |
-| `services/` e `application_managers/` | Autenticação Supabase, mídia nativa, caderneta, sincronização atômica, Isolates, offline-first e feedback | Aprovado |
-| `navigation/` | Árvore de nós, prevenção de loops, callbacks OAuth, Hot-Reload passivo e API `AppNav` | Aprovado |
-| `pages/` e `widgets/` | Interfaces de usuário, Hub de Perfil, carrossel de mapas, busca global, créditos e banners | Aprovado |
-| `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | Aprovado |
-| `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | Aprovado |
-| **Total Geral** | **Suíte completa de testes automatizados** | **Aprovado** |
 
 ## Convenções
 
-- Todos os comentários e nomes de testes estão em **português**.
-- Arquivos temporários criados nos testes são armazenados em `Directory.systemTemp` e removidos no `tearDown`.
-- Testes que dependem de I/O de rede usam um cliente `http` simulado (`ClienteHttpAresta.paraTestes`) ou servidor local de teste para simular respostas.
-- Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
-- Testes que dependem do binding do Flutter (ex: `path_provider`) são separados nos testes de widget ou integração com binding explícito.
+- Nomes de arquivos, grupos e testes em português brasileiro, espelhando `lib/` na proporção 1:1 (`*_test.dart`).
+- Sem uso de `mocktail` ou `mockito` para classes internas; fronteiras externas utilizam bibliotecas `*_fake.dart` (com seus próprios `*_fake_test.dart`), `ClienteHttpAresta.paraTestes` ou servidores HTTP locais em `localhost`.
+- Arquivos temporários usam `Directory.systemTemp` e são removidos em `tearDown`.
