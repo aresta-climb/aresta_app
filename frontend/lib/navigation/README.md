@@ -1,55 +1,51 @@
-# Navegação do App (Tree Navigation)
+# Navegação (`lib/navigation/`)
 
-Este diretório contém a lógica principal de navegação do aplicativo, que foi desenhada usando uma estrutura baseada em **árvore de nós** (Tree Navigation) em vez do tradicional sistema de pilha (Stack/Push-Pop) do Flutter.
+Este diretório implementa a navegação do aplicativo com uma **Árvore de Nós** (`ArvoreNavegacao` / `NavegadorArvore`) em substituição ao empilhamento direto de rotas (`Navigator.push`).
 
-## Por que usar navegação em árvore?
+## Funcionamento da Árvore
 
-Em aplicativos complexos com múltiplas camadas de informações hierárquicas (como Picos -> Setores -> Vias), a navegação padrão em pilha pode gerar problemas de "stacking infinito". 
-Por exemplo, se o usuário abrir o mapa de um setor, clicar em uma via, voltar para o mapa, clicar em outra via e assim por diante, as páginas começarão a se empilhar umas sobre as outras repetidamente. Isso não apenas consome memória, mas torna o comportamento do botão de "Voltar" imprevisível, exigindo que o usuário desfaça cada passo.
+Na exploração de guias (`Pico -> Setor -> Via -> Mapa -> Via`), empilhar rotas cria duplicatas na pilha e exige múltiplos toques para voltar. Na árvore de navegação, o estado guarda o nó atual (`currentNode`) e sua cadeia de pais (`parent`). Se o usuário navegar para um nó que já está entre os ancestrais ativos, a árvore retorna àquele nó em vez de empilhar outra instância.
 
-Com a navegação em árvore, nós declaramos um **estado atual** na hierarquia (`currentNode`). Ao avançar, criamos um nó filho. Ao recuar, nós simplesmente apontamos para o pai do nó atual. Independentemente de quantos atalhos transversais o usuário pegue (por exemplo, ir de uma via diretamente para o mapa e depois para outra via), a estrutura em árvore garante que o aplicativo saiba exatamente o contexto e o "caminho de volta" correto.
-
-## Arquitetura e Módulos (`lib/navigation/`)
-
-A arquitetura decompõe o controlador e os nós em submódulos dedicados em `arvore/`:
+## Estrutura de Arquivos
 
 ```text
 lib/navigation/
 ├── arvore/
-│   ├── no_navegacao.dart                - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
-│   ├── nos_globais.dart                 - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, LoginNode, PerfilNode, CadernetaNode, etc.)
-│   ├── nos_pico.dart                    - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
-│   ├── nos_modais.dart                  - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
-│   ├── modelo_arvore_navegacao.dart     - Modelo de domínio ArvoreNavegacao com operações de pilha e prevenção de loops
-│   └── navegador_arvore.dart            - Controlador reativo TreeNavigationController (ChangeNotifier)
-├── arvore_navegacao.dart                - Fachada de re-exports dos módulos da árvore para importação unificada
-├── construtor_reativo_pagina.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
-├── construtor_view_arvore.dart          - Fábrica e resolução modular de nós da árvore para telas e modais
-├── wrapper_navegacao_arvore.dart        - Roteador principal e envoltório declarativo com suporte a abas persistentes
-├── funcoes_navegacao.dart               - API pública simplificada AppNav
-├── analisador_rotas_deep_link.dart      - Parser normalizador de URLs, QR Codes e parâmetros UTM (aresta.cc e legados)
-├── localizador_destino_uid.dart         - Localizador de UIDs universais (NanoID 14c) para nós da árvore de navegação
-├── servico_navegacao_deep_link.dart     - Orquestrador de linhagem, transição de rotas para deep links e interceptação de callbacks OAuth
-└── gerenciador_deep_links.dart          - Gerenciador de ciclo de vida de links externos do sistema (Cold e Warm Start)
+│   ├── no_navegacao.dart                - Classe base NavNode, rotuloAmigavel e obterCaminhoCurto()
+│   ├── nos_globais.dart                 - Nós globais (HomeNode, BrowseNode, MeusCroquisNode, ComunidadeNode, MapaGlobalNode, SettingsNode, LoginNode, PerfilNode, CadernetaNode, SobreTimeNode, GPSNode)
+│   ├── nos_pico.dart                    - Nós de escalada (PicoNode, SetoresNode, IndiceEscaladasNode, GrupoNode, SetorNode, ViaNode, ExplorarLocalNode, ComunidadePicoNode, ApoiePicoNode)
+│   ├── nos_modais.dart                  - Nós de modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
+│   ├── modelo_arvore_navegacao.dart     - Regras de transição, prevenção de ciclos, salto de Perfil deslogado e poda de nós
+│   └── navegador_arvore.dart            - Controlador ChangeNotifier (TreeNavigationController / NavegadorArvore)
+├── arvore_navegacao.dart                - Reexportação dos módulos de arvore/
+├── construtor_reativo_pagina.dart       - PageListenableBuilder (resolução de IDs para objetos Protobuf atuais)
+├── construtor_view_arvore.dart          - Mapeamento de NavNode para páginas e modais Flutter
+├── wrapper_navegacao_arvore.dart        - Widget raiz com IndexedStack das abas e Navigator declarativo
+├── funcoes_navegacao.dart               - API estática AppNav
+├── hierarquia_mapas.dart                - Resolução de destino superior ("Subir") entre mapas de setor, grupo e pico
+├── pagina_modal_bottom_sheet.dart       - Page declarativa para exibição de BottomSheets na árvore
+├── analisador_rotas_deep_link.dart      - Parser de URLs aresta.cc, /croquis e placas legadas
+├── localizador_destino_uid.dart         - Resolução de NanoID 14c para NavNode via memória, disco e catalogo.db
+├── servico_navegacao_deep_link.dart     - Execução de transições de deep link e filtro de callbacks OAuth
+└── gerenciador_deep_links.dart          - Escuta de links externos em cold start e warm start
 ```
 
-## Deep Links e Placas Físicas nas Falésias (`aresta.cc`)
+## Deep Links (`aresta.cc` e `arestaclimb.com`)
 
-Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte à navegação por placas físicas e links compartilháveis (enquanto callbacks OAuth in-app são capturados diretamente pelo `ASWebAuthenticationSession` sem atravessar o roteador de conteúdo):
+- **Rotas suportadas**:
+  - `https://aresta.cc/<uid>` e `https://aresta.cc/m/<uid>` (abre no mapa).
+  - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (`/ms/<uid>`): compartilhamento (`origem_link: 'compartilhamento'`).
+  - `https://aresta.cc/q/<uid>` e `https://aresta.cc/qm/<uid>` (`/mq/<uid>`): placas QR Code (`origem_link: 'qrcode'`).
+  - `https://arestaclimb.com/croquis/<uid>[/<slug>]` e `aresta://arestaclimb.com/croquis/...` com suporte a `?mapa=1` e parâmetros UTM.
+  - Mapeamento estático das 8 placas antigas em `app.arestaclimb.com/br_mg_igarape_pedra_grande/...`.
+- **Resolução (`LocalizadorDestinoUid`)**: Busca o NanoID 14c no índice em memória, em `/downloads`, em `/temp_cache`, na sessão online e no `catalogo.db`. Quando o croqui não está disponível localmente e o aparelho está offline, retorna os dados do catálogo para exibição do `ModalCroquiSemConexao`.
 
-- **Protocolo Compacto (`≤ 35 chars`) e Vitrine Pública (`/croquis`):**
-  - `https://aresta.cc/<uid>` (padrão) e `https://aresta.cc/m/<uid>` (abre o mapa interativo).
-  - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (ou `/ms/<uid>`): links de compartilhamento (`origem_link: 'compartilhamento'`).
-  - `https://aresta.cc/q/<uid>` e `https://aresta.cc/qm/<uid>` (ou `/mq/<uid>`): placas físicas QR Code Versão 3 Nível H (`origem_link: 'qrcode'`).
-  - `https://arestaclimb.com/croquis/<uid>` e `https://arestaclimb.com/croquis/<uid>/<slug>` (e esquema `aresta://arestaclimb.com/croquis/...`): URLs canônicas da vitrine pública SSR (destino dos redirects `301` de `aresta.cc`), suportando `?mapa=1` e inferência de `origem_link` via `utm_source` / `utm_medium` com preservação integral de todos os argumentos CGI.
-  - Tabela estática de compatibilidade para as 8 placas físicas legadas já instaladas em `app.arestaclimb.com/br_mg_igarape_pedra_grande/...`.
-- **NanoID 14c Universal:** Identificadores estáveis Base62 de 14 caracteres (`[0-9a-zA-Z]`), imunes a colisões e conflitos de merge.
-- **Localização em Cascata (`LocalizadorDestinoUid`):** Mapeia o NanoID 14c instantaneamente para o nó correto (`ViaNode`, `SetorNode`, `GrupoNode`, `PicoNode` ou `MapasCarrosselNode` quando `abrirMapa: true`), consultando o índice em memória, os croquis offline locais (`/downloads`), o cache temporário (`/temp_cache`), as sessões online ativas e o banco SQLite local (`catalogo.db`) com carregamento sob demanda do croqui (aplicando curto-circuito imediato sem segunda requisição ou reconsulta quando `syncIndex()` resulta em `SyncStatus.offline`). Quando o UID pertence a um croqui ainda não baixado e sem cache local durante operação offline, `localizarComDiagnostico` retorna `itemSemConexao` enriquecido (via `RepositorioCatalogo.obterItemPorUid` ou `indice.binarypb`), permitindo que o `DeepLinkNavigatorService` e o `GlobalSearch` apresentem o bottom sheet `ModalCroquiSemConexao` com botão `"Tentar novamente"`.
-- **Preservação de Atribuição e Telemetria:** Preserva `origem_link`, `abrir_mapa` e parâmetros UTM (`utm_source`, `utm_medium`, `utm_campaign`) e registra métricas na telemetria sem afetar a rota de navegação.
+## Componentes Principais
 
-### `arvore/no_navegacao.dart`
-Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`, `picoIds`), nunca os objetos complexos instanciados na memória.
-- **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
+- **`NavNode`**: Armazena somente identificadores em texto (`cragId`, `setorNome`, `escaladaNome`, `mapaCaminhoImagem`), sem reter instâncias Protobuf.
+- **`ArvoreNavegacao`**: Imutável. Calcula transições (`navegarPara`), retorno (`voltar`, saltando `PerfilNode` quando o usuário não está autenticado), retorno à raiz (`irParaRaiz`) e remoção de nós de perfil/caderneta (`podarNosPerfilECaderneta`) quando as interações são desativadas nas configurações.
+- **`PageListenableBuilder`**: Lê os IDs do `NavNode` e injeta os objetos atuais de `DatasetRepository` na página, atualizando a UI quando o croqui muda em segundo plano.
+- **`TreeNavigationWrapper`**: Mantém as 4 abas base em um `IndexedStack`, constrói `Navigator(pages: ...)` para os nós empilhados e trata o botão voltar do sistema via `PopScope`.
 
 ### `arvore/modelo_arvore_navegacao.dart`
 Encapsula as regras de domínio da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
