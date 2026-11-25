@@ -194,3 +194,96 @@ void main() {
         // Ações de acessibilidade (TalkBack / VoiceOver): toque simples e toque longo
         final noSemantico = tester.getSemantics(
           find.bySemanticsLabel('Voltar página'),
+        );
+        expect(
+          noSemantico.getSemanticsData().hasAction(SemanticsAction.tap),
+          isTrue,
+        );
+        expect(
+          noSemantico.getSemanticsData().hasAction(SemanticsAction.longPress),
+          isTrue,
+        );
+
+        tester.binding.pipelineOwner.semanticsOwner!.performAction(
+          noSemantico.id,
+          SemanticsAction.tap,
+        );
+        expect(toquesVoltar, equals(1));
+
+        tester.binding.pipelineOwner.semanticsOwner!.performAction(
+          noSemantico.id,
+          SemanticsAction.longPress,
+        );
+        expect(retornosInicio, equals(2));
+
+        handleSemantica.dispose();
+      },
+    );
+
+    testWidgets(
+      'callbacks padrão delegam toque rápido para AppNav.back e segurar para AppNav.home na árvore de navegação',
+      (tester) async {
+        final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final syncService = SyncService(datasetRepository: repo);
+        const arvoreInicial = ArvoreNavegacao(
+          noAtual: ViaNode(
+            escaladaNome: 'Via Horizonte',
+            setorNome: 'Setor Sul',
+            cragId: 'pico_teste',
+            parent: SetorNode(
+              setorNome: 'Setor Sul',
+              cragId: 'pico_teste',
+              parent: PicoNode(
+                cragId: 'pico_teste',
+                parent: HomeNode(),
+              ),
+            ),
+          ),
+        );
+        final controladorArvore = TreeNavigationController(
+          estadoInicial: arvoreInicial,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controladorArvore,
+              child: Scaffold(
+                appBar: AppBar(
+                  leading: const BotaoVoltarComRetornoInicio(
+                    key: Key('btn_padrao_arvore'),
+                    duracaoSegurar: Duration(milliseconds: 500),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(controladorArvore.currentNode, isA<ViaNode>());
+
+        // 1. Toque simples recua apenas um nível na árvore (ViaNode -> SetorNode)
+        await tester.tap(find.byKey(const Key('btn_padrao_arvore')));
+        await tester.pump();
+        expect(controladorArvore.currentNode, isA<SetorNode>());
+
+        // 2. Segurar continuamente salta toda a árvore direto para HomeNode
+        final centro = tester.getCenter(
+          find.byKey(const Key('btn_padrao_arvore')),
+        );
+        final gesto = await tester.startGesture(centro);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 550));
+        await gesto.up();
+        await tester.pumpAndSettle();
+
+        expect(controladorArvore.currentNode, isA<HomeNode>());
+      },
+    );
+  });
+}
