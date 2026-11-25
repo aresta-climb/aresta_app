@@ -1,67 +1,67 @@
 # Testes da Camada de Apresentação (`test/view/`)
 
-Esta pasta contém os testes unitários e de widget dedicados à camada de apresentação do Aresta Climb, espelhando a estrutura de `lib/view/`.
+Este diretório contém os testes unitários e de widget que espelham `lib/view/`.
 
 ---
 
-## Estrutura de Diretórios
+## Estrutura
 
 ```text
 test/view/
-├── function_library/             - Testes de funções auxiliares, formatações e builders de UI
-│   ├── funcoes_explorar_test.dart - Testes da interface e ações de exploração
-│   ├── biblioteca_funcoes_comuns_test.dart - Testes de funções comuns, normalização e busca
-│   ├── comunidade_functions_test.dart - Testes do hub de comunidade
-│   ├── funcoes_caderneta_test.dart - Testes da seção de histórico e cards da caderneta
-│   ├── funcoes_hub_perfil_caderneta_test.dart - Testes do cabeçalho, avatar/câmera, cartões de métricas e menu do Hub de Perfil
-│   ├── fuzzy_search_test.dart     - Testes do algoritmo de busca tolerante a erros
-│   ├── grupo_functions_test.dart  - Testes de visualização de grupos de setores
-│   ├── funcoes_home_test.dart     - Testes de layout e listas da tela inicial
-│   ├── meus_croquis_functions_test.dart - Testes do gerenciamento de croquis baixados
-│   ├── markdown_offline_test.dart - Testes de renderização offline de Markdown
-│   ├── pico_functions_test.dart   - Testes de funções de apoio da tela do Pico
-│   ├── pico_functions_widget_test.dart - Testes de widget da página do Pico
-│   ├── pico_search_online_test.dart - Testes da busca e carregamento de picos online
-│   ├── setor_functions_test.dart  - Testes de resolução de rótulos e itens de setor
-│   ├── funcoes_configuracoes_test.dart - Testes de conexão de editor e configurações
-│   ├── sobre_time_functions_test.dart - Testes de carregamento e cartões da equipe
-│   ├── via_functions_test.dart    - Testes de conversão e extração de graus de vias
-│   ├── via_functions_widget_test.dart - Testes de widget para exibição de vias
+├── function_library/                          - Testes dos construtores de UI e funções auxiliares
+│   ├── biblioteca_funcoes_comuns_test.dart    - buildCommonAppBar (com retorno por toque/segurar), busca e normalização
+│   ├── funcoes_home_test.dart                 - Seções da Home e abertura de picos
+│   ├── funcoes_explorar_test.dart             - Lista do Explorar e barra de progresso
+│   ├── pico_functions_test.dart               - Extração de botões e metadados do Pico
+│   ├── pico_functions_widget_test.dart        - Renderização de componentes do Pico
+│   ├── pico_search_online_test.dart           - Busca de vias e setores no Pico
+│   ├── grupo_functions_test.dart              - Listagem de grupos
+│   ├── setor_functions_test.dart              - Rótulos e itens de lista de setor
+│   ├── via_functions_test.dart                - Conversão de graus, modalidades e proteções
+│   ├── via_functions_widget_test.dart         - Renderização de CorpoDetalhesVia
+│   ├── meus_croquis_functions_test.dart       - Gerenciamento de croquis baixados
+│   ├── comunidade_functions_test.dart         - Links da aba Comunidade
+│   ├── funcoes_hub_perfil_caderneta_test.dart - Avatar, cabeçalho, métricas e menu do Perfil
+│   ├── funcoes_caderneta_test.dart            - Histórico de ascensões e exclusão
+│   ├── funcoes_configuracoes_test.dart        - Preferências e conexão com Editor Desktop
+│   ├── sobre_time_functions_test.dart         - Cartões dos integrantes
+│   ├── markdown_offline_test.dart             - Imagens locais e tag <small> em Markdown
+│   ├── sintaxe_tag_small_test.dart            - Parser da tag <small>
+│   ├── construtor_elemento_small_test.dart    - Renderização da tag <small>
+│   ├── fuzzy_search_test.dart                 - Busca aproximada sem diferenciação de acentos
 │   └── mapa/
-│       ├── mapa_global_functions_test.dart - Testes de montagem do mapa global e zoom
-│       └── mapa_marker_test.dart  - Testes de geração de bitmaps customizados via Canvas
-└── view_models/                  - Testes unitários dos modelos de apresentação
-    ├── login_view_model_test.dart - Testes de entrada, criação de conta, Google OAuth e tratamento de erros
-    ├── hub_perfil_caderneta_view_model_test.dart - Testes do estado reativo do perfil, atualização de nome/foto e métricas da caderneta
-    ├── perfil_view_model_test.dart - Testes de estatísticas e histórico da caderneta esportiva
-    ├── explorar_view_model_test.dart - Testes do estado reativo do Explorar
-    ├── card_croqui_view_model_test.dart - Testes dos metadados e contagens de cartões de croqui
-    ├── comunidade_view_model_test.dart - Testes de estado do hub comunitário
-    ├── home_view_model_test.dart  - Testes do catálogo e carrossel da Home
-    ├── mapa_global_view_model_test.dart - Testes de pontos e marcadores do mapa global
-    ├── mapa_pico_view_model_test.dart - Testes de coordenadas e projeção de picos no mapa
-    ├── meus_croquis_view_model_test.dart - Testes de ordenação e filtros de croquis salvos
-    ├── pico_proximo_view_model_test.dart - Testes de cálculo de distância GPS e proximidade
-    ├── pico_view_model_test.dart  - Testes de estado de subpáginas e setores do pico
-    └── configuracoes_view_model_test.dart - Testes de preferências e modo de desenvolvedor
+│       ├── mapa_global_functions_test.dart    - Marcadores, faixas de zoom e bottom sheet
+│       └── mapa_marker_test.dart              - Geração de bitmaps de marcadores via Canvas
+└── view_models/                               - Testes unitários dos ViewModels
+    ├── login_view_model_test.dart             - Fluxo sem senha (OTP, Google, Apple) e limites de envio
+    ├── hub_perfil_caderneta_view_model_test.dart - Perfil, foto, métricas, saída e exclusão de conta
+    ├── edicao_perfil_view_model_test.dart     - Edição de nome e foto
+    ├── perfil_view_model_test.dart            - Estatísticas, histórico e alertas na Caderneta
+    ├── via_view_model_test.dart               - Modalidades, votação de grau, alertas com desfazer e Pix
+    ├── formulario_alerta_via_view_model_test.dart - Seleção de categoria e formatação de alertas
+    ├── alertas_mapa_interativo_view_model_test.dart - Projeção e confirmação de alertas no croqui
+    ├── secao_caderneta_via_view_model_test.dart - Resumo pessoal de ascensões na ViaPage
+    ├── registro_cadena_view_model_test.dart   - Registro/edição de cadena e contribuição pública
+    ├── home_view_model_test.dart              - Catálogo e carrossel da Home
+    ├── explorar_view_model_test.dart          - Ordenação, busca e downloads do Explorar
+    ├── meus_croquis_view_model_test.dart      - Filtros e remoção de croquis salvos
+    ├── pico_view_model_test.dart              - Estado online/offline e subpáginas do Pico
+    ├── mapa_global_view_model_test.dart       - Pontos e marcadores do Mapa Global
+    ├── mapa_pico_view_model_test.dart         - Coordenadas de picos para o Google Maps
+    ├── card_croqui_view_model_test.dart       - Metadados de cartões de croqui
+    ├── pico_proximo_view_model_test.dart      - Cálculo de distância GPS
+    ├── comunidade_view_model_test.dart        - Links comunitários
+    └── configuracoes_view_model_test.dart     - Preferências e modo de desenvolvedor
 ```
 
 ---
 
-## Como Executar
+## Execução
 
 ```bash
-# Executar todos os testes da camada de apresentação
 flutter test test/view/
-
-# Executar apenas testes de funções utilitárias e builders
 flutter test test/view/function_library/
-
-# Executar apenas testes dos view models
 flutter test test/view/view_models/
-
-# Executar um teste específico de view model
-flutter test test/view/view_models/hub_perfil_caderneta_view_model_test.dart
 ```
 
 ---
