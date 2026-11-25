@@ -92,7 +92,7 @@ void main() {
           alertasAtivos: [
             AlertaSegurancaVia.criar(
               escaladaUid: 'via-uid-123',
-              categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+              categoria: CategoriaAlertaSeguranca.fauna,
             ),
           ],
         ),
@@ -196,21 +196,21 @@ void main() {
     await tester.pumpAndSettle();
 
     // 2. Criador vê "+1" bloqueado ("✓ Reportado por você"); segundo perfil confirma 1 vez e vê "✓ Confirmado por você"
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     await tester.pumpAndSettle();
     expect(find.text('✓ Reportado por você'), findsOneWidget);
     Navigator.of(tester.element(find.text('✓ Reportado por você'))).pop();
     await tester.pumpAndSettle();
 
     repoFake.autorIdSimulado = 'segundoEscalad1';
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('btn_confirmar_alerta_ativo')));
     await tester.pumpAndSettle();
     expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     await tester.pumpAndSettle();
 
     expect(find.text('Ainda está lá?'), findsOneWidget);
@@ -244,7 +244,7 @@ void main() {
     expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
 
     // 4. Confirmar resolução novamente sem desfazer efetiva a remoção após a janela
-    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
     await tester.pumpAndSettle();
@@ -606,6 +606,31 @@ void main() {
     // Tocar na seta de retorno do AppBar desempilha a ViaPage
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
+    expect(find.byType(ViaPage), findsNothing);
+    expect(find.text('Abrir Via'), findsOneWidget);
+
+    // Reabre em uma pilha mais profunda e segura o botão voltar para retornar direto ao início
+    await tester.tap(find.text('Abrir Via'));
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(ViaPage))).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+          cadernetaViewModel: cadernetaVm,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gestoInicio = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.arrow_back).last),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await gestoInicio.up();
+    await tester.pumpAndSettle();
+
     expect(find.byType(ViaPage), findsNothing);
     expect(find.text('Abrir Via'), findsOneWidget);
   });

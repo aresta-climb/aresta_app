@@ -8,6 +8,7 @@ import '../theme/cores_app.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../widgets/via/snackbar_flutuante_seguro.dart';
 
@@ -152,9 +153,9 @@ class _ViaPageState extends State<ViaPage> {
             backgroundColor: cores.deepBasalt,
             elevation: 0,
             leading: podeVoltar
-                ? IconButton(
-                    icon: Icon(Icons.arrow_back, color: cores.chalkWhite),
-                    onPressed: () => AppNav.back(context),
+                ? BotaoVoltarComRetornoInicio(
+                    corIcone: cores.chalkWhite,
+                    aoVoltar: () => AppNav.back(context),
                   )
                 : null,
             title: subtituloTopo.isNotEmpty

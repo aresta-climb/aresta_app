@@ -9,6 +9,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:frontend/main.dart' show kSentryDsn;
 import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import 'encolhedor_caminho_crash.dart';
 import 'receita_crash_robo.dart';
 
@@ -143,6 +144,7 @@ class MotorRoboCaotico {
     IconButton,
     FloatingActionButton,
     BackButton,
+    BotaoVoltarComRetornoInicio,
     ListTile,
     NavigationDestination,
     Tab,

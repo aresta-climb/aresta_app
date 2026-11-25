@@ -18,7 +18,10 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 
 import 'package:mocktail/mocktail.dart';
 
@@ -600,6 +603,52 @@ group('handleManualSync', () {
 
     expect(find.byType(SnackBar), findsNothing);
   });
+
+  testWidgets(
+    'buildCommonAppBar renderiza BotaoVoltarComRetornoInicio que volta um nível no toque e vai para HomeNode ao segurar',
+    (WidgetTester tester) async {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final sync = SyncService(datasetRepository: repo);
+      final tree = TreeNavigationController(
+        estadoInicial: const ArvoreNavegacao(
+          noAtual: SettingsNode(BrowseNode(HomeNode())),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: repo,
+            syncService: sync,
+            treeController: tree,
+            child: Scaffold(
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight),
+                child: Builder(
+                  builder: (context) => buildCommonAppBar(context, 'Ajustes'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(BotaoVoltarComRetornoInicio), findsOneWidget);
+
+      // Segurar retorna direto à raiz (HomeNode)
+      final centro = tester.getCenter(find.byType(BotaoVoltarComRetornoInicio));
+      final gesto = await tester.startGesture(centro);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesto.up();
+      await tester.pumpAndSettle();
+
+      expect(tree.currentNode, isA<HomeNode>());
+    },
+  );
 });
 
 }

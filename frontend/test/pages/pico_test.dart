@@ -24,6 +24,7 @@ import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.
 import 'package:frontend/widgets/banner_modo_online.dart';
 import 'package:frontend/widgets/linha_credito_autor.dart';
 import 'package:frontend/widgets/modal_confirmacao_saida.dart';
+import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -1973,7 +1974,7 @@ void main() {
             await tester.pumpAndSettle();
 
             // Toca no botão voltar para acionar o Guardião de Saída
-            await tester.tap(find.byType(BackButton));
+            await tester.tap(find.byType(BotaoVoltarComRetornoInicio));
             await tester.pumpAndSettle();
 
             expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
@@ -2098,7 +2099,7 @@ void main() {
             expect(find.byType(PicoDetailsPage), findsOneWidget);
 
             // 2. Toca no BackButton da AppBar (usa Navigator declarativo real do TreeNavigationWrapper)
-            await tester.tap(find.byType(BackButton));
+            await tester.tap(find.byType(BotaoVoltarComRetornoInicio));
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 400));
 
@@ -2122,7 +2123,7 @@ void main() {
             await tester.pumpAndSettle();
             expect(find.byType(PicoDetailsPage), findsOneWidget);
 
-            await tester.tap(find.byType(BackButton));
+            await tester.tap(find.byType(BotaoVoltarComRetornoInicio));
             await tester.pumpAndSettle();
             expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
 
