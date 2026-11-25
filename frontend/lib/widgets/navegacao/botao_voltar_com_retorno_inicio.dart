@@ -101,3 +101,106 @@ class _BotaoVoltarComRetornoInicioState
       HapticFeedback.selectionClick();
     }
     final deveExibirPilula =
+        valor > BotaoVoltarComRetornoInicio._limiarInicioVisual;
+    if (deveExibirPilula != _controladorPilula.isShowing) {
+      if (deveExibirPilula) {
+        _controladorPilula.show();
+      } else {
+        _controladorPilula.hide();
+      }
+    }
+    setState(() {});
+  }
+
+  void _aoMudarStatusAnimacao(AnimationStatus status) {
+    if (status == AnimationStatus.completed && _pressionado) {
+      _pressionado = false;
+      _controladorPilula.hide();
+      _controlador.reset();
+      HapticFeedback.mediumImpact();
+      _executarIrParaInicio();
+    }
+  }
+
+  void _aoPressionarPonteiro(PointerDownEvent _) {
+    _pressionado = true;
+    _disparouFeedbackInicioVisual = false;
+    _controlador.duration = widget.duracaoSegurar;
+    _controlador.forward(from: 0.0);
+  }
+
+  void _aoSoltarPonteiro(PointerUpEvent _) {
+    if (!_pressionado) return;
+    _pressionado = false;
+    if (_controlador.value < BotaoVoltarComRetornoInicio._limiarInicioVisual) {
+      _controlador.reset();
+      _executarVoltar();
+    } else {
+      _controlador.reverse();
+    }
+  }
+
+  void _aoCancelarPonteiro(PointerCancelEvent _) {
+    if (!_pressionado) return;
+    _pressionado = false;
+    _controlador.reverse();
+  }
+
+  void _executarVoltar() {
+    final callback = widget.aoVoltar;
+    if (callback != null) {
+      callback();
+    } else {
+      AppNav.back(context);
+    }
+  }
+
+  void _executarIrParaInicio() {
+    final callback = widget.aoIrParaInicio;
+    if (callback != null) {
+      callback();
+    } else {
+      AppNav.home(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = Theme.of(context).extension<AppColors>() ?? AppColors.dark;
+    final corBase =
+        widget.corIcone ?? IconTheme.of(context).color ?? cores.chalkWhite;
+    final corRealce = widget.corDestaque ?? AppColors.brandColor;
+    final progresso = _progressoVisual;
+
+    final opacidadeSeta = (1.0 - progresso * 1.65).clamp(0.0, 1.0);
+    final escalaBotao = 1.0 + 0.08 * math.sin(progresso * math.pi);
+
+    Widget conteudoBotao = Stack(
+      alignment: Alignment.center,
+      children: [
+        if (progresso > 0.0)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: corRealce.withValues(alpha: 0.18 * progresso),
+              ),
+            ),
+          ),
+        if (opacidadeSeta > 0.0)
+          Opacity(
+            opacity: opacidadeSeta,
+            child: Transform.translate(
+              offset: Offset(-5.0 * progresso, 0),
+              child: Transform.scale(
+                scale: 1.0 - 0.35 * progresso,
+                child: Icon(Icons.arrow_back, color: corBase, size: 24),
+              ),
+            ),
+          ),
+        if (progresso > 0.0)
+          Opacity(
+            opacity: ((progresso - 0.12) / 0.68).clamp(0.0, 1.0),
+            child: Transform.scale(
+              scale: 0.55 + 0.48 * Curves.easeOutBack.transform(progresso),
+              child: Icon(
