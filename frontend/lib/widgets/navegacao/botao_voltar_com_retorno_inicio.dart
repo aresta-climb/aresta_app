@@ -204,3 +204,106 @@ class _BotaoVoltarComRetornoInicioState
             child: Transform.scale(
               scale: 0.55 + 0.48 * Curves.easeOutBack.transform(progresso),
               child: Icon(
+                Icons.home_rounded,
+                color: Color.lerp(corBase, corRealce, 0.35)!,
+                size: 22,
+              ),
+            ),
+          ),
+      ],
+    );
+
+    if (progresso > 0.0) {
+      conteudoBotao = CustomPaint(
+        painter: _PintorArcoRetornoInicio(
+          progresso: progresso,
+          corDestaque: corRealce,
+          corTrilha: corBase.withValues(alpha: 0.22),
+        ),
+        child: conteudoBotao,
+      );
+    }
+
+    return Semantics(
+      button: true,
+      label: widget.dica,
+      hint: 'Segure para ir ao início',
+      excludeSemantics: true,
+      onTap: _executarVoltar,
+      onLongPress: _executarIrParaInicio,
+      child: CompositedTransformTarget(
+        link: _eloCamada,
+        child: OverlayPortal(
+          controller: _controladorPilula,
+          overlayChildBuilder: (_) => _PilulaIndicadoraInicio(
+            eloCamada: _eloCamada,
+            progresso: progresso,
+            corDestaque: corRealce,
+            cores: cores,
+          ),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: _aoPressionarPonteiro,
+              onPointerUp: _aoSoltarPonteiro,
+              onPointerCancel: _aoCancelarPonteiro,
+              child: RepaintBoundary(
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Transform.scale(
+                    scale: escalaBotao,
+                    child: conteudoBotao,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pílula visual flutuante projetada ao lado do botão para indicar o retorno ao início
+/// sem sofrer oclusão pelo polegar do usuário nem alterar o layout da barra superior.
+class _PilulaIndicadoraInicio extends StatelessWidget {
+  final LayerLink eloCamada;
+  final double progresso;
+  final Color corDestaque;
+  final AppColors cores;
+
+  const _PilulaIndicadoraInicio({
+    required this.eloCamada,
+    required this.progresso,
+    required this.corDestaque,
+    required this.cores,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final entrada = (progresso * 3.0).clamp(0.0, 1.0);
+    return CompositedTransformFollower(
+      link: eloCamada,
+      showWhenUnlinked: false,
+      targetAnchor: Alignment.centerRight,
+      followerAnchor: Alignment.centerLeft,
+      offset: Offset(6.0 * entrada, 0),
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Opacity(
+            opacity: entrada,
+            child: Transform.scale(
+              scale: 0.90 + 0.10 * entrada,
+              alignment: Alignment.centerLeft,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: cores.caveShadow.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: corDestaque.withValues(alpha: 0.70),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
