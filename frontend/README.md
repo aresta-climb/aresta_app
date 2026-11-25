@@ -1,50 +1,45 @@
 # Aresta Climb App — Frontend
 
-Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a croquis, mapas GPS, caderneta esportiva e sincronização de repositórios.
+Aplicativo Flutter para Android e iOS. Guia de escalada com leitura offline, mapas vetoriais de setores, busca em catálogo SQLite, caderneta de ascensões e alertas de segurança.
 
 ---
 
 ## Funcionalidades
 
-- **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`) e gerenciamento de notificações silenciosas em Foreground Service nativo ininterrupto.
-- **Perfil do Escalador, Autenticação Supabase e Caderneta Esportiva**:
-  - Registro offline-first de ascensões (`Cadena`) por estilo (*À Vista*, *Flash*, *Trabalhado*, *Tentativa*), pirâmide de graduação (vias e boulders), estatísticas pessoais e identidade pública por NanoID de 14 caracteres (`autorIdPublico`).
-  - Criação de conta e login via **E-mail/Senha** ou **Google OAuth 2.0 (PKCE / Implicit)** integrados diretamente ao **Supabase Auth** (`/auth/v1`) e à tabela `public.perfis`, preservando o NanoID 14c e as cadenas locais ao vincular uma conta.
-  - Seleção nativa de foto de perfil (`app.escalada.croquis/seletor_midia` no Android e iOS) com recorte quadrado central `256x256` em JPEG e upload automático para o bucket público `avatars` no **Supabase Storage**.
-- **Home com Busca Global Unificada (`catalogo.db`)**: Carrossel dos guias baixados com ordenação por prioridade/acesso recente e barra de busca integrada que carrega o catálogo relacional SQLite (`catalogo.db`), realiza Fuzzy Search aproximado (insensível a acentos) em todos os picos, grupos, setores e escaladas, prioriza picos baixados offline (exibindo badge **`Offline`**) e navega sob demanda para qualquer entidade via UID.
-- **Compartilhamento Nativo & Deep Links (`aresta.cc` e `arestaclimb.com/croquis`)**: Botões de compartilhamento nativo (`share_plus`) nas páginas de Pico, Grupo, Setor, Via e Mapa Interativo, gerando URLs compactas de até 35 caracteres (`https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>`), resolvendo tanto deep links curtos e placas físicas QR Code (`/q/<uid>`, `/qm/<uid>`) quanto as URLs canônicas da vitrine pública (`https://arestaclimb.com/croquis/<uid>/<slug>?mapa=1&...`), preservando parâmetros CGI/UTM e interceptando retornos de autenticação OAuth (`aresta://app.arestaclimb.com/auth-callback`).
-- **Explorar & Sincronização com Serving**: Lista todos os picos do índice remoto com download paralelo, sincronização assíncrona incremental do catálogo SQLite (`catalogo.arestaclimb.com/sync`), botão de sincronização forçada com o serving ativo e acesso direto ao **Mapão Global**, projetando os crags em um mapa 2D interativo com Google Maps.
-- **Croquis Topográficos e Mapas Interativos**:
-  - Renderização vetorial nativa de traçados de vias (sólido, tracejado, pontilhado) com hit-testing por distância euclidiana (16dp).
-  - Contenção rígida de limites (`boundaryMargin: EdgeInsets.zero`) e zoom mínimo (`minScale: 1.0`) para evitar perda do mapa em telas pretas.
-  - Botão de recentralização ergonômico no canto inferior direito com a mesma identidade visual do Mapa Global.
-- **Leitura Offline e Streaming Online**: Textos, imagens de alta resolução e betas funcionam offline após o download ou em modo streaming online sob demanda (com guardião de saída para salvar offline).
-- **Formatação Padronizada de Graus**: Dificuldades de escalada esportiva, móvel, boulder e multienfiada formatadas no padrão brasileiro com barras diagonais (ex: `7b/7c`, `4º/5º`, `6ºsup/7a`, `10a/10b`).
-- **Índice de Escaladas (Catálogo e Filtros)**: Aba dedicada ao catálogo de vias e boulders de cada pico com abas dinâmicas por modalidade existente (`Esportivas`, `Boulders`, `Móveis`, `Multienfiadas`), painel colapsável de filtros rápidos e avançados (grau, setor, autor, clássicas), busca textual em tempo real e atalho direto ao croqui do setor.
-- **Créditos e Conquistadores**: Componente `LinhaCreditoAutor` com quebra automática em múltiplas linhas e higienização de placeholders genéricos (`FormatadorCreditos`).
-- **Live Reload & Modo Experimental**: Conexão WebSocket e sincronização em tempo real com o Editor Desktop.
-- **Importação via QR Code**: Leitura rápida de QR codes para emparelhamento instantâneo com o editor em rede local ou relay.
+- **Sincronização em Isolate**: Downloads e atualizações de croquis rodam em background via `Isolate`, validando hashes SHA-256 e baixando apenas arquivos alterados. No Android, downloads em segundo plano usam Foreground Service com notificação de progresso.
+- **Autenticação Sem Senha, Perfil e Caderneta**:
+  - Registro local de ascensões (`Cadena`) por estilo (*À Vista*, *Flash*, *Trabalhado*, *Tentativa*), pirâmide de graus, estatísticas, acompanhamento dos alertas criados ou confirmados pelo usuário e identificador público NanoID de 14 caracteres (`autorIdPublico`).
+  - Login sem senha via **Google** (Android e iOS), **Apple** (iOS) ou **código OTP de 6 dígitos por e-mail** no **Supabase Auth**, preservando o `autorIdPublico` e as cadenas locais. Inclui atalho direto para abrir as configurações sem exigir login.
+  - Seleção nativa de foto de perfil (`app.escalada.croquis/seletor_midia`) com correção EXIF, recorte quadrado `256x256` em WebP e envio ao bucket `avatars` no Supabase Storage.
+- **Interações Comunitárias e Alertas nas Vias**:
+  - Votação de consenso de grau (`-2` a `+2`), comentários públicos de beta e alertas de segurança (`Fauna` `🐝`, `Rocha ou Agarra Instável` `🪨`, `Proteção Precária` `🔩`, `Exposição E4+` `⚠️`) exibidos na página da via e sobre os marcadores do croqui interativo, com confirmação *"Ainda está lá?"* limitada a uma contribuição positiva por perfil.
+- **Home e Busca Global (`catalogo.db`)**: Carrossel de croquis salvos e busca aproximada (*fuzzy*, sem diferenciar acentos) sobre o banco SQLite local (`catalogo.db`), cobrindo picos, grupos, setores e escaladas.
+- **Compartilhamento e Deep Links (`aresta.cc` e `arestaclimb.com/croquis`)**: Geração de links curtos (`/s/<uid>`, `/sm/<uid>`), leitura de placas QR Code (`/q/<uid>`, `/qm/<uid>`) e abertura de URLs de `/croquis/<uid>`, preservando parâmetros UTM e separando callbacks OAuth (`aresta://app.arestaclimb.com/auth-callback`).
+- **Explorar e Mapa Global**: Catálogo de picos com download individual, sincronização incremental do `catalogo.db` e visualização geográfica no Google Maps.
+- **Croquis e Mapas Interativos**: Desenho vetorial de linhas de vias (sólida, tracejada, pontilhada), detecção de toque por distância euclidiana (16dp), carrossel entre mapas e botão de recentralização.
+- **Navegação em Árvore e Retorno Rápido ao Início**: Roteamento declarativo baseado em nós (`NavNode`); em qualquer página secundária, tocar no botão de voltar recua um nível e segurar o botão anima o indicador radial e retorna à Home.
+- **Live Reload e Modo Experimental**: Conexão por QR Code ou código de sessão com o Editor Desktop via LAN ou Cloudflare Relay e atualização via WebSocket.
 
 ---
 
 ## Tecnologias
 
-| Dependência | Versão | Uso |
-|---|---|---|
-| **Flutter / Dart** | SDK `^3.11.3` | Framework principal (cross-platform: Android, iOS) |
-| **`protobuf`** | `^6.0.0` | Serialização binária de dados de escalada (`.binarypb`) |
-| **`sqflite`** | `^2.4.1` | Banco de dados relacional SQLite local (`catalogo.db`) com sincronização incremental (Delta Sync) |
-| **`share_plus`** | `^13.3.1` | Compartilhamento nativo de links compactos (`aresta.cc/s/<uid>` e `aresta.cc/sm/<uid>`) |
-| **`app_links` / `url_launcher`** | `^6.3.2` | Captura de deep links (`aresta.cc`, callbacks OAuth `aresta://`) e abertura de fluxos externos |
-| **`http`** | `^1.2.0` | Camada de rede, downloads atômicos e comunicação REST/Auth/Storage com o Supabase |
-| **`path_provider`** | `^2.1.2` | Resolução de diretórios de armazenamento local |
-| **`shared_preferences`** | `^2.2.2` | Persistência leve de configurações, perfil local e caderneta |
-| **`fuzzy`** | `^0.5.1` | Busca textual aproximada (Fuzzy Search) para a pesquisa global |
-| **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
-| **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
-| **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para conexão com o editor |
-| **`sentry_flutter`** | `^8.14.2` | Observabilidade e rastreamento dual de erros/breadcrumbs com fila offline (em conjunto com Firebase Crashlytics) |
-| **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync e desafios OAuth PKCE (`S256`) |
+| Dependência | Uso |
+|---|---|
+| **Flutter / Dart** (`^3.11.3`) | Interface multiplataforma (Android e iOS) |
+| **`protobuf`** (`^6.0.0`) | Serialização binária de índices e croquis (`.binarypb`) |
+| **`sqflite`** (`^2.4.1`) | Catálogo relacional local (`catalogo.db`) e busca textual |
+| **`share_plus`** (`^13.3.1`) | Compartilhamento de links (`aresta.cc`) |
+| **`app_links` / `url_launcher`** | Recebimento de deep links e abertura de links externos |
+| **`http`** | Downloads, sincronização e comunicação REST/Auth/Storage com o Supabase (isolado em `ClienteHttpAresta`) |
+| **`path_provider`** | Diretórios locais de documentos e cache |
+| **`shared_preferences`** | Preferências locais, cache de perfil, caderneta e filas offline |
+| **`fuzzy`** | Busca aproximada na pesquisa global e busca interna de pico |
+| **`google_maps_flutter`** | Mapa Global de picos |
+| **`flutter_markdown_plus`** | Renderização de descrições e termos em Markdown |
+| **`mobile_scanner`** | Leitura de QR Codes |
+| **`sentry_flutter`** | Monitoramento de erros e breadcrumbs com fila offline (junto ao Firebase Crashlytics) |
+| **`crypto`** | Cálculo de SHA-256 e desafios OAuth PKCE (`S256`) |
 
 ---
 
@@ -53,11 +48,8 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ```text
 frontend/
 ├── firebase.json                        - Configuração do FlutterFire CLI
-├── firebase_telemetry_design.md         - Documentação de design da telemetria
-├── legal/
-│   └── repo/                            - Submodule Git com os Termos de Uso e Política de Privacidade (.md)
-├── tool/
-│   └── legal_updater/                   - Ferramenta de linha de comando para atualizar as constantes legais
+├── legal/repo/                          - Submódulo com Termos de Uso e Política de Privacidade (.md)
+├── tool/                                - Utilitários CLI de termos legais, versão e auditoria de binário
 ├── lib/
 │   ├── main.dart                        - Ponto de entrada: bindings, serviços e navegação principal
 │   ├── firebase_options.dart            - Configurações geradas pelo FlutterFire
