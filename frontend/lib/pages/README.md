@@ -1,57 +1,50 @@
-# Módulo de Páginas — Aresta Climb
+# Páginas (`lib/pages/`)
 
-Este diretório contém as telas e páginas principais de interação do usuário no aplicativo Aresta Climb, estruturadas em componentes modulares independentes no padrão MVVM.
+Este diretório contém as telas do aplicativo. As páginas montam a estrutura de `Scaffold` e conectam eventos ao ViewModel correspondente. Em todas as páginas secundárias, a barra superior utiliza `BotaoVoltarComRetornoInicio` (toque volta um nível; segurar retorna à Home).
 
 ---
 
-## 1. Visão Geral das Páginas Principais
+## 1. Páginas
 
 | Página | Arquivo | Responsabilidade |
 |---|---|---|
-| `HomePage` | `home.dart` | Tela inicial do aplicativo com destaque de croquis baixados, carrossel finito dos 6 picos mais próximos (`NearbyCragsCarousel`) com card de continuidade `"VER MAIS ->"` e últimas atualizações. |
-| `BrowsePage` | `explorar.dart` | Aba de exploração e busca de croquis com selos de distância (`km`/`m`), ordenação geodésica padrão ("Mais próximos"), alfabética e por volume de escaladas, além de rolagem automática direta ao 7º pico quando acionada pelo carrossel da Home. |
-| `PicoDetailsPage` | `pico.dart` | Hub principal de detalhes de um pico (guia), exibindo banner de status (online/offline), ações rápidas, visualização de setores e acesso ao catálogo. |
-| `SetoresPage` | `pico_subpages/setores_page.dart` | Tela unificada de exploração de setores e escaladas com abas por modalidade, filtros reativos e ordenações contextuais. |
-| `GrupoPage` | `grupo.dart` | Tela de exploração de um grupo agregado de setores com capa parallax, abas por modalidade, mapa e filtros sincronizados. |
-| `SetorPage` | `setor.dart` | Tela unificada de exploração de um setor com capa parallax, mapa, abas ordenadas por volume de vias, filtros reativos herdados do pico e cards com rótulos de croqui. |
-| `ViaPage` | `via.dart` | Tela declarativa (MVVM via `ViaViewModel` + `CorpoDetalhesVia`) de detalhes da escalada para as 5 modalidades, reunindo cabeçalho completo sem truncamento, croqui interativo, cartão comparativo de Grau Oficial + Consenso da Comunidade, bolhas vermelhas flutuantes de alerta estilo Waze (*"Ainda está lá?"*), caderneta esportiva, grade técnica, linha do tempo de enfiadas, vídeos/betas curados (`MidiaBeta`), notas da comunidade e cópia funcional da chave Pix (com elementos de perfil/comunidade protegidos sob `ConfiguracaoRecursos.perfilHabilitado`). |
-| `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croquis vetoriais com pan/zoom fluido, foco por `uid` de POI, traçados com `pontosUids` e cartões flutuantes associados via `alvoUid`. |
-| `MapaGlobalPage` | `mapa_global.dart` | Visualização cartográfica global dos picos com marcadores por faixa de zoom e respeito ao recuo inferior do sistema (`MediaQuery.paddingOf(context).bottom`). |
-| `QRScannerPage` | `qr_scanner.dart` | Leitura de QR Codes de repositórios e sessões experimentais com pílula de instrução posicionada acima do recuo inferior do sistema (`40 + padding.bottom`). |
-| `SettingsPage` | `configuracoes.dart` | Seleção de tema, visibilidade das interações de perfil/caderneta, ativação do modo experimental e rodapé de versão em lista rolável com preenchimento inferior adaptado ao modo ponta a ponta (`16 + padding.bottom`). |
-| `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações práticas de acesso, melhor época para escalar e croquis gerais de aproximação. |
-| `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
-| `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |
-| `TermosDeUsoPage` | `termos_de_uso.dart` | Apresentação e aceite formal dos termos legais de uso do aplicativo. |
-| `LoginPage` | `login.dart` | Tela de autenticação sem senha protegida atrás de `ConfiguracaoRecursos.perfilHabilitado`, com suporte a Google (Android/iOS), Apple (apenas iOS), Magic Code OTP de 6 dígitos por e-mail e atalho `"Abrir configurações do app"` que salta a página de perfil na ida e na volta enquanto deslogado. |
-| `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Hub principal de identidade esportiva do atleta, exibindo avatar com botão de câmera para seleção e upload de foto no Supabase Storage, nome editável, métricas rápidas (cadenas, tentativas, picos, vias) e menu de navegação modular (entrar na conta, minha caderneta, configurações, dados/privacidade e saída). |
-| `CadernetaPage` | `caderneta.dart` | Visão detalhada da caderneta esportiva pessoal com gráfico da pirâmide de graduação (vias/boulders), histórico de ascensões e exclusão de registros. |
-| `PerfilPage` | `perfil.dart` | Exportação e alias canônico de compatibilidade para `HubPerfilCadernetaPage`. |
-| `DatabaseMigrationScreen` | `tela_migracao_banco.dart` | Tela de bloqueio e progresso exibida durante migrações estruturais do banco de dados local. |
+| `HomePage` | `home.dart` | Tela inicial com busca global, carrossel de croquis baixados, carrossel dos 6 picos mais próximos (`"VER MAIS ->"`) e atualizações recentes. |
+| `BrowsePage` | `explorar.dart` | Catálogo de croquis com distância (`km`/`m`), ordenação por proximidade, alfabética ou quantidade de vias e rolagem até o 7º pico quando aberta pelo carrossel da Home. |
+| `MeusCroquisPage` | `meus_croquis.dart` | Lista de croquis salvos para leitura offline com remoção local. |
+| `ComunidadePage` | `comunidade.dart` | Aba com links para canais externos do projeto (WhatsApp, Instagram, Discord, GitHub). |
+| `PicoDetailsPage` | `pico.dart` | Página raiz de um guia com capa, status online/offline, busca interna, exclusão local e acesso a setores, mapas e subpáginas. |
+| `SetoresPage` | `pico_subpages/setores_page.dart` | Catálogo de setores e escaladas do pico com abas por modalidade, filtros e ordenação. |
+| `GrupoPage` | `grupo.dart` | Detalhes de um grupo de setores com capa, descrição, mapa, abas de modalidade e filtros. |
+| `SetorPage` | `setor.dart` | Detalhes de um setor com capa, descrição, mapa, abas de modalidade e lista de escaladas. |
+| `ViaPage` | `via.dart` | Página de detalhes de uma escalada (`ViaViewModel`), contendo cabeçalho, croqui, grau oficial, consenso e votação de grau, alertas de segurança, seção da caderneta, atributos técnicos, enfiadas, vídeos/betas, comentários e chave Pix. |
+| `MapasCarrosselPage` | `mapas_carrossel.dart` | Carrossel horizontal entre instâncias de `MapaInterativoPage`. |
+| `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croqui com pan/zoom, traçados vetoriais, bolhas de alerta sobre as vias, cartão de seleção e botão para subir na hierarquia de mapas. |
+| `MapaGlobalPage` | `mapa_global.dart` | Mapa 2D no Google Maps com marcadores agrupados por faixa de zoom. |
+| `GPSPage` | `gps.dart` | Tela auxiliar de coordenadas e localização. |
+| `QRScannerPage` | `qr_scanner.dart` | Leitura de QR Codes para deep links e sessões do Editor Desktop. |
+| `SettingsPage` | `configuracoes.dart` | Configuração de tema, visibilidade das interações de perfil/caderneta e conexão com o Editor Desktop. |
+| `SobreTimePage` | `sobre_time.dart` | Apresentação dos integrantes e colaboradores do projeto. |
+| `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações de acesso, época de escalada, aproximação e atalho para o Google Maps. |
+| `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Contatos locais e canais associados ao pico. |
+| `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Dados Pix e informações de manutenção das vias e trilhas do pico. |
+| `TermosDeUsoPage` | `termos_de_uso.dart` | Leitura e aceite dos Termos de Uso e Política de Privacidade. |
+| `LoginPage` | `login.dart` | Autenticação sem senha (Google, Apple no iOS e código OTP de 6 dígitos por e-mail) e atalho `"Abrir configurações do app"` (saltando `PerfilNode` enquanto desautenticado). |
+| `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Perfil do escalador com foto, edição de nome, 4 métricas (`CADENAS`, `TENTATIVAS`, `PICOS`, `VIAS`), configurações, privacidade, saída e exclusão de conta (`perfil.dart` exporta o alias `PerfilPage`). |
+| `CadernetaPage` | `caderneta.dart` | Pirâmide de graus (vias e boulders), seção de alertas criados/confirmados pelo usuário e histórico de ascensões. |
+| `TelaSplashInicial` | `tela_splash_inicial.dart` | Tela exibida na abertura a frio enquanto o destino inicial é resolvido. |
+| `DatabaseMigrationScreen` | `tela_migracao_banco.dart` | Tela exibida durante migrações do armazenamento local. |
 
 ---
 
-## 2. Adequação de Ponta a Ponta (*Edge-to-Edge*) e Recuos do Sistema
+## 2. Modo Ponta a Ponta (*Edge-to-Edge*) e Recuos do Sistema
 
-Com `SystemUiMode.edgeToEdge` habilitado globalmente na inicialização (`configurarExibicaoPontaAPonta`), todas as páginas que estendem o conteúdo até a borda física inferior da tela consultam `MediaQuery.paddingOf(context).bottom` (ou utilizam `SafeArea` / `BottomNavigationBar`) para garantir que controles flutuantes, avisos legais do Google Maps (`MapaGlobalPage`), pílulas de instrução (`QRScannerPage`) e rodapés de lista (`SettingsPage`) nunca fiquem sobrepostos à barra de navegação de 3 botões ou à barra de gestos no Android 15+.
+Com `SystemUiMode.edgeToEdge` ativo (`configurarExibicaoPontaAPonta`), páginas que desenham até a borda inferior aplicam `SafeArea` ou somam `MediaQuery.paddingOf(context).bottom` para não sobrepor botões flutuantes, `SnackBar`s (`DespachanteSnackBarSeguro`), rodapés ou avisos do Google Maps à barra de navegação do sistema.
 
 ---
 
-## 3. Ciclo de Vida e Gestão de Recursos no Hub do Pico (`PicoDetailsPage`)
+## 3. Ciclo de Vida de `PicoDetailsPage`
 
-A tela de detalhes do pico gerencia conexões e dados online/offline através do seu `PicoViewModel`. Para garantir alta performance e evitar vazamentos de memória e de requisições de rede:
-
-### Injeção de Singleton Gerenciado
-- O `PicoViewModel` recebe por injeção de dependência a instância singleton do `ServicoCroquiOnline` gerenciada por `DatasetRepository.servicoCroquiOnline`.
-- Isso evita a instanciação acidental de múltiplos serviços isolados e garante que o estado do polling seja centralizado.
-
-### Ciclo de Vida Determinístico no `_PicoDetailsPageState`
-- **`initState`**: Inicializa o `_viewModel`, registra o ouvinte para sincronizar a UI e inicia o polling de ETag (caso o pico não esteja baixado offline).
-- **`didUpdateWidget`**: Quando a rota é atualizada pelo `PageListenableBuilder` (por exemplo, ao mudar o dataset ativo ou receber eventos de navegação), o estado descarta o `_viewModel` anterior deterministamente:
-  1. Remove o listener do ViewModel antigo.
-  2. Cancela qualquer polling de ETag em andamento no serviço.
-  3. Invoca `_viewModel.dispose()`.
-  4. Atribui a nova instância do ViewModel vinda de `widget.viewModel` e anexa o novo listener.
-- **`dispose`**: Cancela o polling de ETag e remove ouvintes antes de desmontar o componente.
-
-Essa disciplina de ciclo de vida impede a proliferação de timers fantasmas (*orphan polling timers*) que anteriormente multiplicavam requisições desnecessárias contra a infraestrutura de relay.
+`PicoDetailsPage` recebe `PicoViewModel` injetado com a instância compartilhada `DatasetRepository.servicoCroquiOnline`:
+- **`initState`**: Registra o listener do ViewModel e inicia o polling de ETag quando o croqui está apenas em sessão online.
+- **`didUpdateWidget`**: Ao receber nova instância de `PicoViewModel` via `PageListenableBuilder`, remove o listener anterior, cancela o polling em andamento, chama `dispose()` no ViewModel antigo e conecta o novo.
+- **`dispose`**: Remove listeners, limpa `onBackInterceptor` se pertencer à instância atual e descarta o ViewModel.
