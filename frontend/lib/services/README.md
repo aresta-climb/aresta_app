@@ -68,80 +68,21 @@ Permite testar croquis em edição a partir do Editor Desktop sem misturar arqui
 
 ## Resolução de Croquis em `DatasetRepository.getCroqui`
 
-O usuário pode navegar livremente por qualquer croqui do catálogo sem ser obrigado a baixá-lo previamente para o dispositivo.
-
-### Componentes Chave:
-- **`ClienteHttpAresta` (`http/cliente_http_aresta.dart`)**: Cliente HTTP encapsulado e centralizado de todo o aplicativo. Mantém pool de conexões TCP/TLS persistente (*HTTP Keep-Alive* com `idleTimeout` de 120 segundos e `connectionTimeout` de 10 segundos). Possui construtor privado com apenas dois pontos de obtenção (`ClienteHttpAresta.instancia` em produção e `@visibleForTesting ClienteHttpAresta.paraTestes` em testes), omite deliberadamente o método `.close()` para impedir o encerramento acidental do pool compartilhado e isola `package:http/http.dart` do restante do código de produção (fiscalizado por `isolamento_cliente_http_test.dart`).
-- **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), atualizando reativamente o estado sem exigir downloads prévios.
-- **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil utilizando o `ClienteHttpAresta` compartilhado, calcula o SHA-256 real em memória na chegada do HTTP (prevenindo corrupção de nome de arquivo em *cache misses* da CDN por evicção LRU), grava atomicamente via `.tmp` para `compilado.binarypb.<sha256_real>` antes de expurgar versões antigas, oferece fallback offline para versões anteriores salvas em `/temp_cache`, suporta re-fetch com bypass de cache HTTP (`recarregarCroquiOnline`) e processa respostas HTTP 200 OK no polling periódico de ETag.
-- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em camadas com persistência em disco sob demanda:
-  1. Armazenamento local permanente (`$downloadsRoot/<picoId>/<caminho>` ou thumbnails permanentes em `$downloadsRoot/thumbnails/<picoId>.webp`).
-  2. Cache temporário volátil endereçado por conteúdo (`/temp_cache/<picoId>/<caminho>.<hash>` e `/temp_cache/thumbnails/<picoId>.webp.<hash>`).
-  3. Download atômico da CDN com streaming, validação de integridade por checksum SHA-256 obrigatório, expurgo de versões antigas do mesmo arquivo com hashes divergentes, deduplicação de downloads concorrentes e persistência imediata em disco no `/temp_cache` (com fallback para `NetworkImage` sem persistência, emitindo `logError` quando o croqui está baixado offline ou `logAviso` durante navegação online caso o hash esteja ausente).
-  4. Suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo` (padronizado em 300px para miniaturas de cartões e carrosséis).
-- **Invalidação Reativa de Cache em Live Reload**: Ao receber eventos de recarregamento push via WebSocket, o aplicativo purga o cache de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), garantindo a substituição visual instantânea de texturas na GPU sem necessidade de desempilhar ou reabrir telas, tanto para croquis baixados quanto para croquis em sessão online.
-- **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
-- **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.
-- **`GerenciadorNotificacaoDownload` (`notificacoes/gerenciador_notificacao_download.dart`)**: Gestão de notificações nativas na barra de status do sistema operacional. No Android, ancora a execução a um Foreground Service nativo ininterrupto com notificação contínua sticky (`ongoing: true`), barra de progresso e ícone principal `@mipmap/ic_launcher` (`anydpi-v26`, garantido no APK base sem depender de recursos de densidade em Split APKs), transitando atomicamente para uma notificação dispensável de sucesso/erro. No iOS, emite a notificação nativa ao concluir o salvamento.
-- **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves de integridade no pipeline de download offline e sincronização de índice (como divergência de checksum SHA-256 ou HTTP 404/500 na CDN oficial `serving.arestaclimb.com`) são tratadas no Crashlytics. Já erros HTTP originados de sessões efêmeras do Editor Desktop (`EditorDeCroqui.isUrlExperimental(url) == true`, como `previa.arestaclimb.com` ou LAN local) são registrados apenas como `logAviso` (breadcrumb) em `SyncNetwork`, evitando alertas falsos quando o autor encerra o editor. Para evitar falsos positivos quando o escalador estiver sem conexão na rocha (`SocketException`, `ClientException`, `TimeoutException` ou HTTP `502/503/504/429`), apenas a camada que possui o objeto `error` original (`ServicoCroquiOnline.carregarCroquiRemoto` e `SyncService.tratarErroDownloadIsolate`) invoca `logFalhaSyncOuDownload`, enquanto orquestradores de nível superior (`handlePicoSelection`, `SyncService.downloadCrag` e `ServicoDownloadSegundoPlano.executarDownload`) registram o encerramento sem sucesso como breadcrumb (`logAviso`).
-- **`TelemetryService` e Analytics (`firebase/telemetria.dart`)**: Rastreamento de telemetria analítica com taxonomia padronizada em português via GA4:
-  - *Deep Links & QR Codes*: `logDeepLinkAberto` captura parâmetros de rota, tipo de inicialização (`cold_start`/`warm_start`), status de sucesso/falha e dimensões UTM (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
-  - *Índice de Escaladas*: `logAcaoIndiceEscaladas` instrumenta alternância de abas de modalidade e aplicação de filtros dinâmicos de graduação (`filtrar_grau`), setor (`filtrar_setor`), conquistadores (`filtrar_conquistador`), clássicas (`filtrar_classicas`) e limpeza (`limpar_filtros`) com valores no parâmetro `detalhe`.
-  - *Pico Hub e Subpáginas*: `logNavegacaoPicoHub` para os cards centrais (Setores, Explorar Local, Regras, Comunidade, Créditos, Índice) e `logApoioPix` para cópia de chave PIX em Apoie o Pico.
-  - *Guardião de Saída e Banner*: `logAcaoGuardiaoSaida` e `logSalvarOfflineBanner` para monitorar a conversão de salvamento offline antes de ir à pedra.
-  - *Interações Gerais*: `logAcaoBetaAberto` para o modal de beta, `logLinkExterno` para abertura de redes sociais e referências de desenvolvedores, e `logAlterarOrdenacao` para alternância de ordenação de listas em setores, grupos e catálogo.
-  - *Registro de Primeira Visita*: `RegistroPrimeiraVisita` (`registro_primeira_visita.dart`) gerencia a persistência de croquis já visitados pelo usuário para enriquecer o evento `abrir_croqui`.
-
-## Manutenção e Debug
-
-- Falhas no pipeline de download offline ou no Isolate são sinalizadas com `🛑 [SyncIsolate]`, `🛑 [SyncService]` ou `💥 [AppLogger CRASH]`.
-- Monitore os logs com o prefixo `[EditorConfig]` para eventos do temporizador e Nuke.
-- Logs com `[DatasetRepo]` mostram verificações de download e caminhos de arquivo.
-- Logs com `[LiveReload]` mostram conexões e eventos push recebidos pelo servidor de desenvolvimento.
-- O banner vermelho global `BannerModoExperimental` é injetado via `MaterialApp.builder` para persistir em todas as telas.
-- O estado de **Developer Mode** persiste no disco; os **Dados Experimentais** não persistem entre sessões.
+1. **Memória RAM**: Consulta `GerenciadorSessaoOnline` e `activeDataset.value?.picosBaixados`.
+2. **Downloads Locais**: Lê `<downloads>/<picoId>/compilado.binarypb` (renomeando `<picoId>.binarypb` antigo se encontrado).
+3. **Cache Temporário**: Lê `/temp_cache/<picoId>/compilado.binarypb.<sha256>`.
+4. **Rede**: Baixa o arquivo via `ServicoCroquiOnline` com `?v=<sha256>`, valida o SHA-256 em memória, grava via `.tmp` em `/temp_cache` e remove versões anteriores divergentes.
 
 ---
 
-## Controle de Recursos em Desenvolvimento (Feature Flags & Chaves de Acesso)
+## Flags de Compilação (`ConfiguracaoRecursos` e `ControladorInteracoesUsuario`)
 
-Para garantir que funcionalidades em desenvolvimento (como o **Perfil do Escalador** e a **Caderneta Esportiva**) não fiquem expostas prematuramente em compilações de produção e versões de release, o acesso é protegido por flags de compilação gerenciadas pela classe `ConfiguracaoRecursos` (`configuracao_recursos.dart`).
-
-### Comportamento Padrão (Produção / Release)
-Em qualquer compilação ou execução convencional (`flutter build apk --release`, `flutter run`) onde nenhuma chave ou flag for explicitamente informada:
-- `ConfiguracaoRecursos.perfilHabilitado` avalia como `false`.
-- O botão de Perfil (`btn_home_perfil`) na AppBar da Home (`ArestaHomeAppBar`) permanece oculto.
-- O cartão e o botão de registro de ascensão/cadena (`btn_registrar_cadena`) na tela da via (`via_functions.dart`) permanecem ocultos.
-- Tentativas programáticas ou diretas de navegação via `AppNav.toPerfil` são bloqueadas silenciosamente.
-
-### Como Desbloquear Recursos em Desenvolvimento
-Desenvolvedores e testadores podem liberar o acesso completo aos recursos durante a execução ou build passando flags via `--dart-define`:
+Por padrão (`flutter run` / builds sem flag), `ConfiguracaoRecursos.perfilHabilitado` é `false`. Para habilitar os recursos de Perfil, Caderneta e Interações durante o desenvolvimento:
 
 ```bash
-# Opção 1: Via chave de API / Segredo (conforme exemplo em desenvolvimento)
-flutter run --dart-define=API_KEY=my_secret_key --dart-define=APP_MODE=production
-
-# Opção 2: Via chave específica de acesso ao perfil
-flutter run --dart-define=CHAVE_ACESSO_PERFIL=aresta_segredo_perfil_2026
-
-# Opção 3: Via flag booleana direta
 flutter run --dart-define=HABILITAR_PERFIL=true
+# ou
+flutter run --dart-define=CHAVE_ACESSO_PERFIL=aresta_segredo_perfil_2026
 ```
 
-### Chaves Secretas Autorizadas
-O sistema reconhece o seguinte conjunto de chaves padronizadas:
-- `my_secret_key`
-- `aresta_segredo_perfil_2026`
-- `minha_chave_secreta`
-- `aresta_dev_secret`
-
-### Testes Automatizados
-Para testes unitários e de widget, a classe provê métodos estáticos com a anotação `@visibleForTesting`:
-- `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true)`: Força o estado habilitado.
-- `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false)`: Força o estado desabilitado.
-- `ConfiguracaoRecursos.redefinirParaTestes()`: Restaura o estado original derivado do ambiente.
-
-### Preferência Local do Escalador (`ControladorInteracoesUsuario`)
-Mesmo quando `ConfiguracaoRecursos.perfilHabilitado` está ativo na compilação, escaladores que preferem utilizar o aplicativo exclusivamente para consulta de croquis e dados técnicos podem desativar os elementos opcionais de Perfil e Caderneta em tempo de execução na tela de Configurações (`construirCartaoInteracoesCaderneta`):
-- **`ControladorInteracoesUsuario` (`controlador_interacoes_usuario.dart`)**: Persiste a chave `interacoes_caderneta_ativas` no `SharedPreferences` (padrão `true`) e expõe `interacoesAtivasNotifier` (`ValueListenable<bool>`) e `exibirElementosInterativos` (`ConfiguracaoRecursos.perfilHabilitado && interacoesAtivasNotifier.value`).
-- **Ocultação Reativa Sem Perda de Dados**: Quando desativado pelo usuário, o botão de Perfil na Home (`ArestaHomeAppBar`), o bloco de registro de cadena na tela da via (`via_functions.dart`) e a navegação `AppNav.toPerfil` são ocultados/bloqueados imediatamente, preservando intactos todos os registros locais do `RepositorioCadernetaLocal` e mantendo alertas comunitários de segurança irrestritos.
+Em testes, use `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true)` e `redefinirParaTestes()`. Quando habilitado na compilação, o usuário ainda pode ocultar ou exibir os controles de perfil e caderneta nas Configurações via `ControladorInteracoesUsuario` sem apagar os dados salvos localmente.
