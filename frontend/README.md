@@ -51,90 +51,17 @@ frontend/
 ├── legal/repo/                          - Submódulo com Termos de Uso e Política de Privacidade (.md)
 ├── tool/                                - Utilitários CLI de termos legais, versão e auditoria de binário
 ├── lib/
-│   ├── main.dart                        - Ponto de entrada: bindings, serviços e navegação principal
-│   ├── firebase_options.dart            - Configurações geradas pelo FlutterFire
-│   ├── constants/
-│   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
-│   ├── data/
-│   │   └── modelos/                     - Modelos de domínio locais (PerfilEscalador, Cadena, TipoAscensao, TipoEscalada, FeedbackMetadata)
-│   ├── theme/
-│   │   ├── cores_app.dart               - Definição da paleta mestre de cores com suporte a Light/Dark Mode
-│   │   └── gerenciador_tema.dart        - Gerenciamento de estado do tema
-│   ├── utils/
-│   │   ├── calculadora_distancia_estrada.dart - KD-Tree 2D e cálculo offline de distância rodoviária estimada
-│   │   ├── utilitarios_markdown.dart    - Funções utilitárias para parseamento de strings Markdown
-│   │   ├── formatador_escalada.dart     - Formatação de graus, nomes e localização de escaladas por UID
-│   │   └── categorizacao_pico.dart      - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
-│   ├── view/                            - Camada de visualização e apresentação
-│   │   ├── function_library/            - Construtores de UI, callbacks e componentes visuais
-│   │   │   ├── biblioteca_funcoes_comuns.dart - Sistema de design (paletas, tipografia, componentes base)
-│   │   │   ├── markdown_offline.dart    - Visualizador Markdown com FileImage offline
-│   │   │   ├── funcoes_configuracoes.dart - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
-│   │   │   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho com avatar/câmera, cartões de métricas e menu do Hub de Perfil
-│   │   │   ├── funcoes_caderneta.dart   - Histórico de ascensões e componentes da caderneta
-│   │   │   ├── mapa/
-│   │   │   │   ├── mapa_global_functions.dart - Construtores visuais específicos para o mapa mundial
-│   │   │   │   └── mapa_marker.dart     - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
-│   │   │   └── *_functions.dart         - Funções específicas por página (home, browse, pico, …)
-│   │   └── view_models/                 - Modelos de apresentação e gerenciamento de estado
-│   │       ├── login_view_model.dart    - Estado e comandos de login, criação de conta e Google OAuth
-│   │       ├── hub_perfil_caderneta_view_model.dart - Estado reativo do Hub de Perfil, foto e métricas
-│   │       ├── perfil_view_model.dart   - Estatísticas e histórico da caderneta esportiva
-│   │       ├── card_croqui_view_model.dart - Estado e apresentação de cards de croqui
-│   │       ├── mapa_pico_view_model.dart - Apresentação e coordenadas de picos no mapa
-│   │       ├── pico_proximo_view_model.dart - Apresentação de picos próximos e distâncias
-│   │       └── *_view_model.dart        - View models para páginas e componentes reativos
-│   ├── aresta_api/                      - Submodule: arquivos .proto, SQL, OpenAPI e código Protobuf gerado
-│   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
-│   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
-│   │   ├── funcoes_navegacao.dart       - API estática AppNav com herança de contexto
-│   │   ├── arvore_navegacao.dart        - Classes dos nós baseados em ID (NavNode) e controlador central
-│   │   ├── servico_navegacao_deep_link.dart - Resolução de deep links aresta.cc e interceptação de callbacks OAuth
-│   │   └── construtor_reativo_pagina.dart - Injetor reativo de UI para hot-reload de croquis
-│   ├── pages/                           - Páginas do app
-│   │   ├── home.dart                    - Carrossel e lista de guias locais
-│   │   ├── explorar.dart                - Índice remoto com download inline
-│   │   ├── mapa_global.dart             - Visão de mapa global interativa a partir do Explorar
-│   │   ├── gps.dart                     - Entrada do mapa
-│   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias e compartilhamento
-│   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
-│   │   ├── pico.dart                    - Nó raiz de um guia, atua como hub distribuindo para as sub-páginas
-│   │   ├── pico_subpages/               - Views tabulares do guia (Comunidade Local, Setores, Explorar Local, etc)
-│   │   ├── comunidade.dart              - Hub global de redes sociais (Discord, WhatsApp, GitHub)
-│   │   ├── grupo.dart                   - Agrupamento de setores
-│   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
-│   │   ├── via.dart                     - Nó folha: beta, croqui, imagens e seção da caderneta
-│   │   ├── login.dart                   - Autenticação com Google, e-mail/senha, criação de conta e modo offline
-│   │   ├── hub_perfil_caderneta.dart    - Hub de Perfil do Escalador com avatar, métricas e menu
-│   │   ├── caderneta.dart               - Caderneta esportiva detalhada e pirâmide de graus
-│   │   ├── configuracoes.dart           - Configurações e ferramentas de editor
-│   │   ├── termos_de_uso.dart           - Visualizador dos documentos legais
-│   │   └── qr_scanner.dart              - Scanner de QR code
-│   ├── services/                        - Serviços centrais
-│   │   ├── autenticacao/
-│   │   │   ├── servico_autenticacao.dart - Domínio de autenticação, validação e persistência do PerfilEscalador
-│   │   │   └── cliente_supabase_autenticacao.dart - Comunicação GoTrue (/auth/v1), PostgREST (perfis), Storage (avatars) e OAuth PKCE
-│   │   ├── midia/
-│   │   │   └── seletor_foto_perfil.dart - Seletor nativo de foto de perfil recortada 256x256 em Data URI base64
-│   │   ├── caderneta/
-│   │   │   ├── repositorio_caderneta.dart - Repositório reativo de cadenas e perfil do escalador
-│   │   │   ├── armazenamento_local_caderneta.dart - Persistência local em SharedPreferences
-│   │   │   ├── compilador_estatisticas.dart - Cálculo de pirâmide de graus e recordes
-│   │   │   └── catalogo_vias_caderneta.dart - Hidratação de nomes, graus e picos via SQLite e memória
-│   │   ├── catalogo/
-│   │   │   └── repositorio_catalogo.dart - Banco SQLite local (catalogo.db), batch delta sync e consultas relacionais
-│   │   ├── compartilhamento/
-│   │   │   └── servico_compartilhamento.dart - Formatação de links compactos aresta.cc (/s/<uid>, /sm/<uid>) e share_plus
-│   │   ├── firebase/
-│   │   │   ├── inicializar_firebase.dart - Inicialização e captura de Crashlytics
-│   │   │   ├── telemetria.dart          - Isolamento do Analytics
-│   │   │   ├── remote_config.dart       - Fallbacks (incluindo URL e chave pública do Supabase), cache local e degradação offline
-│   │   │   ├── validador_app.dart       - Atestação de integridade via App Check resiliente a quedas de rede
-│   │   │   └── app_logger.dart          - Logger centralizado com filtro de falhas transitórias HTTP e Firebase
-│   │   ├── http/
-│   │   │   ├── cliente_http_aresta.dart - Pool compartilhado de conexões HTTP Keep-Alive
-│   │   │   ├── sync_service.dart        - Orquestra download, validação e sincronização assíncrona do catálogo
-│   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
+│   ├── main.dart                        - Inicialização e montagem do aplicativo
+│   ├── aresta_api/                      - Submódulo Protobuf (.proto e código gerado)
+│   ├── application_managers/            - Orquestração de feedback e migrações
+│   ├── constants/                       - Constantes de rede e versão legal gerada
+│   ├── data/modelos/                    - Modelos locais (PerfilEscalador, Cadena, AlertaSegurancaVia, ItemFilaInteracao, etc.)
+│   ├── navigation/                      - Árvore de navegação (NavNode, AppNav, deep links, PageListenableBuilder)
+│   ├── pages/                           - Telas do aplicativo e subpáginas do pico
+│   ├── services/                        - Repositórios, HTTP/Sync, autenticação, mídia, caderneta, comunidade, catálogo e Firebase
+│   ├── theme/                           - Paleta de cores (AppColors) e temas claro/escuro
+│   ├── utils/                           - Geometria vetorial, formatação de graus, filtros, UIDs e consultas no dataset
+│   ├── view/
 │   │   │   ├── sync_rede.dart           - Faz o download HTTP bruto, consulta /sync do catálogo e gestão de ETags
 │   │   │   ├── sync_armazenamento.dart  - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   └── baixador_atualizacoes.dart - Verificação e download de atualizações do APK
