@@ -63,11 +63,3 @@ flutter test test/view/
 flutter test test/view/function_library/
 flutter test test/view/view_models/
 ```
-
----
-
-## Convenções de Teste
-
-- **Isolamento**: Testes em `view_models/` validam a lógica de apresentação e estado sem acoplamento a Scaffolds, enquanto `function_library/` combina testes de unidade e testes com `testWidgets`.
-- **Nomenclatura Descritiva**: Todos os nomes de suítes (`group`) e casos de teste (`test` / `testWidgets`) são redigidos em português brasileiro claro, expressando o comportamento esperado.
-- **Resiliência a Mudanças**: Testes de View Models validam o desacoplamento de entidades Protobuf e garantem que cálculos como distâncias e estatísticas tratem valores nulos ou vazios de forma segura.
