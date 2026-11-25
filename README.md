@@ -1,37 +1,37 @@
 # Aresta Climb App
 
-Aplicativo de escalada da **ARESTA** — guia digital offline para centralizar e distribuir informações de picos.
+Aplicativo móvel da **ARESTA** para consulta offline e online de guias de escalada, registro de caderneta e alertas de segurança.
 
 ## Estrutura do Repositório
 
 ```text
 aresta_app/
-├── docs/              Documentação do sistema e especificações arquiteturais
-│   ├── arquitetura/   Modelagem de UIDs estáveis, Supabase, PowerSync, contas e design docs
+├── docs/              Especificações técnicas, scripts SQL e documentos de arquitetura
+│   ├── arquitetura/   Modelagem de UIDs, Supabase, PowerSync, contas e documentos PDF
 │   └── sistema_de_acesso.md
-├── frontend/          Aplicativo Flutter (Android / iOS)
-├── openspec/          Especificações e propostas de mudanças (OpenSpec)
+├── frontend/          Aplicativo Flutter (Android e iOS)
+├── openspec/          Especificações e propostas de mudança (OpenSpec)
 ├── CONTRIBUTING.md    Guia de contribuição (DCO)
 └── README.md
 ```
 
-> O submodule `aresta_api` (definições `.proto` e código Protobuf gerado) fica em `frontend/lib/aresta_api/`.
+> O submódulo `aresta_api` (definições `.proto` e código Protobuf gerado) fica em `frontend/lib/aresta_api/`.
 
 ---
 
-## O que é o Aresta Climb?
+## Visão Geral
 
-O Aresta Climb é um guia de escalada digital. O app permite que escaladores baixem informações completas de picos — croquis, betas, mapas GPS e descrições — para acesso **offline** no campo, sem depender de sinal de celular, além de manterem sua **Caderneta Esportiva** e **Perfil do Escalador** com sincronização opcional em nuvem via Supabase.
+O Aresta Climb distribui croquis, betas, mapas de setores, coordenadas GPS e descrições de picos para uso sem conexão de rede em campo. O aplicativo também inclui perfil de escalador, caderneta de ascensões, votação de consenso de grau e alertas de risco nas vias, com sincronização em nuvem via Supabase.
 
-Os dados dos guias são distribuídos no formato `.binarypb` e imagens WebP, sincronizados a partir do nosso servidor remoto ou consumidos em tempo real pelo Live Reload do Editor Desktop.
+Os dados dos guias usam arquivos `.binarypb` (Protocol Buffers) e imagens WebP, distribuídos pela CDN ou por sessão WebSocket do Editor Desktop.
 
-## Arquitetura e Padrões
+## Arquitetura
 
-O aplicativo é desenvolvido com arquitetura **MVVM (Model-View-ViewModel)** e utiliza classes **Protobuf** geradas automaticamente (`ResumoCroqui`, `Indice`, `Croqui`) como seus **Models** centrais, fortemente tipados de ponta a ponta.
+O aplicativo segue o padrão **MVVM (Model-View-ViewModel)** e utiliza mensagens **Protobuf** (`Indice`, `ResumoCroqui`, `Croqui`) e modelos em `lib/data/modelos/` como camada de dados.
 
-A sincronização de picos com a nuvem utiliza **Isolates em background** no `SyncService` para realizar cálculos de criptografia (SHA256) e persistência de arquivos sem travar a interface (`Main Thread`). Os downloads são do tipo **Delta Syncs (Atômicos)** — o aplicativo só baixa imagens e arquivos que sofreram mutação na nova versão, economizando banda e validando integridade bit a bit.
+A sincronização de croquis executa cálculo de hashes SHA-256 e gravação em disco em `Isolate` separado (`SyncService` / `SyncIsolate`) para não bloquear o Isolate de interface. O download atualiza apenas os arquivos cujo hash mudou em relação à versão armazenada no aparelho.
 
-A navegação principal utiliza uma **Árvore de Navegação** baseada em IDs de nós, estendendo-se para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download através de barras de progresso lineares em tempo real.
+O roteamento utiliza uma **Árvore de Navegação** (`NavNode` / `TreeNavigationController`) indexada por identificadores de texto. O `PageListenableBuilder` reconstrói as páginas quando o dataset em memória muda. Nos botões de retorno das páginas, um toque recua um nível na árvore (`AppNav.back`) e manter pressionado retorna à tela inicial (`AppNav.home`).
 
 ---
 
@@ -39,19 +39,19 @@ A navegação principal utiliza uma **Árvore de Navegação** baseada em IDs de
 
 | Documento | Conteúdo |
 |---|---|
-| [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
-| [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: MVVM, serviços, páginas, funções e widgets |
-| [`frontend/lib/view/README.md`](frontend/lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
-| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, autenticação Supabase, Modo Experimental e ciclo de importação |
-| [`frontend/lib/services/caderneta/README.md`](frontend/lib/services/caderneta/README.md) | Caderneta esportiva pessoal, estatísticas de escalada e sincronização de perfil |
-| [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e streaming sob demanda |
-| [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
-| [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
-| [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação técnica unificada: NanoID 14c universal, Supabase, PowerSync, contas e dados abertos ODbL |
-| [`docs/arquitetura/sql/README.md`](docs/arquitetura/sql/README.md) | Scripts SQL e regras de segurança (RLS e Storage) para contas, fotos de perfil, cadenas e interações no Supabase |
-| [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos oficiais de design e arquitetura diagramados em PDF |
-| [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Especificação das regras e fluxos do sistema de acesso a croquis |
-| [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Guia completo de configuração: Sentry Open Source, GitHub Issues, WAHA em GCP `e2-micro` e fallback Resend |
+| [`frontend/README.md`](frontend/README.md) | Funcionalidades, dependências, estrutura de pastas, execução e release |
+| [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura de `lib/`: serviços, páginas, navegação, `view`, `widgets` e `utils` |
+| [`frontend/lib/view/README.md`](frontend/lib/view/README.md) | Camada de apresentação: `function_library` e `view_models` |
+| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Serviços de dados, autenticação Supabase, interações e Modo Experimental |
+| [`frontend/lib/services/caderneta/README.md`](frontend/lib/services/caderneta/README.md) | Repositório da caderneta, estatísticas e sincronização de ascensões |
+| [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Cliente HTTP, sincronização em duas fases e leitura sob demanda |
+| [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento do SDK Firebase, telemetria e logs (Crashlytics e Sentry) |
+| [`frontend/test/README.md`](frontend/test/README.md) | Estrutura da suíte de testes e comandos de execução |
+| [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação de NanoID 14c, Supabase, PowerSync, contas e licença ODbL |
+| [`docs/arquitetura/sql/README.md`](docs/arquitetura/sql/README.md) | Scripts SQL e políticas RLS para `perfis`, `cadenas`, `fila_interacoes` e `avatars` |
+| [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos de arquitetura em PDF |
+| [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Regras e fluxos de acesso a croquis |
+| [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Configuração de Sentry, GitHub Issues, WAHA e Resend |
 
 ---
 
@@ -66,29 +66,24 @@ A navegação principal utiliza uma **Árvore de Navegação** baseada em IDs de
 ## Licença, Marca e Termos de Uso
 
 ### Código-Fonte
-O código-fonte deste projeto é distribuído sob a licença **Mozilla Public License 2.0 (MPL 2.0)**. 
-Consulte o arquivo [LICENSE](LICENSE) para obter o texto integral dos termos da licença.
+O código-fonte deste projeto é distribuído sob a licença **Mozilla Public License 2.0 (MPL 2.0)**. Consulte [LICENSE](LICENSE) para o texto integral.
 
 ### Marca e Identidade Visual
-O nome **"Aresta"**, **"Aresta Climb"**, bem como os logotipos, ícones e identidades visuais associadas são marcas registradas e de propriedade exclusiva dos mantenedores do projeto. O uso da licença MPL 2.0 aplica-se exclusivamente ao código-fonte e **não concede direitos de uso comercial das marcas ou logotipos** para produtos derivados. Caso crie um fork ou distribuição independente, altere o nome e os elementos visuais.
+Os nomes **"Aresta"** e **"Aresta Climb"**, logotipos, ícones e elementos de marca pertencem aos mantenedores do projeto. A licença MPL 2.0 aplica-se somente ao código-fonte e não concede direito de uso das marcas ou logotipos em produtos derivados. Em forks ou distribuições independentes, altere o nome e os ativos visuais.
 
 ### Conteúdo dos Guias e Croquis
-Os dados de escalada, croquis, betas, imagens e traçados de vias distribuídos através dos servidores oficiais ou comercializados no aplicativo são de propriedade de seus respectivos autores/conquistadores e da Aresta, sendo protegidos pela legislação de direitos autorais de conteúdo. O acesso ao código-fonte do aplicativo não concede licença sobre a base de dados comercial de croquis.
+Os dados de escalada, croquis, betas, imagens e traçados distribuídos pelos servidores do projeto pertencem aos seus autores/conquistadores e à Aresta, protegidos pela legislação de direitos autorais. O acesso ao código-fonte não concede licença sobre a base de croquis.
 
 ---
 
-## 💜 Apoio Open Source — Sentry
+## Apoio Open Source — Sentry
 
 [![Monitorado com Sentry](https://img.shields.io/badge/Monitorado_com-Sentry-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/?utm_source=github&utm_medium=referral)
 
-O ecossistema **Aresta Climb** conta com o apoio oficial do **[Sentry](https://sentry.io/?utm_source=github&utm_medium=referral)** através do seu programa de incentivo a projetos Open Source (**Sponsored Business Plan**), garantindo monitoramento de erros, rastreamento de releases e estabilidade em tempo real no aplicativo móvel, no Editor Desktop e nos serviços de borda.
+O projeto utiliza o **[Sentry](https://sentry.io/?utm_source=github&utm_medium=referral)** pelo programa para projetos Open Source (**Sponsored Business Plan**) para monitoramento de erros e releases no aplicativo móvel, no Editor Desktop e nos serviços de backend.
 
 ---
 
 ## Contribuindo
 
-Contribuições da comunidade são muito bem-vindas!
-
-Adotamos o **Developer Certificate of Origin (DCO v1.1)** para gerenciar as contribuições de forma ágil e sem a necessidade de contratos burocráticos de CLA. Ao enviar um Pull Request, você certifica que tem o direito de disponibilizar o código sob a licença MPL 2.0 assinando seus commits com a flag `-s` (`Signed-off-by`).
-
-Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md).
+Adotamos o **Developer Certificate of Origin (DCO v1.1)**. Ao abrir um Pull Request, assine seus commits com `-s` (`Signed-off-by`) atestando o direito de licenciar o código sob MPL 2.0. Consulte [CONTRIBUTING.md](CONTRIBUTING.md).
