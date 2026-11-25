@@ -265,6 +265,21 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginPage), findsNothing);
+
+      // Reabre e segura o botão voltar para retornar direto à raiz inicial
+      await tester.tap(find.text('Abrir Login'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
+
+      final gestoSegurar = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('btn_voltar_login'))),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      await gestoSegurar.up();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginPage), findsNothing);
     });
 
     testWidgets('não causa overflow em tela ultracompacta (320x568) com escala de texto 1.5x nas duas etapas do OTP', (tester) async {

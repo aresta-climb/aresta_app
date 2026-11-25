@@ -453,9 +453,16 @@ abstract final class AppNav {
     }
   }
 
-  /// Volta todo o caminho de retorno para o nó Home (raiz).
+  /// Volta todo o caminho de retorno para o nó Home (raiz), desempilhando antes
+  /// eventuais rotas imperativas sobrepostas (como busca local, scanner ou termos).
   static void home(BuildContext context) {
     ConstrutorCaminhoTrajeto.limparCache();
+    final navLocal = Navigator.maybeOf(context);
+    navLocal?.popUntil((rota) => rota.isFirst || rota.settings is Page);
+    final navRaiz = Navigator.maybeOf(context, rootNavigator: true);
+    if (navRaiz != null && !identical(navRaiz, navLocal)) {
+      navRaiz.popUntil((rota) => rota.isFirst || rota.settings is Page);
+    }
     _ctrl(context)?.goHome();
   }
 

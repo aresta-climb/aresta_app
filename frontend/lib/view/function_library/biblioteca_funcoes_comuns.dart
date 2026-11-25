@@ -12,6 +12,7 @@ import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import '../../widgets/feedback/construtor_feedback_usuario.dart';
+import '../../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
@@ -237,9 +238,9 @@ PreferredSizeWidget buildCommonAppBar(
 
   return AppBar(
     leading: ModalRoute.of(context)?.canPop == true || AppNav.canGoBack(context)
-        ? IconButton(
-            icon: Icon(Icons.arrow_back, color: fgColor),
-            onPressed: onBack ?? () => AppNav.back(context),
+        ? BotaoVoltarComRetornoInicio(
+            corIcone: fgColor,
+            aoVoltar: onBack ?? () => AppNav.back(context),
           )
         : null,
     title: titleWidget,

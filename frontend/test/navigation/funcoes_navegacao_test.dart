@@ -833,5 +833,63 @@ void main() {
         expect(viaNode.parent, isA<CadernetaNode>());
       },
     );
+
+    testWidgets(
+      'AppNav.home desempilha rotas imperativas sobrepostas local e raiz e retorna a árvore para HomeNode',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final treeController = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: SobreTimeNode(HomeNode()),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: treeController,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(treeController.currentNode, isA<SobreTimeNode>());
+        final contextoInterno = tester.element(find.text('SOBRE O TIME'));
+
+        // Empilha uma rota imperativa no Navigator raiz (distinto do Navigator declarativo interno)
+        Navigator.of(contextoInterno, rootNavigator: true).push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => AppNav.home(contextoInterno),
+                child: const Text('Ir Inicio Imperativo'),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        expect(find.text('Ir Inicio Imperativo'), findsOneWidget);
+
+        await tester.tap(find.text('Ir Inicio Imperativo'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pump();
+
+        expect(find.text('Ir Inicio Imperativo'), findsNothing);
+        expect(treeController.currentNode, isA<HomeNode>());
+      },
+    );
   });
 }

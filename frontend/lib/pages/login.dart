@@ -120,7 +120,10 @@ class _LoginPageState extends State<LoginPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BarraTopoLogin(aoVoltar: () => AppNav.back(context)),
+                BarraTopoLogin(
+                  aoVoltar: () => AppNav.back(context),
+                  aoIrParaInicio: () => AppNav.home(context),
+                ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
