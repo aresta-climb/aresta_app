@@ -1,49 +1,37 @@
 # Testes de Modelos de Dados (`test/data/`)
 
-Esta pasta contém os testes unitários dedicados à validação de modelos de dados e serialização JSON da pasta `lib/data/`, com cobertura de resiliência e integridade.
+Este diretório contém os testes unitários dos modelos em `lib/data/modelos/`.
 
 ---
 
-## Estrutura de Diretórios
+## Arquivos
 
 ```text
 test/data/
 └── modelos/
-    ├── cadena_test.dart             - Testes de criação, imutabilidade, validação e serialização JSON de Cadena
-    ├── perfil_escalador_test.dart   - Testes de geração NanoID 14c, fotoUrl, accessToken, copyWith e JSON de PerfilEscalador
-    ├── tipo_ascensao_test.dart      - Testes de prioridade visual e regras esportivas de TipoAscensao
-    ├── tipo_escalada_test.dart      - Testes de rotulagem e conversão de TipoEscalada
-    └── metadados_feedback_test.dart - Testes de integridade e serialização de FeedbackMetadata
+    ├── cadena_test.dart                  - Criação, limites de campos e JSON de Cadena
+    ├── estatisticas_caderneta_test.dart  - Estrutura imutável de EstatisticasCaderneta
+    ├── interacao_via_test.dart           - CategoriaAlertaSeguranca, AlertaSegurancaVia, ConsensoGrauVia e ComentarioComunidadeVia
+    ├── item_fila_interacao_test.dart     - Serialização de ItemFilaInteracao, consolidação de fila/alertas e verificação do script SQL
+    ├── metadados_feedback_test.dart      - Serialização JSON e campos de hash de FeedbackMetadata
+    ├── perfil_escalador_test.dart        - NanoID 14c, sessão, fotoUrl, copyWith e JSON de PerfilEscalador
+    ├── tipo_ascensao_test.dart           - Prioridade e regras de TipoAscensao
+    └── tipo_escalada_test.dart           - Rótulos e códigos de TipoEscalada
 ```
 
 ---
 
-## 1. Testes de Modelos (`modelos/`)
+## Cobertura Principal
 
-### `perfil_escalador_test.dart`
-Valida a identidade esportiva e estado de sessão do modelo `PerfilEscalador`:
-- **Geração Inicial (`PerfilEscalador.gerarInicial`)**: Verifica a geração criptográfica do `autorIdPublico` (NanoID 14c) e apelido padrão.
-- **Campos de Autenticação e Foto (`userId`, `fotoUrl`, `accessToken`)**: Valida `estaAutenticado`, atualização imutável via `copyWith`, limpeza simultânea de `userId` e `accessToken` com `limparUserId: true` e preservação do NanoID 14c.
-- **Serialização JSON (`toMap` / `fromMap` / `toJson` / `fromJson`)**: Garante compatibilidade com chaves `fotoUrl`, `avatar_url`, `accessToken` e `access_token`, além de regeneração segura caso o JSON contenha identificadores inválidos.
-
-### `cadena_test.dart`
-Valida o registro individual de ascensões (`Cadena`), limites de `notasPrivadas` (200 caracteres), `tentativas >= 1`, `grauSugerido` e serialização JSON.
-
-### `metadados_feedback_test.dart`
-Valida o ciclo completo de serialização e desserialização do modelo `FeedbackMetadata`:
-- **Round-Trip JSON**: Garante que instâncias convertidas para `Map<String, dynamic>` via `toJson()` possam ser reconstruídas via `fromJson()` sem perda ou corrupção de campos.
-- **Auditoria Criptográfica de Hashes**: Valida a persistência e restauração correta dos campos de integridade (`indiceSha256`, `croquiStatus`, `thumbnailStatus`, etc.).
-- **Compatibilidade de Nomenclatura**: Testa a capacidade defensiva do `fromJson` de decodificar tanto chaves no formato `camelCase` quanto no formato `snake_case`.
-- **Resiliência a Valores Nulos**: Assegura que propriedades opcionais ausentes no JSON decodifiquem de forma segura sem lançar exceções.
+- **`perfil_escalador_test.dart`**: Geração inicial de `autorIdPublico` (NanoID 14c), estado `estaAutenticado`, limpeza de sessão (`limparUserId: true`) e leitura/escrita JSON (`camelCase` e `snake_case`).
+- **`cadena_test.dart` e `estatisticas_caderneta_test.dart`**: Validação de `tentativas >= 1`, limite de 200 caracteres em `notasPrivadas`, `grauSugerido` e agregados da pirâmide de graus.
+- **`interacao_via_test.dart` e `item_fila_interacao_test.dart`**: Mapeamento das 4 categorias de alerta (`FAUNA`, `ROCHA_AGARRA_INSTAVEL`, `PROTECAO_PRECARIA`, `EXPOSICAO_E4_MAIS`), deduplicação de confirmações `+1` por `autorIdPublico`, consolidação de alertas contribuídos na Caderneta e verificação das regras em `supabase_contas_cadenas_interacoes.sql`.
+- **`metadados_feedback_test.dart`**: Conversão `toJson`/`fromJson`, compatibilidade de chaves e campos opcionais nulos.
 
 ---
 
-## Como Executar
+## Execução
 
 ```bash
-# Executar todos os testes desta pasta
 flutter test test/data/
-
-# Executar especificamente o teste do perfil do escalador
-flutter test test/data/modelos/perfil_escalador_test.dart
 ```
