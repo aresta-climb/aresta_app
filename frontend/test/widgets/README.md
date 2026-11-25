@@ -1,45 +1,31 @@
-# Testes de Widgets
+# Testes de Widgets (`test/widgets/`)
 
-Esta pasta contém testes de widget da interface do usuário. Os testes aqui verificam a renderização correta de componentes visuais e a lógica de interação do usuário.
+Este diretório contém os testes de widget que espelham `lib/widgets/`.
 
-## Arquivos
+## Principais Suítes
 
-| Arquivo | Widget testado | Descrição |
-|---|---|---|
-| `widget_test.dart` | `HomePage` | Teste básico de carregamento da página principal da aplicação |
-| `autenticacao/componentes_login_test.dart` | `componentes_login.dart` | Testa os componentes declarativos (Dumb UI) da tela de login sem senha: barra superior, cabeçalho, botões OAuth, divisor, banners de aviso/erro e cartão de código OTP de 6 dígitos |
-| `perfil/dialogos_hub_perfil_test.dart` | `DialogoEditarPerfil`, `ModalDadosPrivacidade`, `DialogoConfirmarSaida` | Testa a edição de nome e seleção/pré-visualização de foto de perfil, cópia do NanoID 14c e confirmação de encerramento de sessão |
-| `caderneta/modal_registro_cadena_test.dart` | `ModalRegistroCadena` | Testa o registro e edição de ascensões na caderneta |
-| `caderneta/controles_formulario_cadena_test.dart` | Controles de formulário | Testa seletores de estilo, tentativas, data e notas privadas da caderneta |
-| `caderneta/grafico_piramide_graus_test.dart` | `GraficoPiramideGraus` | Testa a renderização da pirâmide de graduação (vias e boulders) e estado vazio |
-| `caderneta/card_estatistica_test.dart` | `CardEstatistica` | Testa os cartões de resumo estatístico da caderneta |
-| `verificador_versao_app_test.dart` | `VerificadorVersaoApp` | Testa verificação de obsolescência de versão e bloqueio rígido com UI |
-| `banner_modo_experimental_test.dart` | `BannerModoExperimental` | Testa a barra de aviso de modo experimental e botão de encerramento |
-| `banner_modo_online_test.dart` | `BannerModoOnline` | Testa a exibição e ações do banner de aviso de navegação online |
-| `card_pico_test.dart` | `CardPico` | Testa o card modular de pico na grade de exploração com status, progresso e estatísticas |
-| `crag_list_item_test.dart` | `CragListItem` | Testa a renderização do item de lista de picos e ações de download |
-| `busca_global_test.dart` | `BuscaGlobalModal` | Testa o modal de busca global com pesquisa aproximada (Fuzzy) |
-| `imagem_arquivo_aresta_test.dart` | `ImagemArquivoAresta` | Testa o provedor especializado de imagem em disco com cache baseado em checksum SHA-256 |
-| `linha_credito_autor_test.dart` | `LinhaCreditoAutor` | Testa a renderização flexível de créditos de autores e conquistadores |
-| `mapa_thumbnail_test.dart` | `MapaThumbnail` | Testa preview interativo de mapa e transições |
-| `modal_confirmacao_saida_test.dart` | `ModalConfirmacaoSaida` | Testa o guardião de saída em modo online (com feedback e salvamento) |
-| `carrossel_picos_proximos_test.dart` | `CarrosselPicosProximos` | Testa carrossel horizontal de picos próximos e destaques |
-| `provedor_imagem_aresta_test.dart` | `ProvedorImagemAresta` | Testa resolução de imagens em camadas (local, cache temporário e CDN) |
-| `temas_botoes_test.dart` | `TemasBotoes` | Testa estilizações e temas de botões de navegação e ação |
-| `feedback/construtor_feedback_usuario_test.dart` | `CustomStringFeedback` | Testa o layout e comportamento visual (Light/Dark mode) do formulário de In-App Feedback |
-| `app_bar_home_aresta_test.dart` | `ArestaHomeAppBar` | Testa a renderização da barra superior da Home, ações de sincronização, configurações, botão de perfil/login e modal beta |
+| Arquivo | Componente testado |
+|---|---|
+| `navegacao/botao_voltar_com_retorno_inicio_test.dart` | `BotaoVoltarComRetornoInicio` (toque rápido, segurar até retornar ao início, cancelamento no meio da animação, semântica e integração com `AppNav`) |
+| `autenticacao/componentes_login_test.dart` | `BarraTopoLogin`, `CabecalhoTelaLogin`, `BotaoProvedorOAuthLogin`, `BannerAvisoLogin`, `CartaoCodigoEmailLogin` e `BotaoAbrirConfiguracoesLogin` |
+| `perfil/dialogos_hub_perfil_test.dart` | `DialogoEditarPerfil`, `ModalDadosPrivacidade`, `DialogoConfirmarSaida` e `DialogoConfirmarExclusaoConta` |
+| `caderneta/*_test.dart` | `ModalRegistroCadena`, `SecaoContribuicaoPublicaAscensao`, `ControlesFormularioCadena`, `SecaoMeusAlertasCaderneta`, `GraficoPiramideGraus` e `CardEstatistica` |
+| `via/*_test.dart` | `BolhasFlutuantesAlertaVia`, `CamadaBolhasAlertaMapa`, `AnelConsensoGrauVia`, `SeletorPilulasVotoGrauVia`, `CabecalhoIdentidadeVia`, `AreaHeroiTopoGrauVia`, `BarraInferiorAcoesVia`, `DespachanteSnackBarSeguro` e seções técnicas da `ViaPage` |
+| `provedor_imagem_aresta_test.dart` e `imagem_arquivo_aresta_test.dart` | Resolução de imagens em disco/cache/CDN e invalidação por SHA-256 |
+| `busca_global_test.dart` | Pesquisa global sobre `catalogo.db`, trava de concorrência e estado offline |
+| `card_pico_test.dart`, `carrossel_picos_proximos_test.dart`, `mapa_thumbnail_test.dart` | Cartões de picos, carrossel de próximos e miniaturas de mapas |
+| `painel_filtros_indice_test.dart`, `card_indice_escalada_test.dart`, `badges_modalidades_test.dart` | Filtros, cartões de vias/boulders e badges de modalidades |
+| `banner_modo_experimental_test.dart`, `banner_modo_online_test.dart`, `modal_confirmacao_saida_test.dart` | Banners de modo operacional e confirmação ao sair |
+| `feedback/construtor_feedback_usuario_test.dart` | Formulário `CustomStringFeedback` com e sem croqui ativo |
+| `app_bar_home_aresta_test.dart` e `verificador_versao_app_test.dart` | Barra superior da Home e verificação de versão mínima |
 
-## Como executar
+## Execução
 
 ```bash
-# Todos os testes desta pasta
 flutter test test/widgets/
-
-# Um arquivo específico
-flutter test test/widgets/perfil/dialogos_hub_perfil_test.dart
+flutter test test/widgets/navegacao/botao_voltar_com_retorno_inicio_test.dart
 ```
 
 ## Notas
 
-- Testes de widget requerem o `TestWidgetsFlutterBinding`, que inicializa o binding do Flutter.
-- Requisições HTTP feitas durante testes de widget retornam **status 400** automaticamente (comportamento padrão do `TestWidgetsFlutterBinding`). Código que depende de rede deve receber um cliente HTTP injetado ou utilizar Data URIs em base64 para imagens em memória.
+- `TestWidgetsFlutterBinding` bloqueia tráfego HTTP externo retornando status `400`; componentes que buscam dados externos recebem clientes/repositórios Fake injetados ou imagens em memória/disco temporário.
