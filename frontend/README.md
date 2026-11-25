@@ -128,31 +128,19 @@ Disparado manualmente (`workflow_dispatch`):
 | `deploy_android` | `boolean` | `true` | Gera `.aab` e publica na Google Play |
 | `deploy_ios` | `boolean` | `true` | Gera `.ipa` e publica na App Store / TestFlight |
 
-#### Ciclo Contínuo de Desenvolvimento (`-dev`)
-O repositório adota a convenção de que a branch `main` sempre aponta para a versão do **próximo patch planejado** com o sufixo `-dev`:
-- Quando a versão atual for `0.2.5-dev+67` e um release `patch` for disparado, o pipeline lança `0.2.5+68`, cria a tag `v0.2.5+68` e comita automaticamente o início do próximo ciclo dev em `main` como `0.2.6-dev+69`.
-- Se um incremento `minor` for selecionado, a versão lançada será `0.3.0+68` e o ciclo seguinte em `main` iniciará em `0.3.1-dev+69`.
-- Se um incremento `major` for selecionado, a versão lançada será `1.0.0+68` e o ciclo seguinte em `main` iniciará em `1.0.1-dev+69`.
+#### Versionamento `-dev` na `main`
+A branch `main` mantém a versão do próximo patch com sufixo `-dev`:
+- Exemplo: partindo de `0.2.5-dev+67`, um release `patch` publica `0.2.5+68`, cria a tag `v0.2.5+68` e atualiza `main` para `0.2.6-dev+69`.
+- Scripts auxiliares em `frontend/tool/release_tools/`:
+  ```bash
+  dart run tool/release_tools/calcular_versao_release.dart --tipo patch
+  dart run tool/release_tools/calcular_proximo_dev.dart 0.2.5 --build 68
+  dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml 0.2.5-dev+67
+  ```
 
-As ferramentas de cálculo e manipulação de versão estão centralizadas e testadas em `frontend/tool/release_tools/`:
-```bash
-# Calcular versão de lançamento:
-dart run tool/release_tools/calcular_versao_release.dart --tipo patch
+### Build Local Android
+`build.gradle.kts` lê as credenciais de variáveis de ambiente (não utilize `key.properties`):
 
-# Calcular próximo ciclo dev:
-dart run tool/release_tools/calcular_proximo_dev.dart 0.2.5 --build 68
-
-# Atualizar o pubspec.yaml:
-dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml 0.2.5-dev+67
-```
-
-### Artefatos de Release no GitHub Actions
-A cada release gerada pelos workflows `build_android.yml` e `build_ios.yml`, um pacote `.zip` completo contendo os binários (`.aab` / `.ipa`), tabelas de símbolos Dart (`.symbols`), dSYMs do Xcode e arquivos de mapeamento R8/ProGuard é armazenado na aba **Actions** do GitHub (com retenção de 90 dias).
-
-### Build Local
-Se precisar gerar o `.aab` na sua própria máquina, você **não** deve utilizar o arquivo `key.properties` (por segurança). O arquivo `build.gradle.kts` foi configurado para ler diretamente as Variáveis de Ambiente do Sistema Operacional.
-
-No PowerShell, defina as variáveis temporariamente em memória e rode o build:
 ```powershell
 $env:KEY_ALIAS='seu_alias'
 $env:STORE_FILE='caminho\absoluto\upload-keystore.jks'
@@ -161,28 +149,26 @@ $env:STORE_PASSWORD='sua_senha'
 
 flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 ```
-> **Nota:** Use aspas simples (`' '`) no PowerShell caso sua senha contenha caracteres especiais como `$`.
-
-O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
+Saída: `build\app\outputs\bundle\release\app-release.aab`.
 
 ---
 
-## Documentação
+## Documentação Interna
 
 | Documento | Conteúdo |
 |---|---|
-| [`lib/README.md`](lib/README.md) | Arquitetura completa: serviços, páginas, funções e widgets |
-| [`lib/view/README.md`](lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
-| [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore com Hot-Reload (Tree Navigation) |
-| [`lib/services/README.md`](lib/services/README.md) | Serviços centrais, autenticação Supabase, Modo Experimental e isolamento de dados |
-| [`lib/services/caderneta/README.md`](lib/services/caderneta/README.md) | Caderneta esportiva, estatísticas e sincronização de perfil |
-| [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
-| [`test/README.md`](test/README.md) | Estrutura dos testes, como executar e convenções adotadas |
-| [`test/navigation/README.md`](test/navigation/README.md) | Cobertura dos testes da árvore de navegação e validação de prevenção de loops |
+| [`lib/README.md`](lib/README.md) | Camadas de `lib/` e fluxo de dados |
+| [`lib/data/README.md`](lib/data/README.md) | Modelos de domínio locais |
+| [`lib/view/README.md`](lib/view/README.md) | `function_library` e `view_models` |
+| [`lib/navigation/README.md`](lib/navigation/README.md) | Árvore de navegação e deep links |
+| [`lib/pages/README.md`](lib/pages/README.md) | Telas e ciclo de vida |
+| [`lib/services/README.md`](lib/services/README.md) | Serviços, autenticação e Modo Experimental |
+| [`lib/widgets/README.md`](lib/widgets/README.md) | Componentes visuais compartilhados |
+| [`test/README.md`](test/README.md) | Suíte de testes e execução |
 
 ---
 
 ## Licença e Contribuição
 
-- **Código-Fonte**: Licenciado sob a [Mozilla Public License 2.0 (MPL 2.0)](../LICENSE).
-- **Diretrizes de Contribuição**: Adotamos o Developer Certificate of Origin (DCO com `git commit -s`). Veja detalhes em [CONTRIBUTING.md](../CONTRIBUTING.md).
+- **Código-Fonte**: [Mozilla Public License 2.0 (MPL 2.0)](../LICENSE).
+- **Contribuição**: Developer Certificate of Origin (`git commit -s`). Detalhes em [CONTRIBUTING.md](../CONTRIBUTING.md).
