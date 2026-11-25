@@ -1,63 +1,62 @@
-# Camada de Modelos de Dados (`lib/data/`)
+# Modelos de Dados (`lib/data/`)
 
-Este diretório contém os modelos de dados internos não derivados de mensagens Protobuf do ecossistema Aresta Climb.
-
-A principal responsabilidade deste módulo é fornecer estruturas tipadas, seguras e com serialização direta (JSON) para funcionalidades de domínio local e sincronização, como a caderneta esportiva, o perfil do escalador, a telemetria diagnóstica e relatórios de feedback.
+Este diretório contém os modelos de domínio que não vêm dos arquivos Protobuf gerados em `lib/aresta_api/`. Não possui dependências de `services/`, `view/`, `widgets/` ou `pages/`.
 
 ---
 
-## Estrutura de Diretórios
+## Estrutura
 
 ```text
 lib/data/
 └── modelos/
-    ├── metadados_feedback.dart    - Modelo de domínio dos metadados de diagnóstico de feedback
-    ├── tipo_ascensao.dart         - Enum esportivo de tipos de ascensão (À Vista, Flash, Trabalhado, Tentativa)
-    ├── tipo_escalada.dart         - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
-    ├── cadena.dart                - Entidade imutável de registro de ascensão na caderneta
-    ├── perfil_escalador.dart      - Entidade do perfil, sessão autenticada, foto e identificador público do atleta
-    ├── interacao_via.dart         - Modelos imutáveis de alertas estilo Waze, consenso de grau e notas comunitárias da via
-    └── item_fila_interacao.dart   - Modelo validado e redutor de eventos da tabela `public.fila_interacoes` (PostgREST + fila offline)
+    ├── cadena.dart                  - Registro individual de ascensão ou tentativa
+    ├── estatisticas_caderneta.dart  - Agregado de métricas e pirâmides de grau da caderneta
+    ├── interacao_via.dart           - Modelos de alertas de segurança, consenso de grau e comentários
+    ├── item_fila_interacao.dart     - Item da tabela `public.fila_interacoes` e funções de consolidação
+    ├── metadados_feedback.dart      - Metadados de dispositivo, navegação e hashes para feedback
+    ├── perfil_escalador.dart        - Dados do perfil, identificador público e tokens de sessão
+    ├── tipo_ascensao.dart           - Enum de estilos (À Vista, Flash, Trabalhado, Tentativa)
+    └── tipo_escalada.dart           - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
 ```
 
 ---
 
-## 1. Modelos de Domínio (`modelos/`)
+## Modelos
 
 ### `Cadena` (`modelos/cadena.dart`)
-Representa o registro individual de ascensão de uma via ou boulder:
-- Identificador primário UUID v4 (`id`) e vínculo com a via via `escaladaUid` (NanoID 14c Base62).
-- Contém estilo esportivo (`tipoAscensao`), modalidade (`tipoEscalada`), quantidade de tentativas (`tentativas`, >= 1), data de realização (`dataAscensao`), código numérico opcional do grau (`grauSugerido`) e notas íntimas com limite rígido de 200 caracteres (`notasPrivadas`).
-- Suporta serialização `toMap`/`fromMap` e `toJson`/`fromJson`.
+Registro de ascensão ou tentativa em uma via ou boulder:
+- Chave primária UUID v4 (`id`) e referência à via por `escaladaUid` (NanoID 14c).
+- Campos: `tipoAscensao`, `tipoEscalada`, `tentativas` ($\ge 1$), `dataAscensao`, `grauSugerido` (opcional) e `notasPrivadas` (até 200 caracteres).
+- Métodos de serialização `toMap`/`fromMap` e `toJson`/`fromJson`.
 
 ### `PerfilEscalador` (`modelos/perfil_escalador.dart`)
-Representa a identidade esportiva pública e o estado de autenticação do escalador:
-- `autorIdPublico`: NanoID de 14 caracteres criptograficamente gerado, estável e compartilhável, preservado ao criar ou vincular uma conta.
-- `autorNomePublico`: Nome ou apelido esportivo exibido nas telas, sincronizado com `public.perfis` no Supabase.
-- `userId`: Identificador UUID opcional da conta autenticada no Supabase Auth (`auth.users`).
-- `fotoUrl`: URL pública da foto de perfil no Supabase Storage (`avatars/<userId>/avatar.webp`) ou Data URI em base64 (`data:image/webp;base64,...`) para exibição offline.
-- `accessToken` e `refreshToken`: Tokens JWT e de renovação da sessão autenticada no Supabase Auth (`grant_type=refresh_token`), utilizados para manter escritas autenticadas no Storage e em `public.fila_interacoes` mesmo após a expiração de 1 hora do JWT.
-- `estaAutenticado`: Indica se há um `userId` não vazio vinculado ao perfil. Ao invocar `copyWith(limparUserId: true)` no encerramento de sessão, `userId`, `accessToken` e `refreshToken` são limpos simultaneamente, mantendo `autorIdPublico` e demais dados locais intactos.
+Dados de identificação e sessão do usuário:
+- `autorIdPublico`: NanoID de 14 caracteres mantido ao criar ou vincular conta.
+- `autorNomePublico`: Nome exibido nas interações públicas, sincronizado com `public.perfis`.
+- `userId`: UUID da conta no Supabase Auth (`auth.users`), quando autenticado.
+- `fotoUrl`: URL no bucket `avatars` ou Data URI WebP em base64 (`data:image/webp;base64,...`).
+- `accessToken` e `refreshToken`: Credenciais da sessão Supabase Auth.
+- `estaAutenticado`: Retorna `true` quando `userId` não está vazio. `copyWith(limparUserId: true)` limpa `userId`, `accessToken` e `refreshToken` preservando `autorIdPublico`.
 
 ### `TipoAscensao` e `TipoEscalada` (`modelos/tipo_ascensao.dart`, `modelos/tipo_escalada.dart`)
-Enums com rotulagem amigável em português e métodos utilitários:
-- `TipoAscensao`: define se a ascensão foi encadenada com sucesso (`isCadena`) e estabelece a prioridade esportiva visual (`prioridadeVisual`) para eleger o selo de melhor cadena alcançada em uma via.
+- `TipoAscensao`: Indica se houve cadena (`isCadena`) e define a ordem de prioridade (`prioridadeVisual`: À Vista > Flash > Trabalhado > Tentativa).
+- `TipoEscalada`: Rótulos em português e conversão para códigos persistidos.
 
-### Modelos de Comunidade e Segurança da Via (`modelos/interacao_via.dart`)
-Estruturas imutáveis e validadas sob filosofia *Fail-Fast* para a experiência comunitária da `ViaPage`:
-- `CategoriaAlertaSeguranca`: Enum canônico espelhando `chk_fila_categoria_alerta` (`ABELHAS_INSETOS` `🐝`, `ROCHA_AGARRA_INSTAVEL` `🪨`, `PROTECAO_PRECARIA` `🔩`, `VIA_MOLHADA` `💧` e `RISCO_EXPOSICAO` `⚠️`), com rótulos e descrições em português.
-- `AlertaSegurancaVia`: Alerta ativo identificado por NanoID 14c (`uid`), vinculado a `escaladaUid`, validando limite de 100 caracteres para `detalhe` e mantendo contagem de confirmações *"Ainda está lá?"* (`confirmacoesAtivas`).
-- `ConsensoGrauVia`: Agregado de avaliação democrática de grau (`grauSugerido`, `totalVotos`, `distribuicaoDeltas` de `-2` a `+2`) coexistindo com o grau oficial do conquistador e gerando `resumoTendencia`.
-- `ComentarioComunidadeVia`: Nota pública desacoplada de dados pessoais sensíveis (expondo apenas `autorIdPublico`, `autorNomePublico`, `estiloAscensao` e `texto` validado até 280 caracteres).
-- `DadosComunidadeVia`: Agregado raiz combinando `consensoGrau`, `alertasAtivos` e `comentarios`.
-- `ItemFilaInteracao` e `TipoFilaInteracao` (`modelos/item_fila_interacao.dart`): Representação imutável das linhas de `public.fila_interacoes` (`VOTO_GRAU`, `COMENTARIO`, `ALERTA_SEGURANCA`, `CONFIRMACAO_ALERTA`), com validação NanoID 14c e redutor puro `consolidarItensFilaEmDadosComunidade`.
+### Comunidade e Segurança (`modelos/interacao_via.dart` e `modelos/item_fila_interacao.dart`)
+- `CategoriaAlertaSeguranca`: Enum alinhado à constraint `chk_fila_categoria_alerta` do Supabase:
+  - `fauna` (`FAUNA`, `🐝`, `"Fauna"`)
+  - `rochaAgarraInstavel` (`ROCHA_AGARRA_INSTAVEL`, `🪨`, `"Rocha ou Agarra Instável"`)
+  - `protecaoPrecaria` (`PROTECAO_PRECARIA`, `🔩`, `"Proteção Precária"`)
+  - `exposicaoE4Mais` (`EXPOSICAO_E4_MAIS`, `⚠️`, `"Exposição E4+"`)
+- `AlertaSegurancaVia`: Alerta identificado por NanoID 14c (`uid`), associado a `escaladaUid`, com detalhe opcional de até 100 caracteres, contagem `confirmacoesAtivas` e conjunto `confirmadoresUids` (máximo de 1 confirmação positiva por `autorIdPublico`).
+- `AlertaContribuidoCaderneta` e `PapelContribuicaoAlerta`: Representam alertas criados (`CRIADO POR VOCÊ`) ou confirmados (`CONFIRMADO (+1)`) pelo usuário para listagem na `CadernetaPage`.
+- `ConsensoGrauVia`: Agregado de votos de grau (`grauSugerido`, `totalVotos`, `distribuicaoDeltas` de `-2` a `+2` e `resumoTendencia`).
+- `ComentarioComunidadeVia`: Comentário público de até 280 caracteres com `autorIdPublico`, `autorNomePublico` e `estiloAscensao` opcional.
+- `DadosComunidadeVia`: Agrupa `consensoGrau`, `alertasAtivos` e `comentarios` de uma via.
+- `ItemFilaInteracao`: Representa eventos de `public.fila_interacoes` (`VOTO_GRAU`, `COMENTARIO`, `ALERTA_SEGURANCA`, `CONFIRMACAO_ALERTA`) e expõe `consolidarItensFilaEmDadosComunidade` e `consolidarAlertasContribuidosPeloAutor`.
 
 ### `FeedbackMetadata` (`modelos/metadados_feedback.dart`)
-Representa o pacote completo de informações contextuais do dispositivo capturadas no momento em que um usuário abre ou submete um reporte de in-app feedback:
-- **Telemetria do Aparelho**: Modelo, versão do sistema operacional, orientação da tela, dimensões do viewport, conectividade ativa (Wi-Fi, móvel, offline) e tema visual (Claro/Escuro).
-- **Contexto de Navegação**: Identificador único do reporte (`feedbackId`), UUID da instalação (`appInstanceId`), versão do app e caminho canônico completo da árvore de navegação ativa (`navigationTree`).
-- **Auditoria Criptográfica de Hashes**:
-  - `indiceSha256`: Hash SHA-256 do arquivo `indice.binarypb` local.
-  - `croquiId`, `croquiSha256Esperado`, `croquiSha256Real`, `croquiStatus`: Status de integridade do croqui em visualização (`INTEGRO`, `DIVERGENTE`, `NAO_BAIXADO`).
-  - `thumbnailSha256Esperado`, `thumbnailSha256Real`, `thumbnailStatus`: Status de integridade da miniatura do pico ativo.
-- **Serialização Direta**: Possui construtor de fábrica `fromJson` e método `toJson` diretos na própria classe.
+Dados anexados a envios de feedback in-app:
+- Modelo do aparelho, sistema operacional, dimensões de tela, conectividade e tema.
+- `feedbackId`, `appInstanceId`, versão do app e caminho atual da árvore de navegação (`navigationTree`).
+- Hashes SHA-256 e status (`INTEGRO`, `DIVERGENTE`, `NAO_BAIXADO`) de `indice.binarypb`, do croqui aberto e da miniatura.
