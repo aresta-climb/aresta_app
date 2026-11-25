@@ -62,104 +62,71 @@ frontend/
 │   ├── theme/                           - Paleta de cores (AppColors) e temas claro/escuro
 │   ├── utils/                           - Geometria vetorial, formatação de graus, filtros, UIDs e consultas no dataset
 │   ├── view/
-│   │   │   ├── sync_rede.dart           - Faz o download HTTP bruto, consulta /sync do catálogo e gestão de ETags
-│   │   │   ├── sync_armazenamento.dart  - Trata arquivos `.tmp` e salva de forma atômica
-│   │   │   └── baixador_atualizacoes.dart - Verificação e download de atualizações do APK
-│   │   ├── feedback/
-│   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
-│   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
-│   │   │   └── feedback_queue_service.dart - Fila local persistente (SharedPreferences)
-│   │   ├── repositorio_dataset.dart     - Estado central: downloads e metadados
-│   │   └── editor_croqui.dart           - Contexto de modo experimental e Live Reload
-│   └── widgets/
-│       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa
-│       ├── caderneta/                   - Modal de registro de cadena, pirâmide de graus e cards estatísticos
-│       ├── perfil/
-│       │   └── dialogos_hub_perfil.dart - Diálogos de edição de perfil/foto, dados/privacidade e confirmação de saída
-│       ├── feedback/
-│       │   └── construtor_feedback_usuario.dart - Construtor de interface customizada para formulário de in-app feedback
-│       ├── card_pico.dart               - Card interativo do pico com status, progresso de download e estatísticas
-│       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
-│       ├── busca_global.dart            - Busca global Fuzzy sobre catalogo.db com prioridade e badge Offline
-│       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
-└── test/
-    ├── architecture/                    - Testes arquiteturais e de convenção de código
-    ├── data/                            - Testes de modelos de domínio (PerfilEscalador, Cadena, FeedbackMetadata)
-    ├── integration/                     - Testes de integração de fluxos completos (download, leitura, etc)
-    ├── legal/                           - Testes para validação e extração de datas de documentos legais
-    ├── navigation/                      - Testes unitários da árvore de navegação, loops e reatividade
-    ├── pages/                           - Testes de widget das páginas de roteamento superior
-    ├── protobuf/                        - Testes de serialização/desserialização dos objetos Protobuf
-    ├── services/                        - Testes unitários dos serviços principais (Autenticacao, Midia, Caderneta, SyncService, etc)
-    ├── theme/                           - Testes unitários do gerenciamento de temas e persistência
-    ├── view/                            - Testes unitários da camada de apresentação
-    │   ├── function_library/            - Testes de funções utilitárias e builders de tela
-    │   └── view_models/                 - Testes de modelos de apresentação e gerenciamento de estado
-    └── widgets/                         - Testes de widget da interface do usuário
+│   │   ├── function_library/            - Construtores declarativos de UI por tela
+│   │   └── view_models/                 - ViewModels reativos (ChangeNotifier)
+│   └── widgets/                         - Componentes reutilizáveis (navegação, via, caderneta, perfil, login, imagens, modais)
+└── test/                                - Testes unitários, de widget, de integração, arquiteturais e de caos
 ```
 
 ---
 
-## Como Começar
+## Execução e Testes
 
 ```bash
 # Instalar dependências
 flutter pub get
 
-# Rodar em modo de desenvolvimento
+# Executar em modo de desenvolvimento
 flutter run
 
-# Rodar em modo de desenvolvimento com Perfil e Caderneta habilitados
+# Executar com Perfil, Caderneta e Interações habilitados
 flutter run --dart-define=HABILITAR_PERFIL=true
 
-# Rodar a suíte de testes
+# Executar todos os testes
 flutter test
 
-# Rodar apenas uma pasta de testes
+# Executar uma pasta específica
 flutter test test/services/
 flutter test test/navigation/
-flutter test test/integration/
+flutter test test/widgets/
 ```
-
-> **Pré-requisito:** Flutter SDK instalado e configurado. Consulte [flutter.dev](https://flutter.dev/docs/get-started/install) para instruções de instalação.
 
 ---
 
-## Build e Release (Android & iOS)
+## Build e Release (Android e iOS)
 
-O projeto está configurado para gerar as versões finais assinadas (`.aab` para Google Play e `.ipa` para App Store) e enviar automaticamente os símbolos de depuração para o Firebase Crashlytics via CI/CD.
+O pipeline gera os artefatos assinados (`.aab` para Google Play e `.ipa` para App Store) e envia símbolos de depuração ao Firebase Crashlytics via GitHub Actions.
 
-### Segredos do Repositório (GitHub Actions Secrets)
-Para que o pipeline automatizado (`release_new_app_version.yml`) compile, assine e envie os relatórios de crash desofuscados, configure os seguintes secrets no GitHub:
+### Secrets do GitHub Actions
 
 | Secret | Finalidade |
 |---|---|
-| `ANDROID_KEYSTORE_BASE64` | Arquivo Keystore `.jks` do Android em Base64 |
-| `ANDROID_KEY_ALIAS` | Alias da chave de assinatura do Android |
+| `ANDROID_KEYSTORE_BASE64` | Keystore `.jks` do Android em Base64 |
+| `ANDROID_KEY_ALIAS` | Alias da chave de assinatura Android |
 | `ANDROID_KEY_PASSWORD` / `ANDROID_STORE_PASSWORD` | Senhas da chave e do Keystore |
 | `ANDROID_PLAY_STORE_CONFIG_JSON` | Service Account JSON da Google Play Console |
-| `IOS_BUILD_CERTIFICATE_BASE64` | Certificado de Distribuição Apple (`.p12`) em Base64 |
+| `IOS_BUILD_CERTIFICATE_BASE64` | Certificado de distribuição Apple (`.p12`) em Base64 |
 | `IOS_BUILD_CERTIFICATE_PASSWORD` | Senha do certificado `.p12` |
 | `IOS_MOBILE_PROVISIONING_PROFILE_BASE64` | Provisioning Profile (`.mobileprovision`) em Base64 |
-| `APPSTORE_KEY_ID` / `APPSTORE_ISSUER_ID` / `APPSTORE_PRIVATE_KEY` | Chave API da App Store Connect (`.p8`) |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Service Account JSON do Google Cloud com role `Firebase Crashlytics Admin` para upload de `dSYMs` e `.symbols` |
+| `APPSTORE_KEY_ID` / `APPSTORE_ISSUER_ID` / `APPSTORE_PRIVATE_KEY` | Chave da API App Store Connect (`.p8`) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Service Account com permissão `Firebase Crashlytics Admin` |
 
-### Otimizações de Compilação e Google Play Vitals
-O Aresta implementa as melhores práticas recomendadas para Android Vitals e App Store:
-- **Gestão de Memória e Bitmaps:** Teto global de 100 MB para o `imageCache` (via `configurarGestaoMemoria()`) e decodificação com downsampling via `ResizeImage.resizeIfNeeded` no `ProvedorImagemAresta` e `_CragBackgroundWidget` (restringindo o uso de RAM por miniatura a ~160 KB).
-- **R8 e Minificação (Android):** `isMinifyEnabled` e `isShrinkResources` ativados com `proguard-android-optimize.txt` e `proguard-rules.pro`, reduzindo o DEX e tamanho do AAB em mais de 25%.
-- **ThinLTO e Dead Code Stripping (iOS):** Otimizações inter-módulos ativadas no Clang via `Release.xcconfig`.
-- **Ofuscação de Código Dart:** Flags `--obfuscate --split-debug-info=build/symbols` aplicadas nos builds de release com upload automático de `mapping.txt`, `.symbols` e `dSYMs` para o Firebase Crashlytics e Google Play Console.
+### Configurações de Release
+- **Memória de Imagens**: Limite de `imageCache` ajustado por faixa de RAM (`configurarGestaoMemoria()`) e decodificação redimensionada com `ResizeImage.resizeIfNeeded` em `ProvedorImagemAresta`.
+- **Android (R8)**: `isMinifyEnabled` e `isShrinkResources` ativos com `proguard-rules.pro`.
+- **iOS**: Otimizações de compilação definidas em `Release.xcconfig`.
+- **Ofuscação Dart**: `--obfuscate --split-debug-info=build/symbols` com envio de `mapping.txt`, `.symbols` e `dSYMs`.
 
-### Fluxo de Release Automatizado (GitHub Actions)
-O lançamento de novas versões para as lojas de aplicativo é realizado através do workflow unificado [`.github/workflows/release_new_app_version.yml`](../.github/workflows/release_new_app_version.yml) via disparo manual (**workflow_dispatch**):
+### Workflow de Release (`.github/workflows/release_new_app_version.yml`)
+
+Disparado manualmente (`workflow_dispatch`):
 
 | Parâmetro | Tipo | Padrão | Descrição |
 |---|---|---|---|
-| `bump_type` | `choice` | `patch` | Tipo de incremento semântico: `patch`, `minor`, `major` ou `custom`. |
-| `custom_version` | `string` | *(vazio)* | Versão explícita (obrigatória apenas se `bump_type` for `custom`, ex: `1.0.0`). |
-| `deploy_android` | `boolean` | `true` | Se verdadeiro, executa build do AAB e publicação na Google Play Store. |
-| `deploy_ios` | `boolean` | `true` | Se verdadeiro, executa build do IPA e publicação na Apple App Store / TestFlight. |
+| `bump_type` | `choice` | `patch` | Tipo de incremento: `patch`, `minor`, `major` ou `custom` |
+| `custom_version` | `string` | *(vazio)* | Versão manual quando `bump_type` é `custom` |
+| `deploy_android` | `boolean` | `true` | Gera `.aab` e publica na Google Play |
+| `deploy_ios` | `boolean` | `true` | Gera `.ipa` e publica na App Store / TestFlight |
 
 #### Ciclo Contínuo de Desenvolvimento (`-dev`)
 O repositório adota a convenção de que a branch `main` sempre aponta para a versão do **próximo patch planejado** com o sufixo `-dev`:
