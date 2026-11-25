@@ -1,26 +1,17 @@
-﻿# Camada de Tema (`lib/theme/`)
+# Tema e Cores (`lib/theme/`)
 
-Este diretório contém a lógica de estilização, cores e o gerenciamento do tema do aplicativo Aresta Climb.
+Este diretório define as cores, a tipografia e o controle de tema (claro e escuro) do aplicativo usando `ThemeData`, `ThemeMode` e `ThemeExtension`.
 
-A arquitetura de tema do aplicativo é construída utilizando o sistema nativo do Flutter (`ThemeData`, `ThemeMode` e `ThemeExtension`), o que garante alta performance, suporte a temas claros e escuros de forma fluida, e *type-safety* (segurança de tipos) durante o desenvolvimento.
-
-## Componentes
+## Arquivos
 
 ### `cores_app.dart`
-Define a paleta de cores unificada do aplicativo usando `ThemeExtension`.
-Em vez de depender de instâncias hardcoded de `Color` que não podem mudar com base no contexto, as cores são acessadas de forma reativa através do `BuildContext`.
-
-- **`AppColors`**: Uma extensão do `ThemeData` que armazena todas as cores semânticas (ex: `nobleBlack`, `beastHide`, `fishBone`).
-- Duas instâncias estáticas são fornecidas: `AppColors.light` e `AppColors.dark`.
-- **Acesso fácil**: Uma extensão no `BuildContext` (`AppColorsExtension`) permite acessar as cores em qualquer widget com a sintaxe enxuta: `context.colors.nomeDaCor`.
-- **Cor da Logomarca**: Além das cores reativas aos modos de tela, a extensão abriga a `AppColors.brandColor`, que centraliza a cor oficial e vibrante do aplicativo usada em marcadores de mapas e ícones de identidade visual.
+Define a extensão `AppColors` sobre `ThemeData`:
+- Contém as instâncias `AppColors.light` e `AppColors.dark` com tokens de cor nomeados (`deepBasalt`, `caveShadow`, `graniteEdge`, `chalkWhite`, `ashGrey`, `dryMoss`, `rustIron`, etc.).
+- Expõe a extensão `context.colors` em `BuildContext` para leitura das cores do tema atual.
+- Define `AppColors.brandColor` para marcadores de mapa e elementos de destaque da marca.
 
 ### `gerenciador_tema.dart`
-Controlador Singleton que gerencia o estado global do tema selecionado pelo usuário.
-- Armazena a preferência de tema (Sistema, Claro, ou Escuro) utilizando o `SharedPreferences` para persistir a escolha entre as sessões do aplicativo.
-- Expõe um `ValueNotifier<ThemeMode>` que o `main.dart` escuta via `ValueListenableBuilder` para reconstruir toda a árvore de widgets quando o tema é alterado, sem a necessidade de pacotes externos de gerenciamento de estado.
+Controlador que persiste o `ThemeMode` escolhido (`system`, `light` ou `dark`) em `SharedPreferences` e expõe um `ValueNotifier<ThemeMode>` observado em `main.dart`.
 
 ### `temas.dart`
-Fábrica de instâncias de `ThemeData` para o sistema de design:
-- **`construirTemaClaro()`**: Constrói o tema visual claro completo, configurando `colorScheme.fromSeed`, fontes Montserrat, esquema de seleção de texto e definindo explicitamente estilos base para `IconButtonThemeData`, `MenuButtonThemeData` e `PopupMenuThemeData` (prevenindo falhas ao mesclar estilos de botão no Material 3).
-- **`construirTemaEscuro()`**: Constrói o tema visual escuro completo sob a mesma filosofia de resiliência e harmonia visual.
+Funções `construirTemaClaro()` e `construirTemaEscuro()` que montam o `ThemeData` com `ColorScheme`, fonte Montserrat e temas explícitos para `IconButton`, `MenuButton` e `PopupMenu`.
