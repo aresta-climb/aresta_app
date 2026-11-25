@@ -24,6 +24,7 @@ import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/extrator_rotulos_referencia.dart';
 import '../view/view_models/alertas_mapa_interativo_view_model.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/via/camada_bolhas_alerta_mapa.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
@@ -1636,9 +1637,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       appBar: AppBar(
         backgroundColor: Colors.black.withValues(alpha: 0.5),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => AppNav.back(context),
+        leading: BotaoVoltarComRetornoInicio(
+          corIcone: Colors.white,
+          aoVoltar: () => AppNav.back(context),
         ),
         title: const Text(
           'Croqui Interativo',

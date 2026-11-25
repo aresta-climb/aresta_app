@@ -16,6 +16,7 @@ import '../../services/repositorio_dataset.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/badges_modalidades.dart';
+import '../../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../../utils/consolidador_modalidades.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
@@ -452,9 +453,9 @@ class PicoSearchDelegate extends SearchDelegate<Object?> {
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back, color: Color(0xFFC04F34)),
-      onPressed: () => close(context, null),
+    return BotaoVoltarComRetornoInicio(
+      corIcone: const Color(0xFFC04F34),
+      aoVoltar: () => close(context, null),
     );
   }
 

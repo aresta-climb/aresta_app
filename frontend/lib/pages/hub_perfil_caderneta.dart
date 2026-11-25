@@ -7,6 +7,7 @@ import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_hub_perfil_caderneta.dart';
 import '../view/view_models/hub_perfil_caderneta_view_model.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/perfil/dialogos_hub_perfil.dart';
 
 /// Página central do Hub de Perfil do Escalador e Caderneta Esportiva.
@@ -140,11 +141,11 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
+                      BotaoVoltarComRetornoInicio(
                         key: const Key('btn_voltar_hub_perfil'),
-                        icon: Icon(Icons.arrow_back, color: cores.chalkWhite),
-                        tooltip: 'Voltar',
-                        onPressed: () => AppNav.back(context),
+                        corIcone: cores.chalkWhite,
+                        dica: 'Voltar',
+                        aoVoltar: () => AppNav.back(context),
                       ),
                       buildFeedbackButton(context, color: cores.chalkWhite),
                     ],

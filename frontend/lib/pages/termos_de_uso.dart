@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,6 +9,7 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/constants/legal_version.g.dart';
+import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
@@ -297,9 +298,8 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                 'Termos de Uso',
                 style: TextStyle(fontSize: 16),
               ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
+              leading: BotaoVoltarComRetornoInicio(
+                aoVoltar: () => Navigator.pop(context),
               ),
               actions: [buildFeedbackButton(context)],
             ),

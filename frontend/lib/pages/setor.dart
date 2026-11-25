@@ -16,6 +16,7 @@ import '../view/function_library/markdown_offline.dart';
 import '../view/function_library/setor_functions.dart';
 import '../widgets/card_indice_escalada.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/painel_filtros_indice.dart';
 
 /// Página unificada de exploração de um setor específico de escalada.
@@ -308,6 +309,10 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
             pinned: true,
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            leading: ModalRoute.of(context)?.canPop == true ||
+                    AppNav.canGoBack(context)
+                ? const BotaoVoltarComRetornoInicio()
+                : null,
             title: !_temCapa
                 ? Text(
                     widget.setor.nome.toUpperCase(),

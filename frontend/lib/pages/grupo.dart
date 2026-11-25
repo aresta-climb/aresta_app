@@ -15,6 +15,7 @@ import '../view/function_library/markdown_offline.dart';
 import '../view/function_library/pico_functions.dart';
 import '../widgets/card_indice_escalada.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/painel_filtros_indice.dart';
 
 /// Uma página que exibe informações detalhadas sobre um grupo específico de setores.
@@ -329,6 +330,10 @@ class _GrupoPageState extends State<GrupoPage>
             pinned: true,
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            leading: ModalRoute.of(context)?.canPop == true ||
+                    AppNav.canGoBack(context)
+                ? const BotaoVoltarComRetornoInicio()
+                : null,
             title: !_temCapa
                 ? Text(
                     widget.grupo.nome.toUpperCase(),

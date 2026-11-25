@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -8,6 +8,7 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/navigation/funcoes_navegacao.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 
 typedef MapBuilder =
@@ -174,9 +175,9 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       appBar: AppBar(
         backgroundColor: Colors.black.withValues(alpha: 0.5),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => AppNav.back(context),
+        leading: BotaoVoltarComRetornoInicio(
+          corIcone: Colors.white,
+          aoVoltar: () => AppNav.back(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,

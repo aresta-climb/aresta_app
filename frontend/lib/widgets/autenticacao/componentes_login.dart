@@ -4,16 +4,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/cores_app.dart';
+import '../navegacao/botao_voltar_com_retorno_inicio.dart';
 
 /// Barra superior declarativa da tela de login com botão de retorno e marca.
 class BarraTopoLogin extends StatelessWidget {
   /// Callback acionado ao tocar no botão de voltar.
   final VoidCallback aoVoltar;
 
+  /// Callback opcional acionado ao segurar o botão de voltar para retornar ao início.
+  final VoidCallback? aoIrParaInicio;
+
   /// Cria uma instância de [BarraTopoLogin].
   const BarraTopoLogin({
     super.key,
     required this.aoVoltar,
+    this.aoIrParaInicio,
   });
 
   @override
@@ -23,11 +28,12 @@ class BarraTopoLogin extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 2, 20, 0),
       child: Row(
         children: [
-          IconButton(
+          BotaoVoltarComRetornoInicio(
             key: const Key('btn_voltar_login'),
-            icon: Icon(Icons.arrow_back, color: cores.chalkWhite),
-            tooltip: 'Voltar',
-            onPressed: aoVoltar,
+            corIcone: cores.chalkWhite,
+            dica: 'Voltar',
+            aoVoltar: aoVoltar,
+            aoIrParaInicio: aoIrParaInicio,
           ),
           const SizedBox(width: 4),
           Flexible(

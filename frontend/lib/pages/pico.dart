@@ -22,6 +22,7 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../view/view_models/pico_view_model.dart';
 
 class PicoDetailsPage extends StatefulWidget {
@@ -250,11 +251,9 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                         color: Colors.black87,
                         shape: BoxShape.circle,
                       ),
-                      child: BackButton(
-                        color: Colors.white,
-                        onPressed: () {
-                          AppNav.back(context);
-                        },
+                      child: BotaoVoltarComRetornoInicio(
+                        corIcone: Colors.white,
+                        aoVoltar: () => AppNav.back(context),
                       ),
                     ),
                   ),

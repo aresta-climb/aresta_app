@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/sobre_time_functions.dart';
 import '../services/firebase/remote_config.dart';
+import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../main.dart';
 
 class SobreTimePage extends StatefulWidget {
@@ -95,9 +96,9 @@ class _SobreTimePageState extends State<SobreTimePage>
       appBar: AppBar(
         backgroundColor: context.colors.deepBasalt,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.dryMoss),
-          onPressed: () {
+        leading: BotaoVoltarComRetornoInicio(
+          corIcone: context.colors.dryMoss,
+          aoVoltar: () {
             if (_activeQuadrant != null) {
               _onBackgroundTapped();
             } else {

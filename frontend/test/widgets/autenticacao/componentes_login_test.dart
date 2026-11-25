@@ -17,13 +17,17 @@ void main() {
   group('Componentes declarativos da tela de Login Sem Senha (Dumb UI)', () {
     testWidgets('BarraTopoLogin, CabecalhoTelaLogin, DivisorSecaoLogin, BannerAvisoLogin e BotaoAbrirConfiguracoesLogin renderizam e acionam callbacks', (tester) async {
       var voltou = false;
+      var foiParaInicio = false;
       var abriuConfiguracoes = false;
 
       await tester.pumpWidget(
         envolverComTema(
           Column(
             children: [
-              BarraTopoLogin(aoVoltar: () => voltou = true),
+              BarraTopoLogin(
+                aoVoltar: () => voltou = true,
+                aoIrParaInicio: () => foiParaInicio = true,
+              ),
               const CabecalhoTelaLogin(
                 titulo: 'Entrar na sua conta',
                 subtitulo: 'Subtítulo sem senha',
@@ -53,6 +57,16 @@ void main() {
 
       await tester.tap(find.byKey(const Key('btn_voltar_login')));
       expect(voltou, isTrue);
+      expect(foiParaInicio, isFalse);
+
+      final gesto = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('btn_voltar_login'))),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesto.up();
+      await tester.pumpAndSettle();
+      expect(foiParaInicio, isTrue);
 
       await tester.tap(
         find.byKey(const Key('btn_abrir_configuracoes_login')),
