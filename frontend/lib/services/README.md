@@ -1,53 +1,49 @@
-# Documentação de Serviços — Aresta Climb
+# Serviços (`lib/services/`)
 
-Este diretório contém a lógica de negócios e os serviços centrais do aplicativo. A arquitetura é construída com separação de responsabilidades, suportando tanto o modo de produção oficial quanto o modo experimental de Live Reload para editores.
+Este diretório concentra os repositórios, clientes de rede, persistência local e integrações nativas do aplicativo.
 
 ---
 
-## Arquivos
+## Estrutura
 
 | Arquivo / Pasta | Responsabilidade |
 |---|---|
-| `repositorio_dataset.dart` | Fachada e gerenciador de estado central: downloads, índice, metadados e prioridade |
-| `dataset/` | Submódulos desacoplados de responsabilidade única (`modelos/`, `armazenamento/`, `metadados/`, `sessao_online/`) |
-| `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
-| `http/` | Módulo de rede e sincronização (downloads, atualizações OTA, `ClienteHttpAresta`, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano`) |
-| `notificacoes/` | Gerenciamento de notificações nativas de download (`GerenciadorNotificacaoDownload`) com suporte a Foreground Services e progresso contínuo |
-| `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
-| `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
-| `autenticacao/` | Domínio de autenticação (`ServicoAutenticacao` / `ServicoAutenticacaoLocal`), modal nativo de contas (`AutenticadorNativo` / `AutenticadorNativoCanal` via `app.escalada.croquis/autenticacao_nativa`), cliente HTTP/OAuth para o Supabase GoTrue (`ClienteSupabaseAutenticacao`), sincronizador de perfil e Storage (`SincronizadorPerfilSupabase`) e tradutor de erros/PKCE (`tradutor_erros_autenticacao.dart`) |
-| `midia/` | Seletor nativo de foto de perfil (`SeletorFotoPerfil` / `SeletorFotoPerfilNativo`) integrado ao canal `app.escalada.croquis/seletor_midia` para correção EXIF, recorte quadrado `256x256` e compressão WebP em base64 |
-| `caderneta/` | Gestão local-first do Perfil do Escalador, Caderneta Esportiva, sincronização bidirecional offline-first com `public.cadenas` via PostgREST (`ClienteCadenasSupabase`), compilação de estatísticas (`CompiladorEstatisticasCaderneta`) e resolução reativa de metadados via catálogo SQLite e croquis em memória (`CatalogoViasCaderneta`) |
-| `comunidade/` | Cliente PostgREST (`ClienteFilaInteracoes` / `ClienteFilaInteracoesSupabase`) e repositório reativo local-first (`RepositorioInteracoesVia` / `RepositorioInteracoesViaMemoria`) com fila persistente offline (`fila_pendente_interacoes_via_v1`), deduplicação de votos por `autorIdPublico` e autorrecuperação automática de sessão/RLS (`HTTP 401` via `refreshToken` e `HTTP 403` via reconciliação de `public.perfis`), sincronizando votos de grau (`-2..+2`), dicas públicas e bolhas de alerta estilo Waze (*"Ainda está lá?"*) com `public.fila_interacoes` |
-| `controlador_interacoes_usuario.dart` | Preferência local reativa (`SharedPreferences` + `ValueNotifier<bool>`) permitindo ao escalador exibir ou ocultar elementos interativos opcionais de Perfil, Caderneta e Comunidade sem apagar seus dados locais |
-| `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), exibição de ponta a ponta (`configurarExibicaoPontaAPonta`), bootstrap paralelo de serviços locais (`setupAppServices`: `DatasetRepository`, `RepositorioCadernetaLocal` e `ControladorInteracoesUsuario`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
-| `configuracao_recursos.dart` | Controle de flags de compilação (`--dart-define`) e chaves secretas de acesso para recursos em desenvolvimento (Perfil do Escalador e Caderneta Esportiva) |
-| `catalogo/` | Banco SQLite FTS5 local (`RepositorioCatalogo` / `catalogo.db`) para busca global instantânea, resolução de UIDs e hidratação offline de metadados da caderneta |
+| `repositorio_dataset.dart` e `dataset/` | Estado dos croquis baixados e online, armazenamento em disco, prioridade de acesso e normalização Protobuf v5 |
+| `editor_croqui.dart` e `editor_croqui/` | Alternância entre modo oficial e modo experimental (Editor Desktop via WebSocket) |
+| `http/` | `ClienteHttpAresta`, `SyncService`, `SyncIsolate`, `SyncNetwork`, `SyncStorage`, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano` e `UpdateDownloader` |
+| `catalogo/` | Banco SQLite local (`catalogo.db` / `RepositorioCatalogo`) com sincronização incremental e busca textual |
+| `autenticacao/` | Autenticação sem senha (`ServicoAutenticacaoLocal`), canal nativo (`AutenticadorNativoCanal`), cliente GoTrue (`ClienteSupabaseAutenticacao`), perfil/Storage (`SincronizadorPerfilSupabase`) e tradução de erros (`tradutor_erros_autenticacao.dart`) |
+| `midia/` | Seleção nativa de foto de perfil (`SeletorFotoPerfilNativo`), correção EXIF, corte `256x256` e compressão WebP |
+| `caderneta/` | Persistência local de ascensões (`RepositorioCadernetaLocal`), sincronização com `public.cadenas` (`ClienteCadenasSupabase`), estatísticas e hidratação de vias |
+| `comunidade/` | Sincronização de votos de grau, comentários e alertas de segurança com `public.fila_interacoes` (`ClienteFilaInteracoesSupabase`, `RepositorioInteracoesViaMemoria`, `ArmazenamentoFilaInteracoes`) |
+| `compartilhamento/` | Formatação e compartilhamento de links curtos `aresta.cc` (`ServicoCompartilhamento`) |
+| `notificacoes/` | Notificações nativas de progresso e conclusão de download (`GerenciadorNotificacaoDownload`) |
+| `feedback/` | Coleta de diagnóstico, auditoria SHA-256 e fila local de envio para a Edge Function `app-feedback` |
+| `firebase/` | Isolamento de Firebase e Sentry (`AppLogger`, `TelemetryService`, `ServicoPerformance`, `RemoteConfigService`, `ValidadorApp`) |
+| `smoke_ci/` | Utilitários de validação pós-build em emuladores de CI (não importados por `lib/main.dart`) |
+| `controlador_interacoes_usuario.dart` | Preferência local (`interacoes_caderneta_ativas`) para exibir ou ocultar recursos de perfil e caderneta |
+| `configuracao_recursos.dart` | Leitura de flags `--dart-define` para ativação de recursos em desenvolvimento |
+| `gerenciador_filtros_croqui.dart` | Estado compartilhado de filtros e ordenação durante a navegação em um croqui |
+| `inicializacao_app.dart` | Configuração de memória, modo edge-to-edge, bootstrap de serviços locais, listeners de Live Reload e migração de termos |
 
 ---
 
-## Autenticação, Foto de Perfil e Sincronização com Supabase (`autenticacao/` e `midia/`)
+## Autenticação Sem Senha e Sincronização de Perfil (`autenticacao/` e `midia/`)
 
-O subsistema de autenticação foi desenhado em módulos desacoplados para preservar a experiência offline-first e manter a separação entre regras de negócio locais, sessões GoTrue, sincronização PostgREST/Storage e tradução de erros:
-
-1. **`ServicoAutenticacaoLocal` (`autenticacao/servico_autenticacao.dart`)**:
-   - Opera exclusivamente sem senha (*Zero Senha*) e sob filosofia *Fail-Fast* (sem contas locais fictícias `usr_*` em produção; o modo offline sem conta é acionado apenas de forma explícita pelo escalador).
-   - Valida formato de e-mail e código OTP numérico de 6 dígitos, orquestrando `solicitarCodigoOtpEmail`, `verificarCodigoOtpEmail`, `entrarComGoogle`, `entrarComApple`, `atualizarPerfilRemoto` e `encerrarSessao`.
-   - Ao autenticar, preserva o `autorIdPublico` (NanoID 14c) gerado localmente (ou adota o `autor_id_publico` já vinculado à conta no banco remoto) e mantém todas as ascensões locais intactas no `RepositorioCaderneta`.
-2. **`ClienteSupabaseAutenticacao` (`autenticacao/cliente_supabase_autenticacao.dart`)**:
-   - **Magic Code OTP de 6 Dígitos (`/auth/v1/otp` e `/auth/v1/verify`)**: Dispara códigos numéricos de 6 dígitos via Resend SMTP (`create_user: true`) e valida a sessão (`type: "email"`), distinguindo erros de digitação/cooldown do usuário (`ehErroUsuario: true`) de erros operacionais ou de configuração (`ExcecaoComStatusHttp`, reportados ao Sentry).
-   - **Google e Apple 100% In-App (`grant_type=id_token` e PKCE)**: Aciona o `MethodChannel('app.escalada.croquis/autenticacao_nativa')` sem abrir navegador externo — utilizando `CredentialManager` + `GetGoogleIdOption` no Android, `ASWebAuthenticationSession` com PKCE (`callbackURLScheme: "aresta"`) para o Google no iOS e `ASAuthorizationAppleIDProvider` (Face ID / Touch ID) para a Apple no iOS, tratando cancelamentos voluntários (`ExcecaoAutenticacaoCancelada`) de forma silenciosa.
-3. **`SincronizadorPerfilSupabase` (`autenticacao/sincronizador_perfil_supabase.dart`)**:
-   - Encapsula a leitura (`GET /rest/v1/perfis`) e o upsert (`POST /rest/v1/perfis?on_conflict=user_id`) do perfil do escalador via PostgREST, o upload binário de avatares WebP (`data:image/webp;base64,...`) para o bucket público `avatars` no Supabase Storage (`POST /storage/v1/object/avatars/<userId>/avatar.webp` com `Content-Type: image/webp` e `x-upsert: true`) e a atualização de metadados de usuário no GoTrue (`PUT /auth/v1/user`), reportando falhas HTTP definitivas com `StackTrace` ao `AppLogger` e rebaixando desconexões transitórias para `logAviso`.
-4. **`tradutor_erros_autenticacao.dart` (`autenticacao/tradutor_erros_autenticacao.dart`)**:
-   - Reúne a tradução de respostas HTTP e códigos de erro do Supabase GoTrue (`otp_expired`, cooldown de segundos do Resend/GoTrue, `provider_disabled`, `invalid_grant`, etc.) para português, classificação `ehErroEntradaUsuarioServidor`, geração criptográfica de desafios PKCE (`S256`) e extração de parâmetros de retorno OAuth.
-5. **`SeletorFotoPerfilNativo` (`midia/seletor_foto_perfil.dart`)**:
-   - Invoca o método `selecionarFotoPerfil` no `MethodChannel('app.escalada.croquis/seletor_midia')`.
-   - No **Android** (`MainActivity.kt`) e no **iOS** (`AppDelegate.swift`), abre o seletor nativo do sistema operacional, corrige a orientação EXIF da câmera, recorta a imagem em quadrado central, redimensiona para `256x256` pixels e comprime em WebP (qualidade 82%), retornando um Data URI (`data:image/webp;base64,...`) pronto para pré-visualização imediata offline e upload para o Supabase Storage.
+1. **`ServicoAutenticacaoLocal`**:
+   - Valida formato de e-mail e código OTP numérico de 6 dígitos.
+   - Executa `solicitarCodigoOtpEmail`, `verificarCodigoOtpEmail`, `entrarComGoogle`, `entrarComApple`, `atualizarPerfilRemoto`, `encerrarSessao` e `excluirContaPermanentemente`.
+   - Mantém o `autorIdPublico` (NanoID 14c) e as cadenas locais ao autenticar ou encerrar sessão.
+2. **`ClienteSupabaseAutenticacao`**:
+   - Envia e verifica códigos OTP (`/auth/v1/otp` e `/auth/v1/verify`) e autentica sessões OAuth (`grant_type=id_token` ou `grant_type=pkce`).
+   - No Android, usa `CredentialManager` com fallback PKCE em Custom Tabs quando não há credencial Google configurada no aparelho/emulador; no iOS, usa `ASWebAuthenticationSession` (Google) e `ASAuthorizationAppleIDProvider` (Apple).
+   - Suporta chaves públicas Supabase nos formatos JWT (`eyJ...`) e opaco (`sb_publishable_...`), omitindo `Authorization: Bearer` quando a chave não é um JWT de sessão.
+3. **`SincronizadorPerfilSupabase`**:
+   - Lê e grava `public.perfis` (`/rest/v1/perfis?on_conflict=user_id`), envia avatares WebP para `avatars/<userId>/avatar.webp` e atualiza metadados em `/auth/v1/user`.
 
 ---
 
-## Modo Experimental & Live Reload — Ciclo de Vida
+## Interações Comunitárias e Alertas (`comunidade/`)
 
 O Modo Experimental permite testar croquis e alterações em tempo real diretamente do Editor Desktop via WebSocket e Live Reload.
 
