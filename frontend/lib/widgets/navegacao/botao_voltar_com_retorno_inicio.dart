@@ -307,3 +307,105 @@ class _PilulaIndicadoraInicio extends StatelessWidget {
                     width: 1.2,
                   ),
                   boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.38),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: progresso,
+                          child: ColoredBox(
+                            color: corDestaque.withValues(alpha: 0.30),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.home_rounded,
+                              size: 15,
+                              color: cores.chalkWhite,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Início',
+                              style: TextStyle(
+                                color: cores.chalkWhite,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pintor leve `O(1)` do anel circular de progresso durante o gesto de segurar.
+class _PintorArcoRetornoInicio extends CustomPainter {
+  final double progresso;
+  final Color corDestaque;
+  final Color corTrilha;
+
+  const _PintorArcoRetornoInicio({
+    required this.progresso,
+    required this.corDestaque,
+    required this.corTrilha,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const espessura = 2.6;
+    final centro = size.center(Offset.zero);
+    final raio = (math.min(size.width, size.height) - espessura) / 2 - 1.0;
+
+    final pincelTrilha = Paint()
+      ..color = corTrilha
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessura;
+    canvas.drawCircle(centro, raio, pincelTrilha);
+
+    final pincelArco = Paint()
+      ..color = corDestaque
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessura
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: centro, radius: raio),
+      -math.pi / 2,
+      2 * math.pi * progresso,
+      false,
+      pincelArco,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PintorArcoRetornoInicio antigo) {
+    return antigo.progresso != progresso || antigo.corDestaque != corDestaque || antigo.corTrilha != corTrilha;
+  }
+}
