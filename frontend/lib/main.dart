@@ -393,7 +393,80 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       Colors.yellow,
                     ],
                   ),
-                  child: customFeedbackBuilder(context, onSubmit, scrollController),
+                  darkTheme: FeedbackThemeData(
+                    background: AppColors.dark.deepBasalt,
+                    feedbackSheetColor: AppColors.dark.caveShadow,
+                    activeFeedbackModeColor: AppColors.dark.rustIron,
+                    sheetIsDraggable: false,
+                    feedbackSheetHeight: fracaoSheet,
+                    drawColors: const [
+                      AppColors.brandColor,
+                      Colors.red,
+                      Colors.green,
+                      Colors.blue,
+                      Colors.yellow,
+                    ],
+                  ),
+                  localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
+                  localeOverride: idiomaAtual.localeFeedbackCompativel,
+                  child: MaterialApp(
+                    navigatorKey: appNavigatorKey,
+                    title: 'Aresta Climb',
+                    debugShowCheckedModeBanner: false,
+                    themeMode: ThemeMode.dark, // Temporário: fixado em dark mode
+                    theme: construirTemaClaro(),
+                    darkTheme: construirTemaEscuro(),
+                    // Força o Navigator raiz a inicializar sempre apenas a rota '/' (home),
+                    // mesmo que a engine informe um defaultRouteName externo em Cold Start.
+                    routes: <String, WidgetBuilder>{
+                      Navigator.defaultRouteName: _construirTelaRaiz,
+                    },
+                    onGenerateInitialRoutes: (String initialRouteName) {
+                      return Navigator.defaultGenerateInitialRoutes(
+                        appNavigatorKey.currentState!,
+                        Navigator.defaultRouteName,
+                      );
+                    },
+                    // Banner global para modo experimental/editor que persiste em todas as telas
+                    builder: (context, child) {
+                      Widget effectiveChild = child!;
+
+                      if (_needsMigration && _hasAcceptedTerms) {
+                        effectiveChild = DatabaseMigrationScreen(
+                          syncService: widget.syncService,
+                          onMigrationComplete: () {
+                            setState(() {
+                              _needsMigration = false;
+                            });
+                          },
+                        );
+                      }
+
+                      return EscopoIdiomaApp(
+                        notificador:
+                            ControladorIdiomaApp.instancia.notificadorIdioma,
+                        child: AppVersionChecker(
+                          remoteConfigService: widget.remoteConfigService,
+                          child: Stack(
+                            children: [
+                              effectiveChild,
+                              BannerModoExperimental(
+                                editorDeCroqui: widget.datasetRepo.editorDeCroqui,
+                                onSairModoExperimental: () async {
+                                  await widget.datasetRepo.editorDeCroqui.nukeExperimentalData();
+                                  await widget.datasetRepo.init();
+                                  final navContext = TreeNavigationWrapper.navKey.currentContext;
+                                  if (navContext != null && navContext.mounted) {
+                                    AppNav.home(navContext);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
               themeMode: ThemeMode.dark,
