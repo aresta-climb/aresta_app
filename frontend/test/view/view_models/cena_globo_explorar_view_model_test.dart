@@ -272,3 +272,101 @@ void main() {
         ),
       );
 
+      expect(
+        vm.resolverPicoFocado(
+          picos: const [],
+          picoSelecionadoId: null,
+          controlador: ctrl,
+        ),
+        isNull,
+      );
+      expect(
+        vm.resolverPicoFocado(
+          picos: const [pico],
+          picoSelecionadoId: 'igarape',
+          controlador: ctrl,
+        )?.id,
+        equals('igarape'),
+      );
+      expect(
+        vm.resolverPicoFocado(
+          picos: const [pico],
+          picoSelecionadoId: null,
+          controlador: ctrl,
+        )?.id,
+        equals('igarape'),
+      );
+
+      // Escalonamento de LODs não selecionado (<1.35, <2.65, >=2.65) e já selecionado (<2.75, <3.90, >=3.90) + explícito
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: null,
+        controlador: ctrl,
+      );
+      expect(vm.sonarPicoId, equals('igarape'));
+      expect(vm.sonarBolhaId, equals('b_mg'));
+      expect(vm.progressoSonar, equals(0.0));
+      vm.avancarQuadro(
+        dtSegundos: 0.5,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoSonar, equals(1.0));
+
+      ctrl.definirLod(1.80);
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: null,
+        controlador: ctrl,
+      );
+      ctrl.definirLod(3.00);
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: null,
+        controlador: ctrl,
+      );
+
+      ctrl.definirLod(2.10);
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: 'igarape',
+        controlador: ctrl,
+      );
+      ctrl.definirLod(3.50);
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: 'igarape',
+        controlador: ctrl,
+      );
+      ctrl.definirLod(4.10);
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: 'igarape',
+        controlador: ctrl,
+      );
+      vm.selecionarPicoNoMapa(
+        pico: pico,
+        picoSelecionadoAtualId: 'igarape',
+        controlador: ctrl,
+        lodExplicito: 1.18,
+      );
+
+      // Duplo-toque 3D e 2D + resetar visão do globo
+      vm.executarDuploToqueMapa(
+        tamanhoTela: const ui.Size(400, 800),
+        posicaoToque: const ui.Offset(200, 400),
+        picoFocado: pico,
+        controlador: ctrl,
+      );
+      ctrl.definirModo3D(false);
+      vm.executarDuploToqueMapa(
+        tamanhoTela: const ui.Size(400, 800),
+        posicaoToque: const ui.Offset(120, 260),
+        picoFocado: null,
+        controlador: ctrl,
+      );
+      vm.resetarVisaoGlobo(ctrl);
+      expect(ctrl.temAnimacaoAtiva, isTrue);
+    });
+  });
+}
