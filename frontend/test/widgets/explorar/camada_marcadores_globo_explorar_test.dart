@@ -151,3 +151,64 @@ void main() {
       expect(lodRecebido, closeTo(1.18, 1e-4));
     });
 
+    testWidgets('projeta localidades IBGE sem colisão, ponto GPS do usuário e pílula expandida em zoom local', (
+      tester,
+    ) async {
+      final ctrlLocal = ControladorCameraGlobo(
+        latitudeInicial: -19.99,
+        longitudeInicial: -44.08,
+        lodInicial: 2.45,
+      );
+      addTearDown(ctrlLocal.dispose);
+
+      var toquesPico = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => SizedBox(
+                width: 420,
+                height: 820,
+                child: Stack(
+                  children: CamadaMarcadoresGloboExplorar.construirCamadas(
+                    context: ctx,
+                    tamanho: const Size(420, 820),
+                    controlador: ctrlLocal,
+                    redeViaria: redeTeste,
+                    picos: picosTeste,
+                    referenciasRelevo: referenciasTeste,
+                    picoSelecionadoId: 'p_mg',
+                    localizacaoUsuario: (latitude: -19.99, longitude: -44.08),
+                    recuoSuperiorControles: 62.0,
+                    aoSelecionarPico: (_, {lodExplicito}) => toquesPico++,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('marcador_localizacao_usuario')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('pilula_lupa_p_mg')), findsOneWidget);
+      expect(find.byKey(const Key('ponto_aresta_p_rj')), findsOneWidget);
+      expect(find.text('Belo Horizonte'), findsOneWidget);
+      expect(
+        find.byKey(const Key('cidade_aresta_Belo Horizonte')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('cidade_referencia_Polo Referência')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('ponto_aresta_p_rj')));
+      await tester.tap(find.byKey(const Key('pilula_lupa_p_mg')));
+      expect(toquesPico, equals(2));
+    });
+  });
+}
