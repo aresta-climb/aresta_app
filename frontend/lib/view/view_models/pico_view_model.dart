@@ -1,8 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
+import '../../data/modelos/modelos_clima_pico.dart';
+import '../../services/clima/servico_clima_altimetria.dart';
 import '../../services/repositorio_dataset.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
@@ -28,6 +32,7 @@ class PicoViewModel extends ChangeNotifier {
   final DatasetRepository datasetRepo;
 
   final ServicoCroquiOnline _servicoCroquiOnline;
+  final ServicoClimaAltimetria _servicoClima;
   final PicoCategorizedData _categorias;
   bool _isInitiallyDownloaded;
   bool _disposed = false;
@@ -38,15 +43,27 @@ class PicoViewModel extends ChangeNotifier {
     required this.cragId,
     required this.datasetRepo,
     ServicoCroquiOnline? servicoCroquiOnline,
+    ServicoClimaAltimetria? servicoClima,
   })  : _categorias = PicoCategorizedData(croqui),
         _servicoCroquiOnline = servicoCroquiOnline ??
             ServicoCroquiOnline(
               sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
               verificarPicoBaixado: (id) => datasetRepo.isPicoDownloaded(id),
             ),
+        _servicoClima = servicoClima ?? ServicoClimaAltimetria.instancia,
         _isInitiallyDownloaded = datasetRepo.isPicoDownloaded(cragId) {
     datasetRepo.activeDataset.addListener(_verificarStatusDownload);
+    _servicoClima.addListener(notifyListeners);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .addListener(notifyListeners);
     iniciarPollingOnlineSeNecessario();
+    unawaited(_inicializarClimaPico());
+  }
+
+  Future<void> _inicializarClimaPico() async {
+    await _servicoClima.inicializar();
+    if (_disposed || cragId.isEmpty) return;
+    await _servicoClima.sincronizarSeNecessario(idsPicosCatalogo: [cragId]);
   }
 
   void _verificarStatusDownload() {
@@ -63,7 +80,10 @@ class PicoViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .removeListener(notifyListeners);
     datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
+    _servicoClima.removeListener(notifyListeners);
     _servicoCroquiOnline.cancelarPolling(cragId);
     super.dispose();
   }
@@ -78,6 +98,13 @@ class PicoViewModel extends ChangeNotifier {
     if (_disposed) return;
     super.notifyListeners();
   }
+
+  /// Estado vigente de umidade superficial da rocha calculado para este croqui.
+  EstadoUmidadePico get umidadePico => _servicoClima.obterUmidadePico(cragId);
+
+  /// Indica se a tarja de condição hídrica deve ser exibida na `PicoDetailsPage`.
+  bool get exibirStatusUmidade =>
+      umidadePico.nivel.estaUmido || _servicoClima.temSnapshotClima;
 
   /// Indica se o pico está atualmente salvo no armazenamento offline.
   bool get isDownloaded => datasetRepo.isPicoDownloaded(cragId);
@@ -129,9 +156,9 @@ class PicoViewModel extends ChangeNotifier {
   /// Texto de dica do botão de pesquisa na barra superior.
   String get tooltipBusca {
     if (isPicoBoulderArea(pico)) {
-      return 'Buscar boulder';
+      return tr(ChaveTexto.picoBuscarBoulderTooltip);
     }
-    return 'Buscar via';
+    return tr(ChaveTexto.picoBuscarViaTooltip);
   }
 
   /// Data e hora formatada da última sincronização ou atualização do croqui.
@@ -188,21 +215,37 @@ class PicoViewModel extends ChangeNotifier {
     String statsText = '';
     if (totalVias > 0) {
       final List<String> modalidades = [];
-      if (totalEsportivas > 0) modalidades.add('$totalEsportivas esportivas');
-      if (totalBoulders > 0) modalidades.add('$totalBoulders boulders');
-      if (totalMoveis > 0) modalidades.add('$totalMoveis móveis');
-      if (totalMultiplasEnfiadas > 0) {
-        modalidades.add('$totalMultiplasEnfiadas múltiplas enfiadas');
+      if (totalEsportivas > 0) {
+        modalidades.add(
+          '$totalEsportivas ${tr(ChaveTexto.modEsportivasMinusculo)}',
+        );
       }
-      if (totalHighlines > 0) modalidades.add('$totalHighlines highlines');
+      if (totalBoulders > 0) {
+        modalidades.add(
+          '$totalBoulders ${tr(ChaveTexto.modBouldersMinusculo)}',
+        );
+      }
+      if (totalMoveis > 0) {
+        modalidades.add('$totalMoveis ${tr(ChaveTexto.modMoveisMinusculo)}');
+      }
+      if (totalMultiplasEnfiadas > 0) {
+        modalidades.add(
+          '$totalMultiplasEnfiadas ${tr(ChaveTexto.modMultiplasEnfiadasMinusculo)}',
+        );
+      }
+      if (totalHighlines > 0) {
+        modalidades.add(
+          '$totalHighlines ${tr(ChaveTexto.modHighlinesMinusculo)}',
+        );
+      }
 
-      statsText = ' • $totalVias escaladas';
+      statsText = ' • $totalVias ${tr(ChaveTexto.modEscaladasMinusculo)}';
       if (modalidades.isNotEmpty) {
         statsText += ' (${modalidades.join(', ')})';
       }
     }
 
-    return '${pico.estado.toUpperCase()} • $setoresCount SETORES$statsText';
+    return '${pico.estado.toUpperCase()} • $setoresCount ${tr(ChaveTexto.modSetoresCaixaAlta)}$statsText';
   }
 
   /// Inicia polling de verificação ETag caso o pico não esteja baixado e possua URL.

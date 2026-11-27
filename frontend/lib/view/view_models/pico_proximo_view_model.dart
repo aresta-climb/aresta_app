@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 import '../../utils/calculadora_distancia_estrada.dart';
 import '../function_library/funcoes_home.dart';
@@ -131,7 +132,8 @@ class _PicoProximoMetadados extends PicoProximoViewModel {
   String get id => _metadados.id;
 
   @override
-  String get nome => _metadados.nome.isEmpty ? 'Pico' : _metadados.nome;
+  String get nome =>
+      _metadados.nome.isEmpty ? tr(ChaveTexto.comumPico) : _metadados.nome;
 
   @override
   String get localizacao => _metadados.localizacaoFormatada;
@@ -209,7 +211,8 @@ class _PicoProximoValores extends PicoProximoViewModel {
       salvoOffline: estaBaixado,
       textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
       tooltipDistancia: tooltipDistancia,
-      textoEstatisticas: '$totalSetores setores • $totalEscaladas vias',
+      textoEstatisticas:
+          '$totalSetores ${tr(ChaveTexto.modSetoresMinusculo)} • $totalEscaladas ${tr(ChaveTexto.modViasMinusculo)}',
       checksumSha256: checksumSha256,
     );
   }

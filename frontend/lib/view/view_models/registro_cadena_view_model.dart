@@ -6,6 +6,7 @@ import '../../data/modelos/cadena.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../data/modelos/tipo_escalada.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../utils/calculadora_delta_grau.dart';
@@ -110,7 +111,19 @@ class RegistroCadenaViewModel extends ChangeNotifier {
        ehBoulder = ehBoulder ?? tipoEscaladaPadrao.isBoulder,
        repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
        repositorioInteracoes =
-           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia;
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia {
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      notifyListeners,
+    );
+  }
+
+  @override
+  void dispose() {
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      notifyListeners,
+    );
+    super.dispose();
+  }
 
   /// Cria um [RegistroCadenaViewModel] pré-populado para edição de uma [cadena] existente.
   factory RegistroCadenaViewModel.paraEdicao({
@@ -142,15 +155,17 @@ class RegistroCadenaViewModel extends ChangeNotifier {
       repositorio.obterPerfil().estaAutenticado;
 
   /// Título contextual exibido no cabeçalho do modal.
-  String get tituloModal => editando ? 'Editar Ascensão' : 'Registrar Ascensão';
+  String get tituloModal => editando
+      ? tr(ChaveTexto.cadEditarModalTitulo)
+      : tr(ChaveTexto.cadRegistrarModalTitulo);
 
   /// Rótulo contextual exibido no botão principal de salvamento.
   String get rotuloBotaoSalvar {
-    if (editando) return 'Salvar Alterações';
+    if (editando) return tr(ChaveTexto.comumSalvarAlteracoes);
     if (exibirContribuicaoPublica && estaAutenticadoParaComunidade) {
-      return 'Salvar Cadena & Contribuir';
+      return tr(ChaveTexto.cadSalvarEContribuir);
     }
-    return 'Salvar na Caderneta';
+    return tr(ChaveTexto.cadSalvarNaCaderneta);
   }
 
   /// Estilo esportivo de ascensão atualmente selecionado.
