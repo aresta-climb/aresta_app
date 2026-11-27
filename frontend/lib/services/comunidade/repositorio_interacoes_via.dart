@@ -562,70 +562,45 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }) async {
     final uidVia = escaladaUid.trim();
     final perfil = _repositorioCaderneta.obterPerfil();
-    final atual = obterDadosEscalada(uidVia);
-    final alertas = List<AlertaSegurancaVia>.from(atual.alertasAtivos);
-    final indice = alertas.indexWhere((a) => a.uid == alertaUid);
-    if (indice < 0) return;
-
-    if (aindaEstaLa) {
-      final existente = alertas[indice];
-      if (existente.jaConfirmadoPor(perfil.autorIdPublico)) return;
-      alertas[indice] = existente.copyWith(
-        confirmacoesAtivas: existente.confirmacoesAtivas + 1,
-        confirmadoresUids: {
-          ...existente.confirmadoresUids,
-          perfil.autorIdPublico,
-        },
-      );
-    } else {
-      alertas.removeAt(indice);
-    }
-
-    _dadosPorEscalada[uidVia] = atual.copyWith(
-      alertasAtivos: List.unmodifiable(alertas),
+    final atualizado = obterDadosEscalada(uidVia).comConfirmacaoAlerta(
+      alertaUid: alertaUid,
+      autorIdPublico: perfil.autorIdPublico,
+      aindaEstaLa: aindaEstaLa,
     );
+    if (atualizado == null) return;
+    _dadosPorEscalada[uidVia] = atualizado;
     if (validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
         validarUid(alertaUid)) {
-      final evento = ItemFilaInteracao.confirmacaoAlerta(
-        autorIdPublico: perfil.autorIdPublico,
-        autorNomePublico: perfil.autorNomePublico,
-        escaladaUid: uidVia,
-        alertaAlvoUid: alertaUid,
-        alertaAtivo: aindaEstaLa,
+      await _persistirEDespacharEventoAlerta(
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          escaladaUid: uidVia,
+          alertaAlvoUid: alertaUid,
+          alertaAtivo: aindaEstaLa,
+        ),
       );
-      await _registrarEventoAlertaLocal(evento);
-      if (_clienteFila != null) {
-        await _despachante.enfileirarEDespachar(_clienteFila, [evento]);
-      }
     }
     _versaoNotifier.value++;
   }
 
-  void _atualizarCacheAlertasDaVia(
-    String uidVia,
-    Iterable<ItemFilaInteracao> itens,
-  ) {
-    final filtrados = itens
-        .where(
-          (i) =>
-              i.tipo == TipoFilaInteracao.alertaSeguranca ||
-              i.tipo == TipoFilaInteracao.confirmacaoAlerta,
-        )
-        .toList();
-    if (filtrados.isEmpty) {
-      _eventosAlertasPorVia.remove(uidVia);
-    } else {
-      _eventosAlertasPorVia[uidVia] = filtrados;
+  Future<void> _persistirEDespacharEventoAlerta(
+    ItemFilaInteracao evento,
+  ) async {
+    await _hidratarEstadoLocalSeNecessario();
+    await _armazenamentoFila.adicionarEventoAlerta(evento);
+    if (_clienteFila != null) {
+      await _despachante.enfileirarEDespachar(_clienteFila, [evento]);
     }
   }
 
-  Future<void> _registrarEventoAlertaLocal(ItemFilaInteracao evento) async {
-    await _hidratarEstadoLocalSeNecessario();
-    _eventosAlertasPorVia
-        .putIfAbsent(evento.escaladaUid, () => <ItemFilaInteracao>[])
-        .add(evento);
-    await _persistirCacheAlertasUsuario();
+  Future<void> _persistirEDespacharMutacaoAlerta(
+    String uidVia,
+    MutacaoFilaInteracao mutacao,
+  ) async {
+    await _armazenamentoFila.aplicarMutacaoAlertaNaVia(uidVia, mutacao);
+    await _despachante.registrarMutacao(_clienteFila, mutacao);
   }
 
   Future<void> _persistirCacheAlertasUsuario() =>
