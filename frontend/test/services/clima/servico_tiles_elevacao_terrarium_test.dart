@@ -75,6 +75,55 @@ void main() {
         closeTo(1280.0, 2.0),
       );
 
+      // Interpola suavemente entre grade base, z=10 e z=12 conforme o LOD contínuo (zero saltos abruptos)
+      servico.solicitarTilesVisiveis(
+        minLat: -19.93,
+        maxLat: -19.91,
+        minLon: -43.95,
+        maxLon: -43.93,
+        lod: 2.2,
+      );
+      servico.solicitarTilesVisiveis(
+        minLat: -19.93,
+        maxLat: -19.91,
+        minLon: -43.95,
+        maxLon: -43.93,
+        lod: 3.0,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(
+        servico.amostrarElevacaoReal(
+          latitude: -19.92,
+          longitude: -43.94,
+          lod: 2.20,
+        ),
+        closeTo(1280.0, 2.0),
+      );
+      expect(
+        servico.amostrarElevacaoReal(
+          latitude: -19.92,
+          longitude: -43.94,
+          lod: 2.85,
+        ),
+        closeTo(1280.0, 2.0),
+      );
+      expect(
+        servico.amostrarElevacaoReal(
+          latitude: -19.92,
+          longitude: -43.94,
+          lod: 3.70,
+        ),
+        closeTo(1280.0, 2.0),
+      );
+      expect(
+        servico.amostrarElevacaoReal(
+          latitude: -19.92,
+          longitude: -43.94,
+          lod: 4.20,
+        ),
+        closeTo(1280.0, 2.0),
+      );
+
       // Nova solicitação para os mesmos tiles usa cache sem refazer download
       final chamadasAntes = fake.totalChamadas;
       servico.solicitarTilesVisiveis(
