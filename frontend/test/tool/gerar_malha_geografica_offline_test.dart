@@ -180,3 +180,64 @@ void main() {
             jsonDecode(File(caminhoAltSeg).readAsStringSync())
                 as Map<String, dynamic>;
 
+        expect(atual['versao'], equals('nasa_v2'));
+        expect(seg['versao'], equals('nasa_v1'));
+      },
+    );
+
+    test(
+      'deve rotacionar artefato binario de textura com copia de seguranca e simplificar poligonos Douglas-Peucker',
+      () async {
+        final caminhoBin = '${dirTemp.path}/textura_globo_nasa.jpg';
+        final caminhoBinSeg =
+            '${dirTemp.path}/textura_globo_nasa.seguranca.jpg';
+
+        final r1 = await GeradorMalhaGeograficaOffline.executarGeracaoBinaria(
+          caminhoSaida: caminhoBin,
+          caminhoSeguranca: caminhoBinSeg,
+          tamanhoMinimoBytes: 8,
+          provedorBytesExternos: () async => List<int>.filled(16, 1),
+        );
+        expect(r1.usouCopiaSeguranca, isFalse);
+
+        final r2 = await GeradorMalhaGeograficaOffline.executarGeracaoBinaria(
+          caminhoSaida: caminhoBin,
+          caminhoSeguranca: caminhoBinSeg,
+          tamanhoMinimoBytes: 8,
+          provedorBytesExternos: () async => List<int>.filled(20, 2),
+        );
+        expect(r2.usouCopiaSeguranca, isFalse);
+        expect(File(caminhoBin).lengthSync(), equals(20));
+        expect(File(caminhoBinSeg).lengthSync(), equals(16));
+
+        // Falha externa mantem versao local; se corrompida, restaura da copia_seguranca
+        File(caminhoBin).writeAsBytesSync(const [1, 2]);
+        final r3 = await GeradorMalhaGeograficaOffline.executarGeracaoBinaria(
+          caminhoSaida: caminhoBin,
+          caminhoSeguranca: caminhoBinSeg,
+          tamanhoMinimoBytes: 8,
+          provedorBytesExternos: () async => const [0],
+        );
+        expect(r3.usouCopiaSeguranca, isTrue);
+        expect(File(caminhoBin).lengthSync(), equals(16));
+
+        final anelBruto = <List<double>>[
+          [-44.0, -20.0],
+          [-43.5, -20.01],
+          [-43.0, -20.0],
+          [-43.0, -19.0],
+          [-43.5, -18.99],
+          [-44.0, -19.0],
+          [-44.0, -20.0],
+        ];
+        final simplificado =
+            GeradorMalhaGeograficaOffline.simplificarDouglasPeucker(
+              anelBruto,
+              0.05,
+            );
+        expect(simplificado.length, lessThan(anelBruto.length));
+        expect(simplificado.length, greaterThanOrEqualTo(4));
+      },
+    );
+  });
+}
