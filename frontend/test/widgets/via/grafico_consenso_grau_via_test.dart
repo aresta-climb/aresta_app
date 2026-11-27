@@ -104,7 +104,7 @@ void main() {
       envolver(
         Column(
           children: [
-            const AnelConsensoGrauVia(
+            AnelConsensoGrauVia(
               apresentacao: ApresentacaoConsensoGrauVia.semVotos(),
             ),
             BarrasDistribuicaoGrauVia(apresentacao: semGrauOficial),
@@ -145,7 +145,7 @@ void main() {
   testWidgets('oculta BarrasDistribuicaoGrauVia quando sem votos e não causa overflow em 220px @ 1.5x', (tester) async {
     await tester.pumpWidget(
       envolver(
-        const BarrasDistribuicaoGrauVia(
+        BarrasDistribuicaoGrauVia(
           apresentacao: ApresentacaoConsensoGrauVia.semVotos(),
         ),
       ),

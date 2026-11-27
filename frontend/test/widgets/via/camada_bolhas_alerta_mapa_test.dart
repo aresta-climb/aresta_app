@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/utils/consulta_dataset.dart';
 import 'package:frontend/view/view_models/alertas_mapa_interativo_view_model.dart';
@@ -17,10 +16,7 @@ import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
   });
-
-  tearDown(ConfiguracaoRecursos.redefinirParaTestes);
 
   testWidgets(
     'CamadaBolhasAlertaMapa renderiza bolhas estilo Waze ancoradas no mapa e permite confirmar ou Desfazer',
@@ -161,6 +157,55 @@ void main() {
       await tester.tap(find.text('Desfazer'));
       await tester.pumpAndSettle();
       expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+
+      // 3. Alerta criado pelo próprio usuário no mapa permite editar categoria/detalhe e excluir com confirmação
+      repoFake.semearDados(uidVia, const DadosComunidadeVia.vazio());
+      await repoFake.reportarAlerta(
+        escaladaUid: uidVia,
+        categoria: CategoriaAlertaSeguranca.fauna,
+        detalhe: 'Vespas na parada',
+      );
+      await tester.pumpAndSettle();
+
+      // Edição com falha mostra aviso amigável; edição com sucesso atualiza o emoji no mapa
+      repoFake.erroSimulado = StateError('Conflito');
+      await tester.tap(find.byType(BolhaEmojiAlertaVia));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_editar_alerta_modal')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Não foi possível atualizar este alerta.'), findsOneWidget);
+      ScaffoldMessenger.of(tester.element(find.byType(CamadaBolhasAlertaMapa)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      repoFake.erroSimulado = null;
+      await tester.tap(find.byType(BolhaEmojiAlertaVia));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_editar_alerta_modal')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('opcao_alerta_PROTECAO_PRECARIA')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Alerta atualizado!'), findsOneWidget);
+      expect(find.text('🔩'), findsOneWidget);
+      ScaffoldMessenger.of(tester.element(find.byType(CamadaBolhasAlertaMapa)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      // Exclusão pelo autor remove a bolha do mapa
+      await tester.tap(find.byType(BolhaEmojiAlertaVia));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_excluir_alerta_modal')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('btn_confirmar_exclusao_interacao_via')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Alerta excluído.'), findsOneWidget);
+      expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
     },
   );
 }
