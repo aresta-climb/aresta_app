@@ -817,8 +817,25 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toEstatisticasClima empilha EstatisticasClimaNode de forma idempotente e suporta fallback imperativo',
+      'AppNav.toEstatisticasClima navega exclusivamente pela árvore de nós (EstatisticasClimaNode), preserva idempotência e retorna via AppNav.back',
       (tester) async {
+        // Sem TreeNavigationWrapper montado: opera como no-op seguro sem empilhar rota imperativa
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: const Scaffold(body: Text('OrfaoEstat')),
+          ),
+        );
+        await tester.pump();
+        AppNav.toEstatisticasClima(tester.element(find.text('OrfaoEstat')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('pagina_estatisticas_clima')), findsNothing);
+
+        final treeController = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: BrowseNode(HomeNode()),
+          ),
+        );
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -826,42 +843,33 @@ void main() {
               key: TreeNavigationWrapper.navKey,
               datasetRepo: repo,
               syncService: syncService,
-              child: const Scaffold(body: Text('HostEstat')),
+              treeController: treeController,
             ),
           ),
         );
         await tester.pump();
 
-        final ctx = tester.element(find.text('HostEstat'));
-        final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
-
+        final ctx = tester.element(find.byType(TreeNavigationWrapper));
         AppNav.toEstatisticasClima(ctx);
-        expect(controller.currentNode, isA<EstatisticasClimaNode>());
-        final primeiroNo = controller.currentNode;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(treeController.currentNode, isA<EstatisticasClimaNode>());
+        expect(treeController.currentNode.parent, isA<BrowseNode>());
+        expect(find.byKey(const Key('pagina_estatisticas_clima')), findsOneWidget);
+        final primeiroNo = treeController.currentNode;
 
         // Chamada repetida permanece idempotente no mesmo nó
         AppNav.toEstatisticasClima(ctx);
-        expect(identical(controller.currentNode, primeiroNo), isTrue);
+        expect(identical(treeController.currentNode, primeiroNo), isTrue);
 
-        // Fallback sem TreeNavigationWrapper (ex.: diálogo/widget isolado) empilha PaginaEstatisticasClima no Navigator
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-            home: Builder(
-              builder: (isolatedCtx) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () => AppNav.toEstatisticasClima(isolatedCtx),
-                  child: const Text('Abrir Estat Isolado'),
-                ),
-              ),
-            ),
-          ),
-        );
+        // AppNav.back retorna pela árvore de nós para BrowseNode
+        AppNav.back(tester.element(find.byKey(const Key('pagina_estatisticas_clima'))));
         await tester.pump();
-        await tester.tap(find.text('Abrir Estat Isolado'));
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(const Key('pagina_estatisticas_clima')), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 550));
+        await tester.pump();
+        expect(treeController.currentNode, isA<BrowseNode>());
+        expect(find.byKey(const Key('pagina_estatisticas_clima')), findsNothing);
       },
     );
   });

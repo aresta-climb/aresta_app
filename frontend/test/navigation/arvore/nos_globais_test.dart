@@ -86,7 +86,7 @@ void main() {
 
       expect(estat.parent, same(browse));
       expect(estat.rotuloAmigavel, 'Estatísticas do Clima');
-      expect(estat.obterCaminhoCurto(), 'Início -> Explorar -> Estatísticas do Clima');
+      expect(estat.obterCaminhoCurto(), 'Início -> Buscar -> Estatísticas do Clima');
       expect(estat.toString(), 'EstatisticasClimaNode');
 
       const outroPai = HomeNode();
