@@ -113,6 +113,31 @@ void main() {
       expect(resolvidoSetor.mapasMiniatura, hasLength(1));
       expect(resolvidoSetor.aspectRatioMiniatura, 1.5);
       expect(resolvidoSetor.rotuloLinhaNoMapa, '4');
+
+      // Referência em mapa sem dimensões positivas preserva navegação sem miniatura
+      final mapaSemDimensao = Mapa(
+        caminhoImagemMapa: 'mapas/sem_dim.webp',
+        larguraMapa: 0,
+        alturaMapa: 0,
+        referencias: [Mapa_Referencia(alvoUid: 'viaSetorFoto01')],
+      );
+      final setorSemDim = Setor(
+        nome: 'Setor Sem Dim',
+        escaladas: [viaNoMapaSetor],
+        mapas: [mapaSemDimensao],
+      );
+      final resolvidoSemDim = EstadoCroquiVia.resolver(
+        escalada: viaNoMapaSetor,
+        pico: Pico(
+          nome: 'Pico',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setorSemDim)),
+          ],
+        ),
+        setor: setorSemDim,
+      );
+      expect(resolvidoSemDim.mapasMiniatura, isEmpty);
+      expect(resolvidoSemDim.itensNavegacaoCroqui, hasLength(1));
     },
   );
 }

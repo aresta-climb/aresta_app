@@ -3,7 +3,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/utils/indexador_escaladas.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('IndexadorEscaladas', () {
@@ -54,6 +56,7 @@ void main() {
       expect(item1.nome, 'Via Direta');
       expect(item1.grau, '7a');
       expect(item1.modalidade, 'Esportiva');
+      expect(item1.protecoesValor, 0);
       expect(item1.isDestaque, isTrue);
       expect(item1.conquistadores, ['Ana', 'Beto']);
       expect(item1.setor.nome, 'Setor Sol');
@@ -186,6 +189,29 @@ void main() {
       expect(itensComGrupo.length, 2);
       expect(itensComGrupo[0].grupo?.nome, 'Setor Superior');
       expect(itensComGrupo[0].localizacaoFormatada, 'Setor Superior › Falésia Central');
+    });
+
+    test('preserva chave canônica em modalidade e traduz modalidadeExibicao no idioma ativo', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+
+      final setor = Setor()
+        ..nome = 'Setor Internacional'
+        ..escaladas.add(
+          Escalada()
+            ..viaEsportiva = (ViaEsportiva()
+              ..nome = 'Linha Global'
+              ..dificuldade = GrauVia_GrauVia.BR_7A),
+        );
+
+      final item = indexarEscaladasDoSetor(setor, 'crag-intl').single;
+      expect(item.modalidade, 'Esportiva');
+      expect(item.modalidadeExibicao, 'Esportiva');
+
+      await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.alemao);
+      expect(item.modalidade, 'Esportiva');
+      expect(item.modalidadeExibicao, 'Sportklettern');
     });
   });
 }

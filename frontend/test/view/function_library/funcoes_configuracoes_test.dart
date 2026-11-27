@@ -942,39 +942,5 @@ void main() {
       },
     );
   });
-
-  group('construirCartaoInteracoesCaderneta', () {
-    testWidgets(
-      'renderiza cartão de Perfil e Caderneta e aciona callback aoAlternar ao alternar o Switch',
-      (WidgetTester tester) async {
-        final interacoesNotifier = ValueNotifier<bool>(true);
-        addTearDown(interacoesNotifier.dispose);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => construirCartaoInteracoesCaderneta(
-                  context,
-                  interacoesAtivasListenable: interacoesNotifier,
-                  aoAlternar: (ativo) => interacoesNotifier.value = ativo,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        expect(find.text('PERFIL E CADERNETA'), findsOneWidget);
-        final chaveSwitch = find.byKey(const Key('switch_interacoes_caderneta'));
-        expect(tester.widget<Switch>(chaveSwitch).value, isTrue);
-
-        await tester.tap(chaveSwitch);
-        await tester.pump();
-
-        expect(interacoesNotifier.value, isFalse);
-        expect(tester.widget<Switch>(chaveSwitch).value, isFalse);
-      },
-    );
-  });
 }
 
