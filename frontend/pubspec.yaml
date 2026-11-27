@@ -77,9 +77,9 @@ flutter:
     - assets/logo_app_trace.svg
     - assets/preload/
     - assets/preload/thumbnails/
-    - assets/geometria/malha_globo_brasil.json
+    - assets/geometria/malha_globo_brasil.bin
     - assets/geometria/textura_globo_nasa.jpg
-    - assets/dados/altimetria_picos_inicial.json
+    - assets/dados/altimetria_picos_inicial.bin
 
   fonts:
     - family: BebasNeue

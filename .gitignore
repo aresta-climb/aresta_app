@@ -113,6 +113,7 @@ unlinked_spec.ds
 
 # Coverage
 coverage/
+**/supabase/.temp/
 
 # Symbols
 app.*.symbols
