@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../idioma/tradutor_app.dart';
 import '../firebase/app_logger.dart';
 
 /// Gerencia o ciclo de vida das notificações nativas de download do sistema operacional,
@@ -182,13 +183,17 @@ class GerenciadorNotificacaoDownload {
             AndroidFlutterLocalNotificationsPlugin
           >();
 
+      final textoBaixando = tr(ChaveTexto.notifBaixandoPct, {
+        'pct': '$progressoInt',
+      });
+
       if (androidPlugin != null) {
         if (!_servicosAtivos.contains(id)) {
           _servicosAtivos.add(id);
           await androidPlugin.startForegroundService(
             id: id,
             title: nomePico,
-            body: 'Baixando... $progressoInt%',
+            body: textoBaixando,
             notificationDetails: androidDetails,
             foregroundServiceTypes: {
               AndroidServiceForegroundType.foregroundServiceTypeDataSync,
@@ -199,13 +204,13 @@ class GerenciadorNotificacaoDownload {
           await _plugin.show(
             id: id,
             title: nomePico,
-            body: 'Baixando... $progressoInt%',
+            body: textoBaixando,
             notificationDetails: NotificationDetails(android: androidDetails),
           );
         }
       } else {
         final darwinDetails = DarwinNotificationDetails(
-          subtitle: 'Baixando... $progressoInt%',
+          subtitle: textoBaixando,
           presentSound: false,
         );
 
@@ -217,7 +222,7 @@ class GerenciadorNotificacaoDownload {
         await _plugin.show(
           id: id,
           title: nomePico,
-          body: 'Baixando... $progressoInt%',
+          body: textoBaixando,
           notificationDetails: notificationDetails,
         );
       }
@@ -283,7 +288,7 @@ class GerenciadorNotificacaoDownload {
       await _plugin.show(
         id: id,
         title: nomePico,
-        body: '✓ Croqui salvo para uso offline.',
+        body: tr(ChaveTexto.notifCroquiSalvoOffline),
         notificationDetails: notificationDetails,
       );
     } catch (e, stackTrace) {
@@ -349,7 +354,7 @@ class GerenciadorNotificacaoDownload {
       await _plugin.show(
         id: id,
         title: nomePico,
-        body: motivo ?? 'Falha ao baixar croqui. Verifique sua conexão.',
+        body: motivo ?? tr(ChaveTexto.notifFalhaBaixarCroqui),
         notificationDetails: notificationDetails,
       );
     } catch (e, stackTrace) {

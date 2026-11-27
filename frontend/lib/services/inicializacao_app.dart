@@ -13,7 +13,6 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/localizador_destino_uid.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -104,7 +103,6 @@ Future<bool> setupAppServices(
   await Future.wait([
     datasetRepo.init(),
     RepositorioCadernetaLocal.instancia.inicializar(),
-    ControladorInteracoesUsuario.instancia.inicializar(),
   ]);
 
   final needsMigration = await syncService.checkNeedsMigration();

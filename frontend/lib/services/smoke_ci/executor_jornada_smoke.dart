@@ -15,7 +15,6 @@ import '../../navigation/funcoes_navegacao.dart';
 import '../../navigation/wrapper_navegacao_arvore.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/repositorio_caderneta.dart';
-import '../controlador_interacoes_usuario.dart';
 import '../firebase/app_logger.dart';
 import '../http/cliente_http_aresta.dart';
 import '../http/sync_service.dart';
@@ -89,8 +88,6 @@ class ExecutorJornadaSmoke {
         DateTime.utc(2026, 11, 21).toIso8601String(),
       );
       await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
-      await ControladorInteracoesUsuario.instancia.inicializar();
-      await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
       await repositorioCaderneta.inicializar();
       etapas.add('termos_legais_aceitos');
 
