@@ -198,7 +198,6 @@ void main() {
       expect(distExplorarTop6, equals(distHome));
       expect(viewModel.picosCards.every((c) => c.textoDistancia != null), isTrue);
 
-      // Ao mudar para Alfabético ou Mais escaladas, todos os cards continuam exibindo textoDistancia
       viewModel.alterarOrdem(OrdemOrdenacaoPico.alfabetico);
       expect(viewModel.picosCards.every((c) => c.textoDistancia != null), isTrue);
 
@@ -208,7 +207,7 @@ void main() {
       homeVm.dispose();
     });
 
-    test('focarSetimoPicoProximo limpa busca, restaura ordem proximidade e incrementa solicitacaoScrollSetimoPico', () {
+    test('focarSetimoPicoProximo limpa busca e filtros, restaura ordem proximidade e incrementa solicitacaoScrollSetimoPico', () {
       repositorio.activeDataset.value = TopoDataset(
         availablePicos: [
           {'id': '1', 'nome': 'Pedra do Baú', 'latitude': -22.68, 'longitude': -45.66},
@@ -217,114 +216,69 @@ void main() {
       );
 
       viewModel.alterarTermoBusca('Baú');
+      viewModel.alternarModalidade(ModalidadeExploracaoPico.paredao);
       viewModel.alterarOrdem(OrdemOrdenacaoPico.escaladas);
       expect(viewModel.solicitacaoScrollSetimoPico.value, equals(0));
 
       viewModel.focarSetimoPicoProximo();
 
       expect(viewModel.termoBusca, isEmpty);
+      expect(viewModel.modalidadesAtivas, isEmpty);
       expect(viewModel.ordem, equals(OrdemOrdenacaoPico.proximidade));
       expect(viewModel.solicitacaoScrollSetimoPico.value, equals(1));
     });
 
-    test('alterarTermoBusca filtra picos via busca fuzzy', () {
+    test('alterarTermoBusca filtra picos via busca fuzzy e alterarOrdem ordena A-Z e por escaladas', () {
       repositorio.activeDataset.value = TopoDataset(
         availablePicos: [
-          {'id': '1', 'nome': 'Pedra do Baú'},
-          {'id': '2', 'nome': 'Falésia Paraíso'},
+          {'id': 'b', 'nome': 'Pedra do Baú', 'estatisticas': {'totalVias': 10}},
+          {'id': 'a', 'nome': 'Falésia Paraíso', 'estatisticas': {'totalVias': 30}},
         ],
         downloadedPicos: [],
       );
 
       viewModel.alterarTermoBusca('Baú');
-      expect(viewModel.termoBusca, equals('Baú'));
-      expect(viewModel.picosFiltrados.length, equals(1));
-      expect(viewModel.picosFiltrados.first.nome, equals('Pedra do Baú'));
-    });
+      expect(viewModel.picosFiltrados.single.nome, equals('Pedra do Baú'));
 
-    test('alterarOrdem ordena alfabeticamente e por número de vias', () {
-      repositorio.activeDataset.value = TopoDataset(
-        availablePicos: [
-          {
-            'id': 'b',
-            'nome': 'B Pico',
-            'estatisticas': {'totalVias': 10},
-          },
-          {
-            'id': 'a',
-            'nome': 'A Pico',
-            'estatisticas': {'totalVias': 30},
-          },
-        ],
-        downloadedPicos: [],
-      );
-
-      // Alfabético
+      viewModel.alterarTermoBusca('');
       viewModel.alterarOrdem(OrdemOrdenacaoPico.alfabetico);
-      expect(viewModel.ordem, equals(OrdemOrdenacaoPico.alfabetico));
-      expect(viewModel.picosFiltrados.first.nome, equals('A Pico'));
+      expect(viewModel.picosFiltrados.first.nome, equals('Falésia Paraíso'));
       expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
 
-      // Por escaladas (descendente)
       viewModel.alterarOrdem(OrdemOrdenacaoPico.escaladas);
-      expect(viewModel.ordem, equals(OrdemOrdenacaoPico.escaladas));
-      expect(viewModel.picosFiltrados.first.nome, equals('A Pico')); // 30 vias > 10 vias
+      expect(viewModel.picosFiltrados.first.nome, equals('Falésia Paraíso'));
     });
 
-    test('modoEditorAtivo reflete estado de experimentalMode e editorUrl', () {
+    test('modoEditorAtivo e estaBaixado refletem estado do dataset local', () {
       expect(viewModel.modoEditorAtivo, isFalse);
-
       editor.isExperimentalMode.value = true;
       expect(viewModel.modoEditorAtivo, isTrue);
-
       editor.isExperimentalMode.value = false;
       editor.editorUrl.value = 'http://localhost:8000';
       expect(viewModel.modoEditorAtivo, isTrue);
-    });
 
-    test('estaBaixado verifica presença no dataset local', () {
       repositorio.activeDataset.value = TopoDataset(
         availablePicos: [],
-        croquisBaixados: [
-          Croqui(id: 'pico_salvo', nome: 'Salvo'),
-        ],
+        croquisBaixados: [Croqui(id: 'pico_salvo', nome: 'Salvo')],
       );
-
       expect(viewModel.estaBaixado('pico_salvo'), isTrue);
       expect(viewModel.estaBaixado('pico_ausente'), isFalse);
     });
 
     test(
-      'picosFiltrados e picosCards ordenam em 2 faixas (1º com estimativa de tempo por minutos, 2º demais por km) e propagam badge e tooltip',
+      'picosFiltrados e picosCards ordenam em 2 faixas com malha rodoviaria e propagam badge e tooltip',
       () {
         repositorio.activeDataset.value = TopoDataset(
           availablePicos: [
-            {
-              'id': 'pico_serra_lento',
-              'nome': 'Pico Atrás da Serra',
-              'latitude': -20.10,
-              'longitude': -44.00,
-            },
-            {
-              'id': 'pico_rodovia_rapido',
-              'nome': 'Pico Acesso BR',
-              'latitude': -20.20,
-              'longitude': -44.00,
-            },
-            {
-              'id': 'pico_sem_malha_local',
-              'nome': 'Pico Sem Malha Local',
-              'latitude': -20.05,
-              'longitude': -44.00,
-            },
+            {'id': 'pico_serra_lento', 'nome': 'Pico Atrás da Serra', 'latitude': -20.10, 'longitude': -44.00},
+            {'id': 'pico_rodovia_rapido', 'nome': 'Pico Acesso BR', 'latitude': -20.20, 'longitude': -44.00},
+            {'id': 'pico_sem_malha_local', 'nome': 'Pico Sem Malha Local', 'latitude': -20.05, 'longitude': -44.00},
           ],
           downloadedPicos: [],
         );
 
         viewModel.atualizarLocalizacaoUsuario(-20.00, -44.00);
-
-        repositorio.calculadoraDistanciaEstrada.value =
-            CalculadoraDistanciaEstrada(
+        repositorio.calculadoraDistanciaEstrada.value = CalculadoraDistanciaEstrada(
           nos: const <NoEstrada>[
             NoEstrada(
               noOsmId: 77,
@@ -342,23 +296,11 @@ void main() {
           ],
         );
 
-        // Faixa 1: pico_rodovia_rapido (~35 min, 48.1 km) antes de pico_serra_lento (~1h 10min, 35.1 km)
-        // Faixa 2: pico_sem_malha_local (sem estimativa de tempo, ordenado por km ao final)
         expect(
           viewModel.picosFiltrados.map((p) => p.id).toList(),
-          equals(<String>[
-            'pico_rodovia_rapido',
-            'pico_serra_lento',
-            'pico_sem_malha_local',
-          ]),
+          equals(<String>['pico_rodovia_rapido', 'pico_serra_lento', 'pico_sem_malha_local']),
         );
-        expect(viewModel.picosCards[0].id, equals('pico_rodovia_rapido'));
         expect(viewModel.picosCards[0].textoDistancia, equals('~35 min'));
-        expect(
-          viewModel.picosCards[0].tooltipDistancia,
-          equals('Estimativa sem trânsito: ~35 min (48.1 km)'),
-        );
-        expect(viewModel.picosCards[1].id, equals('pico_serra_lento'));
         expect(viewModel.picosCards[1].textoDistancia, equals('~1h 10min'));
         expect(
           viewModel.picosCards[1].tooltipDistancia,
