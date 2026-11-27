@@ -8,8 +8,6 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -24,8 +22,6 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     repoFake = RepositorioInteracoesViaFake();
     lancadorFake = PlataformaLancadorUrlFake();
     UrlLauncherPlatform.instance = lancadorFake;
@@ -34,8 +30,6 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, null);
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
   });
 
   test('extrai grau oficial, atributos técnicos, histórico, betas e Pix para ViaEsportiva', () async {
@@ -395,7 +389,7 @@ void main() {
     expect(await vazia.copiarChavePix(), isFalse);
   });
 
-  test('respeita ConfiguracaoRecursos.perfilHabilitado e gerencia alertas e consenso reativamente', () async {
+  test('gerencia alertas, consenso e comentários reativamente por UID e absorve falha inicial de sync', () async {
     const uidVia = 'x8siJek3FiG3aB';
     repoFake.semearDados(
       uidVia,
@@ -418,8 +412,26 @@ void main() {
       ),
     );
 
-    // Flag desabilitada: oculta alertas, consenso e comentários
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+    // Via sem UID não expõe recursos dependentes de identificador remoto
+    final vmSemUid = ViaViewModel(
+      escalada: Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Sem UID',
+          dificuldade: GrauVia_GrauVia.BR_7A,
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    expect(vmSemUid.podeReportarAlerta, isFalse);
+    expect(vmSemUid.consensoGrau, isNull);
+    expect(vmSemUid.apresentacaoConsenso, isNull);
+    expect(vmSemUid.alertasAtivos, isEmpty);
+    expect(vmSemUid.comentariosComunidade, isEmpty);
+    expect(vmSemUid.notasComunidadeApresentacao, isEmpty);
+    vmSemUid.dispose();
+
+    // Falha transitória inicial de sincronização é absorvida com log de aviso sem quebrar dados locais
+    repoFake.erroSimulado = StateError('Falha inicial de sync');
     final vm = ViaViewModel(
       escalada: Escalada(
         uid: uidVia,
@@ -430,29 +442,9 @@ void main() {
       ),
       repositorioInteracoes: repoFake,
     );
-
-    expect(vm.exibirRecursosComunidade, isFalse);
-    expect(vm.podeReportarAlerta, isFalse);
-    expect(vm.consensoGrau, isNull);
-    expect(vm.apresentacaoConsenso, isNull);
-    expect(vm.alertasAtivos, isEmpty);
-    expect(vm.comentariosComunidade, isEmpty);
-    expect(vm.notasComunidadeApresentacao, isEmpty);
-
-    // Ativar flag com interacoesAtivas=false mantém alertas de segurança visíveis para todos os escaladores
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    repoFake.erroSimulado = StateError('Falha inicial de sync');
-    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(false);
     await Future<void>.delayed(Duration.zero);
     repoFake.erroSimulado = null;
-    expect(vm.exibirRecursosComunidade, isFalse);
-    expect(vm.consensoGrau, isNull);
-    expect(vm.podeReportarAlerta, isTrue);
 
-    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
-    await Future<void>.delayed(Duration.zero);
-
-    expect(vm.exibirRecursosComunidade, isTrue);
     expect(vm.podeReportarAlerta, isTrue);
     expect(vm.consensoGrau?.grauSugerido, '7b');
     expect(vm.apresentacaoConsenso?.votosDuros, 9);
@@ -528,7 +520,6 @@ void main() {
   });
 
   test('suporta voto direto nas pílulas de grau e janela de desfazer na resolução de alerta', () async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     const uidVia = 'viaInterativa01';
 
     final vm = ViaViewModel(
