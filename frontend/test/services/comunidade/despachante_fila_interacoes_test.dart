@@ -193,4 +193,90 @@ void main() {
       );
       await despachante.registrarMutacao(
         clienteFake,
+        MutacaoFilaInteracao.excluirAlerta(
+          alvoUid: 'alertaOff00001',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      expect(despachante.itensPendentes, isEmpty);
+      expect(despachante.mutacoesPendentes, isEmpty);
+
+      // 2. Itens já sincronizados no servidor -> mutações entram em _mutacoesPendentes e deduplicam por domínio
+      clienteFake.erroSimulado = null;
+      final comRemoto = ItemFilaInteracao.comentario(
+        id: 'a17ac10b-58cc-4372-a567-0e02b2c3d479',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        escaladaUid: 'x8siJek3FiG3aB',
+        textoComentario: 'No ar',
+      );
+      final alertaRemoto = ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        escaladaUid: 'x8siJek3FiG3aB',
+        alertaAlvoUid: 'alertaRem00001',
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+      );
+      clienteFake.semearItens([comRemoto, alertaRemoto]);
+
+      // Sem cliente (null), acumula e substitui mutação anterior do mesmo domínio
+      await despachante.registrarMutacao(
+        null,
+        MutacaoFilaInteracao.editarComentario(
+          alvoUid: comRemoto.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: 'Versão 1',
+        ),
+      );
+      await despachante.registrarMutacao(
+        null,
+        MutacaoFilaInteracao.editarAlerta(
+          alvoUid: 'alertaRem00001',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novaCategoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          detalhe: 'Bloco',
+        ),
+      );
+      await despachante.registrarMutacao(
+        null,
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: comRemoto.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      await despachante.registrarMutacao(
+        null,
+        MutacaoFilaInteracao.editarComentario(
+          alvoUid: comRemoto.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: 'Versão 2',
+        ),
+      );
+      expect(despachante.mutacoesPendentes, hasLength(2));
+
+      // Exercita 401 -> refresh ok na 1ª mutação, e 409 descartado na 2ª
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(
+          codigoStatusHttp: 401,
+          message: 'JWT expirado',
+        ),
+        const ExcecaoHttpFilaInteracoes(
+          codigoStatusHttp: 409,
+          message: 'Conflito 409',
+        ),
+      ]);
+      // Na 1ª mutação (editarAlerta): 401 -> refresh -> sucesso (consome 2ª entrada se não cuidarmos: vamos colocar apenas 401 primeiro!)
+      clienteFake.filaErrosInsercao
+        ..clear()
+        ..add(
+          const ExcecaoHttpFilaInteracoes(
+            codigoStatusHttp: 401,
+            message: 'JWT expirado',
+          ),
+        );
 }
