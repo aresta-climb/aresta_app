@@ -153,3 +153,77 @@ void main() {
         provedorDiretorioBase: () async => tempDir.path,
       );
 
+      var agora = DateTime.utc(2026, 11, 27, 10, 0);
+      final servico = ServicoMalhaViariaOffline(
+        armazenamento: arm,
+        fonteRemota: cliente,
+        relogioUtc: () => agora,
+      );
+      addTearDown(servico.dispose);
+
+      await servico.inicializar();
+      await servico.inicializar();
+      expect(servico.inicializado, isTrue);
+      expect(servico.snapshotAtivo, isNull);
+      expect(servico.versaoAtiva, isNull);
+
+      // 1. Mesma versão da semente embarcada -> consulta apenas metadados (~100B) e NÃO baixa o JSON completo!
+      final sincronizouMesmaVersao = await servico.sincronizarSeDisponivel(
+        versaoSementeEmbarcada: 'osm-v1-semente',
+      );
+      expect(sincronizouMesmaVersao, isFalse);
+      expect(authRecebido, equals('Bearer eyJhbGciOiJIUzI1NiJ9.teste'));
+      expect(consultasVersao, equals(1));
+      expect(downloadsCompletos, equals(0));
+
+      // 2. Dentro do TTL de 6h sem forçar -> não faz nova requisição de rede
+      agora = agora.add(const Duration(hours: 2));
+      expect(await servico.sincronizarSeDisponivel(), isFalse);
+      expect(consultasVersao, equals(1));
+
+      // 3. Passado o TTL (ou forçado), catálogo ganhou novo pico no Supabase e slot atual está em manutenção -> usa copia_seguranca!
+      agora = agora.add(const Duration(hours: 5));
+      versaoServidor = 'osm-v2-novo-pico';
+      slotAtualVazio = true;
+      final concorrentes = await Future.wait([
+        servico.sincronizarSeDisponivel(versaoSementeEmbarcada: 'osm-v1-semente'),
+        servico.sincronizarSeDisponivel(versaoSementeEmbarcada: 'osm-v1-semente'),
+      ]);
+      expect(concorrentes, equals([true, true]));
+      expect(downloadsCompletos, equals(1));
+      expect(servico.versaoAtiva, equals('osm-v2-novo-pico'));
+      expect(servico.snapshotAtivo?.rodovias.single.codigo, equals('BR-381'));
+
+      // 4. Novo ciclo em área remota sem sinal (HTTP 503 / ambos slots vazios / versão vazia) -> preserva cópia offline local!
+      slotAtualVazio = false;
+      versaoServidor = '';
+      expect(await servico.sincronizarSeDisponivel(forcar: true), isFalse);
+
+      versaoServidor = 'osm-v3';
+      slotAtualVazio = true;
+      slotSegurancaVazio = true;
+      expect(await servico.sincronizarSeDisponivel(forcar: true), isFalse);
+
+      statusHttp = 503;
+      expect(await servico.sincronizarSeDisponivel(forcar: true), isFalse);
+      expect(servico.versaoAtiva, equals('osm-v2-novo-pico'));
+
+      // 5. Reabertura totalmente offline em área remota hidrata direto do disco sem rede
+      await servidor.close(force: true);
+      final servicoOffline = ServicoMalhaViariaOffline(
+        armazenamento: arm,
+        fonteRemota: cliente,
+        relogioUtc: () => agora,
+      );
+      addTearDown(servicoOffline.dispose);
+      var notificouDisco = 0;
+      servicoOffline.addListener(() => notificouDisco++);
+      await servicoOffline.inicializar();
+      expect(notificouDisco, equals(1));
+      expect(servicoOffline.versaoAtiva, equals('osm-v2-novo-pico'));
+      expect(await servicoOffline.sincronizarSeDisponivel(forcar: true), isFalse);
+
+      expect(ServicoMalhaViariaOffline.instancia, isNotNull);
+    });
+  });
+}
