@@ -177,3 +177,89 @@ class _CartaoSecaoExpansivelVia extends StatefulWidget {
     required this.filhosExpandidos,
   });
 
+  @override
+  State<_CartaoSecaoExpansivelVia> createState() =>
+      _CartaoSecaoExpansivelViaState();
+}
+
+class _CartaoSecaoExpansivelViaState extends State<_CartaoSecaoExpansivelVia> {
+  bool _expandido = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cores.caveShadow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cores.graniteEdge),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              key: widget.chaveCabecalho,
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => setState(() => _expandido = !_expandido),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: CabecalhoSecaoPadraoVia(
+                  icone: widget.icone,
+                  tituloCaixaAlta: widget.tituloCaixaAlta,
+                  sufixo: AnimatedRotation(
+                    turns: _expandido ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: cores.ashGrey,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: _expandido
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: widget.filhosExpandidos,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Seção recolhível (Dumb UI) de vídeos e postagens curadas de beta, iniciando fechada por padrão.
+class SecaoBetasMidiaVia extends StatelessWidget {
+  /// Mídias disponíveis para a escalada.
+  final List<ItemMidiaBetaVia> midias;
+
+  /// Callback acionado ao tocar em um vídeo ou post de beta.
+  final ValueChanged<String> aoAbrirMidia;
+
+  /// Cria uma instância de [SecaoBetasMidiaVia].
+  const SecaoBetasMidiaVia({
+    super.key,
+    required this.midias,
+    required this.aoAbrirMidia,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (midias.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
