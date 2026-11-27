@@ -6,15 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/beta.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
-import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
@@ -26,14 +23,10 @@ import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     RepositorioInteracoesViaMemoria.redefinirParaTestes();
   });
 
   tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     RepositorioInteracoesViaMemoria.redefinirParaTestes();
     ServicoCompartilhamento.restaurarPadrao();
   });
@@ -82,65 +75,7 @@ void main() {
     expect(find.text('7a'), findsOneWidget);
   });
 
-  testWidgets('ViaPage oculta alertas, consenso, caderneta e notas quando perfilHabilitado for false', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-    final repoFake = RepositorioInteracoesViaFake()
-      ..semearDados(
-        'via-uid-123',
-        DadosComunidadeVia(
-          consensoGrau: const ConsensoGrauVia(grauSugerido: '7b', totalVotos: 5),
-          alertasAtivos: [
-            AlertaSegurancaVia.criar(
-              escaladaUid: 'via-uid-123',
-              categoria: CategoriaAlertaSeguranca.fauna,
-            ),
-          ],
-        ),
-      );
-
-    final escalada = Escalada(
-      uid: 'via-uid-123',
-      viaEsportiva: ViaEsportiva(
-        nome: 'Fenda da Esperança',
-        dificuldade: GrauVia_GrauVia.BR_7A,
-      ),
-    );
-    final vm = ViaViewModel(
-      escalada: escalada,
-      repositorioInteracoes: repoFake,
-    );
-    addTearDown(vm.dispose);
-
-    tester.view.devicePixelRatio = 1.0;
-    tester.view.physicalSize = const Size(400, 840);
-    tester.view.viewPadding = const FakeViewPadding(bottom: 48);
-    tester.view.padding = const FakeViewPadding(bottom: 48);
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-      tester.view.resetViewPadding();
-      tester.view.resetPadding();
-    });
-
-    await tester.pumpWidget(
-      envolver(
-        ViaPage(
-          escalada: escalada,
-          cragId: 'crag1',
-          viewModel: vm,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('btn_reportar_alerta_via')), findsNothing);
-    expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
-    expect(find.text('CONSENSO DA COMUNIDADE'), findsNothing);
-    expect(find.text('Registrar Cadena / Tentativa'), findsNothing);
-  });
-
   testWidgets('ViaPage permite reportar alerta pelo AppBar, exibe bolha vermelha flutuante e confirma Ainda está lá?', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     final repoFake = RepositorioInteracoesViaFake();
     final escalada = Escalada(
       uid: 'via-uid-alerta1',
@@ -267,8 +202,6 @@ void main() {
   });
 
   testWidgets('ViaPage abre modal de caderneta, exibe selo Flash, copia chave Pix, abre vídeo beta e compartilha via', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-
     String? textoCompartilhado;
     String? pixCopiado;
     Uri? betaAberto;
@@ -350,7 +283,13 @@ void main() {
     Navigator.of(tester.element(find.byType(ModalRegistroCadena))).pop();
     await tester.pumpAndSettle();
 
-    // Abre vídeo beta
+    // Seção de vídeos & betas inicia recolhida e expande ao tocar
+    expect(find.text('VÍDEOS & BETAS (1)'), findsOneWidget);
+    expect(find.text('Beta Oficial no YouTube'), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('cabecalho_betas_midia_via')));
+    await tester.tap(find.byKey(const Key('cabecalho_betas_midia_via')));
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(find.text('Beta Oficial no YouTube'));
     await tester.tap(find.text('Beta Oficial no YouTube'));
     await tester.pumpAndSettle();
@@ -450,7 +389,6 @@ void main() {
   });
 
   testWidgets('ViaPage atualiza consenso de grau e notas da comunidade ao registrar cadena com voto e beta público', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     final repoFake = RepositorioInteracoesViaFake();
     RepositorioInteracoesViaMemoria.instancia = repoFake;
 
@@ -532,7 +470,12 @@ void main() {
     expect(find.byKey(const Key('grafico_distribuicao_grau_via')), findsOneWidget);
     expect(find.byKey(const Key('pilula_voto_grau_1')), findsOneWidget);
     expect(find.text('7b (+1)'), findsOneWidget);
-    expect(find.text('Betas da Comunidade (1)'), findsOneWidget);
+    expect(find.text('BETAS DA COMUNIDADE (1)'), findsOneWidget);
+    expect(find.text('Clipar a 3ª da orelha esquerda.'), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+    await tester.tap(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+    await tester.pumpAndSettle();
     expect(find.text('Clipar a 3ª da orelha esquerda.'), findsOneWidget);
     expect(find.text('FLASH ★'), findsOneWidget);
 
@@ -544,7 +487,6 @@ void main() {
   });
 
   testWidgets('ViaPage exibe selo de Tentativa clicável no Passaporte e permite voltar pelo botão do AppBar', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     final escalada = Escalada(
       uid: 'uidProjeto99',
       viaEsportiva: ViaEsportiva(

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -150,10 +151,19 @@ void main() {
     },
   );
 
-  test('formatLegalDate correctly formats ISO dates', () {
+  test('formatLegalDate correctly formats ISO dates across supported languages', () async {
+    SharedPreferences.setMockInitialValues({});
+    addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+
     expect(formatLegalDate('2026-06-04'), '04 de Junho de 2026');
     expect(formatLegalDate('2025-12-31'), '31 de Dezembro de 2025');
     expect(formatLegalDate('invalid-date'), 'invalid-date'); // fallback
+
+    await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.ingles);
+    expect(formatLegalDate('2026-06-04'), 'June 4, 2026');
+
+    await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.holandes);
+    expect(formatLegalDate('2026-06-04'), '4 juni 2026');
   });
 
   testWidgets(
