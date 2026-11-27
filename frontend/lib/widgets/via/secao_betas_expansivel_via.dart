@@ -355,3 +355,50 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
     if (notas.isEmpty) return const SizedBox.shrink();
     final cores = context.colors;
 
+    return _CartaoSecaoExpansivelVia(
+      chaveCabecalho: const Key('cabecalho_betas_comunidade_via'),
+      icone: Icons.forum_outlined,
+      tituloCaixaAlta: context.tr(
+        ChaveTexto.viaBetasComunidadeContagem,
+        {'n': notas.length},
+      ),
+      filhosExpandidos: [
+        for (var i = 0; i < notas.length; i++)
+          Container(
+            margin: EdgeInsets.only(bottom: i == notas.length - 1 ? 0 : 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cores.deepBasalt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    AvatarAutorComunidadeVia(
+                      avatarUrl: notas[i].autorAvatarUrl,
+                      iniciais: notas[i].iniciaisAutor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            notas[i].cabecalhoAutorData,
+                            style: TextStyle(
+                              color: cores.ashGrey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (notas[i].rotuloEstilo != null)
+                            PilulaDetalheCurtoVia(
+                              texto: notas[i].rotuloEstilo!,
+                            ),
+                        ],
