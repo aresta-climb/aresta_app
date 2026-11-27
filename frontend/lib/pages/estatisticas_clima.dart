@@ -276,3 +276,93 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
+  Widget _construirSecaoTabelaZ(BuildContext context, AppColors cores) {
+    return _CartaoSecaoEstatistica(
+      titulo: context.tr(ChaveTexto.estatClimaSecaoTabelaZTitulo),
+      cores: cores,
+      filho: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.tr(ChaveTexto.estatClimaTabelaZExplicacao),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.42),
+          ),
+          const SizedBox(height: 12),
+          GraficoDistribuicaoZClima(
+            rotuloH0: context.tr(ChaveTexto.estatClimaGraficoH0Rotulo),
+            rotuloCaudaDireita: context.tr(ChaveTexto.estatClimaGraficoCaudaRotulo),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: cores.deepBasalt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Row(
+                    children: [
+                      _celulaCabecalhoTabelaZ(context.tr(ChaveTexto.estatClimaColunaZ), 52, cores),
+                      _celulaCabecalhoTabelaZ(context.tr(ChaveTexto.estatClimaColunaPhi), 68, cores),
+                      _celulaCabecalhoTabelaZ(context.tr(ChaveTexto.estatClimaColunaCauda), 68, cores),
+                      Expanded(child: _textoCabecalhoTabelaZ(context.tr(ChaveTexto.estatClimaColunaNota), cores)),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: cores.graniteEdge),
+                for (final linha in EstudoEstatisticoClimaAresta.linhasTabelaPadraoZ)
+                  Container(
+                    color: linha.destacar ? cores.rustIron.withValues(alpha: 0.12) : Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 52,
+                          child: Text(
+                            '+${linha.escoreZ.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              color: linha.destacar ? cores.rustIron : cores.chalkWhite,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 68,
+                          child: Text(
+                            linha.probabilidadeAcumuladaPhi.toStringAsFixed(4),
+                            style: TextStyle(fontFamily: 'monospace', color: cores.chalkWhite, fontSize: 11.5),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 68,
+                          child: Text(
+                            linha.caudaDireitaP.toStringAsFixed(4),
+                            style: TextStyle(fontFamily: 'monospace', color: cores.ashGrey, fontSize: 11.5),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            context.tr(linha.chaveInterpretacao),
+                            style: TextStyle(
+                              color: linha.destacar ? cores.chalkWhite : cores.ashGrey,
+                              fontSize: 11,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
