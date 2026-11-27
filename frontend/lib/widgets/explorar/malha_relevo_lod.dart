@@ -269,3 +269,93 @@ abstract final class GeradorRelevoLod {
       final d2 = dx * dx + dy * dy;
       if (d2 < menorDist2) menorDist2 = d2;
 
+      final wReg = 1.0 / (0.020 + d2);
+      somaPlanalto += p.altitudeBaseMetros * wReg;
+      pesoPlanalto += wReg;
+
+      if (d2 < 0.045) {
+        final am = amostrarElevacaoObjetoComPeso(
+          latitude: latitude,
+          longitude: longitude,
+          pico: p,
+        );
+        if (am.peso > 0.0) {
+          somaDem += am.elevacaoMetros * am.peso;
+          pesoDem += am.peso;
+        }
+      }
+    }
+
+    final cotaRealExterna = amostradorElevacaoReal?.call(latitude, longitude);
+    if (cotaRealExterna != null) {
+      final baseReal = ehTerraConfirmada == true
+          ? math.max(2.0, cotaRealExterna)
+          : cotaRealExterna;
+      if (pesoDem <= 0.0) return baseReal;
+      final cotaLocal = somaDem / pesoDem;
+      final mistura = pesoDem.clamp(0.0, 1.0);
+      return baseReal * (1.0 - mistura) + cotaLocal * mistura;
+    }
+
+    if (picosReferencia.isEmpty) return 0.0;
+    if (ehTerraConfirmada == null && menorDist2 >= 8.5) return 0.0;
+
+    final atenDist = ehTerraConfirmada == true
+        ? 1.0 - 0.35 * ((math.sqrt(menorDist2) - 2.0) / 4.0).clamp(0.0, 1.0)
+        : 1.0 - ((math.sqrt(menorDist2) - 1.4) / 1.5).clamp(0.0, 1.0);
+    final pisoContinental = ehTerraConfirmada == true ? 180.0 : 8.0;
+    final cotaRegional =
+        math.max(pisoContinental, (somaPlanalto / pesoPlanalto) * atenDist);
+
+    if (pesoDem <= 0.0) return cotaRegional;
+    final cotaLocal = somaDem / pesoDem;
+    final mistura = pesoDem.clamp(0.0, 1.0);
+    return cotaRegional * (1.0 - mistura) + cotaLocal * mistura;
+  }
+
+  /// Avalia em `O(1)` a cota altimétrica e o peso espacial (`0.0 .. 1.0`) de um único [pico] em `(latitude, longitude)`.
+  static ({double elevacaoMetros, double peso}) amostrarElevacaoObjetoComPeso({
+    required double latitude,
+    required double longitude,
+    required PicoRelevoReferencia pico,
+  }) {
+    if (pico.temGradeDemReal) {
+      final cosLat = math.max(0.35, math.cos(pico.latitude * _grausParaRad));
+      final uNorm = (longitude - pico.longitude) * cosLat / pico.raioGradeDemGraus;
+      final vNorm = (latitude - pico.latitude) / pico.raioGradeDemGraus;
+      final distRadial = math.sqrt(uNorm * uNorm + vNorm * vNorm);
+      if (distRadial >= 1.38) {
+        return (elevacaoMetros: 0.0, peso: 0.0);
+      }
+      final uDem = (longitude - pico.longitude) / pico.raioGradeDemGraus;
+      final cotaDem = _interpolarBilinearDem(pico, uDem, vNorm);
+      final tBorda = ((distRadial - 0.72) / (1.38 - 0.72)).clamp(0.0, 1.0);
+      final peso = 1.0 - tBorda * tBorda * (3.0 - 2.0 * tBorda);
+      return (elevacaoMetros: cotaDem, peso: peso);
+    }
+
+    final dx =
+        (longitude - pico.longitude) * math.cos(pico.latitude * _grausParaRad);
+    final dy = latitude - pico.latitude;
+    final d2 = dx * dx + dy * dy;
+    if (d2 >= 0.0064) {
+      return (elevacaoMetros: 0.0, peso: 0.0);
+    }
+
+    if (pico.altitudeBaseMetros <= 30 && dy < -0.022) {
+      return (elevacaoMetros: -25.0, peso: 1.0);
+    }
+
+    final semente = _sementeDeterministica(pico.id);
+    final baseFloor = pico.altitudeBaseMetros.toDouble();
+    final prominencia = math.max(
+      180.0,
+      (pico.altitudePicoMetros - pico.altitudeBaseMetros).toDouble(),
+    );
+
+    final cumePrincipal = math.exp(-d2 / 0.0014) * prominencia;
+    final sx1 = dx - 0.018 * math.cos(semente);
+    final sy1 = dy + 0.014 * math.sin(semente);
+    final crista1 =
+        math.exp(-(sx1 * sx1 + sy1 * sy1) / 0.0011) * (prominencia * 0.54);
+
