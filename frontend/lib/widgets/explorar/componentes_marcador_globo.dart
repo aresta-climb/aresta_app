@@ -175,3 +175,94 @@ class CapsulaControlesModoGlobo extends StatelessWidget {
   }
 }
 
+/// Bolha circular compacta de um pico não selecionado no mapa, exibindo a marca Aresta e o halo de umidade.
+class BolhaCompactaPicoGlobo extends StatelessWidget {
+  final MarcadorPicoGlobo pico;
+  final PontoProjetadoTela ponto;
+  final VoidCallback aoTocar;
+
+  const BolhaCompactaPicoGlobo({
+    super.key,
+    required this.pico,
+    required this.ponto,
+    required this.aoTocar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final estaUmido = pico.umidade.nivel.estaUmido;
+    final corUmidade = estaUmido
+        ? PaletaUmidadePico.corDestaque(pico.umidade.nivel)
+        : PaletaUmidadePico.corPontoArestaPadrao;
+
+    return Positioned(
+      left: ponto.x - 16,
+      top: ponto.y - 16,
+      child: GestureDetector(
+        key: Key('ponto_aresta_${pico.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: aoTocar,
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          color: Colors.transparent,
+          child: Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: estaUmido
+                  ? PaletaUmidadePico.corFundo(pico.umidade.nivel)
+                  : const Color(0xEB0F141B),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: estaUmido
+                    ? PaletaUmidadePico.corBorda(pico.umidade.nivel)
+                    : PaletaUmidadePico.corPontoArestaPadrao,
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: corUmidade.withValues(alpha: 0.34),
+                  blurRadius: 6,
+                  spreadRadius: 0.6,
+                ),
+              ],
+            ),
+            child: IconeMarcaAresta(largura: 13.0, cor: corUmidade),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pílula expandida exibida exclusivamente para o pico selecionado pelo usuário, com altitude sobre o nível do mar.
+class PilulaExpandidaPicoGlobo extends StatelessWidget {
+  final MarcadorPicoGlobo pico;
+  final PontoProjetadoTela ponto;
+  final Size tamanhoTela;
+  final double lodAtual;
+  final VoidCallback aoTocar;
+
+  const PilulaExpandidaPicoGlobo({
+    super.key,
+    required this.pico,
+    required this.ponto,
+    required this.tamanhoTela,
+    required this.lodAtual,
+    required this.aoTocar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final estaUmido = pico.umidade.nivel.estaUmido;
+    final corUmidade = estaUmido
+        ? PaletaUmidadePico.corDestaque(pico.umidade.nivel)
+        : PaletaUmidadePico.corPontoArestaPadrao;
+    final mostrarAltitudeMar = lodAtual >= 1.75 && pico.altitudePicoMetros > 0;
+    final corTextoPrimario = estaUmido
+        ? PaletaUmidadePico.corTexto(pico.umidade.nivel)
+        : const Color(0xFFF4F3ED);
+
