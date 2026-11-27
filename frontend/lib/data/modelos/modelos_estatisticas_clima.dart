@@ -90,3 +90,93 @@ class MatrizContingenciaClima {
     return math.sqrt((p * (1.0 - p)) / totalEventosReaisChuva.toDouble());
   }
 
+  /// Intervalo de confiança bilateral de `95%` via Tabela Z (`Z = 1,96`).
+  ({double inferior, double superior}) intervaloConfianca95Z() {
+    final p = taxaDeteccaoPod;
+    final margem = zCritico95Bilateral * erroPadraoDeteccao;
+    return (inferior: p - margem, superior: p + margem);
+  }
+
+  /// Calcula a estatística `Z = (p_hat - p0) / sqrt(p0 * (1 - p0) / n)` contra uma hipótese nula `H0: p = p0`.
+  double calcularEscoreZContraH0(double p0) {
+    final seH0 = math.sqrt(
+      (p0 * (1.0 - p0)) / totalEventosReaisChuva.toDouble(),
+    );
+    return (taxaDeteccaoPod - p0) / seH0;
+  }
+
+  /// Taxa marginal esperada por puro acaso climatológico (`Heidke Skill Score H0`).
+  double get taxaBaseAcasoHeidke {
+    final n = totalPicoDias.toDouble();
+    final pRealChuva = (verdadeirosPositivos + falsosNegativos) / n;
+    final pPrevChuva = (verdadeirosPositivos + falsosPositivos) / n;
+    return pRealChuva * pPrevChuva +
+        (1.0 - pRealChuva) * (1.0 - pPrevChuva);
+  }
+
+  /// Estatística `Z` na cauda direita sobre toda a matriz `N = 5.133` contra o acaso climatológico `H0`.
+  double calcularEscoreZHeidkeGlobal() {
+    final p0 = taxaBaseAcasoHeidke;
+    final seGlobal = math.sqrt((p0 * (1.0 - p0)) / totalPicoDias.toDouble());
+    return (acuraciaGlobal - p0) / seGlobal;
+  }
+}
+
+/// Referência matemática e estatística pura do índice empírico de `~85%` exibido no aplicativo.
+abstract final class EstudoEstatisticoClimaAresta {
+  /// Percentual conservador exibido no aviso de uso (`85%`, arredondado de `84,3%–85,5%`).
+  static const int taxaReferenciaExibidaPercentual = 85;
+
+  /// Taxa empírica de detecção na janela conservadora de 4 dias de umidade no pico (`1.867 / 2.305`).
+  static const double taxaDeteccaoJanelaQuatroDias = 0.8100;
+
+  /// Taxa publicada de detecção de fogo ativo do sensor orbital `NASA VIIRS 375m (VNP14IMG)`.
+  static const double taxaDeteccaoIncendioViirsNasa = 0.8650;
+
+  /// Hindcast independente de 180 dias (`01/06/2024 – 27/11/2024`, `29` picos, ` NOAA GFS 0,25°` vs `ECMWF ERA5`).
+  static const MatrizContingenciaClima matrizChuvaRegional =
+      MatrizContingenciaClima(
+        verdadeirosPositivos: 1306,
+        verdadeirosNegativos: 3426,
+        falsosPositivos: 179,
+        falsosNegativos: 222,
+      );
+
+  /// Entradas de referência da Tabela Normal Padrão (`Φ(Z)`) para verificação manual direta.
+  static const List<LinhaTabelaPadraoZ> linhasTabelaPadraoZ = [
+    LinhaTabelaPadraoZ(
+      escoreZ: 0.00,
+      probabilidadeAcumuladaPhi: 0.5000,
+      caudaDireitaP: 0.5000,
+      chaveInterpretacao: ChaveTexto.estatClimaZNotaMedia,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 1.28,
+      probabilidadeAcumuladaPhi: 0.8997,
+      caudaDireitaP: 0.1003,
+      chaveInterpretacao: ChaveTexto.estatClimaZNota90,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 1.65,
+      probabilidadeAcumuladaPhi: 0.9505,
+      caudaDireitaP: 0.0495,
+      chaveInterpretacao: ChaveTexto.estatClimaZNota95,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 1.96,
+      probabilidadeAcumuladaPhi: 0.9750,
+      caudaDireitaP: 0.0250,
+      chaveInterpretacao: ChaveTexto.estatClimaZNotaIC95,
+      destacar: true,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 2.33,
+      probabilidadeAcumuladaPhi: 0.9901,
+      caudaDireitaP: 0.0099,
+      chaveInterpretacao: ChaveTexto.estatClimaZNota99,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 2.57,
+      probabilidadeAcumuladaPhi: 0.9949,
+      caudaDireitaP: 0.0051,
+      chaveInterpretacao: ChaveTexto.estatClimaZNotaTeste83,
