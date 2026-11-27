@@ -187,3 +187,98 @@ abstract final class CamadaMarcadoresGloboExplorar {
       return prioA.compareTo(prioB);
     });
 
+    final widgets = <Widget>[];
+    for (final item in visiveis) {
+      final p = item.pico;
+      final pt = item.pt;
+      if (p.id != picoSelecionadoId) {
+        widgets.add(
+          BolhaCompactaPicoGlobo(
+            pico: p,
+            ponto: pt,
+            aoTocar: () => aoSelecionarPico(p),
+          ),
+        );
+      } else {
+        widgets.add(
+          PilulaExpandidaPicoGlobo(
+            pico: p,
+            ponto: pt,
+            tamanhoTela: tamanho,
+            lodAtual: controlador.lod,
+            aoTocar: () => aoSelecionarPico(p),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
+  static List<Widget> _construirClustersPorUf({
+    required Size tamanho,
+    required ControladorCameraGlobo controlador,
+    required List<MarcadorPicoGlobo> picos,
+    required double limiteSuperior,
+    required double limiteInferior,
+    required void Function(MarcadorPicoGlobo pico, {double? lodExplicito})
+        aoSelecionarPico,
+  }) {
+    final clusters = ControladorCameraGlobo.agruparPorEstado(
+      picos.map(
+        (p) => (id: p.id, uf: p.uf, lat: p.latitude, lon: p.longitude),
+      ),
+    );
+
+    final projetados = <({ClusterEstadoGlobo cluster, Offset pos})>[];
+    for (final cluster in clusters) {
+      final pt = controlador.projetarCoordenada(
+        latitude: cluster.latitudeMedia,
+        longitude: cluster.longitudeMedia,
+        elevacaoMetros: 0,
+        tamanhoTela: tamanho,
+      );
+      if (!pt.visivel ||
+          pt.x < 20 ||
+          pt.x > tamanho.width - 20 ||
+          pt.y < limiteSuperior ||
+          pt.y > limiteInferior) {
+        continue;
+      }
+      projetados.add((cluster: cluster, pos: Offset(pt.x, pt.y)));
+    }
+
+    final posicoesSemColisao = _separarPosicoesClusters(
+      projetados.map((p) => p.pos).toList(),
+      larguraMinima: 56.0,
+      alturaMinima: 28.0,
+    );
+
+    final widgets = <Widget>[];
+    for (var i = 0; i < projetados.length; i++) {
+      final cluster = projetados[i].cluster;
+      final pos = posicoesSemColisao[i];
+      widgets.add(
+        Positioned(
+          left: (pos.dx - 28).clamp(8.0, tamanho.width - 64.0),
+          top: (pos.dy - 12).clamp(limiteSuperior, limiteInferior - 24.0),
+          child: GestureDetector(
+            key: Key('cluster_uf_${cluster.uf}'),
+            onTap: () {
+              final alvo = picos.firstWhere(
+                (p) => p.id == cluster.primeiroPicoId,
+              );
+              aoSelecionarPico(alvo, lodExplicito: 1.18);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xE60B111A),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0x55BAE6FD)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x66000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
