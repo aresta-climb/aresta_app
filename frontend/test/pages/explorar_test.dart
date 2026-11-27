@@ -1,29 +1,48 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/pages/explorar.dart';
-import 'package:frontend/services/repositorio_dataset.dart';
-import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
-import 'package:frontend/view/view_models/explorar_view_model.dart';
-import '../mocks/mock_telemetria.dart';
-
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/pages/explorar.dart';
+import 'package:frontend/services/clima/armazenamento_clima_local.dart';
+import 'package:frontend/data/modelos/modelos_clima_pico.dart';
+import 'package:frontend/services/clima/servico_clima_altimetria.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
+import 'package:frontend/view/view_models/explorar_view_model.dart';
+import 'package:frontend/widgets/explorar/barra_busca_filtros_explorar.dart';
+import 'package:frontend/widgets/explorar/gaveta_deslizante_explorar.dart';
+import 'package:frontend/widgets/explorar/malha_relevo_lod.dart';
+import 'package:frontend/widgets/explorar/superficie_globo_explorar.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../fakes/cliente_clima_altimetria_fake.dart';
+import '../mocks/mock_geolocator_platform.dart';
+import '../mocks/mock_telemetria.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
-  FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);
+  FakeDatasetRepository({
+    required super.editorDeCroqui,
+    required super.repositorioCatalogo,
+  });
+
+  @override
+  Future<void> init({bool force = false}) async {}
 
   @override
   Future<Croqui?> getCroqui(
     String id, {
     bool indiceJaSincronizado = false,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future<void>.delayed(const Duration(milliseconds: 80));
     return null;
   }
 }
@@ -31,11 +50,13 @@ class FakeDatasetRepository extends DatasetRepository {
 class FakeSyncService extends SyncService {
   FakeSyncService(DatasetRepository repo) : super(datasetRepository: repo);
   bool mockResult = true;
+  bool downloadCragCalled = false;
   bool syncIndexCalled = false;
   bool forceBypassCacheUsed = false;
 
   @override
   Future<bool> downloadCrag(ResumoCroqui resumo) async {
+    downloadCragCalled = true;
     return mockResult;
   }
 
@@ -52,19 +73,73 @@ class FakeSyncService extends SyncService {
 }
 
 void main() {
+  sqfliteFfiInit();
+  late Directory dirTemp;
+  late RepositorioCatalogo catalogo;
   late FakeDatasetRepository mockRepo;
   late FakeSyncService mockSync;
   late EditorDeCroqui mockEditor;
   late MockTelemetryService mockTelemetry;
+  late ServicoClimaAltimetria servicoClima;
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    dirTemp = await Directory.systemTemp.createTemp('explorar_page_test_');
+    catalogo = RepositorioCatalogo(
+      fabricaBanco: databaseFactoryFfi,
+      provedorCaminhoBanco: () async => '${dirTemp.path}/catalogo.db',
+    );
     mockEditor = EditorDeCroqui();
-    mockRepo = FakeDatasetRepository(mockEditor);
+    mockRepo = FakeDatasetRepository(
+      editorDeCroqui: mockEditor,
+      repositorioCatalogo: catalogo,
+    );
     mockSync = FakeSyncService(mockRepo);
-
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
+
+    servicoClima = ServicoClimaAltimetria(
+      armazenamento: ArmazenamentoClimaLocal(
+        provedorDiretorioBase: () async => dirTemp.path,
+      ),
+      fonteRemota: ClienteClimaAltimetriaFake(
+        snapshotInicial: SnapshotClimaAltimetria(
+          geradoEm: DateTime.utc(2026, 11, 25, 12),
+          bolhasChuva: const [
+            BolhaChuvaRegional(
+              id: 'frente_mg',
+              latitude: -20.07,
+              longitude: -44.32,
+              intensidadeMmHora: 4.5,
+              ventoRumoGraus: 45.0,
+              ventoVelocidadeKmh: 20.0,
+              contornoExterno: [
+                PontoContornoGeo(longitude: -44.6, latitude: -20.3),
+                PontoContornoGeo(longitude: -44.0, latitude: -20.3),
+                PontoContornoGeo(longitude: -44.3, latitude: -19.8),
+              ],
+            ),
+          ],
+          chuvaPorPico: {
+            'br_mg_igarape': [
+              EventoChuvaPico(
+                data: DateTime.utc(2026, 11, 24),
+                milimetros: 20.0,
+              ),
+            ],
+          },
+          altimetriaPorPico: const {
+            'br_mg_igarape': CotaAltimetricaPico(
+              altitudeBaseMetros: 960,
+              altitudePicoMetros: 1430,
+            ),
+          },
+        ),
+      ),
+      relogioUtc: () => DateTime.utc(2026, 11, 25, 14),
+    );
+    await servicoClima.inicializar();
+    await servicoClima.sincronizarSeNecessario();
   });
 
   testWidgets('BrowsePage shows success SnackBar when download succeeds', (
