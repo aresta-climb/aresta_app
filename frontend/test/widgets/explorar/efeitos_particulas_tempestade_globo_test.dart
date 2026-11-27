@@ -136,3 +136,64 @@ void main() {
         );
       }
 
+      // Bolsão compacto visível em zoom orbital (menor que a malha grossa de 1°) ancora 1 gota no próprio centro geográfico
+      final ctrlOrbitalLocal = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: -44.0,
+        lodInicial: 0.25,
+      );
+      addTearDown(ctrlOrbitalLocal.dispose);
+      const bolsaoMicro = BolhaChuvaRegional(
+        id: 'bolsao_micro',
+        latitude: -20.01,
+        longitude: -44.01,
+        intensidadeMmHora: 3.0,
+        ventoRumoGraus: 90.0,
+        ventoVelocidadeKmh: 12.0,
+        contornoExterno: [
+          PontoContornoGeo(longitude: -44.03, latitude: -20.03),
+          PontoContornoGeo(longitude: -43.99, latitude: -20.03),
+          PontoContornoGeo(longitude: -44.01, latitude: -19.99),
+        ],
+      );
+      EfeitosParticulasTempestadeGlobo.desenharPingoPatterChuva(
+        canvas: canvas,
+        bolha: bolsaoMicro,
+        nivel: NivelIntensidadeChuva.moderada,
+        pxPorGrau: 3.5,
+        menorLadoMundoPx: 12.0,
+        tamanhoTela: tela,
+        controlador: ctrlOrbitalLocal,
+        picosReferencia: const [],
+        sobreRelevo: false,
+        faseSegundos: 0.2,
+        corGota: const Color(0xFFBAE6FD),
+      );
+
+      // Culling limpo quando o contorno está no hemisfério oculto
+      final ctrlOposto = ControladorCameraGlobo(
+        latitudeInicial: 35.0,
+        longitudeInicial: 138.0,
+        lodInicial: 0.25,
+      );
+      addTearDown(ctrlOposto.dispose);
+      EfeitosParticulasTempestadeGlobo.desenharPingoPatterChuva(
+        canvas: canvas,
+        bolha: bolha,
+        nivel: NivelIntensidadeChuva.moderada,
+        pxPorGrau: 12.0,
+        menorLadoMundoPx: 26.0,
+        tamanhoTela: tela,
+        controlador: ctrlOposto,
+        picosReferencia: const [],
+        sobreRelevo: false,
+        faseSegundos: 0.3,
+        corGota: const Color(0xFFBAE6FD),
+      );
+
+      final picture = gravador.endRecording();
+      expect(picture, isNotNull);
+      picture.dispose();
+    });
+  });
+}
