@@ -1,8 +1,9 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import 'biblioteca_funcoes_comuns.dart';
 import 'pico_functions.dart';
 import 'markdown_offline.dart';
@@ -57,7 +58,10 @@ Widget buildGrupoBody(
         buildGrupoSortGrid(context, currentSortMode, onSortChanged),
         const SizedBox(height: 16),
         if (sortedSetores.isEmpty)
-          Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
+          Text(
+            context.tr(ChaveTexto.setorNenhumSetorDisponivel),
+            style: TextStyle(color: fishBone),
+          )
         else
           ...sortedSetores.map((arquivoSetor) {
             if (arquivoSetor.hasConteudo()) {
@@ -90,14 +94,14 @@ Widget buildGrupoSortGrid(
     children: [
       _buildSortCard(
         context: context,
-        label: 'PADRÃO',
+        label: context.tr(ChaveTexto.filtroPadrao),
         icon: Icons.grid_view_rounded,
         isActive: currentMode == GrupoSortMode.original,
         onTap: () => onSortChanged?.call(GrupoSortMode.original),
       ),
       _buildSortCard(
         context: context,
-        label: 'ALFABÉTICO',
+        label: context.tr(ChaveTexto.filtroAlfabetico),
         icon: Icons.sort_by_alpha,
         isActive:
             currentMode == GrupoSortMode.alphaAsc ||

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/main.dart';
 import 'biblioteca_funcoes_comuns.dart';
@@ -55,14 +56,15 @@ Widget buildPicoBody(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader('Informações do Local'),
-        _buildInfoRow('Nome', pico.nome),
+        _buildHeader(context.tr(ChaveTexto.picoInfoLocal)),
+        _buildInfoRow(context.tr(ChaveTexto.picoCampoNome), pico.nome),
         if (pico.descricao.isNotEmpty) ...[
           const SizedBox(height: 10),
           OfflineMarkdown(data: pico.descricao, cragId: cragId),
           const SizedBox(height: 10),
         ],
-        if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
+        if (pico.estado.isNotEmpty)
+          _buildInfoRow(context.tr(ChaveTexto.picoCampoEstado), pico.estado),
         const SizedBox(height: 20),
 
         if (capaBotoes.isNotEmpty) ...[
@@ -77,7 +79,7 @@ Widget buildPicoBody(
         ],
 
         if (otherBotoes.isNotEmpty) ...[
-          _buildHeader('Mais Informações'),
+          _buildHeader(context.tr(ChaveTexto.picoMaisInfoSecao)),
           ...otherBotoes.map((b) => buildBotaoTile(context, b, cragId)),
           const SizedBox(height: 20),
         ],
@@ -86,14 +88,21 @@ Widget buildPicoBody(
             pico.mapasGerais.hasConteudo() &&
             pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
           (() {
-            final validMapas = pico.mapasGerais.conteudo.mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
+            final validMapas = pico.mapasGerais.conteudo.mapas
+                .where(
+                  (m) =>
+                      m.caminhoImagemMapa.isNotEmpty &&
+                      m.larguraMapa > 0 &&
+                      m.alturaMapa > 0,
+                )
+                .toList();
             if (validMapas.isNotEmpty) {
               return KeyedSubtree(
                 key: mapaKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader('Mapas Gerais'),
+                    _buildHeader(context.tr(ChaveTexto.picoMapasGerais)),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 15),
                       child: MapaThumbnail(mapas: validMapas, cragId: cragId),
@@ -106,9 +115,12 @@ Widget buildPicoBody(
           })(),
           const SizedBox(height: 10),
         ],
-        _buildHeader('Setores'),
+        _buildHeader(context.tr(ChaveTexto.buscaSetores)),
         if (pico.setoresOuGrupos.isEmpty)
-          Text('Nenhum elemento disponível.', style: TextStyle(color: fishBone))
+          Text(
+            context.tr(ChaveTexto.picoNenhumElemento),
+            style: TextStyle(color: fishBone),
+          )
         else
           ...pico.setoresOuGrupos.map((setorOuGrupo) {
             if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor &&
@@ -431,9 +443,9 @@ class PicoSearchDelegate extends SearchDelegate<Object?> {
   @override
   String get searchFieldLabel {
     if (isPicoBoulderArea(pico)) {
-      return 'Buscar boulder (ex: V4) ou setor...';
+      return tr(ChaveTexto.picoBuscarBoulderHint);
     } else {
-      return 'Buscar escalada (ex: 7a) ou setor...';
+      return tr(ChaveTexto.picoBuscarEscaladaHint);
     }
   }
 
@@ -524,7 +536,7 @@ class PicoSearchDelegate extends SearchDelegate<Object?> {
         color: context.colors.deepBasalt,
         alignment: Alignment.center,
         child: Text(
-          'Nenhum resultado encontrado.',
+          context.tr(ChaveTexto.buscaNenhumResultado),
           style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
         ),
       );
@@ -545,11 +557,13 @@ class PicoSearchDelegate extends SearchDelegate<Object?> {
           if (item is Escalada) {
             title = getEscaladaNome(item);
             final grau = getGrauString(item);
-            subtitle = grau.isNotEmpty ? 'Dificuldade: $grau' : null;
+            subtitle = grau.isNotEmpty
+                ? context.tr(ChaveTexto.picoDificuldadePrefixo, {'grau': grau})
+                : null;
             icon = Icons.terrain;
           } else if (item is Setor) {
             title = item.nome;
-            subtitle = 'Setor';
+            subtitle = context.tr(ChaveTexto.comumSetor);
             icon = Icons.layers;
           }
 
@@ -646,7 +660,7 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
 /// Caso contrário, exibe 'Última atualização: DD/MM/YYYY às HH:mm'.
 String formatarTextoUltimaAtualizacao(DateTime? data) {
   if (data == null) {
-    return 'Última atualização: Não informada';
+    return tr(ChaveTexto.picoUltimaAtualizacaoNaoInformada);
   }
   final now = DateTime.now();
   final localData = data.toLocal();
@@ -659,14 +673,17 @@ String formatarTextoUltimaAtualizacao(DateTime? data) {
   final horario = '$h:$min';
 
   if (diferencaDias == 0) {
-    return 'Última atualização: Hoje às $horario';
+    return tr(ChaveTexto.picoUltimaAtualizacaoHoje, {'hora': horario});
   } else if (diferencaDias == 1) {
-    return 'Última atualização: Ontem às $horario';
+    return tr(ChaveTexto.picoUltimaAtualizacaoOntem, {'hora': horario});
   } else {
     final d = localData.day.toString().padLeft(2, '0');
     final m = localData.month.toString().padLeft(2, '0');
     final y = localData.year.toString();
-    return 'Última atualização: $d/$m/$y às $horario';
+    return tr(
+      ChaveTexto.picoUltimaAtualizacaoData,
+      {'data': '$d/$m/$y', 'hora': horario},
+    );
   }
 }
 

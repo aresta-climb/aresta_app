@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../view_models/card_croqui_view_model.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/provedor_imagem_aresta.dart';
@@ -181,9 +182,9 @@ class OfflineCragCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'ABRIR OFFLINE',
-                    style: TextStyle(
+                  child: Text(
+                    context.tr(ChaveTexto.meusCroquisAbrirOffline),
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
