@@ -81,3 +81,96 @@ void main() {
           ],
           croquisBaixados: [Croqui(id: 'p1', nome: 'Pico Alfa')],
         );
+        final sync = SyncService(datasetRepository: repo);
+        servicoClima = ServicoClimaAltimetria(
+          armazenamento: ArmazenamentoClimaLocal(
+            provedorDiretorioBase: () async => dirTemp.path,
+          ),
+          fonteRemota: ClienteClimaAltimetriaFake(
+            snapshotInicial: SnapshotClimaAltimetria(
+              geradoEm: DateTime.utc(2026, 11, 26),
+              bolhasChuva: const [],
+              chuvaPorPico: const {},
+              altimetriaPorPico: const {},
+            ),
+          ),
+        );
+        await servicoClima.inicializar();
+        vm = BrowseViewModel(
+          datasetRepo: repo,
+          syncService: sync,
+          servicoClima: servicoClima,
+        );
+      });
+
+      addTearDown(() async {
+        vm.dispose();
+        servicoClima.dispose();
+        await tester.runAsync(() async {
+          await catalogo.fechar();
+          if (await dirTemp.exists()) {
+            await dirTemp.delete(recursive: true);
+          }
+        });
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                key: const Key('abrir_modal'),
+                onPressed: () => exibirModalFiltrosOrdenacaoExplorar(
+                  context: ctx,
+                  viewModel: vm,
+                ),
+                child: const Text('Abrir'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('abrir_modal')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(tr(ChaveTexto.explorarAlfabeticoAZ)));
+      await tester.pump();
+      expect(vm.ordem, equals(OrdemOrdenacaoPico.alfabetico));
+
+      await tester.tap(find.widgetWithText(FilterChip, tr(ChaveTexto.modBoulder)));
+      await tester.pump();
+      expect(vm.modalidadesAtivas, contains(ModalidadeExploracaoPico.boulder));
+
+      final sliders = find.byType(RangeSlider);
+      expect(sliders, findsNWidgets(2));
+      final sliderVia = tester.widget<RangeSlider>(sliders.at(0));
+      sliderVia.onChanged!(const RangeValues(2, 6));
+      sliderVia.onChanged!(RangeValues(0, sliderVia.max));
+      final sliderBld = tester.widget<RangeSlider>(sliders.at(1));
+      sliderBld.onChanged!(const RangeValues(1, 5));
+      sliderBld.onChanged!(RangeValues(0, sliderBld.max));
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('filtro_raio_150km')));
+      await tester.tap(find.byKey(const Key('filtro_raio_150km')));
+      await tester.pump();
+      expect(vm.raioMaximoKm, equals(150.0));
+      await tester.tap(find.byKey(const Key('filtro_raio_150km')));
+      await tester.pump();
+      expect(vm.raioMaximoKm, isNull);
+
+      await tester.tap(find.byKey(const Key('filtro_salvos_offline')));
+      await tester.pump();
+      expect(vm.apenasSalvosOffline, isTrue);
+
+      await tester.tap(find.byKey(const Key('botao_limpar_todos_filtros')));
+      await tester.pump();
+      expect(vm.totalFiltrosAtivos, equals(0));
+
+      await tester.tap(find.byKey(const Key('botao_aplicar_filtros_explorar')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ModalFiltrosOrdenacaoExplorar), findsNothing);
+    });
+  });
+}
