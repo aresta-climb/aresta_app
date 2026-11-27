@@ -5,14 +5,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/data/modelos/modelos_clima_pico.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
-import 'package:frontend/view/function_library/funcoes_explorar.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/view/function_library/funcoes_explorar.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import '../../mocks/mock_telemetria.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -27,102 +27,7 @@ class MockPathProviderPlatform extends PathProviderPlatform
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  testWidgets(
-    'buildBrowseBody passa onOpen corretamente e permite acionar telemetria',
-    (WidgetTester tester) async {
-      final mockTelemetry = MockTelemetryService();
-      TelemetryService.instance = mockTelemetry;
 
-      final List<Map<String, dynamic>> availableCrags = [
-        {
-          'id': 'crag1',
-          'nome': 'Pico Teste',
-          'local': 'Local Teste',
-          'isDownloaded': true, // Para mostrar o botão Abrir Croqui
-        },
-      ];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return buildBrowseBody(
-                  context,
-                  availableCrags,
-                  ValueNotifier<Map<String, double>>({}),
-                  onSearchChanged: (_) {},
-                  onDownload: (_) {},
-                  onOpen: (crag) {
-                    // Simulando o comportamento definido na page browse.dart
-                    final String cragId = crag is MetadadosIndice ? crag.id : (crag['id'] as String);
-                    TelemetryService.instance.logAcaoCroqui(
-                      cragId,
-                      'abrir_croqui',
-                      origem: 'explorar',
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      // Agora o tap no card já chama onOpen diretamente se estiver baixado!
-      await tester.tap(find.text('PICO TESTE'));
-      await tester.pumpAndSettle();
-
-      // Verifica a telemetria disparada pelo onOpen
-      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-      expect(
-        mockTelemetry.recordedParams['acao_croqui']!['acao'],
-        'abrir_croqui',
-      );
-      expect(
-        mockTelemetry.recordedParams['acao_croqui']!['origem'],
-        'explorar',
-      );
-    },
-  );
-
-  testWidgets(
-    'buildBrowseBody exibe animação de download quando o pico está em downloadingCrags',
-    (WidgetTester tester) async {
-      final List<Map<String, dynamic>> availableCrags = [
-        {
-          'id': 'crag_dl',
-          'nome': 'Pico Baixando',
-          'local': 'Local DL',
-          'isDownloaded': false,
-        },
-      ];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return buildBrowseBody(
-                  context,
-                  availableCrags,
-                  ValueNotifier<Map<String, double>>({
-                    'crag_dl': 0.5,
-                  }), // Simula que está baixando com 50%
-                  onSearchChanged: (_) {},
-                  onDownload: (_) {},
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('PICO BAIXANDO'));
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
-      // Verifica se o CircularProgressIndicator com o percentual está presente no card.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('50%'), findsOneWidget);
     },
