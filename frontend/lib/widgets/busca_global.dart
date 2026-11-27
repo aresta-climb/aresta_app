@@ -7,6 +7,7 @@ import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../main.dart';
 import '../navigation/arvore_navegacao.dart';
 import '../navigation/localizador_destino_uid.dart';
@@ -91,6 +92,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
   void initState() {
     super.initState();
     _registrarOuvintesDados(widget.datasetRepo);
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      _aoMudarIdiomaBusca,
+    );
     if (widget.autoFocus) {
       _isExpanded = true;
       _loadAllData();
@@ -99,6 +103,34 @@ class _GlobalSearchState extends State<GlobalSearch> {
           _searchFocusNode.requestFocus();
         }
       });
+    }
+  }
+
+  void _aoMudarIdiomaBusca() {
+    _aoAtualizarFonteDados();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  String _rotuloCategoriaFiltro(BuildContext context, String chaveFiltro) {
+    switch (chaveFiltro) {
+      case 'Todos':
+        return context.tr(ChaveTexto.buscaTodos);
+      case 'Picos':
+        return context.tr(ChaveTexto.buscaPicos);
+      case 'Setores':
+        return context.tr(ChaveTexto.buscaSetores);
+      case 'Esportivas':
+        return context.tr(ChaveTexto.modEsportivas);
+      case 'Móveis':
+        return context.tr(ChaveTexto.modMoveis);
+      case 'Boulders':
+        return context.tr(ChaveTexto.modBoulders);
+      case 'Highlines':
+        return context.tr(ChaveTexto.modHighlines);
+      default:
+        return chaveFiltro;
     }
   }
 
@@ -116,6 +148,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
   @override
   void dispose() {
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _aoMudarIdiomaBusca,
+    );
     _removerOuvintesDados(widget.datasetRepo);
     _debounceTimer?.cancel();
     _searchFocusNode.dispose();
@@ -213,9 +248,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
     required bool isDownloaded,
   }) {
     final partes = [
-      'Pico',
+      tr(ChaveTexto.comumPico),
       if (crag.local.isNotEmpty) crag.local,
-      isDownloaded ? 'Salvo offline' : 'Catálogo',
+      isDownloaded
+          ? tr(ChaveTexto.comumSalvoOffline)
+          : tr(ChaveTexto.comumCatalogo),
     ];
     return GlobalSearchResult(
       title: crag.nome,
@@ -276,7 +313,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     const CircularProgressIndicator(color: Color(0xFFC04F34)),
                     const SizedBox(height: 16),
                     Text(
-                      'Abrindo $titulo...',
+                      dialogContext.tr(
+                        ChaveTexto.comumAbrindo,
+                        {'titulo': titulo},
+                      ),
                       style: TextStyle(
                         color: context.colors.chalkWhite,
                         fontWeight: FontWeight.w600,
@@ -414,11 +454,13 @@ class _GlobalSearchState extends State<GlobalSearch> {
         if ((croquiCat.estado ?? '').isNotEmpty) croquiCat.estado!,
       ];
       final localStr = partesLocal.join(', ');
+      final rotuloPico = tr(ChaveTexto.comumPico);
+      final rotuloOffline = tr(ChaveTexto.comumSalvoOffline);
       final subtitulo = baixado
           ? (localStr.isNotEmpty
-                ? 'Pico • $localStr • Salvo offline'
-                : 'Pico • Salvo offline')
-          : (localStr.isNotEmpty ? 'Pico • $localStr' : 'Pico');
+                ? '$rotuloPico • $localStr • $rotuloOffline'
+                : '$rotuloPico • $rotuloOffline')
+          : (localStr.isNotEmpty ? '$rotuloPico • $localStr' : rotuloPico);
 
       aggregatedData.add(
         _criarResultadoPorUid(
@@ -445,7 +487,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
         aggregatedData.add(
           _criarResultadoPorUid(
             title: ent.nome,
-            subtitle: 'Grupo • ${ent.picoNome}',
+            subtitle: '${tr(ChaveTexto.comumGrupo)} • ${ent.picoNome}',
             icon: Icons.terrain,
             isDownloaded: baixado,
             isPico: false,
@@ -459,9 +501,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
       } else if (ent.tipo == 'setor') {
         final temGrupo =
             ent.grupoNome != null && ent.grupoNome!.trim().isNotEmpty;
+        final rotuloSetor = tr(ChaveTexto.comumSetor);
+        final rotuloGrupo = tr(ChaveTexto.comumGrupo);
         final subtitulo = temGrupo
-            ? 'Setor (Grupo: ${ent.grupoNome}) • ${ent.picoNome}'
-            : 'Setor • ${ent.picoNome}';
+            ? '$rotuloSetor ($rotuloGrupo: ${ent.grupoNome}) • ${ent.picoNome}'
+            : '$rotuloSetor • ${ent.picoNome}';
         aggregatedData.add(
           _criarResultadoPorUid(
             title: ent.nome,
@@ -535,27 +579,27 @@ class _GlobalSearchState extends State<GlobalSearch> {
     ItemCatalogoBusca ent,
     bool baixado,
   ) {
-    String rotuloTipo = 'Esportiva';
+    String rotuloTipo = tr(ChaveTexto.modEsportiva);
     String categoriaFiltro = 'Esportivas';
     IconData icon = Icons.trending_up;
 
     switch (ent.escaladaTipo) {
       case 'tradicional':
-        rotuloTipo = 'Móvel';
+        rotuloTipo = tr(ChaveTexto.modMovel);
         categoriaFiltro = 'Móveis';
         break;
       case 'boulder':
-        rotuloTipo = 'Boulder';
+        rotuloTipo = tr(ChaveTexto.modBoulder);
         categoriaFiltro = 'Boulders';
         icon = Icons.landscape;
         break;
       case 'highline':
-        rotuloTipo = 'Highline';
+        rotuloTipo = tr(ChaveTexto.modHighline);
         categoriaFiltro = 'Highlines';
         icon = Icons.straighten;
         break;
       case 'multienfiada':
-        rotuloTipo = 'Multienfiada';
+        rotuloTipo = tr(ChaveTexto.modMultienfiada);
         categoriaFiltro = 'Outros';
         break;
       default:
@@ -601,7 +645,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
     final pico = croqui.picos.first;
     final picoNome = pico.nome;
     final picoLocal = pico.estado;
-    final picoSubtitle = picoLocal.isNotEmpty ? 'Pico • $picoLocal' : 'Pico';
+    final rotuloPico = tr(ChaveTexto.comumPico);
+    final picoSubtitle =
+        picoLocal.isNotEmpty ? '$rotuloPico • $picoLocal' : rotuloPico;
 
     aggregatedData.add(
       _criarResultadoPorUid(
@@ -655,9 +701,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
     required String? grupoNome,
     required bool isDownloaded,
   }) {
+    final rotuloSetor = tr(ChaveTexto.comumSetor);
+    final rotuloGrupo = tr(ChaveTexto.comumGrupo);
     final subtitulo = (grupoNome != null && grupoNome.isNotEmpty)
-        ? 'Setor (Grupo: $grupoNome) • $picoNome'
-        : 'Setor • $picoNome';
+        ? '$rotuloSetor ($rotuloGrupo: $grupoNome) • $picoNome'
+        : '$rotuloSetor • $picoNome';
 
     aggregatedData.add(
       _criarResultadoPorUid(
@@ -712,7 +760,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
         categoriaFiltro = 'Highlines';
         break;
       case Escalada_Tipo.notSet:
-        tipoStr = 'Outro';
+        tipoStr = tr(ChaveTexto.modOutro);
         categoriaFiltro = 'Outros';
         break;
       default:
@@ -845,7 +893,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     style: TextStyle(color: searchTextColor),
                     cursorColor: const Color(0xFFC04F34),
                     decoration: InputDecoration(
-                      hintText: 'Buscar picos, setores ou vias...',
+                      hintText: context.tr(ChaveTexto.homeBuscaHint),
                       hintStyle: TextStyle(
                         color: searchTextColor.withValues(alpha: 0.6),
                       ),
@@ -885,7 +933,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                       return PopupMenuItem<String>(
                         value: filter,
                         child: Text(
-                          filter,
+                          _rotuloCategoriaFiltro(context, filter),
                           style: TextStyle(
                             fontWeight: isSelected
                                 ? FontWeight.bold
@@ -918,7 +966,15 @@ class _GlobalSearchState extends State<GlobalSearch> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Filtro: $_selectedFilter',
+                          context.tr(
+                            ChaveTexto.buscaFiltroPrefixo,
+                            {
+                              'filtro': _rotuloCategoriaFiltro(
+                                context,
+                                _selectedFilter,
+                              ),
+                            },
+                          ),
                           style: TextStyle(
                             color: context.colors.ashGrey,
                             fontWeight: FontWeight.bold,
@@ -931,7 +987,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Dica: pesquise por picos, setores, vias ou graus (ex: 7a, V4)',
+                    context.tr(ChaveTexto.buscaDica),
                     style: TextStyle(
                       color: context.colors.ashGrey,
                       fontSize: 11,
@@ -955,7 +1011,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               Expanded(
                 child: Center(
                   child: Text(
-                    'Nenhum resultado encontrado.',
+                    context.tr(ChaveTexto.buscaNenhumResultado),
                     style: TextStyle(color: context.colors.ashGrey),
                   ),
                 ),
@@ -1021,7 +1077,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Offline',
+                                      context.tr(ChaveTexto.comumOffline),
                                       style: TextStyle(
                                         color: context.colors.dryMoss,
                                         fontSize: 11,
