@@ -4,25 +4,32 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/item_fila_interacao.dart';
+import '../../data/modelos/mutacao_fila_interacao.dart';
 
 /// Adaptador dedicado à persistência local da fila de envio offline (*outbox*)
-/// de interações comunitárias (`public.fila_interacoes`) via [SharedPreferences].
-///
-/// Isola a serialização JSON de disco do estado reativo de domínio mantido por
-/// `RepositorioInteracoesViaMemoria`, espelhando o padrão de `ArmazenamentoLocalCaderneta`.
+/// e do cache local de alertas da Caderneta via [SharedPreferences].
 class ArmazenamentoFilaInteracoes {
   /// Chave de armazenamento persistente da fila de interações pendentes.
   static const String chaveFilaPendente = 'fila_pendente_interacoes_via_v1';
+
+  /// Chave de armazenamento persistente das edições e exclusões pendentes de envio.
+  static const String chaveMutacoesPendentes =
+      'fila_mutacoes_interacoes_via_v1';
 
   /// Chave de cache local dos eventos de alerta ligados ao perfil para leitura offline na Caderneta.
   static const String chaveCacheAlertasUsuario =
       'cache_alertas_usuario_caderneta_v1';
 
   SharedPreferences? _preferencias;
+  final Map<String, List<ItemFilaInteracao>> _eventosAlertasPorVia = {};
 
   /// Cria uma instância de [ArmazenamentoFilaInteracoes].
   ArmazenamentoFilaInteracoes({SharedPreferences? preferencias})
     : _preferencias = preferencias;
+
+  /// Eventos de alertas de segurança cacheados localmente por `escaladaUid`.
+  Map<String, List<ItemFilaInteracao>> get eventosAlertasPorVia =>
+      _eventosAlertasPorVia;
 
   Future<SharedPreferences> _obterPrefs() async =>
       _preferencias ??= await SharedPreferences.getInstance();
@@ -52,7 +59,9 @@ class ArmazenamentoFilaInteracoes {
       return;
     }
     final serializado = jsonEncode(
-      itens.map((i) => i.toJson()).toList(growable: false),
+      itens
+          .map((i) => i.toJson(incluirAvatarLocal: true))
+          .toList(growable: false),
     );
     await prefs.setString(chave, serializado);
   }
