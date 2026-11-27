@@ -67,3 +67,71 @@ abstract final class FiltradorCatalogoExplorar {
         perfil.atendeIntervaloBoulder(minGrauBoulder, maxGrauBoulder);
   }
 
+  /// Executa busca difusa ponderada por nome e localização formatada quando [termoBusca] não é vazio.
+  static List<MetadadosIndice> filtrarPorBuscaDifusa(
+    List<MetadadosIndice> todos,
+    String termoBusca,
+  ) {
+    if (termoBusca.isEmpty) return todos.toList();
+    final fuse = Fuzzy<MetadadosIndice>(
+      todos,
+      options: FuzzyOptions(
+        keys: [
+          WeightedKey(
+            name: 'nome',
+            getter: (MetadadosIndice c) => normalizeSearchString(c.nome),
+            weight: 1.0,
+          ),
+          WeightedKey(
+            name: 'local',
+            getter: (MetadadosIndice c) =>
+                normalizeSearchString(c.localizacaoFormatada),
+            weight: 0.5,
+          ),
+        ],
+        threshold: 0.4,
+      ),
+    );
+    return fuse
+        .search(normalizeSearchString(termoBusca))
+        .map((r) => r.item)
+        .toList();
+  }
+
+  /// Ordena os picos filtrados conforme o critério [ordem] e o mapa opcional [proximidadePorId].
+  static List<MetadadosIndice> ordenarPicosFiltrados({
+    required List<MetadadosIndice> itens,
+    required OrdemOrdenacaoPico ordem,
+    required Map<String, PicoProximo> proximidadePorId,
+  }) {
+    switch (ordem) {
+      case OrdemOrdenacaoPico.proximidade:
+        if (proximidadePorId.isEmpty) {
+          return itens..sort((a, b) => a.nome.compareTo(b.nome));
+        }
+        final comCoords = itens
+            .where((m) => proximidadePorId.containsKey(m.id))
+            .toList()
+          ..sort(
+            (a, b) => compararPicosPorProximidade(
+              proximidadePorId[a.id]!,
+              proximidadePorId[b.id]!,
+            ),
+          );
+        final semCoords = itens
+            .where((m) => !proximidadePorId.containsKey(m.id))
+            .toList()
+          ..sort((a, b) => a.nome.compareTo(b.nome));
+        return [...comCoords, ...semCoords];
+      case OrdemOrdenacaoPico.alfabetico:
+        return itens..sort((a, b) => a.nome.compareTo(b.nome));
+      case OrdemOrdenacaoPico.escaladas:
+        return itens
+          ..sort((a, b) {
+            final cmp = b.precomputados.totalEscaladas
+                .compareTo(a.precomputados.totalEscaladas);
+            return cmp != 0 ? cmp : a.nome.compareTo(b.nome);
+          });
+    }
+  }
+}
