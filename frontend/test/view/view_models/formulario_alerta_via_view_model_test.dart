@@ -46,6 +46,20 @@ void main() {
         AlertaSegurancaVia.limiteCaracteresDetalhe,
       );
       vm.dispose();
+
+      final vmInicializado = FormularioAlertaViaViewModel(
+        categoriaInicial: CategoriaAlertaSeguranca.protecaoPrecaria,
+        detalheInicial: '  ${'Z' * 150}  ',
+      );
+      expect(
+        vmInicializado.categoriaSelecionada,
+        CategoriaAlertaSeguranca.protecaoPrecaria,
+      );
+      expect(
+        vmInicializado.detalhe.length,
+        AlertaSegurancaVia.limiteCaracteresDetalhe,
+      );
+      vmInicializado.dispose();
     },
   );
 

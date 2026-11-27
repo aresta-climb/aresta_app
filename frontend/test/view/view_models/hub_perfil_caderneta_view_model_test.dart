@@ -9,6 +9,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -331,6 +332,33 @@ void main() {
         expect(vm.totalCadenas, equals(1));
 
         vm.dispose();
+      },
+    );
+
+    test(
+      'traduz apelido padrão e função padrão reativamente ao alternar o idioma preservando nomes customizados',
+      () async {
+        addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+        final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+        addTearDown(vm.dispose);
+
+        var notificacoes = 0;
+        vm.addListener(() => notificacoes++);
+
+        expect(vm.nomeAtleta, 'Escalador Aresta');
+        expect(vm.funcaoAtleta, 'Escalador');
+
+        await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.ingles);
+        expect(notificacoes, 1);
+        expect(vm.nomeAtleta, 'Aresta Climber');
+        expect(vm.funcaoAtleta, 'Climber');
+
+        await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.holandes);
+        expect(vm.nomeAtleta, 'Aresta-klimmer');
+        expect(vm.funcaoAtleta, 'Klimmer');
+
+        await vm.atualizarNome('Marina Pedra');
+        expect(vm.nomeAtleta, 'Marina Pedra');
       },
     );
   });

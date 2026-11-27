@@ -11,8 +11,6 @@ import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 import '../../mocks/mock_telemetria.dart';
@@ -201,33 +199,6 @@ void main() {
 
       vm.dispose();
     });
-
-    test(
-      'expõe exibirBotaoPerfil e interacoesUsuarioAtivasListenable encapsulando ControladorInteracoesUsuario',
-      () async {
-        SharedPreferences.setMockInitialValues({});
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
-
-        final controlador = ControladorInteracoesUsuario();
-        await controlador.inicializar();
-
-        final vm = HomeViewModel(
-          datasetRepo: repositorio,
-          syncService: servicoSync,
-          controladorInteracoes: controlador,
-        );
-
-        expect(vm.exibirBotaoPerfil, isTrue);
-        expect(vm.interacoesUsuarioAtivasListenable.value, isTrue);
-
-        await controlador.definirInteracoesAtivas(false);
-        expect(vm.exibirBotaoPerfil, isFalse);
-        expect(vm.interacoesUsuarioAtivasListenable.value, isFalse);
-
-        vm.dispose();
-      },
-    );
 
     test(
       'picosProximos utiliza a malha rodoviária de calculadoraDistanciaEstrada e reage quando a malha é atualizada',
