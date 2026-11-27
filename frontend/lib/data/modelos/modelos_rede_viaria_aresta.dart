@@ -55,3 +55,68 @@ class PicoRelevoReferencia {
   final double raioGradeDemGraus;
   final List<int> gradeDemMetros;
 
+  const PicoRelevoReferencia({
+    required this.id,
+    required this.latitude,
+    required this.longitude,
+    required this.altitudeBaseMetros,
+    required this.altitudePicoMetros,
+    this.dimensaoGradeDem = 0,
+    this.raioGradeDemGraus = 0.024,
+    this.gradeDemMetros = const [],
+  });
+
+  /// Verdadeiro quando o pico dispõe de matriz altimétrica real de satélite válida.
+  bool get temGradeDemReal =>
+      dimensaoGradeDem >= 2 &&
+      gradeDemMetros.length == dimensaoGradeDem * dimensaoGradeDem &&
+      raioGradeDemGraus > 0;
+}
+
+/// Trecho direcionado de rodovia percorrido pela onda de luz laranja Aresta a partir de Belo Horizonte.
+class TrechoPropagacaoViaria {
+  final List<Offset> verticesLonLat;
+  final double tempoInicio;
+  final double tempoFim;
+
+  const TrechoPropagacaoViaria({
+    required this.verticesLonLat,
+    required this.tempoInicio,
+    required this.tempoFim,
+  });
+}
+
+/// Cidade classificada no mapa viário entre relevante para escalada Aresta (contorno viário iluminado)
+/// ou cidade puramente de referência geográfica (ponto branco limpo).
+class CidadeClassificadaMapa {
+  final LocalidadeRegionalMapa localidade;
+  final bool ehRelevanteAresta;
+  final double tempoAtivacao;
+  final List<List<Offset>> viasUrbanasLonLat;
+
+  const CidadeClassificadaMapa({
+    required this.localidade,
+    required this.ehRelevanteAresta,
+    required this.tempoAtivacao,
+    required this.viasUrbanasLonLat,
+  });
+}
+
+/// Modelo imutável da rede viária Aresta originada no centro de Belo Horizonte,
+/// totalmente desacoplado de estado mutável estático, serviços ou widgets de UI.
+class RedeViariaArestaGlobo {
+  /// Coordenada central de Belo Horizonte (Praça Sete / Av. do Contorno) onde nasce o pulso luminoso.
+  static const double latitudeCentroBeloHorizonte = -19.9191;
+  static const double longitudeCentroBeloHorizonte = -43.9386;
+
+  final List<RodoviaRegionalMapa> rodoviasFundo;
+  final List<TrechoPropagacaoViaria> trechosCorredorAresta;
+  final List<CidadeClassificadaMapa> cidadesClassificadas;
+
+  const RedeViariaArestaGlobo({
+    required this.rodoviasFundo,
+    required this.trechosCorredorAresta,
+    required this.cidadesClassificadas,
+  });
+}
+
