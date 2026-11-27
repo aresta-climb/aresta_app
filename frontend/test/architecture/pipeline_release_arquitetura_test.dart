@@ -49,6 +49,7 @@ void main() {
             File('../.github/workflows/build_ios.yml').readAsStringSync();
 
         expect(androidYaml, contains('android-staging-archive.tar.gz'));
+        expect(androidYaml.contains('HABILITAR_PERFIL'), isFalse);
         expect(androidYaml, contains('smoke_test_pacote.dart'));
         expect(androidYaml, contains('ORG_GRADLE_PROJECT_arestaSmokeCi=true'));
         expect(androidYaml, contains('libpulse0'));
@@ -62,6 +63,7 @@ void main() {
         );
 
         expect(iosYaml, contains('ios-staging-archive.tar.gz'));
+        expect(iosYaml.contains('HABILITAR_PERFIL'), isFalse);
         expect(iosYaml, contains('smoke_test_pacote.dart'));
         expect(iosYaml, contains('--simulator'));
         expect(

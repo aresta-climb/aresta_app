@@ -192,12 +192,14 @@ void main() {
         uid: 'm8Kq2L1x9Y7zWq',
         autorIdPublico: 'c3Lk9P1x4Vw8Mn',
         autorNomePublico: 'Carlos Lagartixa',
+        autorAvatarUrl: '  https://cdn.aresta.cc/avatars/carlos.webp  ',
         criadoEm: data,
         estiloAscensao: TipoAscensao.flash,
         texto: 'Costura 4 fica tranquila se clipar da orelha à esquerda.',
       );
 
       expect(comentario.rotuloEstilo, 'FLASH ★');
+      expect(comentario.autorAvatarUrl, 'https://cdn.aresta.cc/avatars/carlos.webp');
 
       final comentarioTrabalhado = ComentarioComunidadeVia(
         uid: 'n9Lr3M2y8Z6xVp',
@@ -238,6 +240,99 @@ void main() {
       final preenchido = vazio.copyWith(comentarios: [comentario]);
       expect(preenchido.comentarios, hasLength(1));
       expect(preenchido.consensoGrau.possuiVotos, isFalse);
+
+      expect(comentario.foiCriadoPor('c3Lk9P1x4Vw8Mn'), isTrue);
+      expect(comentario.foiCriadoPor('outroAutor0001'), isFalse);
+      expect(comentario.foiCriadoPor(null), isFalse);
+      expect(comentario.copyWith().texto, comentario.texto);
+      final comentarioEditado = comentario.copyWith(
+        texto: '  Costura 4 tranquila pela esquerda.  ',
+      );
+      expect(comentarioEditado.uid, comentario.uid);
+      expect(comentarioEditado.texto, 'Costura 4 tranquila pela esquerda.');
+      expect(() => comentario.copyWith(texto: '   '), throwsArgumentError);
+
+      expect(
+        () => vazio.comComentarioEditado(
+          comentarioUid: 'inexistente',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: 'Novo',
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => vazio.semComentarioDoAutor(
+          comentarioUid: 'inexistente',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+        throwsStateError,
+      );
+
+      final aFauna = AlertaSegurancaVia.criar(
+        escaladaUid: 'x8siJek3FiG3aB',
+        categoria: CategoriaAlertaSeguranca.fauna,
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      );
+      final aRocha = AlertaSegurancaVia.criar(
+        escaladaUid: 'x8siJek3FiG3aB',
+        categoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+        autorIdPublico: 'outroAutor0001',
+      );
+      final comDoisAlertas = DadosComunidadeVia(alertasAtivos: [aFauna, aRocha]);
+      expect(
+        () => comDoisAlertas.comAlertaEditado(
+          alertaUid: 'inexistente',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novaCategoria: CategoriaAlertaSeguranca.fauna,
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => comDoisAlertas.comAlertaEditado(
+          alertaUid: aFauna.uid,
+          autorIdPublico: 'outroAutor0001',
+          novaCategoria: CategoriaAlertaSeguranca.fauna,
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => comDoisAlertas.comAlertaEditado(
+          alertaUid: aFauna.uid,
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novaCategoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => comDoisAlertas.semAlertaDoAutor(
+          alertaUid: 'inexistente',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => comDoisAlertas.semAlertaDoAutor(
+          alertaUid: aFauna.uid,
+          autorIdPublico: 'outroAutor0001',
+        ),
+        throwsStateError,
+      );
+
+      final alertaParaLimpar = AlertaSegurancaVia.criar(
+        escaladaUid: 'x8siJek3FiG3aB',
+        categoria: CategoriaAlertaSeguranca.fauna,
+        detalhe: 'Detalhe antigo',
+      );
+      final alertaEditado = alertaParaLimpar.copyWith(
+        categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+        limparDetalhe: true,
+      );
+      expect(alertaEditado.categoria, CategoriaAlertaSeguranca.protecaoPrecaria);
+      expect(alertaEditado.detalhe, isNull);
+      expect(
+        () => alertaParaLimpar.copyWith(detalhe: 'z' * 101),
+        throwsArgumentError,
+      );
     });
   });
 }
