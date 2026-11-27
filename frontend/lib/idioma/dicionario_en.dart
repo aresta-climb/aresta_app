@@ -271,8 +271,61 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.explorarBotaoClimaMapa: 'Rain & Fire',
   ChaveTexto.explorarAvisoClimaTitulo: 'Usage notice',
   ChaveTexto.explorarAvisoClimaCorpo:
-      'Aresta uses 3 weather & radar resources AND 3 public NASA mission resources to achieve an ~86% success rate on the display of this information. Take this as a reference tool instead of absolute truth.',
+      'Aresta uses 3 weather & radar sources (Open-Meteo, RainViewer, INPE BDQueimadas) AND 3 public NASA mission resources (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble) to achieve an ~85% success rate on the display of this information. Take this as a reference tool instead of absolute truth.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, show on map',
+  ChaveTexto.explorarBotaoVerEstatisticasClima: 'Check statistics',
+  ChaveTexto.estatClimaTituloPagina: 'STATISTICS (~85%)',
+  ChaveTexto.estatClimaSubtituloHeroi:
+      '180-day empirical hindcast (N = 5,133 crag-days across 29 crags) cross-checked against the Standard Normal Z-Table.',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. HOW THE ~85% RATE IS DERIVED',
+  ChaveTexto.estatClimaComposicaoChuvaMapa:
+      'Regional rain bubbles (≥ 0.2 mm/day)',
+  ChaveTexto.estatClimaComposicaoUmidade4d:
+      '4-day conservative crag wetness window',
+  ChaveTexto.estatClimaComposicaoIncendioNasa:
+      'Active wildfire perimeters (NASA VIIRS 375m)',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. CONTINGENCY MATRIX & FORMULAS',
+  ChaveTexto.estatClimaMatrizExplicacao:
+      'Independent hindcast (Jun–Nov 2024) comparing operational NOAA GFS 0.25° map forecasts against ECMWF ERA5 reanalysis across all 29 crags:',
+  ChaveTexto.estatClimaSecaoTabelaZTitulo:
+      '3. STANDARD Z-TABLE CROSS-CHECK (NULL HYPOTHESIS)',
+  ChaveTexto.estatClimaTabelaZExplicacao:
+      'Under the no-skill null hypothesis (H₀: p₀ = 0.50 coin-flip, or climatological base p₀ = 0.5853), Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. You can also directly cross-check on the Z-table below our one-sided test H₀: p ≤ 0.83 (Z = +2.57 → Φ = 0.9949, p = 0.0051) and our 95% CI (Z = 1.96):',
+  ChaveTexto.estatClimaGraficoH0Rotulo: 'Null Distribution (H₀)',
+  ChaveTexto.estatClimaGraficoCaudaRotulo: 'Observed right tail (+27.7σ to +49.0σ)',
+  ChaveTexto.estatClimaColunaZ: 'Z-Score',
+  ChaveTexto.estatClimaColunaPhi: 'Φ(Z) Cumul.',
+  ChaveTexto.estatClimaColunaCauda: 'Tail 1−Φ',
+  ChaveTexto.estatClimaColunaNota: 'Z-Table reading',
+  ChaveTexto.estatClimaZNotaMedia: 'Null hypothesis center (50%)',
+  ChaveTexto.estatClimaZNota90: '90% one-sided threshold',
+  ChaveTexto.estatClimaZNota95: 'Standard one-sided threshold (α = 0.05)',
+  ChaveTexto.estatClimaZNotaIC95: 'Two-sided 95% CI ([83.7%, 87.2%])',
+  ChaveTexto.estatClimaZNota99: '99% one-sided threshold (α = 0.01)',
+  ChaveTexto.estatClimaZNotaTeste83:
+      'Aresta test p̂ = 85.5% vs H₀ ≤ 83% (p = 0.0051)',
+  ChaveTexto.estatClimaZNota999: '99.9% threshold (α = 0.001)',
+  ChaveTexto.estatClimaZNotaFimTabela:
+      'End of printed Z-table (Aresta: Z = +27.7σ)',
+  ChaveTexto.estatClimaSecaoFontesTitulo: '4. SPECIFIC DATA SOURCES USED',
+  ChaveTexto.estatClimaGrupoFontesMeteo:
+      '3 WEATHER, RADAR & MONITORING SOURCES',
+  ChaveTexto.estatClimaGrupoFontesNasa:
+      '3 PUBLIC NASA MISSION RESOURCES',
+  ChaveTexto.estatClimaFonteOpenMeteoDesc:
+      'NOAA GFS, DWD ICON, and ECMWF IFS numerical models for 5-day observed hourly rainfall, storm fronts, and 10 m winds.',
+  ChaveTexto.estatClimaFonteRainViewerDesc:
+      'Live global Doppler weather radar mosaic pinpointing convective rain cells and heavy precipitation cores.',
+  ChaveTexto.estatClimaFonteInpeDesc:
+      'INPE BDQueimadas satellite monitoring program tracking daily wildfire hotspots across Brazilian biomes.',
+  ChaveTexto.estatClimaFonteFirmsDesc:
+      'VIIRS (375 m) and MODIS (1 km) orbital thermal sensors aboard Suomi NPP, NOAA-20, and Aqua/Terra missions.',
+  ChaveTexto.estatClimaFonteSrtmDesc:
+      'Shuttle Radar Topography Mission (30 m via AWS Terrarium) powering real crag elevation, hillshading, and contours.',
+  ChaveTexto.estatClimaFonteBlueMarbleDesc:
+      'NASA Blue Marble Next Generation Earth observation imagery powering the orbital satellite globe.',
+  ChaveTexto.estatClimaAvisoFinal:
+      'Cliff-face microclimates, crack seepage, sun aspect, and local wind affect actual rock drying. Always inspect conditions in person.',
   ChaveTexto.climaChuvaFraca: 'Light rain',
   ChaveTexto.climaChuvaModerada: 'Moderate rain',
   ChaveTexto.climaChuvaForte: 'Heavy rain',
