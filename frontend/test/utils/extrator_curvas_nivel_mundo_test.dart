@@ -10,10 +10,9 @@ import 'package:frontend/utils/geometria_clipping_mapa.dart';
 void main() {
   group('ExtratorCurvasNivelMundo', () {
     test('extrai tiles canônicos fixos do mundo com zero deformação de vértices ao variar janela ou nível de zoom', () {
-      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(2.10), equals(0));
-      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(2.85), equals(1));
-      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(3.50), equals(2));
-      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(4.20), equals(3));
+      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(2.80), equals(0));
+      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(3.20), equals(1));
+      expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(3.90), equals(2));
 
       expect(
         ExtratorCurvasNivelMundo.passoGradePorNivel(0),
@@ -25,10 +24,6 @@ void main() {
       );
       expect(
         ExtratorCurvasNivelMundo.passoGradePorNivel(2),
-        closeTo(ExtratorCurvasNivelMundo.passoFinoGraus, 1e-6),
-      );
-      expect(
-        ExtratorCurvasNivelMundo.passoGradePorNivel(3),
         closeTo(ExtratorCurvasNivelMundo.passoFinoGraus, 1e-6),
       );
 
@@ -97,7 +92,7 @@ void main() {
       );
       final resPerto = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janelaAproximada,
-        nivelDetalhe: 3,
+        nivelDetalhe: 2,
         versaoDadosElevacao: 1,
         amostrarElevacaoMetros: domoMontanha,
         picosReferencia: const [pico],
@@ -109,7 +104,6 @@ void main() {
       expect(resPerto.curvas.any((c) => c.ehEscarpaPico), isTrue);
       expect(resPerto.curvas.any((c) => c.ancoraRotuloLonLat != null), isTrue);
       expect(resPerto.curvas.any((c) => c.geracaoDetalhe == 2), isTrue);
-      expect(resPerto.curvas.any((c) => c.geracaoDetalhe == 3), isTrue);
 
       final curva1200Longe =
           resLonge.curvas.firstWhere((c) => c.cotaMetros == 1200);

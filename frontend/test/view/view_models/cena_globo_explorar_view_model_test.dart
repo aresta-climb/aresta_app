@@ -199,21 +199,21 @@ void main() {
       expect(curvas1, isNotNull);
       expect(curvasMesmoBloco, same(curvas1));
 
-      // Exercita camada fina (LOD >= 3.18), reuso de tiles no zoom e evicção LRU de tiles de curvas em pan longo
-      ctrlCurvas.definirLod(3.60);
+      // Exercita camada fina (LOD >= 3.50), reuso de tiles no zoom e evicção LRU de tiles de curvas em pan longo
+      ctrlCurvas.definirLod(3.65);
       final curvasFinas = vm.obterCurvasNivelVisiveis(
         controlador: ctrlCurvas,
         tamanhoTela: const ui.Size(400, 800),
         picosReferencia: picosReferencia,
       );
       expect(curvasFinas, isNotNull);
-      for (var passoPan = 0; passoPan < 10; passoPan++) {
+      for (var passoPan = 0; passoPan < 16; passoPan++) {
         ctrlCurvas.aplicarArrasto(
-          dxPx: -320.0,
-          dyPx: 260.0,
+          dxPx: -480.0,
+          dyPx: 380.0,
           tamanhoTela: const ui.Size(400, 800),
         );
-        ctrlCurvas.definirLod(2.15);
+        ctrlCurvas.definirLod(2.85);
         vm.obterCurvasNivelVisiveis(
           controlador: ctrlCurvas,
           tamanhoTela: const ui.Size(400, 800),

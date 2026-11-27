@@ -97,15 +97,15 @@ void main() {
       );
       gravadorVazio.endRecording().dispose();
 
-      // Exercita as 3 faixas de resolução das curvas (50 m em LOD 2.4, 25 m em LOD 3.3 e 12,5 m em LOD 4.2)
-      ctrl.definirLod(2.40);
+      // Exercita as 3 faixas aditivas de curvas sólidas (400 m em LOD 2.95, +200 m em LOD 3.40 e +100 m em LOD 4.20)
+      ctrl.definirLod(2.95);
       final qMedio = await _renderizarTerrenoComCurvas(
         ctrl: ctrl,
         picos: picos,
         malha: malhaTerra,
       );
 
-      ctrl.definirLod(3.30);
+      ctrl.definirLod(3.40);
       final qProximo = await _renderizarTerrenoComCurvas(
         ctrl: ctrl,
         picos: picos,
