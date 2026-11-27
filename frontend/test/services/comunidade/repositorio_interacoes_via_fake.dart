@@ -6,12 +6,12 @@ import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/utils/calculadora_delta_grau.dart';
-import 'package:frontend/utils/gerador_uid.dart';
+import 'package:uuid/uuid.dart';
 
 /// Biblioteca `test-only` de Fake determinístico em memória para [RepositorioInteracoesVia].
 ///
 /// Permite semear consensos de grau, comentários comunitários e alertas ativos de segurança,
-/// além de inspecionar sincronizações e simular falhas determinísticas sem frameworks de mock.
+/// além de exercitar edições/exclusões do autor e simular falhas determinísticas sem mocks.
 class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   final Map<String, DadosComunidadeVia> _dados = {};
   final Map<String, int> _votosUsuario = {};
@@ -136,8 +136,8 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
       comentarios.insert(
         0,
         ComentarioComunidadeVia(
-          uid: gerarUid(),
-          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          uid: const Uuid().v4(),
+          autorIdPublico: autorIdSimulado,
           autorNomePublico: 'Escalador Teste',
           criadoEm: DateTime.now().toUtc(),
           estiloAscensao: estiloAscensao,
@@ -153,6 +153,38 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
         distribuicaoDeltas: Map.unmodifiable(dist),
       ),
       comentarios: List.unmodifiable(comentarios),
+    );
+    _versao.value++;
+  }
+
+  @override
+  Future<void> editarComentario({
+    required String escaladaUid,
+    required String comentarioUid,
+    required String novoTexto,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    _dados[escaladaUid] = obterDadosEscalada(escaladaUid).comComentarioEditado(
+      comentarioUid: comentarioUid,
+      autorIdPublico: autorIdSimulado,
+      novoTexto: novoTexto,
+    );
+    _versao.value++;
+  }
+
+  @override
+  Future<void> excluirComentario({
+    required String escaladaUid,
+    required String comentarioUid,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    _dados[escaladaUid] = obterDadosEscalada(escaladaUid).semComentarioDoAutor(
+      comentarioUid: comentarioUid,
+      autorIdPublico: autorIdSimulado,
     );
     _versao.value++;
   }
@@ -188,6 +220,69 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
     );
     _versao.value++;
     return novo;
+  }
+
+  @override
+  Future<AlertaSegurancaVia> editarAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+    required CategoriaAlertaSeguranca novaCategoria,
+    String? detalhe,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    if (!_dados.containsKey(escaladaUid)) {
+      final idxMeu = _meusAlertas.indexWhere((m) => m.alerta.uid == alertaUid);
+      if (idxMeu >= 0) {
+        _dados[escaladaUid] = DadosComunidadeVia(
+          alertasAtivos: [_meusAlertas[idxMeu].alerta],
+        );
+      }
+    }
+    final (atualizados, alertaEditado) = obterDadosEscalada(escaladaUid)
+        .comAlertaEditado(
+          alertaUid: alertaUid,
+          autorIdPublico: autorIdSimulado,
+          novaCategoria: novaCategoria,
+          detalhe: detalhe,
+        );
+    _dados[escaladaUid] = atualizados;
+    final idxMeu = _meusAlertas.indexWhere((m) => m.alerta.uid == alertaUid);
+    if (idxMeu >= 0) {
+      _meusAlertas[idxMeu] = AlertaContribuidoCaderneta(
+        alerta: alertaEditado,
+        papel: _meusAlertas[idxMeu].papel,
+        ativo: _meusAlertas[idxMeu].ativo,
+        ultimaInteracaoEm: DateTime.now().toUtc(),
+      );
+    }
+    _versao.value++;
+    return alertaEditado;
+  }
+
+  @override
+  Future<void> excluirAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    if (!_dados.containsKey(escaladaUid)) {
+      final idxMeu = _meusAlertas.indexWhere((m) => m.alerta.uid == alertaUid);
+      if (idxMeu >= 0) {
+        _dados[escaladaUid] = DadosComunidadeVia(
+          alertasAtivos: [_meusAlertas[idxMeu].alerta],
+        );
+      }
+    }
+    _dados[escaladaUid] = obterDadosEscalada(escaladaUid).semAlertaDoAutor(
+      alertaUid: alertaUid,
+      autorIdPublico: autorIdSimulado,
+    );
+    _meusAlertas.removeWhere((m) => m.alerta.uid == alertaUid);
+    _versao.value++;
   }
 
   @override
