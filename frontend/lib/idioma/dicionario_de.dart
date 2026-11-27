@@ -650,3 +650,93 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
       'Route ist derzeit offline nicht verfügbar.',
   ChaveTexto.cadTotalCadenas: 'Begehungen gesamt',
   ChaveTexto.cadTaxaAVistaFlash: 'Onsight-/Flash-Quote',
+  ChaveTexto.cadMaiorGrauVias: 'Schwerste Route',
+  ChaveTexto.cadMaiorGrauBoulders: 'Schwerster Boulder',
+  ChaveTexto.cadPiramideTitulo: 'Gradpyramide',
+  ChaveTexto.cadNenhumaAscensaoModalidade:
+      'Noch keine Begehungen in dieser Disziplin.',
+  ChaveTexto.cadHistoricoContagem: 'Begehungsverlauf ({n})',
+  ChaveTexto.cadMeusAlertasContagem: 'Meine Felswarnungen ({n})',
+  ChaveTexto.cadNenhumaAscensaoAinda: 'Noch keine Begehungen eingetragen',
+  ChaveTexto.cadNenhumaAscensaoSub:
+      'Deine gespeicherten Begehungen erscheinen hier.',
+  ChaveTexto.cadEditarAscensaoTooltip: 'Begehung bearbeiten',
+  ChaveTexto.cadExcluirAscensaoTooltip: 'Begehung löschen',
+  ChaveTexto.cadExcluirAscensaoTitulo: 'Begehung löschen?',
+  ChaveTexto.cadExcluirAscensaoCorpo:
+      'Dieser Eintrag wird dauerhaft aus deinem Tourenbuch entfernt.',
+  ChaveTexto.cadEstiloEsportivoLabel: 'Kletterstil',
+  ChaveTexto.cadTentativasPegasLabel: 'Versuche',
+  ChaveTexto.cadDataAscensaoLabel: 'Datum der Begehung',
+  ChaveTexto.cadNotasPrivadasLabel: 'Private Notizen (Crux / Beta)',
+  ChaveTexto.cadNotasPrivadasHint:
+      'z. B. Linker Heelhook an der 3. Exe, lange Schlinge mitnehmen...',
+  ChaveTexto.cadCadenaSalvaToast: 'Begehung im Tourenbuch gespeichert!',
+  ChaveTexto.cadTentativaSalvaToast: 'Versuch im Tourenbuch gespeichert!',
+  ChaveTexto.cadContribuicaoPublica: 'ÖFFENTLICHER BEITRAG',
+  ChaveTexto.cadPercepcaoGrau: 'Wie hat sich der Grad angefühlt?',
+  ChaveTexto.cadBetaOpcionalLabel: 'Community-Beta (optional)',
+  ChaveTexto.cadBetaOpcionalHint:
+      'z. B. 3. Exe verlängern; links herum in der Schlüsselstelle.',
+  ChaveTexto.cadConecteParaContribuir:
+      'Melde dich im Profil an, um Gradstimmen und öffentliche Beta beizutragen.',
+  ChaveTexto.cadEditarModalTitulo: 'Begehung bearbeiten',
+  ChaveTexto.cadRegistrarModalTitulo: 'Begehung eintragen',
+  ChaveTexto.cadSalvarEContribuir: 'Speichern & Beitragen',
+  ChaveTexto.cadSalvarNaCaderneta: 'Im Tourenbuch speichern',
+  ChaveTexto.cadEncadenadaEm: 'Durchstieg am {data} ({estilo})',
+  ChaveTexto.cadTentativaEm: 'Versuch am {data}',
+  ChaveTexto.cadNovaAscensaoBtn: 'Neue Begehung / Versuch',
+  ChaveTexto.cadRegistrarCadenaBtn: 'Durchstieg / Versuch loggen',
+  ChaveTexto.comunidadeHeader: 'MEDIEN, SUPPORT & COMMUNITY',
+  ChaveTexto.comunidadeSobreTimeTitulo: 'ÜBER DAS TEAM',
+  ChaveTexto.comunidadeSobreTimeSub:
+      'Lerne die Entwickler und Mitwirkenden hinter Aresta kennen.',
+  ChaveTexto.comunidadeWhatsappTitulo: 'WHATSAPP-GRUPPE',
+  ChaveTexto.comunidadeWhatsappSub:
+      'Fragen stellen, Ideen teilen und Neuigkeiten erhalten.',
+  ChaveTexto.comunidadeInstagramTitulo: 'OFFIZIELLES INSTAGRAM',
+  ChaveTexto.comunidadeInstagramSub:
+      'Neuigkeiten, Updates und Blicke hinter die Kulissen.',
+  ChaveTexto.comunidadeLinkedinTitulo: 'PROJEKT-LINKEDIN',
+  ChaveTexto.comunidadeLinkedinSub:
+      'Meilensteine und Projektneuigkeiten von Aresta.',
+  ChaveTexto.comunidadeDiscordTitulo: 'ENTWICKLER-DISCORD',
+  ChaveTexto.comunidadeDiscordSub:
+      'Sprich mit dem Team, verfolge den Code und gestalte Aresta mit.',
+  ChaveTexto.comunidadeGithubTitulo: 'ARESTA AUF GITHUB',
+  ChaveTexto.comunidadeGithubSub:
+      'Entdecke unsere Open-Source-Repositories auf GitHub.',
+  ChaveTexto.comunidadeTermosTitulo: 'Nutzungsbedingungen & Datenschutz',
+  ChaveTexto.comunidadeTermosSub:
+      'Eigenverantwortung beim Klettern und Offline-Datenschutz.',
+  ChaveTexto.comunidadeRodapeVersao: 'Aresta Climb v{versao} • Open Beta',
+  ChaveTexto.comunidadeIniciativaLivre:
+      'Eine unabhängige Initiative für freies Klettern.',
+  ChaveTexto.comunidadeTermosModalHeader: 'BEDINGUNGEN & DATENSCHUTZ',
+  ChaveTexto.comunidadePoliticaModalHeader: 'DATENSCHUTZERKLÄRUNG',
+  ChaveTexto.timeConhecaSubtitulo: 'DAS TEAM HINTER ARESTA',
+  ChaveTexto.timeOpenSourceTitulo: 'ARESTA IST OPEN SOURCE',
+  ChaveTexto.timeOpenSourceCorpo:
+      'Möchtest du mitwirken? Komm auf unseren Discord und schreib uns!',
+  ChaveTexto.timeCargoDesigner: 'Design',
+  ChaveTexto.timeCargoProduto: 'Produkt / Marketing',
+  ChaveTexto.timeCargoProdutoQuebra: 'Produkt/\nMarketing',
+  ChaveTexto.timeCargoBackend: 'Backend',
+  ChaveTexto.timeCargoFrontend: 'Frontend',
+  ChaveTexto.legalTermosTitulo: 'Nutzungsbedingungen',
+  ChaveTexto.legalPoliticaTitulo: 'Datenschutzerklärung',
+  ChaveTexto.legalErroTermos:
+      'Bedingungen konnten nicht geladen werden. Bitte später erneut versuchen.',
+  ChaveTexto.legalErroPolitica: 'Datenschutzerklärung konnte nicht geladen werden.',
+  ChaveTexto.legalBannerAtualizacao:
+      '🌟 Wir haben unsere Rechtstexte aktualisiert. Bitte lies sie durch und bestätige.',
+  ChaveTexto.legalDataAtualizacao: 'Stand: {data}',
+  ChaveTexto.legalAceitoEm: 'Akzeptiert am {data} um {hora}',
+  ChaveTexto.legalConcordoCheckbox:
+      'Ich habe die Nutzungsbedingungen und die Datenschutzerklärung gelesen und stimme zu.',
+  ChaveTexto.legalAceitarContinuar: 'Akzeptieren & Weiter',
+  ChaveTexto.configTitulo: 'Einstellungen',
+  ChaveTexto.configIdiomaTitulo: 'SPRACHE',
+  ChaveTexto.configIdiomaSubtitulo:
+      'Wechsle sofort die Anzeigesprache der gesamten App.',
