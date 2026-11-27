@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../idioma/tradutor_app.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 
@@ -224,10 +225,14 @@ class _BotaoVoltarComRetornoInicioState
       );
     }
 
+    final dicaResolvida = widget.dica == 'Voltar'
+        ? context.tr(ChaveTexto.comumVoltar)
+        : widget.dica;
+
     return Semantics(
       button: true,
-      label: widget.dica,
-      hint: 'Segure para ir ao início',
+      label: dicaResolvida,
+      hint: context.tr(ChaveTexto.comumSegureParaInicio),
       excludeSemantics: true,
       onTap: _executarVoltar,
       onLongPress: _executarIrParaInicio,
@@ -342,7 +347,7 @@ class _PilulaIndicadoraInicio extends StatelessWidget {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              'Início',
+                              context.tr(ChaveTexto.navInicioCurto),
                               style: TextStyle(
                                 color: cores.chalkWhite,
                                 fontSize: 12,
