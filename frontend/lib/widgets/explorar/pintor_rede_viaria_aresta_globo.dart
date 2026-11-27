@@ -94,3 +94,99 @@ abstract final class PintorRedeViariaArestaGlobo {
         }
       }
 
+      if (temFundo) {
+        final escalaViaZoom =
+            1.0 + 1.35 * ControladorCameraGlobo.smoothstep(2.40, 4.20, lod);
+        canvas.drawPath(
+          caminhoFundo,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.2 * escalaViaZoom
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..color = Color.fromRGBO(
+              7,
+              10,
+              15,
+              (0.62 * fatorModoViario).clamp(0.0, 1.0),
+            ),
+        );
+        canvas.drawPath(
+          caminhoFundo,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.95 * escalaViaZoom
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..color = Color.fromRGBO(
+              214,
+              224,
+              236,
+              (0.28 * fatorModoViario).clamp(0.0, 1.0),
+            ),
+        );
+      }
+    }
+
+    // 2. Corredores laranja Aresta (ida: BH -> extremidades; volta ao dar zoom-out: extremidades -> centro de BH)
+    if (progressoLuzViaria > 0.0 && rede.trechosCorredorAresta.isNotEmpty) {
+      _desenharCorredoresIluminados(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        rede: rede,
+        janelaVisivel: janelaVisivel,
+        passoSubdivisaoGraus: passoSubdivisaoGraus,
+        picosReferencia: picosReferencia,
+        pesoTerreno: pesoTerreno,
+        fatorModoViario: opacidadeLuzLaranja,
+        progressoLuz: progressoLuzViaria,
+        amostradorElevacaoReal: amostradorElevacaoReal,
+      );
+    }
+
+    // 3. Dois tipos de cidade: referência (pontos brancos) vs Aresta-relevantes (contorno viário brilhante)
+    _desenharCidadesClassificadas(
+      canvas: canvas,
+      size: size,
+      controlador: controlador,
+      rede: rede,
+      janelaVisivel: janelaVisivel,
+      passoSubdivisaoGraus: passoSubdivisaoGraus,
+      picosReferencia: picosReferencia,
+      pesoTerreno: pesoTerreno,
+      fatorModoViario: fatorModoViario,
+      opacidadeLuzLaranja: opacidadeLuzLaranja,
+      progressoLuz: progressoLuzViaria,
+      amostradorElevacaoReal: amostradorElevacaoReal,
+    );
+
+    if (escudosRodovia.isNotEmpty && fatorModoViario > 0.25) {
+      _desenharEscudosCodigoRodovia(
+        canvas: canvas,
+        escudos: escudosRodovia,
+        opacidade: (fatorModoViario *
+                ControladorCameraGlobo.smoothstep(2.55, 3.15, lod))
+            .clamp(0.0, 1.0),
+      );
+    }
+  }
+
+  static void _desenharCorredoresIluminados({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required RedeViariaArestaGlobo rede,
+    required JanelaGeograficaVisivel janelaVisivel,
+    required double passoSubdivisaoGraus,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required double pesoTerreno,
+    required double fatorModoViario,
+    required double progressoLuz,
+    required double? Function(double latitude, double longitude)?
+        amostradorElevacaoReal,
+  }) {
+    final caminhoAceso = Path();
+    final pontasOnda = <Offset>[];
+    var temAceso = false;
+
