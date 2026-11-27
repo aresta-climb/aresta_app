@@ -357,3 +357,70 @@ void main() {
           nivelIntensidade: NivelIntensidadeChuva.forte,
         );
 
+        final pixels = await _renderizarPixels(
+          ctrl: ctrl,
+          bolhas: const [tempestadeComRastro, celulaMinuscula],
+          faseSegundos: 0.25,
+        );
+
+        // Ponto onde a tempestade passou 6h atras (-22.2, -45.7) fica fora da bolha atual, mas exibe a sombra/contorno do rastro!
+        final ptPassado6h = ctrl.projetarCoordenada(
+          latitude: -22.2,
+          longitude: -45.7,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final ptAtual = ctrl.projetarCoordenada(
+          latitude: -20.0,
+          longitude: -43.5,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idxPassado =
+            (ptPassado6h.y.round() * 220 + ptPassado6h.x.round()) * 4;
+        final idxAtual = (ptAtual.y.round() * 220 + ptAtual.x.round()) * 4;
+        expect(pixels[idxPassado + 3], greaterThan(6));
+        expect(pixels[idxPassado + 3], lessThan(pixels[idxAtual + 3]));
+
+        // Micro-célula pequena (~8x8 px na tela) permanece translúcida e limpa (nunca vira ovo listrado opaco alfa > 210!)
+        final ptMicro = ctrl.projetarCoordenada(
+          latitude: -18.0,
+          longitude: -41.0,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idxMicro = (ptMicro.y.round() * 220 + ptMicro.x.round()) * 4;
+        expect(pixels[idxMicro + 3], greaterThan(15));
+        expect(pixels[idxMicro + 3], lessThan(175));
+      },
+    );
+
+    test(
+      'mantem gotas de chuva e emblema da nuvem ancorados ao solo (mundo) ao mover a camera em zoom aproximado',
+      () async {
+        // Em zoom alto (LOD 2.85), a frente é muito maior que a tela (recortada no frustum).
+        // Ao mover a câmera 40 px para o leste, o emblema da nuvem DEVE sair do centro da tela
+        // acompanhando a coordenada geográfica real (-20.5, -43.8), e cada gota move-se exatamente
+        // com o terreno em vez de ficar colada no centro da lente!
+        final ctrlA = ControladorCameraGlobo(
+          latitudeInicial: -20.5,
+          longitudeInicial: -43.8,
+          lodInicial: 2.85,
+          modo3DInicial: false,
+        );
+        final ctrlB = ControladorCameraGlobo(
+          latitudeInicial: -20.5,
+          longitudeInicial: -43.8,
+          lodInicial: 2.85,
+          modo3DInicial: false,
+        );
+        addTearDown(() {
+          ctrlA.dispose();
+          ctrlB.dispose();
+        });
+
+        const bolha = BolhaAtivaRenderizavel(
+          bolha: frenteSudeste,
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+        );
+
