@@ -644,3 +644,92 @@ void main() {
       },
     );
 
+    testWidgets(
+      'navegacao no mapa 2D rastreia arrasto 1:1 sem deslizar com dedo parado, suporta pinch+pan simultaneo, retomada com 1 dedo e duplo-toque no ponto clicado',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(420, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -20.07,
+          longitudeInicial: -44.32,
+          lodInicial: 1.25,
+          modo3DInicial: false,
+        );
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: const [],
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // 1. Arrasto com 1 dedo e pausa com dedo encostado: o pino move 1:1 e NAO continua escorregando sozinho
+        final posInicialPino =
+            tester.getCenter(find.byKey(const Key('ponto_aresta_igarape')));
+        final dedo1 = await tester.startGesture(const Offset(210, 380));
+        await dedo1.moveBy(const Offset(60, -40));
+        await tester.pump(const Duration(milliseconds: 16));
+        final posAposMover =
+            tester.getCenter(find.byKey(const Key('ponto_aresta_igarape')));
+        expect(posAposMover.dx - posInicialPino.dx, closeTo(60.0, 2.0));
+        expect(posAposMover.dy - posInicialPino.dy, closeTo(-40.0, 2.0));
+
+        // Mantem o dedo parado por 250ms: posicao deve permanecer identica (sem ticker parasita!)
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        final posComDedoParado =
+            tester.getCenter(find.byKey(const Key('ponto_aresta_igarape')));
+        expect(posComDedoParado.dx, closeTo(posAposMover.dx, 0.05));
+        expect(posComDedoParado.dy, closeTo(posAposMover.dy, 0.05));
+
+        // 2. Entra segundo dedo (pinch multi-quadro) -> escala aumenta de forma proporcional (~2x, nao 16x!),
+        // levanta o 2o dedo e continua pan imediatamente com o 1o dedo sem soltar tudo!
+        final escAntesPinch = ctrl.calcularEscala2D(const Size(420, 800));
+        final dedo2 = await tester.startGesture(const Offset(330, 340));
+        for (var s = 0; s < 5; s++) {
+          await dedo1.moveBy(const Offset(-12, 2));
+          await dedo2.moveBy(const Offset(12, 2));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        final escDepoisPinch = ctrl.calcularEscala2D(const Size(420, 800));
+        expect(escDepoisPinch, greaterThan(escAntesPinch * 1.25));
+        expect(escDepoisPinch, lessThan(escAntesPinch * 3.2));
+
+        // Levanta apenas o dedo2 e continua arrastando com o dedo1 sem soltar tudo!
+        await dedo2.up();
+        await tester.pump(const Duration(milliseconds: 16));
+        final lonAntesContinuar = ctrl.longitudeCentral;
+        for (var s = 0; s < 4; s++) {
+          await dedo1.moveBy(const Offset(18, 8));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(ctrl.longitudeCentral, lessThan(lonAntesContinuar));
+        await dedo1.up();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // 3. Duplo-toque fora do centro em 2D voa em direcao a coordenada clicada
+        const pontoDuploToque = Offset(90, 210);
+        final alvoEsperado = ctrl.converterTelaParaCoordenada2D(
+          pontoTela: pontoDuploToque,
+          tamanhoTela: const Size(420, 800),
+        );
+        await tester.tapAt(pontoDuploToque);
+        await tester.pump(const Duration(milliseconds: 60));
+        await tester.tapAt(pontoDuploToque);
+        for (var i = 0; i < 32; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+        expect(ctrl.longitudeCentral, closeTo(alvoEsperado.longitude, 0.5));
+        expect(ctrl.latitudeCentral, closeTo(alvoEsperado.latitude, 0.5));
+
