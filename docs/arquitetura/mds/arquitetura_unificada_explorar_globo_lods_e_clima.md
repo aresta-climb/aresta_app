@@ -175,3 +175,90 @@ CREATE TABLE IF NOT EXISTS public.estado_clima_picos (
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Tabela de snapshots consolidados de altimetria NASA 30m (estritamente 2 linhas)
+CREATE TABLE IF NOT EXISTS public.snapshots_altimetria_picos (
+    slot TEXT PRIMARY KEY CHECK (slot IN ('atual', 'copia_seguranca')),
+    gerado_em TIMESTAMPTZ NOT NULL,
+    altimetria_por_pico JSONB NOT NULL,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Rotação atômica: promove 'atual' anterior para 'copia_seguranca' (descartando o antigo) e grava o novo 'atual'
+CREATE OR REPLACE FUNCTION public.rotacionar_estado_clima_picos(
+    p_gerado_em TIMESTAMPTZ,
+    p_bolhas_chuva JSONB,
+    p_chuva_por_pico JSONB
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO public.estado_clima_picos (slot, gerado_em, bolhas_chuva, chuva_por_pico, atualizado_em)
+    SELECT 'copia_seguranca', gerado_em, bolhas_chuva, chuva_por_pico, now()
+    FROM public.estado_clima_picos
+    WHERE slot = 'atual'
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        bolhas_chuva = EXCLUDED.bolhas_chuva,
+        chuva_por_pico = EXCLUDED.chuva_por_pico,
+        atualizado_em = now();
+
+    INSERT INTO public.estado_clima_picos (slot, gerado_em, bolhas_chuva, chuva_por_pico, atualizado_em)
+    VALUES ('atual', p_gerado_em, p_bolhas_chuva, p_chuva_por_pico, now())
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        bolhas_chuva = EXCLUDED.bolhas_chuva,
+        chuva_por_pico = EXCLUDED.chuva_por_pico,
+        atualizado_em = now();
+END;
+$$;
+```
+
+### 6.3. Formato Compacto do Payload JSON (`~5 KB` no Cliente)
+
+```json
+{
+  "slot": "atual",
+  "gerado_em": "2026-11-25T15:00:00Z",
+  "bolhas_chuva": [
+    {
+      "id": "quadrilatero_20261125",
+      "lat": -20.04,
+      "lon": -44.24,
+      "raio_lon_graus": 0.72,
+      "raio_lat_graus": 0.54,
+      "rotacao_rad": -0.35,
+      "precipitacao_mm": 22.0,
+      "data_chuva": "2026-11-25"
+    }
+  ],
+  "chuva_por_pico": {
+    "br_mg_igarape_pedra_grande": [
+      { "data": "2026-11-25", "mm": 22.0, "bolha_id": "quadrilatero_20261125" }
+    ],
+    "br_mg_santana_do_riacho_serra_do_cipo": [
+      { "data": "2026-11-24", "mm": 9.4, "bolha_id": "cipo_sul_20261124" }
+    ]
+  }
+}
+```
+
+---
+
+## 7. Máquina de Estados da Umidade (`CalculadoraUmidadePico`)
+
+### 7.1. Progressão de 5 Dias
+A secagem da rocha segue uma progressão encadeada onde cada estágio decai para o próximo até atingir `Seco`:
+
+```
+  Chuva >= 15 mm          Chuva 5 a < 15 mm       Chuva 1 a < 5 mm
+        │                         │                       │
+        ▼                         ▼                       ▼
+┌────────────────┐       ┌────────────────┐      ┌───────────────────┐     ┌────────┐
+│ MUITO MOLHADO  │ 2d ──►│    MOLHADO     │ 2d ─►│ LEVEMENTE MOLHADO │ 1d ►│  SECO  │
+│  Azul Índigo   │       │   Azul Médio   │      │  Verde Musgo App  │     │ Neutro │
+└────────────────┘       └────────────────┘      └───────────────────┘     └────────┘
+  Total até Seco: 5 dias   Total até Seco: 3 dias  Total até Seco: 1 dia
+```
+
