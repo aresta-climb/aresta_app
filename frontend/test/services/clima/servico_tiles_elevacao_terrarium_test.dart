@@ -86,3 +86,81 @@ void main() {
       );
       expect(fake.totalChamadas, equals(chamadasAntes));
 
+      // Evicção LRU acima de 48 tiles
+      final rgbaDummy = Uint8List(256 * 256 * 4);
+      for (var x = 0; x < 55; x++) {
+        servico.registrarTileEmMemoria(
+          TileElevacaoTerrarium.deRgba256(
+            zoom: 8,
+            x: x,
+            y: 100,
+            rgba: rgbaDummy,
+          ),
+        );
+      }
+      expect(
+        servico.totalTilesEmCache,
+        equals(ServicoTilesElevacaoTerrarium.limiteCacheTiles),
+      );
+
+      // Tolerância a falha de rede, PNG corrompido e AssetBundle falho
+      final fakeFalho = FonteTilesElevacaoFake(retornarBytesCorrompidos: true);
+      final srvFalho = ServicoTilesElevacaoTerrarium(
+        fonteRemota: fakeFalho,
+        assetBundle: _AssetBundleFalho(),
+      );
+      addTearDown(srvFalho.dispose);
+      await srvFalho.inicializar();
+      srvFalho.solicitarTilesVisiveis(
+        minLat: -22.0,
+        maxLat: -18.0,
+        minLon: -46.0,
+        maxLon: -41.0,
+        lod: 2.2,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      fakeFalho.simularFalhaRede = true;
+      srvFalho.solicitarTilesVisiveis(
+        minLat: -15.0,
+        maxLat: -14.0,
+        minLon: -45.0,
+        maxLon: -44.0,
+        lod: 2.2,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(srvFalho.totalTilesEmCache, equals(0));
+
+      expect(ServicoTilesElevacaoTerrarium.instancia, isNotNull);
+    });
+
+    test('ClienteTilesTerrariumAws busca PNG via HTTP local e retorna null em 404 ou falha de socket', () async {
+      final pngValido = await FonteTilesElevacaoFake.gerarPngTerrarium256(850);
+      var statusCode = 200;
+      final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => servidor.close(force: true));
+
+      servidor.listen((req) async {
+        req.response.statusCode = statusCode;
+        if (statusCode == 200) {
+          req.response.add(pngValido);
+        }
+        await req.response.close();
+      });
+
+      final cliente = ClienteTilesTerrariumAws(
+        urlBase: 'http://127.0.0.1:${servidor.port}',
+        clienteHttp: ClienteHttpAresta.paraTestes(http.Client()),
+      );
+
+      final recebido = await cliente.baixarPngTile(zoom: 8, x: 93, y: 143);
+      expect(recebido, isNotNull);
+      expect(recebido!.length, equals(pngValido.length));
+
+      statusCode = 404;
+      expect(await cliente.baixarPngTile(zoom: 8, x: 93, y: 143), isNull);
+
+      await servidor.close(force: true);
+      expect(await cliente.baixarPngTile(zoom: 8, x: 93, y: 143), isNull);
+    });
+  });
+}
