@@ -175,3 +175,98 @@ abstract final class ExtratorCurvasNivelMundo {
           final lon0 = (bloco.iMin + c) * passo;
           final lon1 = lon0 + passo;
 
+          Offset interpSul() => Offset(
+                lon0 + _fracao(z00, z10, cota) * passo,
+                lat0,
+              );
+          Offset interpLeste() => Offset(
+                lon1,
+                lat0 + _fracao(z10, z11, cota) * passo,
+              );
+          Offset interpNorte() => Offset(
+                lon0 + _fracao(z01, z11, cota) * passo,
+                lat1,
+              );
+          Offset interpOeste() => Offset(
+                lon0,
+                lat0 + _fracao(z00, z01, cota) * passo,
+              );
+
+          switch (mascara) {
+            case 1:
+            case 14:
+              segmentos.add((interpOeste(), interpSul()));
+            case 2:
+            case 13:
+              segmentos.add((interpSul(), interpLeste()));
+            case 3:
+            case 12:
+              segmentos.add((interpOeste(), interpLeste()));
+            case 4:
+            case 11:
+              segmentos.add((interpLeste(), interpNorte()));
+            case 6:
+            case 9:
+              segmentos.add((interpSul(), interpNorte()));
+            case 7:
+            case 8:
+              segmentos.add((interpOeste(), interpNorte()));
+            case 5:
+              final media = (z00 + z10 + z11 + z01) * 0.25;
+              if (media >= cota) {
+                segmentos
+                  ..add((interpOeste(), interpNorte()))
+                  ..add((interpSul(), interpLeste()));
+              } else {
+                segmentos
+                  ..add((interpOeste(), interpSul()))
+                  ..add((interpLeste(), interpNorte()));
+              }
+            case 10:
+              final media = (z00 + z10 + z11 + z01) * 0.25;
+              if (media >= cota) {
+                segmentos
+                  ..add((interpOeste(), interpSul()))
+                  ..add((interpLeste(), interpNorte()));
+              } else {
+                segmentos
+                  ..add((interpOeste(), interpNorte()))
+                  ..add((interpSul(), interpLeste()));
+              }
+          }
+        }
+      }
+
+      if (segmentos.isEmpty) continue;
+      final polilinhas = _costurarESuavizarPolilinhas(segmentos, passo);
+      for (final poli in polilinhas) {
+        if (poli.length < 3) continue;
+        final meio = poli[poli.length ~/ 2];
+        final cosLat = math.max(0.35, math.cos(meio.dy * _grausParaRad));
+        var ehEscarpa = false;
+        if (ehMestra) {
+          for (final p in picosReferencia) {
+            final dx = (meio.dx - p.longitude) * cosLat;
+            final dy = meio.dy - p.latitude;
+            if (dx * dx + dy * dy <= raioPicoGraus2) {
+              ehEscarpa = true;
+              break;
+            }
+          }
+        }
+
+        final ancoraRotulo = (ehMestra && poli.length >= 9)
+            ? _escolherAncoraDeterministicaMundo(poli, passo)
+            : null;
+        curvas.add(
+          CurvaNivelMundo(
+            cotaMetros: cotaInt,
+            ehMestra: ehMestra,
+            ehEscarpaPico: ehEscarpa,
+            verticesLonLat: poli,
+            ancoraRotuloLonLat: ancoraRotulo,
+          ),
+        );
+      }
+    }
+
