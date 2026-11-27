@@ -873,3 +873,55 @@ abstract final class GeradorMalhaGeograficaOffline {
   }
 }
 
+Future<void> main(List<String> args) async {
+  final raizFrontend = Directory.current.path;
+  final modoOfflineSintetico = args.contains('--sintetico-teste');
+
+  final resMalha = await GeradorMalhaGeograficaOffline.executarGeracaoMalha(
+    caminhoSaida: '$raizFrontend/assets/geometria/malha_globo_brasil.json',
+    caminhoSeguranca:
+        '$raizFrontend/assets/geometria/malha_globo_brasil.seguranca.json',
+    provedorMalhaExterna: modoOfflineSintetico
+        ? () async => GeradorMalhaGeograficaOffline.construirMalhaPadraoEmbutida()
+        : GeradorMalhaGeograficaOffline.buscarMalhaRealIbgeENaturalEarth,
+  );
+  print(
+    '[GeradorMalha] ${resMalha.mensagem} '
+    '(copiaSeguranca=${resMalha.usouCopiaSeguranca})',
+  );
+
+  final resAlt = await GeradorMalhaGeograficaOffline.executarGeracaoAltimetria(
+    caminhoSaida: '$raizFrontend/assets/dados/altimetria_picos_inicial.json',
+    caminhoSeguranca:
+        '$raizFrontend/assets/dados/altimetria_picos_inicial.seguranca.json',
+    provedorAltimetriaExterna: () => modoOfflineSintetico
+        ? Future.value(
+            GeradorMalhaGeograficaOffline.construirAltimetriaDoIndiceLocal(
+              caminhoIndiceBinaryPb:
+                  '$raizFrontend/assets/preload/indice.binarypb',
+            ),
+          )
+        : GeradorMalhaGeograficaOffline.buscarAltimetriaRealDemParaIndice(
+            caminhoIndiceBinaryPb:
+                '$raizFrontend/assets/preload/indice.binarypb',
+          ),
+  );
+  print(
+    '[GeradorAltimetria] ${resAlt.mensagem} '
+    '(copiaSeguranca=${resAlt.usouCopiaSeguranca})',
+  );
+
+  if (!modoOfflineSintetico) {
+    final resTex = await GeradorMalhaGeograficaOffline.executarGeracaoBinaria(
+      caminhoSaida: '$raizFrontend/assets/geometria/textura_globo_nasa.jpg',
+      caminhoSeguranca:
+          '$raizFrontend/assets/geometria/textura_globo_nasa.seguranca.jpg',
+      provedorBytesExternos:
+          GeradorMalhaGeograficaOffline.baixarTexturaNasaBlueMarble,
+    );
+    print(
+      '[GeradorTexturaNasa] ${resTex.mensagem} '
+      '(copiaSeguranca=${resTex.usouCopiaSeguranca})',
+    );
+  }
+}
