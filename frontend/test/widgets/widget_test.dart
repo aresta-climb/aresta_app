@@ -84,8 +84,8 @@ void main() {
     );
     await tester.pump();
 
-    // Verifica se a página inicial está presente (o ícone de settings é renderizado pelo Header)
-    expect(find.byIcon(Icons.settings), findsOneWidget);
+    // Verifica se a página inicial está presente (no modo dev o botão de Perfil é exibido por padrão no Header)
+    expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
   });
 
   testWidgets(

@@ -107,6 +107,16 @@ void main() {
                       conteudo: 'Camalots #1 e #2',
                       ehMarkdown: false,
                     ),
+                    SecaoTextoVia(
+                      titulo: 'Descrição do Acesso',
+                      conteudo: 'Trilha de 10 min.',
+                      ehMarkdown: false,
+                    ),
+                    SecaoTextoVia(
+                      titulo: 'Descrição da Ancoragem',
+                      conteudo: ' Dupla química.',
+                      ehMarkdown: false,
+                    ),
                   ],
                 ),
                 const SecaoEnfiadasVia(
@@ -159,12 +169,30 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('11+2'), findsOneWidget);
     expect(find.textContaining('Dupla com argola inox'), findsOneWidget);
+    expect(find.text('DESCRIÇÃO'), findsOneWidget);
+    expect(find.text('PEÇAS MÓVEIS'), findsOneWidget);
+    expect(find.text('ENFIADAS (1)'), findsOneWidget);
     expect(find.text('Enfiada 1 • Diedro'), findsOneWidget);
-    expect(find.text('FLASH ★'), findsOneWidget);
+    expect(find.text('HISTÓRICO & CONQUISTA'), findsOneWidget);
+    expect(find.text('VÍDEOS & BETAS (1)'), findsOneWidget);
+    expect(find.text('BETAS DA COMUNIDADE (1)'), findsOneWidget);
+
+    // Seções de beta iniciam fechadas por padrão e expandem sob demanda
+    expect(find.text('Beta Completo da Via'), findsNothing);
+    expect(find.text('FLASH ★'), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('cabecalho_betas_midia_via')));
+    await tester.tap(find.byKey(const Key('cabecalho_betas_midia_via')));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Beta Completo da Via'));
     await tester.tap(find.text('Beta Completo da Via'));
     expect(urlMidiaClicada, 'https://youtube.com/watch?v=abc');
+
+    await tester.ensureVisible(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+    await tester.tap(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+    await tester.pumpAndSettle();
+    expect(find.text('FLASH ★'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('btn_copiar_pix_manutencao')));
     await tester.tap(find.byKey(const Key('btn_copiar_pix_manutencao')));
