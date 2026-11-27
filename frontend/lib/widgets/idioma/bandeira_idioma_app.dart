@@ -156,3 +156,76 @@ class PintorBandeiraIdioma extends CustomPainter {
       Paint()..color = const Color(0xFF3C3B6E),
     );
 
+    final tintaEstrela = Paint()..color = Colors.white;
+    final raioPonto = (h * 0.042).clamp(0.55, 1.3);
+    for (var linha = 0; linha < 3; linha++) {
+      final py = cantaoAltura * (0.24 + linha * 0.26);
+      for (var col = 0; col < 3; col++) {
+        final px = cantaoLargura * (0.22 + col * 0.28);
+        canvas.drawCircle(Offset(px, py), raioPonto, tintaEstrela);
+      }
+    }
+  }
+
+  void _pintarEspanha(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final tintaVermelha = Paint()..color = const Color(0xFFAA151B);
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h * 0.25), tintaVermelha);
+    canvas.drawRect(
+      Rect.fromLTWH(0, h * 0.25, w, h * 0.50),
+      Paint()..color = const Color(0xFFF1BF00),
+    );
+    canvas.drawRect(Rect.fromLTWH(0, h * 0.75, w, h * 0.25), tintaVermelha);
+
+    final brasao = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(w * 0.33, h * 0.50),
+        width: w * 0.13,
+        height: h * 0.26,
+      ),
+      Radius.circular(h * 0.05),
+    );
+    canvas.drawRRect(brasao, tintaVermelha);
+  }
+
+  void _pintarAlemanha(Canvas canvas, Size size) {
+    final w = size.width;
+    final terco = size.height / 3.0;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, terco),
+      Paint()..color = const Color(0xFF18181B),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, terco, w, terco),
+      Paint()..color = const Color(0xFFDD0000),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, terco * 2.0, w, terco),
+      Paint()..color = const Color(0xFFFFCE00),
+    );
+  }
+
+  void _pintarPaisesBaixos(Canvas canvas, Size size) {
+    final w = size.width;
+    final terco = size.height / 3.0;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, terco),
+      Paint()..color = const Color(0xFFAE1C28),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, terco, w, terco),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, terco * 2.0, w, terco),
+      Paint()..color = const Color(0xFF21468B),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant PintorBandeiraIdioma oldDelegate) {
+    return oldDelegate.idioma != idioma || oldDelegate.raioBorda != raioBorda;
+  }
+}
