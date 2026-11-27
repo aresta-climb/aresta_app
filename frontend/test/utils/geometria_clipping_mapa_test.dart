@@ -131,6 +131,47 @@ void main() {
         passoMaxGraus: 0.5,
       );
       expect(antimeridiano, hasLength(1));
+
+      // Suavização invariante em coordenadas do mundo e recorte proporcional de polilinhas
+      final curta = GeometriaClippingMapa.suavizarCantosPolilinhaMundo(const [
+        Offset(-43.9, -19.9),
+        Offset(-43.8, -19.8),
+      ]);
+      expect(curta, hasLength(2));
+
+      final suavizada = GeometriaClippingMapa.suavizarCantosPolilinhaMundo(const [
+        Offset(-44.0, -20.0),
+        Offset(-43.9, -20.0),
+        Offset(-43.9, -19.9),
+      ]);
+      expect(suavizada.length, greaterThan(3));
+
+      final suavizadaAntimeridiano =
+          GeometriaClippingMapa.suavizarCantosPolilinhaMundo(const [
+        Offset(179.6, 0.0),
+        Offset(-179.6, 0.0),
+        Offset(-179.0, 0.2),
+      ]);
+      expect(suavizadaAntimeridiano, hasLength(3));
+
+      expect(
+        GeometriaClippingMapa.recortarFracaoPolilinhaGeo(const [], 0.5),
+        isEmpty,
+      );
+      expect(
+        GeometriaClippingMapa.recortarFracaoPolilinhaGeo(
+          const [Offset(0, 0), Offset(0, 0)],
+          0.5,
+        ),
+        isEmpty,
+      );
+      final pts = const [Offset(0, 0), Offset(1, 0), Offset(2, 0)];
+      expect(
+        GeometriaClippingMapa.recortarFracaoPolilinhaGeo(pts, 1.0),
+        same(pts),
+      );
+      final metade = GeometriaClippingMapa.recortarFracaoPolilinhaGeo(pts, 0.75);
+      expect(metade.last.dx, closeTo(1.5, 1e-6));
     });
   });
 }

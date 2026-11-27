@@ -198,6 +198,29 @@ void main() {
       );
       expect(curvas1, isNotNull);
       expect(curvasMesmoBloco, same(curvas1));
+
+      // Exercita camada fina (LOD >= 3.18), reuso de tiles no zoom e evicção LRU de tiles de curvas em pan longo
+      ctrlCurvas.definirLod(3.60);
+      final curvasFinas = vm.obterCurvasNivelVisiveis(
+        controlador: ctrlCurvas,
+        tamanhoTela: const ui.Size(400, 800),
+        picosReferencia: picosReferencia,
+      );
+      expect(curvasFinas, isNotNull);
+      for (var passoPan = 0; passoPan < 10; passoPan++) {
+        ctrlCurvas.aplicarArrasto(
+          dxPx: -320.0,
+          dyPx: 260.0,
+          tamanhoTela: const ui.Size(400, 800),
+        );
+        ctrlCurvas.definirLod(2.15);
+        vm.obterCurvasNivelVisiveis(
+          controlador: ctrlCurvas,
+          tamanhoTela: const ui.Size(400, 800),
+          picosReferencia: picosReferencia,
+        );
+      }
+
       await Future<void>.delayed(const Duration(milliseconds: 80));
       expect(vm.amostrarElevacaoReal(-19.3156, -43.6135), isNotNull);
 
