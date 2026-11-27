@@ -29,6 +29,7 @@ import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/theme/temas.dart';
 import 'package:frontend/theme/gerenciador_tema.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:frontend/widgets/banner_modo_experimental.dart';
 import 'package:frontend/widgets/modal_sessao_experimental_encerrada.dart';
@@ -76,6 +77,7 @@ void main() async {
     GerenciadorNotificacaoDownload.instancia.inicializar(),
     initFirebase(),
     ThemeController().loadTheme(),
+    ControladorIdiomaApp.instancia.carregarDoDisco(),
     SharedPreferences.getInstance().then((prefs) async {
       acceptedLegalVersion = await migrarTermosLegais(prefs);
     }),
@@ -357,18 +359,39 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
     }
 
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeController().themeMode,
-      builder: (context, currentMode, _) {
-        return ValueListenableBuilder<double>(
-          valueListenable: GerenciadorFeedbackSheet.fracaoAlturaSheet,
-          builder: (context, fracaoSheet, _) {
-            return BetterFeedback(
-              feedbackBuilder: (context, onSubmit, scrollController) {
-                return Theme(
-                  data: ThemeData(
-                    brightness: Brightness.dark,
-                    extensions: const [AppColors.dark],
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, idiomaAtual, _) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeController().themeMode,
+          builder: (context, currentMode, _) {
+            return ValueListenableBuilder<double>(
+              valueListenable: GerenciadorFeedbackSheet.fracaoAlturaSheet,
+              builder: (context, fracaoSheet, _) {
+                return BetterFeedback(
+                  feedbackBuilder: (context, onSubmit, scrollController) {
+                    return Theme(
+                      data: ThemeData(
+                        brightness: Brightness.dark,
+                        extensions: const [AppColors.dark],
+                      ),
+                      child: customFeedbackBuilder(context, onSubmit, scrollController),
+                    );
+                  },
+                  themeMode: ThemeMode.dark,
+                  theme: FeedbackThemeData(
+                    background: AppColors.light.slateStone,
+                    feedbackSheetColor: AppColors.light.obsidianBrown,
+                    activeFeedbackModeColor: AppColors.light.beastHide,
+                    sheetIsDraggable: false,
+                    feedbackSheetHeight: fracaoSheet,
+                    drawColors: const [
+                      AppColors.brandColor,
+                      Colors.red,
+                      Colors.green,
+                      Colors.blue,
+                      Colors.yellow,
+                    ],
                   ),
                   child: customFeedbackBuilder(context, onSubmit, scrollController),
                 );
