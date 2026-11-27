@@ -266,3 +266,93 @@ abstract final class EfeitosParticulasTempestadeGlobo {
             )
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9.0),
         );
+        final esc = (menorLadoMundoPx * 0.15).clamp(5.0, 14.0);
+        final relampago = Path()
+          ..moveTo(c.dx + esc * 0.18, c.dy - esc * 0.90)
+          ..lineTo(c.dx - esc * 0.30, c.dy - esc * 0.08)
+          ..lineTo(c.dx + esc * 0.14, c.dy - esc * 0.08)
+          ..lineTo(c.dx - esc * 0.24, c.dy + esc * 0.92);
+        canvas.drawPath(
+          relampago,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.65
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..color = Color.fromRGBO(
+              254,
+              249,
+              195,
+              (0.90 * onda).clamp(0.0, 1.0),
+            ),
+        );
+      }
+    }
+  }
+
+  /// Desenha o efeito rítmico *pitter-patter* ancorado em uma grade geográfica fixa no mundo `(0°, 0°)`
+  /// com oitavas potência-de-2, garantindo que as gotas jamais deslizem junto com a câmera ao dar zoom ou pan.
+  static void desenharPingoPatterChuva({
+    required Canvas canvas,
+    required BolhaChuvaRegional bolha,
+    required NivelIntensidadeChuva nivel,
+    required double pxPorGrau,
+    required double menorLadoMundoPx,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required double faseSegundos,
+    required Color corGota,
+  }) {
+    final espacamentoAlvoPx = switch (nivel) {
+      NivelIntensidadeChuva.fraca => 40.0,
+      NivelIntensidadeChuva.moderada => 29.0,
+      NivelIntensidadeChuva.forte => 22.5,
+      NivelIntensidadeChuva.extrema => 18.0,
+    };
+
+    final passoIdealGraus = espacamentoAlvoPx / math.max(1.0, pxPorGrau);
+    final octavaCont =
+        (math.log(2.0 / passoIdealGraus) / math.ln2).clamp(0.0, 14.0);
+    final octavaBase = octavaCont.floor();
+    final alfaSub = ControladorCameraGlobo.smoothstep(
+      0.18,
+      0.94,
+      octavaCont - octavaBase,
+    );
+    final passoFino = (2.0 / (1 << octavaBase)) * 0.5;
+
+    final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
+      modo3D: controlador.modo3D,
+      latitudeCentral: controlador.latitudeCentral,
+      longitudeCentral: controlador.longitudeCentral,
+      lod: controlador.lod,
+      raioAparentePx: controlador.raioAparentePx,
+      escala2D: controlador.modo3D
+          ? 1.0
+          : controlador.calcularEscala2D(tamanhoTela),
+      tamanhoTela: tamanhoTela,
+      fatorMargem: 1.08,
+    );
+
+    final lonIni = math.max(bolha.minLon, janela.minLon);
+    final lonFim = math.min(bolha.maxLon, janela.maxLon);
+    final latIni = math.max(bolha.minLat, janela.minLat);
+    final latFim = math.min(bolha.maxLat, janela.maxLat);
+    if (lonFim < lonIni || latFim < latIni) return;
+
+    final ixIni = (lonIni / passoFino).floor();
+    final iyIni = (latIni / passoFino).floor();
+    final ixFim = math.min(ixIni + 15, (lonFim / passoFino).ceil());
+    final iyFim = math.min(iyIni + 15, (latFim / passoFino).ceil());
+
+    final raioMaxAnel =
+        (menorLadoMundoPx * (0.07 + 0.022 * nivel.peso)).clamp(2.6, 10.4);
+    final pincelAnel = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth =
+          menorLadoMundoPx < 28.0 ? 0.75 : (0.70 + 0.16 * nivel.peso);
+    final pincelPingo = Paint()..style = PaintingStyle.fill;
+    final sementeBolha = bolha.id.codeUnits.fold<int>(19, (a, b) => a * 31 + b);
+
