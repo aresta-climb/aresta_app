@@ -622,3 +622,85 @@ abstract final class GeradorMalhaGeograficaOffline {
     return elevacoes;
   }
 
+  /// Baixa a textura equiretangular pública NASA Blue Marble (`2048x1024`).
+  static Future<List<int>> baixarTexturaNasaBlueMarble() async {
+    final cliente = HttpClient()..connectionTimeout = const Duration(seconds: 25);
+    try {
+      const urls = <String>[
+        'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg',
+        'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+      ];
+      Object? ultimoErro;
+      for (final url in urls) {
+        try {
+          return await _getBytesHttp(cliente, url);
+        } catch (e) {
+          ultimoErro = e;
+        }
+      }
+      throw StateError('Falha em todos os mirrors NASA Blue Marble: $ultimoErro');
+    } finally {
+      cliente.close(force: true);
+    }
+  }
+
+  /// Simplificação geométrica Ramer-Douglas-Peucker preservando extremos de anéis fechados.
+  static List<List<double>> simplificarDouglasPeucker(
+    List<List<double>> pontos,
+    double toleranciaGraus,
+  ) {
+    if (pontos.length <= 5) return pontos;
+    final usados = List<bool>.filled(pontos.length, false);
+    usados[0] = true;
+    usados[pontos.length - 1] = true;
+    // Garante ao menos o ponto médio oposto em anéis fechados onde início == fim
+    final meio = pontos.length ~/ 2;
+    usados[meio] = true;
+
+    void subdividir(int ini, int fim) {
+      if (fim - ini <= 1) return;
+      var maiorDist = -1.0;
+      var melhorIdx = -1;
+      final ax = pontos[ini][0];
+      final ay = pontos[ini][1];
+      final bx = pontos[fim][0];
+      final by = pontos[fim][1];
+      final dx = bx - ax;
+      final dy = by - ay;
+      final norm2 = dx * dx + dy * dy;
+
+      for (var i = ini + 1; i < fim; i++) {
+        final px = pontos[i][0];
+        final py = pontos[i][1];
+        double d2;
+        if (norm2 < 1e-12) {
+          d2 = (px - ax) * (px - ax) + (py - ay) * (py - ay);
+        } else {
+          final t = (((px - ax) * dx + (py - ay) * dy) / norm2).clamp(0.0, 1.0);
+          final projX = ax + t * dx;
+          final projY = ay + t * dy;
+          d2 = (px - projX) * (px - projX) + (py - projY) * (py - projY);
+        }
+        if (d2 > maiorDist) {
+          maiorDist = d2;
+          melhorIdx = i;
+        }
+      }
+
+      if (melhorIdx != -1 && maiorDist > toleranciaGraus * toleranciaGraus) {
+        usados[melhorIdx] = true;
+        subdividir(ini, melhorIdx);
+        subdividir(melhorIdx, fim);
+      }
+    }
+
+    subdividir(0, meio);
+    subdividir(meio, pontos.length - 1);
+
+    final saida = <List<double>>[];
+    for (var i = 0; i < pontos.length; i++) {
+      if (usados[i]) saida.add(pontos[i]);
+    }
+    return saida;
+  }
+
