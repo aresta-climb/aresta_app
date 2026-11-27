@@ -225,3 +225,67 @@ export function suavizarChaikin(
   return atual;
 }
 
+/** Reamostra uniformemente um anel limitando sua contagem máxima de vértices para payload enxuto. */
+export function simplificarAnelUniforme(
+  anel: ParLonLat[],
+  maxVertices: number,
+): ParLonLat[] {
+  if (anel.length <= maxVertices) {
+    return anel.map((p) => [arredondar(p[0], 3), arredondar(p[1], 3)]);
+  }
+  const resultado: ParLonLat[] = [];
+  const passo = anel.length / maxVertices;
+  for (let i = 0; i < maxVertices; i++) {
+    const pt = anel[Math.floor(i * passo) % anel.length];
+    resultado.push([arredondar(pt[0], 3), arredondar(pt[1], 3)]);
+  }
+  return resultado;
+}
+
+/** Calcula a área planar assinada (fórmula de Shoelace) em graus quadrados. */
+export function calcularAreaAssinada(anel: ParLonLat[]): number {
+  let soma = 0;
+  for (let i = 0; i < anel.length; i++) {
+    const a = anel[i];
+    const b = anel[(i + 1) % anel.length];
+    soma += a[0] * b[1] - b[0] * a[1];
+  }
+  return soma * 0.5;
+}
+
+/** Calcula o centroide aritmético `[lon, lat]` de um anel poligonal. */
+export function calcularCentroideAnel(anel: ParLonLat[]): ParLonLat {
+  let slon = 0;
+  let slat = 0;
+  for (const p of anel) {
+    slon += p[0];
+    slat += p[1];
+  }
+  return [slon / anel.length, slat / anel.length];
+}
+
+/** Verifica por ray-casting se `(lon, lat)` encontra-se dentro de [poligono]. */
+export function pontoEmPoligono(
+  lon: number,
+  lat: number,
+  poligono: ParLonLat[],
+): boolean {
+  let dentro = false;
+  for (let i = 0, j = poligono.length - 1; i < poligono.length; j = i++) {
+    const xi = poligono[i][0];
+    const yi = poligono[i][1];
+    const xj = poligono[j][0];
+    const yj = poligono[j][1];
+    const cruza =
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (cruza) dentro = !dentro;
+  }
+  return dentro;
+}
+
+/** Arredonda um número de ponto flutuante para `casas` decimais. */
+export function arredondar(valor: number, casas: number): number {
+  const f = Math.pow(10, casas);
+  return Math.round(valor * f) / f;
+}
