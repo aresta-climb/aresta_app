@@ -9,7 +9,6 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/grupo.dart';
-import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/pico_subpages/apoie_pico_page.dart';
@@ -30,7 +29,6 @@ import 'package:frontend/utils/utilitarios_markdown.dart';
 import 'package:frontend/utils/categorizacao_pico.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/view/function_library/markdown_offline.dart';
-import 'package:frontend/view/view_models/mapa_global_view_model.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 import 'package:frontend/view/view_models/configuracoes_view_model.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
@@ -179,18 +177,6 @@ Widget construirPaginaParaNo({
         }
         return const Scaffold();
       },
-    );
-  }
-
-  if (node is MapaGlobalNode) {
-    final List<dynamic> picosIniciais =
-        node.picoIds.isNotEmpty ? node.picoIds : node.crags;
-    return MapaGlobalPage(
-      viewModel: MapaGlobalViewModel(
-        datasetRepo: datasetRepo,
-        syncService: syncService,
-        picosIniciais: picosIniciais,
-      ),
     );
   }
 

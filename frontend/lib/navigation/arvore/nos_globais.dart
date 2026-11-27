@@ -41,42 +41,6 @@ class BrowseNode extends NavNode {
   String toString() => 'BrowseNode';
 }
 
-/// Nó que representa o mapa global acessado a partir da Busca ou Explorar.
-class MapaGlobalNode extends NavNode {
-  /// Lista opcional de identificadores em texto dos picos filtrados.
-  final List<String> picoIds;
-
-  /// Lista legada de objetos de picos (para retrocompatibilidade).
-  final List<dynamic> crags;
-
-  const MapaGlobalNode({
-    this.picoIds = const [],
-    this.crags = const [],
-    required super.parent,
-  });
-
-  @override
-  NavNode copyWithMergedAncestor(covariant MapaGlobalNode matchingAncestor) {
-    return MapaGlobalNode(
-      picoIds: picoIds.isNotEmpty ? picoIds : matchingAncestor.picoIds,
-      crags: crags.isNotEmpty ? crags : matchingAncestor.crags,
-      parent: matchingAncestor.parent,
-    );
-  }
-
-  @override
-  String get rotuloAmigavel => 'Mapa Global';
-
-  @override
-  String obterCaminhoCurto() => 'Início -> Mapa Global';
-
-  @override
-  String toString() {
-    final total = picoIds.isNotEmpty ? picoIds.length : crags.length;
-    return 'MapaGlobalNode($total picos)';
-  }
-}
-
 /// Nó que representa a tela de configurações gerais do aplicativo (SettingsView).
 class SettingsNode extends NavNode {
   const SettingsNode(NavNode parent) : super(parent: parent);
