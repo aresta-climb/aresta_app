@@ -731,3 +731,80 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.configPerfilCadernetaTitulo: 'PROFILE & LOGBOOK',
   ChaveTexto.configPerfilCadernetaSub:
       'Show or hide your profile and ascent logging on routes without erasing local data.',
+  ChaveTexto.configExibirPerfilSwitch: 'Show Profile & Logbook on screens',
+  ChaveTexto.configConectarEditorTitulo: 'Connect Editor',
+  ChaveTexto.configConectarEditorInstrucao:
+      'Enter the 8-character code from Desktop Editor or scan the QR Code.',
+  ChaveTexto.configConectarEditorHint: 'e.g. k9x2-p83a or full URL',
+  ChaveTexto.configEscanearQrBtn: 'SCAN QR CODE',
+  ChaveTexto.configComoFuncionaEditor:
+      'How does Desktop Editor work? Learn more',
+  ChaveTexto.configConectarBtn: 'CONNECT',
+  ChaveTexto.configModoExperimentalTitulo: 'EXPERIMENTAL / PREVIEW MODE',
+  ChaveTexto.configModoExperimentalSub:
+      'Viewing live-synced topos from Desktop Editor.',
+  ChaveTexto.configVoltarModoOficialBtn: 'RETURN TO OFFICIAL MODE',
+  ChaveTexto.configModoOficialTitulo: 'OFFICIAL MODE',
+  ChaveTexto.configModoOficialSub:
+      'Connected to the official Aresta Climb catalog. You can pair with Desktop Editor to preview new topos live.',
+  ChaveTexto.configConectarEditorPreviaBtn: 'CONNECT TO EDITOR / PREVIEW',
+  ChaveTexto.configComoFazerSaibaMais: 'How does it work? Learn more',
+  ChaveTexto.configVoltandoOficialToast: 'Returning to official catalog...',
+  ChaveTexto.configReativandoExpToast: 'Restoring local experimental data...',
+  ChaveTexto.configReativarExpBtn: 'REACTIVATE EXPERIMENTAL MODE',
+  ChaveTexto.configApagarTudoTitulo: 'Erase Everything?',
+  ChaveTexto.configApagarTudoCorpo:
+      'This will permanently erase the experimental index and all topos downloaded in preview mode. Continue?',
+  ChaveTexto.configApagarTudoBtn: 'ERASE ALL',
+  ChaveTexto.configAmbienteExpLimpoToast: 'Experimental environment cleared.',
+  ChaveTexto.configLimparExpBtn: 'CLEAR EXPERIMENTAL DATA',
+  ChaveTexto.configConectadoEditorToast: 'Connected to editor repository!',
+  ChaveTexto.configErroIndiceStatus:
+      'Error: Could not reach index (Status {status})',
+  ChaveTexto.configErroConexaoUrl: 'Connection error: Check the URL',
+  ChaveTexto.qrTituloPagina: 'Scan QR Code',
+  ChaveTexto.qrAponteCamera: 'Point your camera at the\nrepository QR Code',
+  ChaveTexto.feedbackPerguntaTipo: 'What is your feedback about?',
+  ChaveTexto.feedbackSobreCroqui: 'About the Topo',
+  ChaveTexto.feedbackSobreApp: 'About the App',
+  ChaveTexto.feedbackHintDescricao: 'Describe the issue or suggestion...',
+  ChaveTexto.feedbackAvisoPublico:
+      'Public feedback. No personal data is exposed.',
+  ChaveTexto.feedbackEnviarBtn: 'Send',
+  ChaveTexto.shareConfiraPico:
+      'Check out the topo for {pico}{loc} on Aresta:\n{url}',
+  ChaveTexto.shareConfiraGrupo: 'Check out {grupo} at {pico} on Aresta:\n{url}',
+  ChaveTexto.shareConfiraSetor: 'Check out {setor} at {pico} on Aresta:\n{url}',
+  ChaveTexto.shareConfiraEscalada:
+      'Check out {via}{grau}{setor} at {pico} on Aresta:\n{url}',
+  ChaveTexto.gpsDesligadoUltimaConhecida:
+      'GPS is off; centering on your last known location.',
+  ChaveTexto.gpsAtiveAparelho:
+      'Turn on device GPS to center on your location.',
+  ChaveTexto.gpsPermissaoNegada: 'Location permission denied.',
+  ChaveTexto.gpsSinalIndisponivel: 'Could not get a GPS signal right now.',
+  ChaveTexto.filtroSecaoFiltros: 'FILTERS',
+  ChaveTexto.filtroModalidadesTitulo: 'Disciplines',
+  ChaveTexto.setorNenhumaEscaladaFiltrosAtuais:
+      'No climbs match the active filters.',
+  ChaveTexto.modEsportivaMinusculo: 'sport route',
+  ChaveTexto.modMovelMinusculo: 'trad route',
+  ChaveTexto.modBoulderMinusculo: 'boulder',
+  ChaveTexto.modMultienfiadaMinusculo: 'multi-pitch',
+  ChaveTexto.modMultienfiadasMinusculo: 'multi-pitches',
+  ChaveTexto.modHighlineMinusculo: 'highline',
+  ChaveTexto.comumFecharCaixaAlta: 'CLOSE',
+  ChaveTexto.authValidacaoCodigo6Digitos:
+      'Enter the 6-digit numeric code sent by email.',
+  ChaveTexto.authServicoIndisponivel:
+      'Authentication service is currently unavailable.',
+  ChaveTexto.configTestarObsolescenciaBtn: 'TEST DEPRECATION NOTICE',
+  ChaveTexto.configTestarBloqueioBtn: 'TEST HARD-BLOCK SCREEN',
+  ChaveTexto.notifBaixandoPct: 'Downloading... {pct}%',
+  ChaveTexto.notifCroquiSalvoOffline: '✓ Topo saved for offline use.',
+  ChaveTexto.notifFalhaBaixarCroqui:
+      'Failed to download topo. Check your connection.',
+  ChaveTexto.feedbackRecebidoObrigado:
+      'Feedback received! Thank you so much for helping improve the app.',
+  ChaveTexto.sistemaMigracaoTentarNovamente: 'Try Again',
+};
