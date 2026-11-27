@@ -28,40 +28,75 @@ String extrairSiglaUfPico({
   final mCam = padraoBr.firstMatch(caminhoRelativo);
   if (mCam != null) return mCam.group(1)!.toUpperCase();
 
-  return Column(
-    children: [
-      const SizedBox(height: 10),
-      buildSearchBar(
-        onChanged: onSearchChanged,
-        onFilterPressed: onFilterPressed,
-        onSyncPressed: onSyncPressed,
-        showFeedback: true,
-      ),
-      Expanded(
-        child: _buildCragList(
-          context,
-          picos,
-          downloadingCrags,
-          onDownload,
-          onOpen: onOpen,
-          onAddExperimental: onAddExperimental,
-          isDownloadedChecker: verificarBaixado,
-          scrollController: scrollController,
-          chaveSetimoPico: chaveSetimoPico,
-        ),
-      ),
-    ],
+  if (latitude >= -23.4 &&
+      latitude <= -20.7 &&
+      longitude >= -44.9 &&
+      longitude <= -40.9) {
+    return 'RJ';
+  }
+  if (latitude >= -21.4 &&
+      latitude <= -17.8 &&
+      longitude >= -41.9 &&
+      longitude <= -39.6) {
+    return 'ES';
+  }
+  if (latitude >= -25.3 &&
+      latitude <= -19.7 &&
+      longitude >= -53.1 &&
+      longitude <= -44.1) {
+    return 'SP';
+  }
+  if (latitude >= -22.9 &&
+      latitude <= -14.2 &&
+      longitude >= -51.1 &&
+      longitude <= -39.8) {
+    return 'MG';
+  }
+  if (latitude < -25.3) return 'RS';
+  if (latitude > -14.2) return 'BA';
+  return 'BR';
+}
+
+/// Constrói um [MarcadorPicoGlobo] imutável a partir dos dados geográficos, cota DEM e estado de umidade.
+MarcadorPicoGlobo construirMarcadorGloboPico({
+  required String id,
+  required String nome,
+  required String caminhoRelativo,
+  required double latitude,
+  required double longitude,
+  required CotaAltimetricaPico? cota,
+  required EstadoUmidadePico umidade,
+}) {
+  final picoAlt = cota?.altitudePicoMetros ?? 920;
+  final baseAlt = cota?.altitudeBaseMetros ?? math.max(0, picoAlt - 280);
+  return MarcadorPicoGlobo(
+    id: id,
+    nome: nome.isEmpty ? tr(ChaveTexto.comumPico) : nome,
+    uf: extrairSiglaUfPico(
+      id: id,
+      caminhoRelativo: caminhoRelativo,
+      latitude: latitude,
+      longitude: longitude,
+    ),
+    latitude: latitude,
+    longitude: longitude,
+    altitudeBaseMetros: baseAlt,
+    altitudePicoMetros: picoAlt,
+    dimensaoGradeDem: cota?.dimensaoGradeDem ?? 0,
+    raioGradeDemGraus: cota?.raioGradeDemGraus ?? 0.024,
+    gradeDemMetros: cota?.gradeDemMetros ?? const [],
+    umidade: umidade,
   );
 }
 
-List<CardCroquiViewModel> _normalizarCards(dynamic lista) {
-  if (lista == null) return const [];
-  if (lista is List<CardCroquiViewModel>) return lista;
-  if (lista is List) {
-    return lista.map((item) {
-      if (item is CardCroquiViewModel) return item;
-      return mapearMetadadosParaCard(item);
-    }).toList();
+/// Normaliza um alvo de download (`CardCroquiViewModel`, `Map` ou identificador textual) em `(id, nome)`.
+({String id, String nome}) resolverAlvoDownloadExplorar(Object? crag) {
+  final padraoPico = tr(ChaveTexto.comumPico);
+  if (crag is CardCroquiViewModel) {
+    return (
+      id: crag.id,
+      nome: crag.titulo.isEmpty ? padraoPico : crag.titulo,
+    );
   }
   return const [];
 }
