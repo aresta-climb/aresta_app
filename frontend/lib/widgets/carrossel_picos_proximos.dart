@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../idioma/tradutor_app.dart';
 import '../services/firebase/app_logger.dart';
 import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
@@ -141,12 +142,18 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   void initState() {
     super.initState();
     widget.viewModel.addListener(_aoAtualizarViewModel);
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      _aoAtualizarViewModel,
+    );
     _initLocation();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _aoAtualizarViewModel,
+    );
     widget.viewModel.removeListener(_aoAtualizarViewModel);
     super.dispose();
   }
@@ -159,9 +166,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     if (await widget.viewModel.syncService.isNetworkDisabled()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+              tr(ChaveTexto.comumVersaoDesatualizadaToast),
             ),
           ),
         );
@@ -170,9 +177,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr(ChaveTexto.comumBaixando, {'nome': name}))),
+      );
     }
 
     final success = await widget.viewModel.baixarPico(id);
@@ -181,7 +188,11 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
+          content: Text(
+            success
+                ? tr(ChaveTexto.comumBaixadoSucesso, {'nome': name})
+                : tr(ChaveTexto.comumFalhaBaixar, {'nome': name}),
+          ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
@@ -200,22 +211,23 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final String id;
     final String name;
 
+    final padraoPico = tr(ChaveTexto.comumPico);
     if (crag is PicoProximoViewModel) {
       id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+      name = crag.nome.isEmpty ? padraoPico : crag.nome;
     } else if (crag is PicoProximo) {
       id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+      name = crag.nome.isEmpty ? padraoPico : crag.nome;
     } else if (crag is CardCroquiViewModel) {
       id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+      name = crag.nome.isEmpty ? padraoPico : crag.nome;
     } else if (crag is Map) {
       id = crag['id']?.toString() ?? '';
-      name = crag['nome']?.toString() ?? 'Pico';
+      name = crag['nome']?.toString() ?? padraoPico;
     } else {
       try {
         id = (crag.id as String?) ?? '';
-        name = (crag.nome as String?) ?? 'Pico';
+        name = (crag.nome as String?) ?? padraoPico;
       } catch (_) {
         return;
       }
@@ -426,9 +438,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             children: [
-              const Text(
-                'MAIS PRÓXIMOS DE VOCÊ',
-                style: TextStyle(
+              Text(
+                context.tr(ChaveTexto.homeMaisProximosTitulo),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -479,10 +491,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               size: 48,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Permita o acesso à localização para ver os picos mais próximos de você.',
+            Text(
+              context.tr(ChaveTexto.homePermitaLocalizacao),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -494,9 +506,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Permitir Localização',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                context.tr(ChaveTexto.homePermitirLocalizacaoBtn),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -510,7 +522,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Aguardando sinal de GPS...',
+              context.tr(ChaveTexto.homeAguardandoGps),
               style: TextStyle(color: context.colors.ashGrey),
             ),
             const SizedBox(height: 8),
@@ -518,7 +530,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               onPressed: _initLocation,
               icon: Icon(Icons.refresh, size: 16, color: context.colors.rustIron),
               label: Text(
-                'Tentar novamente',
+                context.tr(ChaveTexto.comumTentarNovamente),
                 style: TextStyle(color: context.colors.rustIron, fontSize: 13),
               ),
             ),
@@ -531,7 +543,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     if (picos.isEmpty) {
       return Center(
         child: Text(
-          'Nenhum pico com localização encontrada.',
+          context.tr(ChaveTexto.homeNenhumPicoLocalizado),
           style: TextStyle(color: context.colors.ashGrey),
         ),
       );
@@ -597,7 +609,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         ),
         child: Center(
           child: Text(
-            'VER MAIS ->',
+            context.tr(ChaveTexto.homeVerMais),
             style: TextStyle(
               color: context.colors.chalkWhite,
               fontSize: 18,

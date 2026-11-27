@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/view_models/card_croqui_view_model.dart';
 import '../theme/cores_app.dart';
 import 'provedor_imagem_aresta.dart';
@@ -188,9 +189,11 @@ class CragCard extends StatelessWidget {
                                 size: 12,
                               ),
                               const SizedBox(width: 4),
-                              const Text(
-                                'SALVO OFFLINE',
-                                style: TextStyle(
+                              Text(
+                                context.tr(
+                                  ChaveTexto.comumSalvoOfflineCaixaAlta,
+                                ),
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,

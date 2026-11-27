@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../utils/indexador_escaladas.dart';
 import '../view/function_library/setor_functions.dart';
@@ -37,20 +38,22 @@ class CardIndiceEscalada extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.idiomaApp;
     final colors = context.colors;
 
     // Subtítulo técnico com modalidade, grau (quando em modo setor) e proteções
+    final modalidadeExibicao = item.modalidadeExibicao;
     final partesSubtitulo = <String>[];
     if (rotuloCroqui != null) {
       final modalidadeComGrau = item.grau.isNotEmpty
-          ? '${item.modalidade} | ${item.grau}'
-          : item.modalidade;
+          ? '$modalidadeExibicao | ${item.grau}'
+          : modalidadeExibicao;
       if (modalidadeComGrau.isNotEmpty) {
         partesSubtitulo.add(modalidadeComGrau);
       }
     } else {
-      if (item.modalidade.isNotEmpty) {
-        partesSubtitulo.add(item.modalidade);
+      if (modalidadeExibicao.isNotEmpty) {
+        partesSubtitulo.add(modalidadeExibicao);
       }
     }
     if (item.protecoes.isNotEmpty) {
