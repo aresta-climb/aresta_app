@@ -291,3 +291,93 @@ abstract final class PintorRedeViariaArestaGlobo {
         ),
     );
 
+    // Frentes luminosas ativas durante os 1,65s de propagação a partir de Belo Horizonte
+    if (progressoLuz < 1.0 && pontasOnda.isNotEmpty) {
+      final pincelHaloPonta = Paint()
+        ..color = corBrilhoViasAresta.withValues(
+          alpha: (0.78 * fatorModoViario).clamp(0.0, 1.0),
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+      final pincelCentroPonta = Paint()
+        ..color = corFilamentoQuente.withValues(
+          alpha: (0.98 * fatorModoViario).clamp(0.0, 1.0),
+        );
+      for (final p in pontasOnda) {
+        canvas.drawCircle(p, 4.8, pincelHaloPonta);
+        canvas.drawCircle(p, 2.0, pincelCentroPonta);
+      }
+    }
+  }
+
+  static void _desenharCidadesClassificadas({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required RedeViariaArestaGlobo rede,
+    required JanelaGeograficaVisivel janelaVisivel,
+    required double passoSubdivisaoGraus,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required double pesoTerreno,
+    required double fatorModoViario,
+    required double opacidadeLuzLaranja,
+    required double progressoLuz,
+    required double? Function(double latitude, double longitude)?
+        amostradorElevacaoReal,
+  }) {
+    final lod = controlador.lod;
+    final nivelMaxVisivel = lod >= 2.85 ? 3 : (lod >= 2.05 ? 2 : 1);
+    final caminhoContornosCidades = Path();
+    var temContornoCidade = false;
+
+    final pincelBordaPontoRef = Paint()
+      ..color = Color.fromRGBO(
+        9,
+        13,
+        20,
+        (0.85 * fatorModoViario).clamp(0.0, 1.0),
+      );
+    final pincelPontoBrancoRef = Paint()
+      ..color = Color.fromRGBO(
+        248,
+        250,
+        252,
+        (0.88 * fatorModoViario).clamp(0.0, 1.0),
+      );
+
+    for (final cidade in rede.cidadesClassificadas) {
+      final loc = cidade.localidade;
+      final jaIluminada =
+          cidade.ehRelevanteAresta && progressoLuz > 0.0 && progressoLuz >= cidade.tempoAtivacao;
+      if (!jaIluminada && fatorModoViario <= 0.02) continue;
+      if (!cidade.ehRelevanteAresta && loc.nivel > nivelMaxVisivel) continue;
+      if (cidade.ehRelevanteAresta && loc.nivel == 3 && lod < 2.15) {
+        continue;
+      }
+
+      final elev = math.max(
+            0.0,
+            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              picosReferencia: picosReferencia,
+              ehTerraConfirmada: true,
+              amostradorElevacaoReal: amostradorElevacaoReal,
+            ),
+          ) *
+          pesoTerreno;
+      final pt = controlador.projetarCoordenada(
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        elevacaoMetros: elev + 6.0,
+        tamanhoTela: size,
+      );
+      if (!pt.visivel ||
+          pt.x < -30 ||
+          pt.x > size.width + 30 ||
+          pt.y < -30 ||
+          pt.y > size.height + 30) {
+        continue;
+      }
+
+      final pos = Offset(pt.x, pt.y);
+
