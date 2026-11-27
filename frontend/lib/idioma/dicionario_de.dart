@@ -560,3 +560,93 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.alertaResolvidoStatus: 'Behoben',
   ChaveTexto.alertaMarcarResolvido: 'Als behoben markieren',
 
+  // Autenticação, Perfil, Caderneta, Comunidade, Configurações, Feedback e Compartilhamento
+  ChaveTexto.authEntrarTitulo: 'Anmelden',
+  ChaveTexto.authEntrarSubtitulo:
+      'Melde dich passwortlos per Konto oder 6-stelligem E-Mail-Code an, um dein Tourenbuch zu synchronisieren.',
+  ChaveTexto.authContinuarGoogle: 'Weiter mit Google',
+  ChaveTexto.authContinuarApple: 'Weiter mit Apple',
+  ChaveTexto.authOuCodigoEmail: 'oder Code per E-Mail erhalten',
+  ChaveTexto.authEmailLabel: 'E-Mail',
+  ChaveTexto.authAguardeSegundos: 'Warte {s}s',
+  ChaveTexto.authReceberCodigoEmail: 'Code per E-Mail senden',
+  ChaveTexto.authCodigo6DigitosLabel: '6-stelliger Code',
+  ChaveTexto.authConfirmarCodigo: 'Code bestätigen',
+  ChaveTexto.authReenviarComSegundos: 'Erneut senden ({s}s)',
+  ChaveTexto.authReenviarCodigo: 'Code erneut senden',
+  ChaveTexto.authUsarOutroEmail: 'Andere E-Mail verwenden',
+  ChaveTexto.authAbrirConfigApp: 'App-Einstellungen öffnen',
+  ChaveTexto.authLimiteTemporario:
+      'Zeitlimit erreicht. Bitte warte {s}s für einen neuen Code.',
+  ChaveTexto.authCodigoEnviadoPara:
+      'Wir haben einen 6-stelligen Code an {email} gesendet. Prüfe Posteingang und Spam.',
+  ChaveTexto.authErroEnviarCodigo:
+      'Zugangscode konnte nicht gesendet werden. Bitte erneut versuchen.',
+  ChaveTexto.authErroValidarCodigo:
+      'Zugangscode konnte nicht geprüft werden. Bitte erneut versuchen.',
+  ChaveTexto.authErroGoogle:
+      'Google-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+  ChaveTexto.authErroApple:
+      'Apple-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+  ChaveTexto.authSemConexao:
+      'Keine Internetverbindung. Prüfe deinen Empfang und versuche es erneut.',
+  ChaveTexto.authSrvChaveInvalida:
+      'Ungültiger Serverschlüssel. Bitte erneut versuchen.',
+  ChaveTexto.authSrvCodigoExpirado:
+      'Der Zugangscode ist abgelaufen oder ungültig.',
+  ChaveTexto.authSrvEmailInvalido:
+      'Bitte gib eine gültige E-Mail-Adresse ein.',
+  ChaveTexto.authSrvProvedorDesabilitado:
+      'Anmeldeanbieter ist auf dem Server deaktiviert.',
+  ChaveTexto.authSrvCredencialInvalida:
+      'Anmeldedaten konnten nicht bestätigt werden.',
+  ChaveTexto.authSrvLimiteEnvio:
+      'Sendelimit erreicht. Bitte kurz warten und erneut versuchen.',
+  ChaveTexto.authSrvSessaoExpirada:
+      'Deine Sitzung ist abgelaufen. Bitte neu anmelden.',
+  ChaveTexto.authSrvCancelado: 'Anmeldung abgebrochen.',
+  ChaveTexto.authSrvCooldownAposUm:
+      'Aus Sicherheitsgründen kannst du erst nach 1 Sekunde einen neuen Code anfordern.',
+  ChaveTexto.authSrvCooldownAposVarios:
+      'Aus Sicherheitsgründen kannst du erst nach {s} Sekunden einen neuen Code anfordern.',
+  ChaveTexto.authSrvCooldownCadaUm:
+      'Aus Sicherheitsgründen ist nur alle 1 Sekunde ein neuer Code möglich.',
+  ChaveTexto.authSrvCooldownCadaVarios:
+      'Aus Sicherheitsgründen ist nur alle {s} Sekunden ein neuer Code möglich.',
+  ChaveTexto.perfilEscaladorPadrao: 'Kletterer',
+  ChaveTexto.perfilEscaladorAresta: 'Aresta-Kletterer',
+  ChaveTexto.perfilEditarBtn: 'Profil bearbeiten',
+  ChaveTexto.perfilMetricaCadenas: 'BEGEHUNGEN',
+  ChaveTexto.perfilMetricaTentativas: 'VERSUCHE',
+  ChaveTexto.perfilMetricaPicos: 'GEBIETE',
+  ChaveTexto.perfilMetricaVias: 'ROUTEN',
+  ChaveTexto.perfilEntrarConta: 'Anmelden',
+  ChaveTexto.perfilMinhaCaderneta: 'Mein Tourenbuch',
+  ChaveTexto.perfilDadosPrivacidade: 'Daten & Datenschutz',
+  ChaveTexto.perfilSair: 'Abmelden',
+  ChaveTexto.perfilExcluirConta: 'Konto löschen',
+  ChaveTexto.perfilIdCopiadoToast: 'Öffentliche ID kopiert!',
+  ChaveTexto.perfilSemConexaoExcluir:
+      'Keine Internetverbindung. Verbinde dich, um dein Konto zu löschen.',
+  ChaveTexto.perfilErroExcluirConta:
+      'Konto konnte momentan nicht gelöscht werden.',
+  ChaveTexto.perfilDialogEditarTitulo: 'Profil bearbeiten',
+  ChaveTexto.perfilAlterarFoto: 'Profilbild ändern',
+  ChaveTexto.perfilNomeAtletaLabel: 'Name des Kletterers',
+  ChaveTexto.perfilPrivacidadeTitulo: 'Daten & Datenschutz',
+  ChaveTexto.perfilPrivacidadeCorpo:
+      'Aresta Climb schützt deine Datenhoheit. Dein Tourenbuch ist privat. Öffentliche Gradstimmen und Warnungen nutzen ausschließlich deine anonyme Autor-ID.',
+  ChaveTexto.perfilIdPublicoLabel: 'ÖFFENTLICHE AUTOR-ID (NANOID)',
+  ChaveTexto.perfilCopiarIdTooltip: 'Öffentliche ID kopieren',
+  ChaveTexto.perfilSairPergunta: 'Wirklich abmelden?',
+  ChaveTexto.perfilSairCorpo:
+      'Dein lokales Tourenbuch bleibt sicher auf diesem Gerät erhalten.',
+  ChaveTexto.perfilExcluirPergunta: 'Konto dauerhaft löschen?',
+  ChaveTexto.perfilExcluirCorpo:
+      'Dies kann nicht rückgängig gemacht werden. Konto, Profilbild und alle synchronisierten Begehungen werden dauerhaft gelöscht.',
+  ChaveTexto.cadTituloPagina: 'MEIN TOURENBUCH',
+  ChaveTexto.cadAscensaoAtualizadaToast: 'Begehung im Tourenbuch aktualisiert!',
+  ChaveTexto.cadViaIndisponivelOffline:
+      'Route ist derzeit offline nicht verfügbar.',
+  ChaveTexto.cadTotalCadenas: 'Begehungen gesamt',
+  ChaveTexto.cadTaxaAVistaFlash: 'Onsight-/Flash-Quote',
