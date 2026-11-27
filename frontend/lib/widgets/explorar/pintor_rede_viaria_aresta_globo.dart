@@ -190,3 +190,104 @@ abstract final class PintorRedeViariaArestaGlobo {
     final pontasOnda = <Offset>[];
     var temAceso = false;
 
+    for (final trecho in rede.trechosCorredorAresta) {
+      if (progressoLuz <= trecho.tempoInicio) continue;
+
+      final vertsAtivos = progressoLuz >= trecho.tempoFim
+          ? trecho.verticesLonLat
+          : _recortarFracaoPolilinhaGeo(
+              trecho.verticesLonLat,
+              ((progressoLuz - trecho.tempoInicio) /
+                      math.max(1e-4, trecho.tempoFim - trecho.tempoInicio))
+                  .clamp(0.0, 1.0),
+            );
+      if (vertsAtivos.length < 2) continue;
+
+      final caminhoTrecho = Path();
+      final visivel = _adicionarPolilinhaSuaveAoPath(
+        destino: caminhoTrecho,
+        verticesLonLat: vertsAtivos,
+        janelaVisivel: janelaVisivel,
+        passoSubdivisaoGraus: passoSubdivisaoGraus,
+        size: size,
+        controlador: controlador,
+        picosReferencia: picosReferencia,
+        pesoTerreno: pesoTerreno,
+        amostradorElevacaoReal: amostradorElevacaoReal,
+      );
+      if (!visivel) continue;
+
+      caminhoAceso.addPath(caminhoTrecho, Offset.zero);
+      temAceso = true;
+
+      if (progressoLuz < trecho.tempoFim) {
+        final pontaGeo = vertsAtivos.last;
+        final ptPonta = controlador.projetarCoordenada(
+          latitude: pontaGeo.dy,
+          longitude: pontaGeo.dx,
+          elevacaoMetros: 6.0,
+          tamanhoTela: size,
+        );
+        if (ptPonta.visivel) {
+          pontasOnda.add(Offset(ptPonta.x, ptPonta.y));
+        }
+      }
+    }
+
+    if (!temAceso) return;
+
+    final lod = controlador.lod;
+    final espessuraNuc =
+        1.25 + 1.10 * ControladorCameraGlobo.smoothstep(2.20, 4.15, lod);
+    if (lod >= 2.35) {
+      // Leito asfáltico escuro preciso sob o corredor Aresta
+      canvas.drawPath(
+        caminhoAceso,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = espessuraNuc * 2.15
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = Color.fromRGBO(
+            8,
+            11,
+            17,
+            (0.76 * fatorModoViario).clamp(0.0, 1.0),
+          ),
+      );
+    }
+    canvas.drawPath(
+      caminhoAceso,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = espessuraNuc * 2.45
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = corLaranjaAresta.withValues(
+          alpha: (0.34 * fatorModoViario).clamp(0.0, 1.0),
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+    );
+    canvas.drawPath(
+      caminhoAceso,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = espessuraNuc
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = corBrilhoViasAresta.withValues(
+          alpha: (0.92 * fatorModoViario).clamp(0.0, 1.0),
+        ),
+    );
+    canvas.drawPath(
+      caminhoAceso,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = espessuraNuc * 0.42
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = corFilamentoQuente.withValues(
+          alpha: (0.86 * fatorModoViario).clamp(0.0, 1.0),
+        ),
+    );
+
