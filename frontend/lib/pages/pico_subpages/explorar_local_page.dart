@@ -108,23 +108,62 @@ class ExplorarLocalPage extends StatelessWidget {
                     ),
                   ),
 
-            if (categories.sobre.isNotEmpty)
-              PicoMenuCard(
-                title: 'Sobre o local',
-                subtitle: categories.sobre.length == 1
-                    ? categories.sobre.first.texto
-                    : 'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
-                icon: Icons.menu_book,
-                iconColor: context.colors.dryMoss,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.fishBone,
-                onTap: () {
-                  if (categories.sobre.length == 1) {
-                    _pushTextNode(
+                if (categories.sobre.isNotEmpty)
+                  PicoMenuCard(
+                    title: tituloSobre,
+                    subtitle: categories.sobre.length == 1
+                        ? categories.sobre.first.texto
+                        : subSobre,
+                    icon: Icons.menu_book,
+                    iconColor: context.colors.dryMoss,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      if (categories.sobre.length == 1) {
+                        _pushTextNode(
+                          context,
+                          tituloSobre,
+                          categories.sobre.first.destino.secaoTextual.conteudo,
+                          icon: Icons.menu_book,
+                        );
+                      } else {
+                        final carouselData = categories.sobre
+                            .map(
+                              (b) => TextCarouselData(
+                                title: b.texto,
+                                content: b.destino.secaoTextual.conteudo,
+                                icon: Icons.menu_book,
+                              ),
+                            )
+                            .toList();
+                        final treeNav =
+                            TreeNavigationWrapper.currentTreeController;
+                        if (treeNav != null) {
+                          treeNav.navigateTo(
+                            TextCarouselNode(
+                              cragId: cragId,
+                              texts: carouselData,
+                              parent: treeNav.currentNode,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                if (categories.sobre.isEmpty && pico.descricao.isNotEmpty)
+                  PicoMenuCard(
+                    title: tituloSobre,
+                    subtitle: subSobre,
+                    icon: Icons.menu_book,
+                    iconColor: context.colors.dryMoss,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () => _pushTextNode(
                       context,
-                      'Sobre o local',
-                      categories.sobre.first.destino.secaoTextual.conteudo,
+                      tituloSobre,
+                      pico.descricao,
                       icon: Icons.menu_book,
                     );
                   } else {
