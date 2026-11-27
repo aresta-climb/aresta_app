@@ -85,3 +85,93 @@ class _FormularioAlertaViaSheetState extends State<_FormularioAlertaViaSheet> {
     final cores = context.colors;
     final modoEdicao = widget.alertaInicial != null;
 
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  modoEdicao
+                      ? context.tr(ChaveTexto.alertaEditarModalTitulo)
+                      : context.tr(ChaveTexto.alertaReportarModalTitulo),
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  modoEdicao
+                      ? context.tr(ChaveTexto.alertaEditarModalSub)
+                      : context.tr(ChaveTexto.alertaReportarModalSub),
+                  style: TextStyle(color: cores.ashGrey, fontSize: 13),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _viewModel.opcoesCategorias.map((cat) {
+                    final selecionado = cat == _viewModel.categoriaSelecionada;
+                    return InkWell(
+                      key: Key('opcao_alerta_${cat.codigoBanco}'),
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _viewModel.selecionarCategoria(cat),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selecionado
+                              ? _corVermelhoAlertaModal.withValues(alpha: 0.18)
+                              : cores.caveShadow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selecionado
+                                ? _corVermelhoAlertaModal
+                                : cores.graniteEdge,
+                            width: selecionado ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(cat.emoji, style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                cat.rotulo,
+                                style: TextStyle(
+                                  color: cores.chalkWhite,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _viewModel.descricaoCategoriaSelecionada,
+                  style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('campo_detalhe_alerta_via'),
+                  controller: _detalheController,
+                  maxLength: AlertaSegurancaVia.limiteCaracteresDetalhe,
+                  style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: context.tr(ChaveTexto.alertaDetalheLabel),
+                    labelStyle: TextStyle(color: cores.ashGrey),
+                    hintText: context.tr(ChaveTexto.alertaDetalheHint),
