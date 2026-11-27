@@ -72,7 +72,8 @@ class GradeElevacaoRegionalOffline {
     );
   }
 
-  /// Amostra bilinearmente a altitude real em metros ou retorna `null` fora da cobertura regional.
+  /// Amostra com interpolação bicúbica *Catmull-Rom* (`C¹`) a altitude real em metros,
+  /// eliminando quinas retangulares de grade em isolinhas e sombreamento, ou retorna `null` fora dos limites.
   double? amostrarBilinear(double latitude, double longitude) {
     final gy = (latitude - latMin) / passoGraus;
     final gx = (longitude - lonMin) / passoGraus;
@@ -83,21 +84,32 @@ class GradeElevacaoRegionalOffline {
       return null;
     }
 
-    final j0 = gy.floor().clamp(0, linhas - 1);
-    final i0 = gx.floor().clamp(0, colunas - 1);
-    final j1 = math.min(linhas - 1, j0 + 1);
-    final i1 = math.min(colunas - 1, i0 + 1);
-    final fy = gy - j0;
-    final fx = gx - i0;
+    final j1 = gy.floor().clamp(0, linhas - 1);
+    final i1 = gx.floor().clamp(0, colunas - 1);
+    final ty = (gy - j1).clamp(0.0, 1.0);
+    final tx = (gx - i1).clamp(0.0, 1.0);
 
-    final z00 = cotasMetros[j0 * colunas + i0].toDouble();
-    final z10 = cotasMetros[j0 * colunas + i1].toDouble();
-    final z01 = cotasMetros[j1 * colunas + i0].toDouble();
-    final z11 = cotasMetros[j1 * colunas + i1].toDouble();
+    double cota(int r, int c) {
+      final rr = r.clamp(0, linhas - 1);
+      final cc = c.clamp(0, colunas - 1);
+      return cotasMetros[rr * colunas + cc].toDouble();
+    }
 
-    final sul = z00 + (z10 - z00) * fx;
-    final norte = z01 + (z11 - z01) * fx;
-    return sul + (norte - sul) * fy;
+    final l0 = _catmullRom(cota(j1 - 1, i1 - 1), cota(j1 - 1, i1), cota(j1 - 1, i1 + 1), cota(j1 - 1, i1 + 2), tx);
+    final l1 = _catmullRom(cota(j1, i1 - 1), cota(j1, i1), cota(j1, i1 + 1), cota(j1, i1 + 2), tx);
+    final l2 = _catmullRom(cota(j1 + 1, i1 - 1), cota(j1 + 1, i1), cota(j1 + 1, i1 + 1), cota(j1 + 1, i1 + 2), tx);
+    final l3 = _catmullRom(cota(j1 + 2, i1 - 1), cota(j1 + 2, i1), cota(j1 + 2, i1 + 1), cota(j1 + 2, i1 + 2), tx);
+    return _catmullRom(l0, l1, l2, l3, ty);
+  }
+
+  static double _catmullRom(double p0, double p1, double p2, double p3, double t) {
+    final t2 = t * t;
+    final t3 = t2 * t;
+    return 0.5 *
+        ((2.0 * p1) +
+            (-p0 + p2) * t +
+            (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+            (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
   }
 }
 
@@ -178,23 +190,34 @@ class TileElevacaoTerrarium {
     );
   }
 
-  /// Interpola bilinearmente a cota em metros nas coordenadas locais `[0..255]` do tile.
+  /// Interpola bicubicamente (`Catmull-Rom C¹`) a cota em metros nas coordenadas locais `[0..255]` do tile.
   double amostrarLocal(double localX, double localY) {
-    final x0 = localX.floor().clamp(0, dimensao - 1);
-    final y0 = localY.floor().clamp(0, dimensao - 1);
-    final x1 = math.min(dimensao - 1, x0 + 1);
-    final y1 = math.min(dimensao - 1, y0 + 1);
-    final fx = localX - x0;
-    final fy = localY - y0;
+    final x1 = localX.floor().clamp(0, dimensao - 1);
+    final y1 = localY.floor().clamp(0, dimensao - 1);
+    final fx = (localX - x1).clamp(0.0, 1.0);
+    final fy = (localY - y1).clamp(0.0, 1.0);
 
-    final e00 = cotasMetros[y0 * dimensao + x0].toDouble();
-    final e10 = cotasMetros[y0 * dimensao + x1].toDouble();
-    final e01 = cotasMetros[y1 * dimensao + x0].toDouble();
-    final e11 = cotasMetros[y1 * dimensao + x1].toDouble();
+    double px(int y, int x) {
+      final yy = y.clamp(0, dimensao - 1);
+      final xx = x.clamp(0, dimensao - 1);
+      return cotasMetros[yy * dimensao + xx].toDouble();
+    }
 
-    final topo = e00 + (e10 - e00) * fx;
-    final base = e01 + (e11 - e01) * fx;
-    return topo + (base - topo) * fy;
+    double cr(double p0, double p1, double p2, double p3, double t) {
+      final t2 = t * t;
+      final t3 = t2 * t;
+      return 0.5 *
+          ((2.0 * p1) +
+              (-p0 + p2) * t +
+              (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+              (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
+    }
+
+    final r0 = cr(px(y1 - 1, x1 - 1), px(y1 - 1, x1), px(y1 - 1, x1 + 1), px(y1 - 1, x1 + 2), fx);
+    final r1 = cr(px(y1, x1 - 1), px(y1, x1), px(y1, x1 + 1), px(y1, x1 + 2), fx);
+    final r2 = cr(px(y1 + 1, x1 - 1), px(y1 + 1, x1), px(y1 + 1, x1 + 1), px(y1 + 1, x1 + 2), fx);
+    final r3 = cr(px(y1 + 2, x1 - 1), px(y1 + 2, x1), px(y1 + 2, x1 + 1), px(y1 + 2, x1 + 2), fx);
+    return cr(r0, r1, r2, r3, fy);
   }
 }
 
