@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:share_plus/share_plus.dart';
+import '../../idioma/tradutor_app.dart';
 import '../firebase/telemetria.dart';
 import '../repositorio_dataset.dart';
 
@@ -153,8 +154,11 @@ class ServicoCompartilhamento {
         resolverNomeCroqui(idCroqui, nomePreferencial: nomePico);
     final locLimpa = (localizacao ?? '').trim();
     final sufixoLocal = locLimpa.isNotEmpty ? ' ($locLimpa)' : '';
-    final mensagem =
-        'Confira o croqui de $nomeCroquiResolvido$sufixoLocal no Aresta:\n$url';
+    final mensagem = tr(ChaveTexto.shareConfiraPico, {
+      'pico': nomeCroquiResolvido,
+      'loc': sufixoLocal,
+      'url': url,
+    });
 
     await TelemetryService.instance.logCompartilharEntidade(
       idCroqui: idCroqui,
@@ -176,9 +180,16 @@ class ServicoCompartilhamento {
     final url = construirUrlCompartilhamento(uid, abrirMapa: abrirMapa);
     final nomeCroquiResolvido =
         resolverNomeCroqui(idCroqui, nomePreferencial: nomePico);
-    final refGrupo = _formatarArtigoGrupo(nomeGrupo);
-    final mensagem =
-        'Confira $refGrupo, em $nomeCroquiResolvido, no Aresta:\n$url';
+    final emPortugues =
+        ControladorIdiomaApp.instancia.idiomaAtual == IdiomaApp.portugues;
+    final refGrupo = emPortugues
+        ? _formatarArtigoGrupo(nomeGrupo)
+        : nomeGrupo.trim();
+    final mensagem = tr(ChaveTexto.shareConfiraGrupo, {
+      'grupo': refGrupo,
+      'pico': nomeCroquiResolvido,
+      'url': url,
+    });
 
     await TelemetryService.instance.logCompartilharEntidade(
       idCroqui: idCroqui,
@@ -200,9 +211,16 @@ class ServicoCompartilhamento {
     final url = construirUrlCompartilhamento(uid, abrirMapa: abrirMapa);
     final nomeCroquiResolvido =
         resolverNomeCroqui(idCroqui, nomePreferencial: nomePico);
-    final refSetor = _formatarArtigoSetor(nomeSetor);
-    final mensagem =
-        'Confira $refSetor, em $nomeCroquiResolvido, no Aresta:\n$url';
+    final emPortugues =
+        ControladorIdiomaApp.instancia.idiomaAtual == IdiomaApp.portugues;
+    final refSetor = emPortugues
+        ? _formatarArtigoSetor(nomeSetor)
+        : nomeSetor.trim();
+    final mensagem = tr(ChaveTexto.shareConfiraSetor, {
+      'setor': refSetor,
+      'pico': nomeCroquiResolvido,
+      'url': url,
+    });
 
     await TelemetryService.instance.logCompartilharEntidade(
       idCroqui: idCroqui,
@@ -231,10 +249,20 @@ class ServicoCompartilhamento {
     final setorLimpo = nomeSetor.trim();
     final temSetorEspecifico =
         setorLimpo.isNotEmpty && setorLimpo.toLowerCase() != 'geral';
-    final trechoSetor =
-        temSetorEspecifico ? ' ${_formatarLocativoSetor(setorLimpo)}' : '';
-    final mensagem =
-        'Confira $nomeEscalada$sufixoGrau$trechoSetor, em $nomeCroquiResolvido, no Aresta:\n$url';
+    final emPortugues =
+        ControladorIdiomaApp.instancia.idiomaAtual == IdiomaApp.portugues;
+    final trechoSetor = temSetorEspecifico
+        ? (emPortugues
+              ? ' ${_formatarLocativoSetor(setorLimpo)}'
+              : ' ($setorLimpo)')
+        : '';
+    final mensagem = tr(ChaveTexto.shareConfiraEscalada, {
+      'via': nomeEscalada,
+      'grau': sufixoGrau,
+      'setor': trechoSetor,
+      'pico': nomeCroquiResolvido,
+      'url': url,
+    });
 
     await TelemetryService.instance.logCompartilharEntidade(
       idCroqui: idCroqui,
