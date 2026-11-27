@@ -49,6 +49,108 @@ class RodoviaRegionalMapa {
     int? nivelViario,
     required this.codigo,
     required this.verticesLonLat,
+    this.minLon = -180.0,
+    this.maxLon = 180.0,
+    this.minLat = -90.0,
+    this.maxLat = 90.0,
+  }) : nivelViario = nivelViario ?? (ehPrincipal ? 1 : 2);
+
+  /// Constrói uma rodovia pré-computando sua caixa envolvente geográfica para descarte em `O(1)`.
+  factory RodoviaRegionalMapa.comLimites({
+    required bool ehPrincipal,
+    int? nivelViario,
+    required String codigo,
+    required List<Offset> verticesLonLat,
+  }) {
+    final nivelResolvido = (nivelViario ?? (ehPrincipal ? 1 : 2)).clamp(1, 3);
+    if (verticesLonLat.isEmpty) {
+      return RodoviaRegionalMapa(
+        ehPrincipal: ehPrincipal,
+        nivelViario: nivelResolvido,
+        codigo: codigo,
+        verticesLonLat: verticesLonLat,
+        minLon: 0.0,
+        maxLon: 0.0,
+        minLat: 0.0,
+        maxLat: 0.0,
+      );
+    }
+    var xMin = verticesLonLat.first.dx;
+    var xMax = xMin;
+    var yMin = verticesLonLat.first.dy;
+    var yMax = yMin;
+    for (var i = 1; i < verticesLonLat.length; i++) {
+      final p = verticesLonLat[i];
+      if (p.dx < xMin) xMin = p.dx;
+      if (p.dx > xMax) xMax = p.dx;
+      if (p.dy < yMin) yMin = p.dy;
+      if (p.dy > yMax) yMax = p.dy;
+    }
+    return RodoviaRegionalMapa(
+      ehPrincipal: ehPrincipal,
+      nivelViario: nivelResolvido,
+      codigo: codigo,
+      verticesLonLat: verticesLonLat,
+      minLon: xMin,
+      maxLon: xMax,
+      minLat: yMin,
+      maxLat: yMax,
+    );
+  }
+
+  /// Desserializa um registro viário JSON (`malha_globo_brasil.json` ou `snapshots_malha_viaria_picos`).
+  factory RodoviaRegionalMapa.deMapa(Map<String, dynamic> mapa) {
+    final classe = (mapa['classe'] as String?) ?? '';
+    final ehPrinc = classe == 'principal' || (mapa['nivel'] as num?)?.toInt() == 1;
+    final nivelBruto = (mapa['nivel'] as num?)?.toInt() ?? (ehPrinc ? 1 : 2);
+    final poligonoBruto = (mapa['poligono'] as List<dynamic>?) ?? const [];
+    final vertices = poligonoBruto
+        .map((par) {
+          final p = par as List<dynamic>;
+          return Offset((p[0] as num).toDouble(), (p[1] as num).toDouble());
+        })
+        .toList(growable: false);
+    return RodoviaRegionalMapa.comLimites(
+      ehPrincipal: nivelBruto == 1,
+      nivelViario: nivelBruto.clamp(1, 3),
+      codigo: (mapa['codigo'] as String?) ?? '',
+      verticesLonLat: vertices,
+    );
+  }
+
+  /// Serializa a rodovia para persistência local de 2 slots em disco.
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'classe': nivelViario == 1 ? 'principal' : 'secundaria',
+        'nivel': nivelViario,
+        'codigo': codigo,
+        'poligono': verticesLonLat
+            .map((v) => <double>[v.dx, v.dy])
+            .toList(growable: false),
+      };
+
+  /// Verifica em `O(1)` se a caixa envolvente da rodovia intercepta a janela visível da câmera.
+  bool interceptaJanela({
+    required double janelaMinLon,
+    required double janelaMaxLon,
+    required double janelaMinLat,
+    required double janelaMaxLat,
+  }) =>
+      maxLon >= janelaMinLon &&
+      minLon <= janelaMaxLon &&
+      maxLat >= janelaMinLat &&
+      minLat <= janelaMaxLat;
+}
+
+/// Snapshot offline-first da malha viária hierárquica sincronizado via Supabase (`atual` / `copia_seguranca`).
+class SnapshotMalhaViariaOffline {
+  final DateTime geradoEm;
+  final String versaoHash;
+  final List<RodoviaRegionalMapa> rodovias;
+
+  const SnapshotMalhaViariaOffline({
+    required this.geradoEm,
+    required this.versaoHash,
+    required this.rodovias,
   });
 }
 
