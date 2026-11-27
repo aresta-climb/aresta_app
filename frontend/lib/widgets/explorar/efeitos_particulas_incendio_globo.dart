@@ -96,3 +96,85 @@ abstract final class EfeitosParticulasIncendioGlobo {
     final dirPluma = empuxo / norm;
     final perp = Offset(-dirPluma.dy, dirPluma.dx);
 
+    final escalaAlcance = 0.46 + 0.16 * severidade.peso + 0.26 * fatorVel;
+    final alcancePlumaPx = (menorLadoPx * escalaAlcance).clamp(9.0, 68.0);
+    final raioBasePx =
+        (menorLadoPx * (0.11 + 0.025 * severidade.peso)).clamp(2.6, 13.0);
+    final totalNuvens = 1 + severidade.peso * 2; // 3, 5, 7 ou 9 nuvens
+
+    for (var i = 0; i < totalNuvens; i++) {
+      final progresso =
+          ((faseSegundos * 0.26 * fatorVel + i / totalNuvens) % 1.0 + 1.0) %
+              1.0;
+      final distancia = progresso * alcancePlumaPx;
+      final serpenteio =
+          math.sin(faseSegundos * 1.9 + i * 1.7 + progresso * 4.2) *
+              (1.6 + progresso * (2.5 + severidade.peso * 1.1));
+      final pos = origemFogo + dirPluma * distancia + perp * serpenteio;
+      final raioNuvem =
+          raioBasePx * (0.55 + (0.95 + 0.18 * severidade.peso) * progresso);
+      final envelopeAlfa = math.sin(progresso * math.pi).clamp(0.0, 1.0) *
+          (1.0 - progresso * 0.28);
+
+      final cor =
+          Color.lerp(paleta.fumacaDensa, paleta.fumacaDifusa, progresso)!;
+      canvas.drawCircle(
+        pos,
+        raioNuvem,
+        Paint()
+          ..color = cor.withValues(alpha: (cor.a * envelopeAlfa).clamp(0.0, 1.0))
+          ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal,
+            (raioNuvem * 0.55).clamp(2.0, 9.5),
+          ),
+      );
+
+      if (severidade == NivelSeveridadeIncendio.extremo && i.isOdd) {
+        final posSecundaria =
+            pos - perp * (serpenteio * 0.85) + dirPluma * (raioNuvem * 0.35);
+        canvas.drawCircle(
+          posSecundaria,
+          raioNuvem * 0.78,
+          Paint()
+            ..color = paleta.fumacaDensa.withValues(
+              alpha: (paleta.fumacaDensa.a * envelopeAlfa * 0.65)
+                  .clamp(0.0, 1.0),
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.5),
+        );
+      }
+    }
+  }
+
+  /// Desenha ondas concêntricas de reverberação térmica ao redor de incêndios de severidade `alto` e `extremo`.
+  static void desenharOndaCalorRadiante({
+    required Canvas canvas,
+    required Offset centro,
+    required double menorLadoPx,
+    required double faseSegundos,
+    required NivelSeveridadeIncendio severidade,
+    required PaletaIncendioGlobo paleta,
+  }) {
+    if (severidade.peso < 3 || menorLadoPx < 16.0) return;
+    final ondas = severidade == NivelSeveridadeIncendio.extremo ? 2 : 1;
+    final raioBase = (menorLadoPx * 0.46).clamp(8.0, 44.0);
+
+    for (var k = 0; k < ondas; k++) {
+      final t = ((faseSegundos * 0.48 + k * 0.5) % 1.0 + 1.0) % 1.0;
+      final raio = raioBase * (0.85 + 0.55 * t);
+      final alfa = (1.0 - t) *
+          (severidade == NivelSeveridadeIncendio.extremo ? 0.42 : 0.24);
+      canvas.drawCircle(
+        centro,
+        raio,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth =
+              severidade == NivelSeveridadeIncendio.extremo ? 1.35 : 0.95
+          ..color = paleta.bordaViva.withValues(
+            alpha: (paleta.bordaViva.a * alfa).clamp(0.0, 1.0),
+          ),
+      );
+    }
+  }
+
