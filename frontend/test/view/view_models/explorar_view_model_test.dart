@@ -685,5 +685,98 @@ void main() {
         expect(vmSemCache.latitudeUsuario, closeTo(-20.12, 0.001));
 
         // Instancia padrao compartilhada de ServicoClimaAltimetria
+        final vmInstanciaPadrao = BrowseViewModel(
+          datasetRepo: repositorio,
+          syncService: servicoSync,
+        );
+        expect(vmInstanciaPadrao.obterUmidadePico('inexistente').nivel, NivelUmidadePico.seco);
+        vmInstanciaPadrao.dispose();
+        ServicoClimaAltimetria.redefinirParaTestes();
+      },
+    );
+
+    test(
+      'marcadoresGlobo, calcularDestinoVooPico e resolverAlvoDownload projetam dados prontos para a Dumb UI',
+      () async {
+        repositorio.activeDataset.value = TopoDataset(
+          availablePicos: [
+            {
+              'id': 'p_igarape',
+              'nome': 'Pedra Grande',
+              'latitude': -20.07,
+              'longitude': -44.30,
+              'estatisticas': {'totalVias': 30},
+            },
+            {
+              'id': 'p_sem_nome',
+              'nome': '',
+              'latitude': -20.15,
+              'longitude': -44.10,
+              'estatisticas': {'totalVias': 5},
+            },
+            {
+              'id': 'p_sem_coord',
+              'nome': 'Sem Coordenada',
+              'estatisticas': {'totalVias': 2},
+            },
+          ],
+          downloadedPicos: [],
+        );
+        await servicoClima.inicializar();
+        await servicoClima.sincronizarSeNecessario(
+          forcar: true,
+          idsPicosCatalogo: const ['p_igarape'],
+        );
+
+        final marcadoresDesligado = viewModel.marcadoresGlobo;
+        expect(
+          marcadoresDesligado.map((m) => m.id).toSet(),
+          equals({'p_igarape', 'p_sem_nome'}),
+        );
+        expect(
+          marcadoresDesligado.firstWhere((m) => m.id == 'p_igarape').umidade.nivel,
+          equals(NivelUmidadePico.seco),
+        );
+        viewModel.definirRadarClimaMapaAtivo(true);
+        final marcadores = viewModel.marcadoresGlobo;
+        expect(
+          marcadores.firstWhere((m) => m.id == 'p_igarape').umidade.nivel,
+          equals(NivelUmidadePico.possivelmenteUmido),
+        );
+        final mSemNome = marcadores.firstWhere((m) => m.id == 'p_sem_nome');
+        expect(mSemNome.nome, isNotEmpty);
+        expect(mSemNome.altitudePicoMetros, equals(920));
+        expect(mSemNome.altitudeBaseMetros, equals(640));
+
+        final vooLonge = viewModel.calcularDestinoVooPico('p_igarape', lodAtual: 1.0);
+        expect(vooLonge, isNotNull);
+        expect(vooLonge!.destinoLod, closeTo(2.35, 1e-4));
+        expect(vooLonge.altitudeBaseMetros, equals(980.0));
+
+        final vooPerto = viewModel.calcularDestinoVooPico('p_igarape', lodAtual: 2.5);
+        expect(vooPerto!.destinoLod, closeTo(3.65, 1e-4));
+        expect(viewModel.calcularDestinoVooPico('p_sem_coord', lodAtual: 1.0), isNull);
+        expect(viewModel.calcularDestinoVooPico('inexistente', lodAtual: 1.0), isNull);
+
+        expect(
+          viewModel.resolverAlvoDownload({'id': 'm1', 'nome': 'Mapa Pico'}),
+          equals((id: 'm1', nome: 'Mapa Pico')),
+        );
+        expect(viewModel.resolverAlvoDownload({'id': 'm2'}).id, equals('m2'));
+        expect(
+          viewModel.resolverAlvoDownload(
+            const CardCroquiViewModel.deValores(
+              id: 'c1',
+              titulo: '',
+              textoEstatisticas: '',
+              caminhoMiniatura: '',
+              salvoOffline: false,
+            ),
+          ).id,
+          equals('c1'),
+        );
+        expect(viewModel.resolverAlvoDownload('br_mg_teste').id, equals('br_mg_teste'));
+      },
+    );
   });
 }
