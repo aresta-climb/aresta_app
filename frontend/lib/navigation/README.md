@@ -12,7 +12,7 @@ Na exploração de guias (`Pico -> Setor -> Via -> Mapa -> Via`), empilhar rotas
 lib/navigation/
 ├── arvore/
 │   ├── no_navegacao.dart                - Classe base NavNode, rotuloAmigavel e obterCaminhoCurto()
-│   ├── nos_globais.dart                 - Nós globais (HomeNode, BrowseNode, MeusCroquisNode, ComunidadeNode, MapaGlobalNode, SettingsNode, LoginNode, PerfilNode, CadernetaNode, SobreTimeNode, GPSNode)
+│   ├── nos_globais.dart                 - Nós globais (HomeNode, BrowseNode, MeusCroquisNode, ComunidadeNode, SettingsNode, LoginNode, PerfilNode, CadernetaNode, SobreTimeNode, GPSNode)
 │   ├── nos_pico.dart                    - Nós de escalada (PicoNode, SetoresNode, IndiceEscaladasNode, GrupoNode, SetorNode, ViaNode, ExplorarLocalNode, ComunidadePicoNode, ApoiePicoNode)
 │   ├── nos_modais.dart                  - Nós de modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
 │   ├── modelo_arvore_navegacao.dart     - Regras de transição, prevenção de ciclos, salto de Perfil deslogado e poda de nós

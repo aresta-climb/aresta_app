@@ -82,3 +82,13 @@ Funções puras de domínio e geometria:
 - **`filtro_grau_escalada.dart`, `formatador_escalada.dart` e `calculadora_delta_grau.dart`**: Normalização de graus, cálculo de mediana de setor, filtros e consolidação de votos de grau.
 - **`extrator_detalhes_tecnicos_via.dart` e `modelos_apresentacao_via.dart`**: Extração de dados técnicos das cinco modalidades de escalada para apresentação na `ViaPage`.
 - **`gerador_uid.dart` e `formatador_creditos.dart`**: Geração/validação de NanoID 14c e UUID v4 e formatação de nomes de autores.
+
+---
+
+## 7. Internacionalização Reativa (`lib/idioma/`)
+
+Motor síncrono `O(1)` e 100% offline para tradução instantânea de toda a interface entre `Português (PT)`, `English (EN)`, `Español (ES)`, `Deutsch (DE)` e `Nederlands (NL)`:
+- **`IdiomaApp` e `ChaveTexto` (`modelo_idioma_app.dart`)**: Metadados regionais, `Locale`s e catálogo exaustivo de chaves tipadas.
+- **`ControladorIdiomaApp` e `EscopoIdiomaApp` (`controlador_idioma_app.dart`)**: Estado reativo com persistência em `SharedPreferences` e propagação automática na árvore de widgets.
+- **`TradutorApp`, `tr(...)` e `context.tr(...)` (`tradutor_app.dart`)**: Consulta direta nos cinco dicionários (`dicionario_pt.dart`, `dicionario_en.dart`, `dicionario_es.dart`, `dicionario_de.dart`, `dicionario_nl.dart`) com interpolação de parâmetros. Consulte [`idioma/README.md`](idioma/README.md).
+

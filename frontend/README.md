@@ -15,9 +15,10 @@ Aplicativo Flutter para Android e iOS. Guia de escalada com leitura offline, map
   - Votação de consenso de grau (`-2` a `+2`), comentários públicos de beta e alertas de segurança (`Fauna` `🐝`, `Rocha ou Agarra Instável` `🪨`, `Proteção Precária` `🔩`, `Exposição E4+` `⚠️`) exibidos na página da via e sobre os marcadores do croqui interativo, com confirmação *"Ainda está lá?"* limitada a uma contribuição positiva por perfil.
 - **Home e Busca Global (`catalogo.db`)**: Carrossel de croquis salvos e busca aproximada (*fuzzy*, sem diferenciar acentos) sobre o banco SQLite local (`catalogo.db`), cobrindo picos, grupos, setores e escaladas.
 - **Compartilhamento e Deep Links (`aresta.cc` e `arestaclimb.com/croquis`)**: Geração de links curtos (`/s/<uid>`, `/sm/<uid>`), leitura de placas QR Code (`/q/<uid>`, `/qm/<uid>`) e abertura de URLs de `/croquis/<uid>`, preservando parâmetros UTM e separando callbacks OAuth (`aresta://app.arestaclimb.com/auth-callback`).
-- **Explorar e Mapa Global**: Catálogo de picos com download individual, sincronização incremental do `catalogo.db` e visualização geográfica no Google Maps.
+- **Explorar Unificado (Globo 3D/2D em 4 LODs e Clima Contextual)**: Esfera 3D com textura NASA Blue Marble, divisas oficiais IBGE v3 / Natural Earth 110m, relevo 3D real por proximidade ao objeto (`NASA SRTM 30m` com sombreamento Gouraud e rotação de 1 cópia de segurança) e pontos Aresta com expansão dinâmica em lupa, acoplada a uma gaveta ajustável em 3 estágios (`Mapa`, `Dividir`, `Lista`), busca com modal completo de filtros de grau (`1º–12a` e `V0–V15`) e modalidades (incluindo `Paredão`) sobre o `catalogo.db`, radar sinótico de tempestades ao vivo e indicadores de alta discrepância cromática na curva de secagem de 5 dias (também exibidos em `PicoDetailsPage`).
 - **Croquis e Mapas Interativos**: Desenho vetorial de linhas de vias (sólida, tracejada, pontilhada), detecção de toque por distância euclidiana (16dp), carrossel entre mapas e botão de recentralização.
 - **Navegação em Árvore e Retorno Rápido ao Início**: Roteamento declarativo baseado em nós (`NavNode`); em qualquer página secundária, tocar no botão de voltar recua um nível e segurar o botão anima o indicador radial e retorna à Home.
+- **Multilíngue Reativo Offline (`PT`, `EN`, `ES`, `DE`, `NL`)**: Alternância instantânea de idioma em todo o aplicativo entre **Português**, **English**, **Español**, **Deutsch** e **Nederlands** (idioma oficial e mais falado dos Países Baixos) por meio do botão em bolha (`BotaoBolhaIdioma`) na `HomePage` e na `PicoDetailsPage` ou pelo cartão de idioma em `Configurações`, com persistência local em `SharedPreferences`.
 - **Live Reload e Modo Experimental**: Conexão por QR Code ou código de sessão com o Editor Desktop via LAN ou Cloudflare Relay e atualização via WebSocket.
 
 ---
@@ -35,7 +36,6 @@ Aplicativo Flutter para Android e iOS. Guia de escalada com leitura offline, map
 | **`path_provider`** | Diretórios locais de documentos e cache |
 | **`shared_preferences`** | Preferências locais, cache de perfil, caderneta e filas offline |
 | **`fuzzy`** | Busca aproximada na pesquisa global e busca interna de pico |
-| **`google_maps_flutter`** | Mapa Global de picos |
 | **`flutter_markdown_plus`** | Renderização de descrições e termos em Markdown |
 | **`mobile_scanner`** | Leitura de QR Codes |
 | **`sentry_flutter`** | Monitoramento de erros e breadcrumbs com fila offline (junto ao Firebase Crashlytics) |
@@ -56,6 +56,7 @@ frontend/
 │   ├── application_managers/            - Orquestração de feedback e migrações
 │   ├── constants/                       - Constantes de rede e versão legal gerada
 │   ├── data/modelos/                    - Modelos locais (PerfilEscalador, Cadena, AlertaSegurancaVia, ItemFilaInteracao, etc.)
+│   ├── idioma/                          - Motor multilíngue reativo O(1) e dicionários (PT, EN, ES, DE, NL)
 │   ├── navigation/                      - Árvore de navegação (NavNode, AppNav, deep links, PageListenableBuilder)
 │   ├── pages/                           - Telas do aplicativo e subpáginas do pico
 │   ├── services/                        - Repositórios, HTTP/Sync, autenticação, mídia, caderneta, comunidade, catálogo e Firebase
@@ -76,11 +77,8 @@ frontend/
 # Instalar dependências
 flutter pub get
 
-# Executar em modo de desenvolvimento
+# Executar o aplicativo
 flutter run
-
-# Executar com Perfil, Caderneta e Interações habilitados
-flutter run --dart-define=HABILITAR_PERFIL=true
 
 # Executar todos os testes
 flutter test
@@ -157,8 +155,10 @@ Saída: `build\app\outputs\bundle\release\app-release.aab`.
 
 | Documento | Conteúdo |
 |---|---|
+| [`../docs/recursos/README.md`](../docs/recursos/README.md) | Inventário completo de APIs, fontes de dados externas, infraestrutura, ativos e licenças |
 | [`lib/README.md`](lib/README.md) | Camadas de `lib/` e fluxo de dados |
 | [`lib/data/README.md`](lib/data/README.md) | Modelos de domínio locais |
+| [`lib/idioma/README.md`](lib/idioma/README.md) | Internacionalização reativa e dicionários (`PT`, `EN`, `ES`, `DE`, `NL`) |
 | [`lib/view/README.md`](lib/view/README.md) | `function_library` e `view_models` |
 | [`lib/navigation/README.md`](lib/navigation/README.md) | Árvore de navegação e deep links |
 | [`lib/pages/README.md`](lib/pages/README.md) | Telas e ciclo de vida |

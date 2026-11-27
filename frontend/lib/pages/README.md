@@ -8,21 +8,20 @@ Este diretório contém as telas do aplicativo. As páginas montam a estrutura d
 
 | Página | Arquivo | Responsabilidade |
 |---|---|---|
-| `HomePage` | `home.dart` | Tela inicial com busca global, carrossel de croquis baixados, carrossel dos 6 picos mais próximos (`"VER MAIS ->"`) e atualizações recentes. |
-| `BrowsePage` | `explorar.dart` | Catálogo de croquis com distância (`km`/`m`), ordenação por proximidade, alfabética ou quantidade de vias e rolagem até o 7º pico quando aberta pelo carrossel da Home. |
+| `HomePage` | `home.dart` | Tela inicial com bolha rápida de idioma (`BotaoBolhaIdioma`), busca global, carrossel de croquis baixados, carrossel dos 6 picos mais próximos (`"VER MAIS ->"`) e atualizações recentes. |
+| `BrowsePage` | `explorar.dart` | Aba unificada `Explorar`: globo 3D/2D offline e terreno em 4 LODs (`SuperficieGloboExplorar`) com botão opcional de bolhas de chuva/incêndio na seção `Mapa` (`BotaoCamadaClimaMapa`, iniciado desligado com aviso de ~75% de precisão), botão de localização GPS e voo parabólico, barra de busca com seletor rápido de grau (`BarraBuscaFiltrosExplorar`), gaveta ajustável em 3 estágios (`GavetaDeslizanteExplorar`: `Mapa`, `Dividir` e `Lista`), altimetria externa e alertas conservadores de 4 dias de chuva próxima. |
 | `MeusCroquisPage` | `meus_croquis.dart` | Lista de croquis salvos para leitura offline com remoção local. |
 | `ComunidadePage` | `comunidade.dart` | Aba com links para canais externos do projeto (WhatsApp, Instagram, Discord, GitHub). |
-| `PicoDetailsPage` | `pico.dart` | Página raiz de um guia com capa, status online/offline, busca interna, exclusão local e acesso a setores, mapas e subpáginas. |
+| `PicoDetailsPage` | `pico.dart` | Página raiz de um guia com capa, bolha rápida de idioma (`BotaoBolhaIdioma`), cartão conservador de condição hídrica de 4 dias (`CartaoCondicaoHidricaPico`), status online/offline, busca interna, exclusão local e acesso a setores, mapas e subpáginas. |
 | `SetoresPage` | `pico_subpages/setores_page.dart` | Catálogo de setores e escaladas do pico com abas por modalidade, filtros e ordenação. |
 | `GrupoPage` | `grupo.dart` | Detalhes de um grupo de setores com capa, descrição, mapa, abas de modalidade e filtros. |
 | `SetorPage` | `setor.dart` | Detalhes de um setor com capa, descrição, mapa, abas de modalidade e lista de escaladas. |
 | `ViaPage` | `via.dart` | Página de detalhes de uma escalada (`ViaViewModel`), contendo cabeçalho, croqui, grau oficial, consenso e votação de grau, alertas de segurança, seção da caderneta, atributos técnicos, enfiadas, vídeos/betas, comentários e chave Pix. |
 | `MapasCarrosselPage` | `mapas_carrossel.dart` | Carrossel horizontal entre instâncias de `MapaInterativoPage`. |
 | `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croqui com pan/zoom, traçados vetoriais, bolhas de alerta sobre as vias, cartão de seleção e botão para subir na hierarquia de mapas. |
-| `MapaGlobalPage` | `mapa_global.dart` | Mapa 2D no Google Maps com marcadores agrupados por faixa de zoom. |
 | `GPSPage` | `gps.dart` | Tela auxiliar de coordenadas e localização. |
 | `QRScannerPage` | `qr_scanner.dart` | Leitura de QR Codes para deep links e sessões do Editor Desktop. |
-| `SettingsPage` | `configuracoes.dart` | Configuração de tema, visibilidade das interações de perfil/caderneta e conexão com o Editor Desktop. |
+| `SettingsPage` | `configuracoes.dart` | Configuração de idioma (`CartaoPreferenciaIdioma`), tema, visibilidade das interações de perfil/caderneta e conexão com o Editor Desktop. |
 | `SobreTimePage` | `sobre_time.dart` | Apresentação dos integrantes e colaboradores do projeto. |
 | `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações de acesso, época de escalada, aproximação e atalho para o Google Maps. |
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Contatos locais e canais associados ao pico. |
