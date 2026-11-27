@@ -97,3 +97,59 @@ class CartaoPreferenciaIdioma extends StatelessWidget {
   }
 }
 
+class _BolhaIdiomaConfig extends StatelessWidget {
+  final IdiomaApp idioma;
+  final bool selecionado;
+  final VoidCallback aoTocar;
+
+  const _BolhaIdiomaConfig({
+    required this.idioma,
+    required this.selecionado,
+    required this.aoTocar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return InkWell(
+      key: Key('chip_config_idioma_${idioma.codigoIso}'),
+      borderRadius: BorderRadius.circular(999),
+      onTap: aoTocar,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selecionado
+              ? cores.rustIron.withValues(alpha: 0.18)
+              : cores.deepBasalt,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selecionado ? cores.rustIron : cores.graniteEdge,
+            width: selecionado ? 1.4 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BandeiraIdiomaApp(
+              key: Key('bandeira_chip_config_${idioma.codigoIso}'),
+              idioma: idioma,
+              largura: 21,
+              altura: 14.5,
+              raioBorda: 3.5,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              idioma.nomeNativo,
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 12.5,
+                fontWeight: selecionado ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
