@@ -262,3 +262,78 @@ abstract final class PintorCurvasNivelGlobo {
         alpha: (0.40 * alfaAnel).clamp(0.0, 1.0),
       );
 
+    for (final p in picosReferencia) {
+      if ((p.latitude - controlador.latitudeCentral).abs() > 0.35 ||
+          (p.longitude - controlador.longitudeCentral).abs() > 0.42) {
+        continue;
+      }
+      final cosLat = math.max(0.35, math.cos(p.latitude * (math.pi / 180.0)));
+      final caminhoArcos = Path();
+
+      for (var q = 0; q < 4; q++) {
+        final angIni = q * (math.pi * 0.5) + 0.18;
+        final angFim = (q + 1) * (math.pi * 0.5) - 0.18;
+        var iniciado = false;
+        for (var s = 0; s <= 8; s++) {
+          final a = angIni + (angFim - angIni) * (s / 8.0);
+          final lat = p.latitude + math.sin(a) * raioGraus;
+          final lon = p.longitude + (math.cos(a) * raioGraus) / cosLat;
+          final elev = math.max(
+                0.0,
+                GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+                  latitude: lat,
+                  longitude: lon,
+                  picosReferencia: picosReferencia,
+                  ehTerraConfirmada: true,
+                  amostradorElevacaoReal: amostradorElevacaoReal,
+                ),
+              ) *
+              opacidadeTerreno;
+          final pt = controlador.projetarCoordenada(
+            latitude: lat,
+            longitude: lon,
+            elevacaoMetros: elev + 4.0,
+            tamanhoTela: size,
+          );
+          if (!pt.visivel) {
+            iniciado = false;
+            continue;
+          }
+          if (!iniciado) {
+            caminhoArcos.moveTo(pt.x, pt.y);
+            iniciado = true;
+          } else {
+            caminhoArcos.lineTo(pt.x, pt.y);
+          }
+        }
+      }
+      canvas.drawPath(caminhoArcos, pincelAnel);
+
+      for (var c = 0; c < 4; c++) {
+        final a = c * (math.pi * 0.5);
+        final rInt = raioGraus * 0.86;
+        final rExt = raioGraus * 1.14;
+        final elevBase = p.altitudeBaseMetros.toDouble() * opacidadeTerreno;
+        final pInt = controlador.projetarCoordenada(
+          latitude: p.latitude + math.sin(a) * rInt,
+          longitude: p.longitude + (math.cos(a) * rInt) / cosLat,
+          elevacaoMetros: elevBase + 4.0,
+          tamanhoTela: size,
+        );
+        final pExt = controlador.projetarCoordenada(
+          latitude: p.latitude + math.sin(a) * rExt,
+          longitude: p.longitude + (math.cos(a) * rExt) / cosLat,
+          elevacaoMetros: elevBase + 4.0,
+          tamanhoTela: size,
+        );
+        if (pInt.visivel && pExt.visivel) {
+          canvas.drawLine(
+            Offset(pInt.x, pInt.y),
+            Offset(pExt.x, pExt.y),
+            pincelCardeal,
+          );
+        }
+      }
+    }
+  }
+
