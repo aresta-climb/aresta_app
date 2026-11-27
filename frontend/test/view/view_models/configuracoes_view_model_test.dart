@@ -4,8 +4,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
@@ -18,65 +16,42 @@ void main() {
   late Directory tempDir;
   late EditorDeCroqui editor;
   late DatasetRepository repositorio;
-  late ControladorInteracoesUsuario controladorInteracoes;
   late SettingsViewModel viewModel;
 
-  setUp(() async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     tempDir = Directory.systemTemp.createTempSync('aresta_settings_vm_test_');
     editor = EditorDeCroqui();
     repositorio = DatasetRepository(editorDeCroqui: editor);
-    controladorInteracoes = ControladorInteracoesUsuario();
-    await controladorInteracoes.inicializar();
     viewModel = SettingsViewModel(
       datasetRepo: repositorio,
       editorDeCroqui: editor,
-      controladorInteracoes: controladorInteracoes,
     );
   });
 
   tearDown(() {
     viewModel.dispose();
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
   });
 
   group('SettingsViewModel', () {
-    test('reflete estado de modoExperimental, editorUrl e activeBaseUrl', () {
+    test('reflete estado de modoExperimental, editorUrl e activeBaseUrl notificando ouvintes', () {
+      var notificacoes = 0;
+      viewModel.addListener(() => notificacoes++);
+
       expect(viewModel.modoExperimental, isFalse);
       expect(viewModel.editorUrl, isNull);
       expect(viewModel.activeBaseUrl, isNotEmpty);
 
       viewModel.alterarModoExperimental(true);
       expect(viewModel.modoExperimental, isTrue);
+      expect(notificacoes, greaterThanOrEqualTo(1));
 
       viewModel.alterarEditorUrl('http://192.168.1.10:8080');
       expect(viewModel.editorUrl, equals('http://192.168.1.10:8080'));
     });
-
-    test(
-      'expõe visibilidade do recurso de perfil e alterna interações de caderneta notificando ouvintes',
-      () async {
-        expect(viewModel.exibirSecaoInteracoesCaderneta, isTrue);
-        expect(viewModel.interacoesCadernetaAtivas, isTrue);
-        expect(viewModel.interacoesCadernetaAtivasNotifier.value, isTrue);
-
-        var notificacoes = 0;
-        viewModel.addListener(() => notificacoes++);
-
-        await viewModel.definirInteracoesCadernetaAtivas(false);
-        expect(viewModel.interacoesCadernetaAtivas, isFalse);
-        expect(controladorInteracoes.interacoesAtivas, isFalse);
-        expect(notificacoes, equals(1));
-
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-        expect(viewModel.exibirSecaoInteracoesCaderneta, isFalse);
-      },
-    );
 
     testWidgets('abrirDialogConexao exibe o diálogo de troca de servidor', (
       tester,
