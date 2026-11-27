@@ -328,3 +328,60 @@ class CelulaMatrizClima extends StatelessWidget {
 class CartaoFonteDadosClima extends StatelessWidget {
   final FonteDadosClimaMapa fonte;
 
+  const CartaoFonteDadosClima({super.key, required this.fonte});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cores.deepBasalt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            fonte.nome,
+            style: TextStyle(
+              color: cores.chalkWhite,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Text(
+              fonte.resolucaoEspacial,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                color: cores.rustIron,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            context.tr(fonte.chaveDescricao),
+            style: TextStyle(
+              color: cores.ashGrey,
+              fontSize: 12,
+              height: 1.42,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
