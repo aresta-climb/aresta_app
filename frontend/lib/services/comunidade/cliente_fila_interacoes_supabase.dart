@@ -247,4 +247,64 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
       );
     }
   }
+
+  @override
+  Future<void> atualizarComentario({
+    required String comentarioId,
+    required String autorIdPublico,
+    required String novoTexto,
+    String? accessToken,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?id=eq.${Uri.encodeQueryComponent(comentarioId.trim())}'
+      '&autor_id_publico=eq.${Uri.encodeQueryComponent(autorIdPublico.trim())}'
+      '&tipo=eq.COMENTARIO'
+      '&status=eq.PENDENTE',
+    );
+    return _enviarMutacaoRest(
+      metodo: 'PATCH',
+      uri: uri,
+      accessToken: accessToken,
+      corpoJson: <String, dynamic>{'texto_comentario': novoTexto.trim()},
+    );
+  }
+
+  @override
+  Future<void> excluirComentario({
+    required String comentarioId,
+    required String autorIdPublico,
+    String? accessToken,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?id=eq.${Uri.encodeQueryComponent(comentarioId.trim())}'
+      '&autor_id_publico=eq.${Uri.encodeQueryComponent(autorIdPublico.trim())}'
+      '&tipo=eq.COMENTARIO'
+      '&status=eq.PENDENTE',
+    );
+    return _enviarMutacaoRest(
+      metodo: 'DELETE',
+      uri: uri,
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<void> atualizarAlerta({
+    required String alertaAlvoUid,
+    required String autorIdPublico,
+    required CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+    String? accessToken,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?alerta_alvo_uid=eq.${Uri.encodeQueryComponent(alertaAlvoUid.trim())}'
+      '&autor_id_publico=eq.${Uri.encodeQueryComponent(autorIdPublico.trim())}'
+      '&tipo=eq.ALERTA_SEGURANCA'
+      '&status=eq.PENDENTE',
+    );
+    final detalheLimpo = detalhe?.trim();
+    return _enviarMutacaoRest(
 }
