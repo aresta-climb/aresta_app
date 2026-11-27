@@ -178,3 +178,90 @@ abstract final class EfeitosParticulasIncendioGlobo {
     }
   }
 
+  /// Desenha lobos pulsantes de combustão interna e fagulhas ascendentes ancorados em coordenadas geográficas reais.
+  static void desenharChamasEFagulhasAscendentes({
+    required Canvas canvas,
+    required BolhaIncendioRegional incendio,
+    required double pxPorGrau,
+    required double menorLadoMundoPx,
+    required Offset dirVentoTela,
+    required double faseSegundos,
+    required double fatorVel,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required NivelSeveridadeIncendio severidade,
+    required PaletaIncendioGlobo paleta,
+  }) {
+    final spanLon = math.max(0.03, incendio.maxLon - incendio.minLon);
+    final spanLat = math.max(0.03, incendio.maxLat - incendio.minLat);
+
+    Offset? projetarPontoFogo(double lon, double lat) {
+      final elev = sobreRelevo
+          ? math.max(
+              0.0,
+              GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+                    latitude: lat,
+                    longitude: lon,
+                    picosReferencia: picosReferencia,
+                  ) +
+                  24.0,
+            )
+          : 0.0;
+      final pt = controlador.projetarCoordenada(
+        latitude: lat,
+        longitude: lon,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!pt.visivel) return null;
+      return Offset(pt.x, pt.y);
+    }
+
+    // 1. Lobos de combustão fixos nas coordenadas geográficas internas da cicatriz
+    final qtdLobos = 2 * severidade.peso;
+    for (var i = 0; i < qtdLobos; i++) {
+      final fx = 0.18 + 0.64 * (((i * 61 + 17) % 89) / 89.0);
+      final fy = 0.20 + 0.62 * (((i * 43 + 31) % 83) / 83.0);
+      final posBase = projetarPontoFogo(
+        incendio.minLon + fx * spanLon,
+        incendio.minLat + fy * spanLat,
+      );
+      if (posBase == null) continue;
+
+      final tremular = 0.72 +
+          0.28 *
+              math.sin(faseSegundos * (4.2 + 0.5 * severidade.peso) + i * 2.1) *
+              math.cos(faseSegundos * 3.3 - i * 1.3);
+      final danzarX = math.sin(faseSegundos * 3.8 + i * 1.7) * 2.4 +
+          dirVentoTela.dx * 1.8;
+      final danzarY = -math.cos(faseSegundos * 4.5 + i * 1.1).abs() * 3.2;
+      final centroLobo = posBase.translate(danzarX, danzarY);
+      final raioLobo =
+          (menorLadoMundoPx * (0.20 + 0.03 * severidade.peso) * tremular)
+              .clamp(3.0, 24.0);
+      final shader = ui.Gradient.radial(
+        centroLobo,
+        raioLobo,
+        <Color>[
+          paleta.fagulha.withValues(
+            alpha: (paleta.fagulha.a * 0.80 * tremular).clamp(0.0, 1.0),
+          ),
+          paleta.nucleoBrasa.withValues(
+            alpha: (paleta.nucleoBrasa.a * 0.64 * tremular).clamp(0.0, 1.0),
+          ),
+          Colors.transparent,
+        ],
+        const <double>[0.0, 0.48, 1.0],
+      );
+      canvas.drawCircle(centroLobo, raioLobo, Paint()..shader = shader);
+    }
+
+    // 2. Fagulhas ascendentes ancoradas em grade geográfica mundial potência-de-2
+    final espacamentoFagulhaPx = 38.0 - 4.5 * severidade.peso;
+    final passoIdealGraus = espacamentoFagulhaPx / math.max(1.0, pxPorGrau);
+    final octavaBase =
+        (math.log(2.0 / passoIdealGraus) / math.ln2).clamp(0.0, 14.0).floor();
+    final passoGraus = 2.0 / (1 << octavaBase);
+
