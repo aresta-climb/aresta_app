@@ -32,14 +32,19 @@ void main() {
         id: 'm8Kq2L1x9Y7zWq',
         autorIdPublico: 'c3Lk9P1x4Vw8Mn',
         autorNomePublico: 'Mariana Silva',
+        autorAvatarUrl: '  https://cdn.aresta.cc/avatars/mariana.webp  ',
         escaladaUid: 'x8siJek3FiG3aB',
         textoComentario: '  Chapeleta 3 bamba, levar chave 13.  ',
         tipoAscensao: TipoAscensao.aVista,
         criadoEm: instante,
       );
-      final comentarioRestaurado = ItemFilaInteracao.fromJson(comentario.toJson());
+      expect(comentario.toJson().containsKey('autor_avatar_url'), isFalse);
+      final comentarioRestaurado = ItemFilaInteracao.fromJson(
+        comentario.toJson(incluirAvatarLocal: true),
+      );
       expect(comentarioRestaurado.tipo, TipoFilaInteracao.comentario);
       expect(comentarioRestaurado.textoComentario, 'Chapeleta 3 bamba, levar chave 13.');
+      expect(comentarioRestaurado.autorAvatarUrl, 'https://cdn.aresta.cc/avatars/mariana.webp');
       expect(comentarioRestaurado.tipoAscensao, TipoAscensao.aVista);
 
       final alerta = ItemFilaInteracao.alertaSeguranca(
@@ -345,7 +350,7 @@ void main() {
 
       final sql = File(
         '../docs/arquitetura/sql/supabase_contas_cadenas_interacoes.sql',
-      ).readAsStringSync();
+      ).readAsStringSync().replaceAll('\r\n', '\n');
       expect(
         sql,
         contains('DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima"'),
@@ -376,6 +381,50 @@ void main() {
         sql,
         contains("DELETE FROM public.fila_interacoes\nWHERE categoria_alerta = 'VIA_MOLHADA';"),
       );
+      expect(
+        sql,
+        contains('CREATE POLICY "fila_interacoes_atualizacao_proprio_autor"'),
+      );
+      expect(
+        sql,
+        contains('CREATE POLICY "fila_interacoes_exclusao_proprio_autor"'),
+      );
+      expect(
+        sql,
+        contains('proteger_campos_imutaveis_fila_interacoes'),
+      );
+
+      final comAuto = ItemFilaInteracao.comentario(
+        autorIdPublico: eu,
+        autorNomePublico: 'Mariana',
+        escaladaUid: 'viaCriadaPorMi',
+        textoComentario: 'Original',
+      );
+      expect(ItemFilaInteracao.ehUuidValido(comAuto.id), isTrue);
+      expect(ItemFilaInteracao.ehUuidValido('nao-eh-uuid'), isFalse);
+      final comEditado = comAuto.comTextoComentario('Editado');
+      expect(comEditado.id, comAuto.id);
+      expect(comEditado.textoComentario, 'Editado');
+      final consolidadoCom = consolidarItensFilaEmDadosComunidade(
+        [comEditado],
+        ehBoulder: false,
+      );
+      expect(consolidadoCom.comentarios.single.uid, comAuto.id);
+
+      expect(() => comAuto.comTextoComentario('   '), throwsArgumentError);
+      expect(
+        () => eventos.first.comEdicaoAlerta(
+          categoria: CategoriaAlertaSeguranca.fauna,
+          detalhe: 'x' * 101,
+        ),
+        throwsArgumentError,
+      );
+      final alertaEditado = eventos.first.comEdicaoAlerta(
+        categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+        detalhe: '   ',
+      );
+      expect(alertaEditado.categoriaAlerta, CategoriaAlertaSeguranca.protecaoPrecaria);
+      expect(alertaEditado.textoComentario, isNull);
     });
   });
 }
