@@ -565,3 +565,93 @@ const Map<ChaveTexto, String> dicionarioPortugues = {
   ChaveTexto.alertaResolvidoStatus: 'Resolvido',
   ChaveTexto.alertaMarcarResolvido: 'Marcar resolvido',
 
+  // Autenticação, Perfil, Caderneta, Comunidade, Configurações, Feedback e Compartilhamento
+  ChaveTexto.authEntrarTitulo: 'Entrar na sua conta',
+  ChaveTexto.authEntrarSubtitulo:
+      'Entre sem senha usando sua conta social ou um código de 6 dígitos enviado por e-mail para sincronizar sua caderneta.',
+  ChaveTexto.authContinuarGoogle: 'Continuar com o Google',
+  ChaveTexto.authContinuarApple: 'Continuar com a Apple',
+  ChaveTexto.authOuCodigoEmail: 'ou receba um código por e-mail',
+  ChaveTexto.authEmailLabel: 'E-mail',
+  ChaveTexto.authAguardeSegundos: 'Aguarde {s}s',
+  ChaveTexto.authReceberCodigoEmail: 'Receber código por e-mail',
+  ChaveTexto.authCodigo6DigitosLabel: 'Código de 6 dígitos',
+  ChaveTexto.authConfirmarCodigo: 'Confirmar código',
+  ChaveTexto.authReenviarComSegundos: 'Reenviar código ({s}s)',
+  ChaveTexto.authReenviarCodigo: 'Reenviar código',
+  ChaveTexto.authUsarOutroEmail: 'Usar outro e-mail',
+  ChaveTexto.authAbrirConfigApp: 'Abrir configurações do app',
+  ChaveTexto.authLimiteTemporario:
+      'Limite temporário atingido. Aguarde {s}s para solicitar outro código.',
+  ChaveTexto.authCodigoEnviadoPara:
+      'Enviamos um código de 6 dígitos para {email}. Verifique sua caixa de entrada e spam.',
+  ChaveTexto.authErroEnviarCodigo:
+      'Não foi possível enviar o código de acesso. Tente novamente.',
+  ChaveTexto.authErroValidarCodigo:
+      'Não foi possível validar o código de acesso. Tente novamente.',
+  ChaveTexto.authErroGoogle:
+      'Não foi possível entrar com o Google. Tente novamente.',
+  ChaveTexto.authErroApple:
+      'Não foi possível entrar com a Apple. Tente novamente.',
+  ChaveTexto.authSemConexao:
+      'Sem conexão com a internet. Verifique o sinal e tente novamente.',
+  ChaveTexto.authSrvChaveInvalida:
+      'Chave de acesso do servidor inválida. Tente novamente.',
+  ChaveTexto.authSrvCodigoExpirado:
+      'O código de acesso expirou ou é inválido.',
+  ChaveTexto.authSrvEmailInvalido: 'Informe um endereço de e-mail válido.',
+  ChaveTexto.authSrvProvedorDesabilitado:
+      'Provedor de autenticação não está habilitado no servidor.',
+  ChaveTexto.authSrvCredencialInvalida:
+      'Não foi possível validar a credencial nativa no servidor.',
+  ChaveTexto.authSrvLimiteEnvio:
+      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
+  ChaveTexto.authSrvSessaoExpirada:
+      'Sua sessão expirou. Faça login novamente.',
+  ChaveTexto.authSrvCancelado: 'Autenticação cancelada pelo escalador.',
+  ChaveTexto.authSrvCooldownAposUm:
+      'Por motivos de segurança, você só pode solicitar um novo código após 1 segundo.',
+  ChaveTexto.authSrvCooldownAposVarios:
+      'Por motivos de segurança, você só pode solicitar um novo código após {s} segundos.',
+  ChaveTexto.authSrvCooldownCadaUm:
+      'Por motivos de segurança, você só pode solicitar um novo código a cada 1 segundo.',
+  ChaveTexto.authSrvCooldownCadaVarios:
+      'Por motivos de segurança, você só pode solicitar um novo código a cada {s} segundos.',
+  ChaveTexto.perfilEscaladorPadrao: 'Escalador',
+  ChaveTexto.perfilEscaladorAresta: 'Escalador Aresta',
+  ChaveTexto.perfilEditarBtn: 'Editar perfil',
+  ChaveTexto.perfilMetricaCadenas: 'CADENAS',
+  ChaveTexto.perfilMetricaTentativas: 'TENTATIVAS',
+  ChaveTexto.perfilMetricaPicos: 'PICOS',
+  ChaveTexto.perfilMetricaVias: 'VIAS',
+  ChaveTexto.perfilEntrarConta: 'Entrar na conta',
+  ChaveTexto.perfilMinhaCaderneta: 'Minha caderneta',
+  ChaveTexto.perfilDadosPrivacidade: 'Dados e privacidade',
+  ChaveTexto.perfilSair: 'Sair',
+  ChaveTexto.perfilExcluirConta: 'Excluir conta',
+  ChaveTexto.perfilIdCopiadoToast: 'ID público copiado!',
+  ChaveTexto.perfilSemConexaoExcluir:
+      'Sem conexão com a internet. Conecte-se para excluir sua conta.',
+  ChaveTexto.perfilErroExcluirConta:
+      'Não foi possível excluir a conta neste momento.',
+  ChaveTexto.perfilDialogEditarTitulo: 'Editar Perfil',
+  ChaveTexto.perfilAlterarFoto: 'Alterar foto de perfil',
+  ChaveTexto.perfilNomeAtletaLabel: 'Nome do atleta',
+  ChaveTexto.perfilPrivacidadeTitulo: 'Dados e Privacidade',
+  ChaveTexto.perfilPrivacidadeCorpo:
+      'O Aresta Climb respeita a soberania e a privacidade dos seus dados. Sua caderneta é estritamente privada. Contribuições públicas de graduação e alertas utilizam exclusivamente seu ID de Autor público, sem expor dados pessoais.',
+  ChaveTexto.perfilIdPublicoLabel: 'ID DE AUTOR PÚBLICO (NANOID)',
+  ChaveTexto.perfilCopiarIdTooltip: 'Copiar ID público',
+  ChaveTexto.perfilSairPergunta: 'Deseja realmente sair?',
+  ChaveTexto.perfilSairCorpo:
+      'Sua caderneta pessoal e histórico permanecem preservados com segurança no dispositivo.',
+  ChaveTexto.perfilExcluirPergunta: 'Excluir conta permanentemente?',
+  ChaveTexto.perfilExcluirCorpo:
+      'Esta ação é irreversível. Sua conta, foto de perfil e todas as cadenas sincronizadas serão apagadas permanentemente da nuvem e deste dispositivo.',
+  ChaveTexto.cadTituloPagina: 'MINHA CADERNETA',
+  ChaveTexto.cadAscensaoAtualizadaToast: 'Ascensão atualizada na caderneta!',
+  ChaveTexto.cadViaIndisponivelOffline:
+      'Via não disponível offline no momento.',
+  ChaveTexto.cadTotalCadenas: 'Total de Cadenas',
+  ChaveTexto.cadTaxaAVistaFlash: 'Taxa À Vista/Flash',
+  ChaveTexto.cadMaiorGrauVias: 'Maior Grau (Vias)',
