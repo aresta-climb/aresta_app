@@ -270,3 +270,61 @@ class LinhaBarraMetricaClima extends StatelessWidget {
   }
 }
 
+/// Célula individual da matriz de contingência `2×2` (`TP`, `FP`, `FN`, `TN`).
+class CelulaMatrizClima extends StatelessWidget {
+  final String sigla;
+  final String detalhe;
+  final bool destaque;
+
+  const CelulaMatrizClima({
+    super.key,
+    required this.sigla,
+    required this.detalhe,
+    this.destaque = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cores.deepBasalt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: destaque
+              ? cores.rustIron.withValues(alpha: 0.45)
+              : cores.graniteEdge,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            sigla,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              color: destaque ? cores.rustIron : cores.chalkWhite,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            detalhe,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: cores.ashGrey, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cartão de fonte oficial meteorológica ou missão pública da NASA exibido na memória estatística.
+class CartaoFonteDadosClima extends StatelessWidget {
+  final FonteDadosClimaMapa fonte;
+
