@@ -86,3 +86,99 @@ abstract final class GeometriaGeoideGlobo {
     return rElipsoide + ondulacaoEgm96;
   }
 
+  /// Constrói o contorno fechado da silhueta do Geoide Terrestre (`WGS84 + NASA EGM96`) para o limbo orbital.
+  static Path construirSilhuetaGeoide({
+    required Size tamanhoTela,
+    required double centroVerticalOpticoPx,
+    required double raioAparentePx,
+    required double latitudeCentral,
+    required double longitudeCentral,
+    required double lod,
+    double escalaExtra = 1.0,
+    int segmentos = 108,
+  }) {
+    final rPx = raioAparentePx * escalaExtra;
+    final cx = tamanhoTela.width * 0.5;
+    final phi0 = latitudeCentral * grausParaRad;
+    final lam0 = longitudeCentral * grausParaRad;
+    final cosPhi0 = math.cos(phi0);
+    final sinPhi0 = math.sin(phi0);
+    final cosLam0 = math.cos(lam0);
+    final sinLam0 = math.sin(lam0);
+    final atenuacaoLocal = 1.0 - smoothstep(0.95, 1.85, lod);
+
+    final lesteX = -sinLam0;
+    final lesteY = cosLam0;
+    const lesteZ = 0.0;
+    final norteX = -sinPhi0 * cosLam0;
+    final norteY = -sinPhi0 * sinLam0;
+    final norteZ = cosPhi0;
+
+    final caminho = Path();
+    for (var i = 0; i < segmentos; i++) {
+      final theta = (i / segmentos) * 2.0 * math.pi;
+      final ct = math.cos(theta);
+      final st = math.sin(theta);
+
+      final vx = ct * lesteX + st * norteX;
+      final vy = ct * lesteY + st * norteY;
+      final vz = ct * lesteZ + st * norteZ;
+
+      final latLimbo = math.asin(vz.clamp(-1.0, 1.0)) / grausParaRad;
+      final lonLimbo = math.atan2(vy, vx) / grausParaRad;
+      final rGeo = 1.0 +
+          (raioNormalizadoGeoide(latitude: latLimbo, longitude: lonLimbo) -
+                  1.0) *
+              atenuacaoLocal;
+
+      final px = cx + ct * rPx * rGeo;
+      final py = centroVerticalOpticoPx - st * rPx * rGeo;
+      if (i == 0) {
+        caminho.moveTo(px, py);
+      } else {
+        caminho.lineTo(px, py);
+      }
+    }
+    caminho.close();
+    return caminho;
+  }
+
+  /// Agrupa picos por sigla de estado (`UF`) para exibição sem poluição no `LOD 0`.
+  static List<ClusterEstadoGlobo> agruparPorEstado(
+    Iterable<({String id, String uf, double lat, double lon})> picos,
+  ) {
+    final acumulador = <String,
+        ({double latSoma, double lonSoma, int qtd, String primeiroId})>{};
+    for (final p in picos) {
+      final chaveUf = p.uf.isEmpty ? 'BR' : p.uf;
+      final atual = acumulador[chaveUf];
+      if (atual == null) {
+        acumulador[chaveUf] = (
+          latSoma: p.lat,
+          lonSoma: p.lon,
+          qtd: 1,
+          primeiroId: p.id,
+        );
+      } else {
+        acumulador[chaveUf] = (
+          latSoma: atual.latSoma + p.lat,
+          lonSoma: atual.lonSoma + p.lon,
+          qtd: atual.qtd + 1,
+          primeiroId: atual.primeiroId,
+        );
+      }
+    }
+
+    return acumulador.entries
+        .map(
+          (e) => ClusterEstadoGlobo(
+            uf: e.key,
+            latitudeMedia: e.value.latSoma / e.value.qtd,
+            longitudeMedia: e.value.lonSoma / e.value.qtd,
+            quantidade: e.value.qtd,
+            primeiroPicoId: e.value.primeiroId,
+          ),
+        )
+        .toList();
+  }
+
