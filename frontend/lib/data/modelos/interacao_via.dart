@@ -484,4 +484,77 @@ class DadosComunidadeVia {
       comentarios: comentarios ?? this.comentarios,
     );
   }
+
+  /// Edita o comentário [comentarioUid] exigindo autoria de [autorIdPublico] sob Fail-Fast.
+  DadosComunidadeVia comComentarioEditado({
+    required String comentarioUid,
+    required String autorIdPublico,
+    required String novoTexto,
+  }) {
+    final idx = comentarios.indexWhere((c) => c.uid == comentarioUid.trim());
+    if (idx < 0) {
+      throw StateError('Comentário $comentarioUid não encontrado nesta via.');
+    }
+    final alvo = comentarios[idx];
+    if (!alvo.foiCriadoPor(autorIdPublico)) {
+      throw StateError('Apenas o próprio autor pode editar este comentário.');
+    }
+    final lista = List<ComentarioComunidadeVia>.from(comentarios);
+    lista[idx] = alvo.copyWith(texto: novoTexto);
+    return copyWith(comentarios: List.unmodifiable(lista));
+  }
+
+  /// Remove o comentário [comentarioUid] exigindo autoria de [autorIdPublico] sob Fail-Fast.
+  DadosComunidadeVia semComentarioDoAutor({
+    required String comentarioUid,
+    required String autorIdPublico,
+  }) {
+    final idx = comentarios.indexWhere((c) => c.uid == comentarioUid.trim());
+    if (idx < 0) {
+      throw StateError('Comentário $comentarioUid não encontrado nesta via.');
+    }
+    if (!comentarios[idx].foiCriadoPor(autorIdPublico)) {
+      throw StateError('Apenas o próprio autor pode excluir este comentário.');
+    }
+    final lista = List<ComentarioComunidadeVia>.from(comentarios)..removeAt(idx);
+    return copyWith(comentarios: List.unmodifiable(lista));
+  }
+
+  /// Edita a categoria e/ou detalhe de [alertaUid] exigindo autoria de [autorIdPublico].
+  (DadosComunidadeVia, AlertaSegurancaVia) comAlertaEditado({
+    required String alertaUid,
+    required String autorIdPublico,
+    required CategoriaAlertaSeguranca novaCategoria,
+    String? detalhe,
+  }) {
+    final idx = alertasAtivos.indexWhere((a) => a.uid == alertaUid.trim());
+    if (idx < 0) {
+      throw StateError('Alerta $alertaUid não encontrado nesta via.');
+    }
+    final alvo = alertasAtivos[idx];
+    if (!alvo.foiCriadoPor(autorIdPublico)) {
+      throw StateError('Apenas o próprio autor pode editar este alerta.');
+    }
+    final conflitoCategoria = alertasAtivos.any(
+      (a) => a.uid != alvo.uid && a.categoria == novaCategoria,
+    );
+    if (conflitoCategoria) {
+      throw StateError(
+        'Já existe um alerta ativo na categoria ${novaCategoria.rotulo} nesta via.',
+      );
+    }
+    final detalheLimpo = detalhe?.trim();
+    final atualizado = alvo.copyWith(
+      categoria: novaCategoria,
+      detalhe: detalheLimpo,
+      limparDetalhe: detalheLimpo == null || detalheLimpo.isEmpty,
+    );
+    final lista = List<AlertaSegurancaVia>.from(alertasAtivos);
+    lista[idx] = atualizado;
+    return (copyWith(alertasAtivos: List.unmodifiable(lista)), atualizado);
+  }
+
+  /// Remove o alerta [alertaUid] exigindo autoria de [autorIdPublico] sob Fail-Fast.
+  DadosComunidadeVia semAlertaDoAutor({
+    required String alertaUid,
 }
