@@ -274,8 +274,61 @@ const Map<ChaveTexto, String> dicionarioEspanhol = {
   ChaveTexto.explorarBotaoClimaMapa: 'Lluvia y Fuego',
   ChaveTexto.explorarAvisoClimaTitulo: 'Aviso de uso',
   ChaveTexto.explorarAvisoClimaCorpo:
-      'Aresta utiliza 3 fuentes meteorológicas y de radar Y 3 recursos públicos de misiones de la NASA para lograr una tasa de ~86% de acierto al mostrar esta información. Usa esta herramienta como referencia y no como verdad absoluta.',
+      'Aresta utiliza 3 fuentes meteorológicas y de radar (Open-Meteo, RainViewer e INPE BDQueimadas) Y 3 recursos públicos de misiones de la NASA (FIRMS VIIRS/MODIS, SRTM 30m y Blue Marble) para lograr una tasa de ~85% de acierto al mostrar esta información. Usa esta herramienta como referencia y no como verdad absoluta.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, mostrar en el mapa',
+  ChaveTexto.explorarBotaoVerEstatisticasClima: 'Ver estadísticas',
+  ChaveTexto.estatClimaTituloPagina: 'ESTADÍSTICAS (~85%)',
+  ChaveTexto.estatClimaSubtituloHeroi:
+      'Validación empírica de 180 días (N = 5.133 días-sector en 29 zonas) verificada con la Tabla Normal Estándar (Tabla Z).',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. ORIGEN DEL ÍNDICE ~85%',
+  ChaveTexto.estatClimaComposicaoChuvaMapa:
+      'Burbujas regionales de lluvia (≥ 0,2 mm/día)',
+  ChaveTexto.estatClimaComposicaoUmidade4d:
+      'Ventana conservadora de 4 días en la roca',
+  ChaveTexto.estatClimaComposicaoIncendioNasa:
+      'Perímetros de fuego activo (NASA VIIRS 375m)',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. MATRIZ DE CONTINGENCIA Y FÓRMULAS',
+  ChaveTexto.estatClimaMatrizExplicacao:
+      'Hindcast independiente (jun–nov 2024) comparando pronósticos NOAA GFS (0,25°) frente al reanálisis ECMWF ERA5 en las 29 zonas:',
+  ChaveTexto.estatClimaSecaoTabelaZTitulo:
+      '3. VERIFICACIÓN CON LA TABLA Z (HIPÓTESIS NULA)',
+  ChaveTexto.estatClimaTabelaZExplicacao:
+      'Bajo la hipótesis nula sin habilidad (H₀: p₀ = 0,50 al azar, o base climatológica p₀ = 0,5853), Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. Comprueba directamente en la Tabla Z la prueba unilateral H₀: p ≤ 0,83 (Z = +2,57 → Φ = 0,9949, p = 0,0051) y el IC del 95% (Z = 1,96):',
+  ChaveTexto.estatClimaGraficoH0Rotulo: 'Distribución Nula (H₀)',
+  ChaveTexto.estatClimaGraficoCaudaRotulo: 'Cola derecha (+27,7σ a +49,0σ)',
+  ChaveTexto.estatClimaColunaZ: 'Puntaje Z',
+  ChaveTexto.estatClimaColunaPhi: 'Φ(Z) Acum.',
+  ChaveTexto.estatClimaColunaCauda: 'Cola 1−Φ',
+  ChaveTexto.estatClimaColunaNota: 'Lectura en Tabla Z',
+  ChaveTexto.estatClimaZNotaMedia: 'Centro de hipótesis nula (50%)',
+  ChaveTexto.estatClimaZNota90: 'Umbral unilateral del 90%',
+  ChaveTexto.estatClimaZNota95: 'Umbral unilateral estándar (α = 0,05)',
+  ChaveTexto.estatClimaZNotaIC95: 'IC bilateral del 95% ([83,7%, 87,2%])',
+  ChaveTexto.estatClimaZNota99: 'Umbral unilateral del 99% (α = 0,01)',
+  ChaveTexto.estatClimaZNotaTeste83:
+      'Prueba Aresta p̂ = 85,5% vs H₀ ≤ 83% (p = 0,0051)',
+  ChaveTexto.estatClimaZNota999: 'Umbral del 99,9% (α = 0,001)',
+  ChaveTexto.estatClimaZNotaFimTabela:
+      'Fin de la Tabla Z impresa (Aresta: Z = +27,7σ)',
+  ChaveTexto.estatClimaSecaoFontesTitulo: '4. FUENTES ESPECÍFICAS UTILIZADAS',
+  ChaveTexto.estatClimaGrupoFontesMeteo:
+      '3 FUENTES METEOROLÓGICAS, RADAR Y MONITOREO',
+  ChaveTexto.estatClimaGrupoFontesNasa:
+      '3 RECURSOS PÚBLICOS DE MISIONES DE LA NASA',
+  ChaveTexto.estatClimaFonteOpenMeteoDesc:
+      'Modelos numéricos NOAA GFS, DWD ICON y ECMWF IFS para lluvia horaria observada de 5 días, frentes activos y viento a 10 m.',
+  ChaveTexto.estatClimaFonteRainViewerDesc:
+      'Mosaico global de radar Doppler en vivo para ubicar células convectivas y núcleos de lluvia intensa.',
+  ChaveTexto.estatClimaFonteInpeDesc:
+      'Programa BDQueimadas del INPE para monitoreo diario de focos de calor en biomas brasileños.',
+  ChaveTexto.estatClimaFonteFirmsDesc:
+      'Sensores térmicos orbitales VIIRS (375 m) y MODIS (1 km) de las misiones Suomi NPP, NOAA-20 y Aqua/Terra.',
+  ChaveTexto.estatClimaFonteSrtmDesc:
+      'Shuttle Radar Topography Mission (30 m vía AWS Terrarium) para altimetría real, sombreado y curvas de nivel.',
+  ChaveTexto.estatClimaFonteBlueMarbleDesc:
+      'Mosaico satelital terrestre Next Generation de la NASA empleado en el globo.',
+  ChaveTexto.estatClimaAvisoFinal:
+      'Los microclimas de pared, filtraciones, orientación solar y viento local alteran el secado real de la roca. Evalúa siempre las condiciones en persona.',
   ChaveTexto.climaChuvaFraca: 'Lluvia débil',
   ChaveTexto.climaChuvaModerada: 'Lluvia moderada',
   ChaveTexto.climaChuvaForte: 'Lluvia fuerte',
