@@ -276,3 +276,92 @@ abstract final class PintorTerrenoVetoresGlobo {
       tb = 148.0;
     }
 
+    final exposicaoRocha =
+        ControladorCameraGlobo.smoothstep(0.16, 0.48, declive);
+    final rNat = tr + (174.0 - tr) * exposicaoRocha;
+    final gNat = tg + (165.0 - tg) * exposicaoRocha;
+    final bNat = tb + (154.0 - tb) * exposicaoRocha;
+
+    if (fatorMonocromatico <= 0.001) {
+      return (r: rNat, g: gNat, b: bNat);
+    }
+
+    // Versão monocromática basalto/prata esculpida com realce mineral em paredes íngremes
+    final cotaNorm = (el / 1600.0).clamp(0.0, 1.0);
+    final degrauNorm = ((el / 200.0).floorToDouble() / 8.0).clamp(0.0, 1.0);
+    final cinzaBase =
+        21.0 + 30.0 * cotaNorm + 16.0 * degrauNorm + 40.0 * exposicaoRocha;
+    final m = fatorMonocromatico.clamp(0.0, 1.0);
+    final rMono = cinzaBase + 8.0 * exposicaoRocha;
+    final gMono = cinzaBase + 2.5 + 3.0 * exposicaoRocha;
+    final bMono = cinzaBase + 6.5 - 2.0 * exposicaoRocha;
+    return (
+      r: rNat + (rMono - rNat) * m,
+      g: gNat + (gMono - gNat) * m,
+      b: bNat + (bMono - bNat) * m,
+    );
+  }
+
+  /// Desenha retícula topográfica fina sobre terra firme em zooms regionais e locais.
+  static void desenharMicroGradeTopograficaTerrestre({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required MalhaGeograficaGlobo dadosMalha,
+    required double alfaBase,
+  }) {
+    final lod = controlador.lod;
+    final passoGraus = lod >= 3.55 ? 0.02 : (lod >= 2.65 ? 0.10 : 0.50);
+    final lat0 = controlador.latitudeCentral;
+    final lon0 = controlador.longitudeCentral;
+    final span = (passoGraus * 9.0).clamp(0.18, 4.5);
+
+    final latIni = ((lat0 - span) / passoGraus).floor() * passoGraus;
+    final latFim = ((lat0 + span) / passoGraus).ceil() * passoGraus;
+    final lonIni = ((lon0 - span) / passoGraus).floor() * passoGraus;
+    final lonFim = ((lon0 + span) / passoGraus).ceil() * passoGraus;
+
+    final pincelLinhaPrincipal = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.85
+      ..color =
+          Color.fromRGBO(203, 213, 225, (0.12 * alfaBase).clamp(0.0, 1.0));
+    final pincelLinhaSecundaria = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.55
+      ..color =
+          Color.fromRGBO(148, 163, 184, (0.07 * alfaBase).clamp(0.0, 1.0));
+
+    var idxLat = 0;
+    for (var lat = latIni; lat <= latFim; lat += passoGraus, idxLat++) {
+      final path = Path();
+      var ativo = false;
+      for (var k = 0; k <= 16; k++) {
+        final lon = lonIni + (lonFim - lonIni) * (k / 16.0);
+        if (!dadosMalha.contemPontoTerrestre(latitude: lat, longitude: lon)) {
+          ativo = false;
+          continue;
+        }
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lon,
+          elevacaoMetros: 0.0,
+          tamanhoTela: size,
+        );
+        if (!pt.visivel) {
+          ativo = false;
+          continue;
+        }
+        if (!ativo) {
+          path.moveTo(pt.x, pt.y);
+          ativo = true;
+        } else {
+          path.lineTo(pt.x, pt.y);
+        }
+      }
+      canvas.drawPath(
+        path,
+        idxLat % 5 == 0 ? pincelLinhaPrincipal : pincelLinhaSecundaria,
+      );
+    }
+
