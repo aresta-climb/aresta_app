@@ -17,9 +17,9 @@ import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/meus_croquis.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/view/view_models/explorar_view_model.dart';
@@ -91,7 +91,6 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final BrowseViewModel _browseViewModel;
   late final MeusCroquisViewModel _meusCroquisViewModel;
   FeedbackController? _feedbackController;
-  late final Listenable _escutaInteracoesUsuario;
   bool _ultimoFeedbackAberto = false;
   final Set<int> _abasVisitadas = {};
   final Map<String, Page> _paginasDaPilhaCache = {};
@@ -125,9 +124,8 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     treeController = widget.treeController ?? TreeNavigationController();
     _sincronizarPicoAbertoId();
     treeController.addListener(_onNodeChanged);
-    _escutaInteracoesUsuario =
-        ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier;
-    _escutaInteracoesUsuario.addListener(_aoMudarPreferenciaInteracoes);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .addListener(_aoMudarIdioma);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.addListener(_onCroquiOnlineAtualizado);
 
@@ -225,7 +223,8 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     _meusCroquisViewModel.dispose();
     gerenciadorDeepLinks.dispose();
     _feedbackController?.removeListener(_onFeedbackChanged);
-    _escutaInteracoesUsuario.removeListener(_aoMudarPreferenciaInteracoes);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .removeListener(_aoMudarIdioma);
     widget.datasetRepo.notificadorCroquiAtualizado.removeListener(_onCroquiOnlineAtualizado);
     widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);
     treeController.removeListener(_onNodeChanged);
@@ -233,10 +232,8 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     super.dispose();
   }
 
-  void _aoMudarPreferenciaInteracoes() {
-    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
-      treeController.podarNosPerfilECaderneta();
-    }
+  void _aoMudarIdioma() {
+    if (mounted) setState(() {});
   }
 
   void _onCroquiOnlineAtualizado() {
@@ -248,7 +245,9 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     if (!isExperimental) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('O guia de $nomeOuId foi atualizado!'),
+          content: Text(
+            tr(ChaveTexto.comumGuiaAtualizadoToast, {'nome': nomeOuId}),
+          ),
           backgroundColor: context.colors.dryMoss,
           duration: const Duration(seconds: 4),
         ),
@@ -264,9 +263,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Erro ao sincronizar os dados. Tente novamente mais tarde.',
-            ),
+            content: Text(tr(ChaveTexto.comumErroSincronizarDadosToast)),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
           ),
@@ -283,7 +280,9 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         if (croquisAtualizados > 0 && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Seus croquis baixados foram atualizados!'),
+              content: Text(
+                tr(ChaveTexto.comumCroquisBaixadosAtualizadosToast),
+              ),
               backgroundColor: context.colors.dryMoss,
               duration: const Duration(seconds: 4),
             ),
