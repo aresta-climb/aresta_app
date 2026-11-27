@@ -94,3 +94,88 @@ void main() {
         expect(baseMapa2d.y, greaterThanOrEqualTo(tela.height - 0.5));
         expect(topoMapa2d.x, greaterThan(tela.width * 0.5));
 
+        // Em 3D inclinado para o Polo Norte, pontos do outro lado do polo (lon + 180) sao visiveis
+        final ctrlPolo3d = ControladorCameraGlobo(
+          latitudeInicial: 65.0,
+          longitudeInicial: -150.0,
+          lodInicial: 0.22,
+          modo3DInicial: true,
+        );
+        addTearDown(ctrlPolo3d.dispose);
+        final outroLadoPolo = ctrlPolo3d.projetarCoordenada(
+          latitude: 78.0,
+          longitude: 30.0,
+          elevacaoMetros: 0,
+          tamanhoTela: tela,
+        );
+        expect(outroLadoPolo.visivel, isTrue);
+
+        // estenderBordaHorizonte projeta vertices levemente atras do limbo (z0 ~ -0.05) ate a borda do disco
+        final bordaLimbo = ctrlPolo3d.projetarCoordenada(
+          latitude: -27.0,
+          longitude: -150.0,
+          elevacaoMetros: 0,
+          tamanhoTela: tela,
+          estenderBordaHorizonte: true,
+        );
+        expect(bordaLimbo.visivel, isTrue);
+      },
+    );
+
+    test(
+      'deve executar voo parabolico (Fly-To) com recuo de zoom entre estados e desacelerar inercia ate parar',
+      () {
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -19.34,
+          longitudeInicial: -43.62,
+          lodInicial: 2.2,
+        );
+        addTearDown(ctrl.dispose);
+
+        ctrl.iniciarVooParabolico(
+          destinoLat: -15.79,
+          destinoLon: -48.77,
+          destinoLod: 2.2,
+        );
+        expect(ctrl.temAnimacaoAtiva, isTrue);
+
+        // No meio do voo distante, o arco parabolico recua temporariamente o lod abaixo de 2.2
+        var menorLodDuranteVoo = 2.2;
+        for (var i = 0; i < 80 && ctrl.temAnimacaoAtiva; i++) {
+          ctrl.avancarQuadroFisica(0.025);
+          if (ctrl.lod < menorLodDuranteVoo) {
+            menorLodDuranteVoo = ctrl.lod;
+          }
+        }
+
+        expect(menorLodDuranteVoo, lessThan(2.15));
+        expect(ctrl.temAnimacaoAtiva, isFalse);
+        expect(ctrl.latitudeCentral, closeTo(-15.79, 0.01));
+        expect(ctrl.longitudeCentral, closeTo(-48.77, 0.01));
+
+        // Arrasto no globo gera inercia que desacelera ate parar; no LOD 3 gira azimute
+        ctrl.definirLod(0.5);
+        ctrl.aplicarArrasto(dxPx: 24, dyPx: -12);
+        expect(ctrl.temAnimacaoAtiva, isTrue);
+        for (var i = 0; i < 120 && ctrl.temAnimacaoAtiva; i++) {
+          ctrl.avancarQuadroFisica(0.03);
+        }
+        expect(ctrl.temAnimacaoAtiva, isFalse);
+
+        ctrl.definirModo3D(true);
+        ctrl.definirLod(4.2);
+        final latAntesH = ctrl.latitudeCentral;
+        final lonAntesH = ctrl.longitudeCentral;
+        ctrl.aplicarArrasto(dxPx: 48, dyPx: 0);
+        // Em zoom maximo 3D, arrasto puramente horizontal move APENAS longitude (sem eixo diagonal!)
+        expect(ctrl.longitudeCentral, isNot(equals(lonAntesH)));
+        expect(ctrl.latitudeCentral, closeTo(latAntesH, 1e-6));
+
+        final lonAntesV = ctrl.longitudeCentral;
+        final latAntesV = ctrl.latitudeCentral;
+        ctrl.aplicarArrasto(dxPx: 0, dyPx: -48);
+        // Arrasto puramente vertical move APENAS latitude (sem eixo diagonal!)
+        expect(ctrl.latitudeCentral, isNot(equals(latAntesV)));
+        expect(ctrl.longitudeCentral, closeTo(lonAntesV, 1e-6));
+        expect(ctrl.giroLocalRad, equals(0.0));
+
