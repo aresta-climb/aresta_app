@@ -88,3 +88,93 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cores.caveShadow,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cores.graniteEdge),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.analytics_outlined,
+                        size: 16,
+                        color: cores.rustIron,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        '~86%',
+                        style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          color: cores.chalkWhite,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: Container(
+                            height: 6,
+                            color: cores.graniteEdge,
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.86,
+                              child: Container(color: cores.rustIron),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  tr(ChaveTexto.explorarAvisoClimaCorpo),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: cores.ashGrey,
+                    fontSize: 13,
+                    height: 1.42,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    key: const Key('botao_confirmar_aviso_clima'),
+                    onPressed: () => Navigator.of(context).pop(true),
+                    icon: const Icon(
+                      Icons.layers_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: Text(
+                      tr(ChaveTexto.explorarAvisoClimaConfirmar),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cores.rustIron,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    key: const Key('botao_cancelar_aviso_clima'),
+                    onPressed: () => Navigator.of(context).pop(false),
