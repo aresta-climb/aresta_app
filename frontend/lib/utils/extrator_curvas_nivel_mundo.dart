@@ -378,81 +378,38 @@ abstract final class ExtratorCurvasNivelMundo {
     return resultado;
   }
 
-  static List<double> _suavizarGradeGaussiana(
-    List<double> entrada, {
-    required int rows,
-    required int cols,
-    required int passadas,
-  }) {
-    final nVertsX = cols + 1;
-    var atual = entrada;
-    for (var p = 0; p < passadas; p++) {
-      final horiz = List<double>.filled(atual.length, 0.0);
-      for (var r = 0; r <= rows; r++) {
-        final base = r * nVertsX;
-        for (var c = 0; c <= cols; c++) {
-          final cEsq = c > 0 ? c - 1 : 0;
-          final cDir = c < cols ? c + 1 : cols;
-          horiz[base + c] =
-              (atual[base + cEsq] + 2.0 * atual[base + c] + atual[base + cDir]) *
-                  0.25;
-        }
-      }
-      final vert = List<double>.filled(atual.length, 0.0);
-      for (var r = 0; r <= rows; r++) {
-        final rSul = r > 0 ? r - 1 : 0;
-        final rNorte = r < rows ? r + 1 : rows;
-        final bSul = rSul * nVertsX;
-        final bCen = r * nVertsX;
-        final bNor = rNorte * nVertsX;
-        for (var c = 0; c <= cols; c++) {
-          vert[bCen + c] =
-              (horiz[bSul + c] + 2.0 * horiz[bCen + c] + horiz[bNor + c]) *
-                  0.25;
-        }
-      }
-      atual = vert;
-    }
-    return atual;
-  }
-
-  /// Aplica 3 iterações de corte de cantos *Chaikin* para gerar curvas topográficas contínuas sem quinas.
-  static List<Offset> _suavizarChaikin(
+  /// Aplica 1 passada sutil (`0,82 / 0,18`) preservando o lugar geométrico exato da cota sem encolher laços.
+  static List<Offset> _suavizarCantoUnico(
     List<Offset> pontos, {
     required bool fechado,
   }) {
-    var atual = pontos;
-    for (var iter = 0; iter < 3; iter++) {
-      if (atual.length < 3) break;
-      final prox = <Offset>[];
-      if (fechado) {
-        final m = atual.length - 1;
-        for (var i = 0; i < m; i++) {
-          final a = atual[i];
-          final b = atual[(i + 1) % m];
-          prox
-            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
-            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
-        }
-        if (prox.isNotEmpty) prox.add(prox.first);
-      } else {
-        prox.add(atual.first);
-        for (var i = 0; i < atual.length - 1; i++) {
-          final a = atual[i];
-          final b = atual[i + 1];
-          prox
-            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
-            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
-        }
-        prox.add(atual.last);
+    if (pontos.length < 3) return List<Offset>.unmodifiable(pontos);
+    final prox = <Offset>[];
+    if (fechado) {
+      final m = pontos.length - 1;
+      for (var i = 0; i < m; i++) {
+        final a = pontos[i];
+        final b = pontos[(i + 1) % m];
+        prox
+          ..add(Offset(a.dx * 0.82 + b.dx * 0.18, a.dy * 0.82 + b.dy * 0.18))
+          ..add(Offset(a.dx * 0.18 + b.dx * 0.82, a.dy * 0.18 + b.dy * 0.82));
       }
-      atual = prox;
+      if (prox.isNotEmpty) prox.add(prox.first);
+    } else {
+      prox.add(pontos.first);
+      for (var i = 0; i < pontos.length - 1; i++) {
+        final a = pontos[i];
+        final b = pontos[i + 1];
+        prox
+          ..add(Offset(a.dx * 0.82 + b.dx * 0.18, a.dy * 0.82 + b.dy * 0.18))
+          ..add(Offset(a.dx * 0.18 + b.dx * 0.82, a.dy * 0.18 + b.dy * 0.82));
+      }
+      prox.add(pontos.last);
     }
-    return List<Offset>.unmodifiable(atual);
+    return List<Offset>.unmodifiable(prox);
   }
 
-  /// Escolhe um vértice canônico em espaço do mundo (ex.: extremo norte da curva) para que
-  /// a etiqueta `800 m` jamais salte entre vértices quando a câmera se move.
+  /// Escolhe um vértice canônico em espaço do mundo (extremo norte da curva) para ancorar o rótulo.
   static Offset _escolherAncoraDeterministicaMundo(
     List<Offset> poli,
     double passo,
