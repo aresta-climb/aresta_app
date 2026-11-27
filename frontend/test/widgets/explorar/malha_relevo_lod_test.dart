@@ -16,7 +16,19 @@ void main() {
         expect(malha.brasil.length, greaterThan(10));
         expect(malha.estados.length, equals(27));
         expect(malha.localidadesProximas.length, inInclusiveRange(35, 110));
-        expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(60));
+        expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(3000));
+        expect(malha.versaoMalhaViaria, startsWith('osm-v1-'));
+        expect(
+          malha.rodoviasProximas.map((r) => r.nivelViario).toSet(),
+          containsAll(<int>[1, 2, 3]),
+        );
+        final malhaAtualizada = malha.comRodoviasAtualizadas(
+          malha.rodoviasProximas.take(5).toList(),
+          versaoMalhaViaria: 'osm-v2-teste',
+        );
+        expect(malhaAtualizada.rodoviasProximas, hasLength(5));
+        expect(malhaAtualizada.versaoMalhaViaria, equals('osm-v2-teste'));
+        expect(malhaAtualizada.comRodoviasAtualizadas(const []).versaoMalhaViaria, equals('osm-v2-teste'));
         expect(
           malha.localidadesProximas.any(
             (l) => l.nome == 'Belo Horizonte' && l.nivel == 1,

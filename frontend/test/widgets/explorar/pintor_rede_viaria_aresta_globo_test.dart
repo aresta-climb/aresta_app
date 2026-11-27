@@ -87,10 +87,20 @@ void main() {
       ),
       RodoviaRegionalMapa(
         ehPrincipal: false,
+        nivelViario: 2,
         codigo: 'SEC-REF',
         verticesLonLat: [
           ui.Offset(-44.6500, -19.9000),
           ui.Offset(-44.5000, -19.8500),
+        ],
+      ),
+      RodoviaRegionalMapa(
+        ehPrincipal: false,
+        nivelViario: 3,
+        codigo: 'TERC-ACESSO',
+        verticesLonLat: [
+          ui.Offset(-43.9300, -19.9100),
+          ui.Offset(-43.8900, -19.8700),
         ],
       ),
       RodoviaRegionalMapa(
