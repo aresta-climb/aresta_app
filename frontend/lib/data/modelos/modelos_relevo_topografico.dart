@@ -222,8 +222,12 @@ class TileElevacaoTerrarium {
 }
 
 /// Curva isométrica individual ancorada em coordenadas geográficas fixas do mundo `(longitude, latitude)`.
+///
+/// [geracaoDetalhe] indica a hierarquia diádica aditiva (`0` = `400 m`, `1` = `200 m`, `2` = `100 m`, `3` = `50 m`),
+/// permitindo que o zoom revele novas subdivisões progressivamente sem mover nem apagar as curvas já visíveis.
 class CurvaNivelMundo {
   final int cotaMetros;
+  final int geracaoDetalhe;
   final bool ehMestra;
   final bool ehEscarpaPico;
   final List<Offset> verticesLonLat;
@@ -231,6 +235,7 @@ class CurvaNivelMundo {
 
   const CurvaNivelMundo({
     required this.cotaMetros,
+    this.geracaoDetalhe = 0,
     required this.ehMestra,
     required this.ehEscarpaPico,
     required this.verticesLonLat,
