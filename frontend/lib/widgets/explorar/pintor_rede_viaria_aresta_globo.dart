@@ -381,3 +381,95 @@ abstract final class PintorRedeViariaArestaGlobo {
 
       final pos = Offset(pt.x, pt.y);
 
+      if (!jaIluminada) {
+        // Cidade de referência (ou já apagada na retração): ponto branco limpo no modo P&B
+        final raioRef = loc.nivel == 1 ? 2.8 : 2.1;
+        canvas.drawCircle(pos, raioRef + 1.1, pincelBordaPontoRef);
+        canvas.drawCircle(pos, raioRef, pincelPontoBrancoRef);
+        continue;
+      }
+
+      // Cidade Aresta-relevante iluminada: destaca todas as rodovias e avenidas reais da cidade
+      for (final viaUrbana in cidade.viasUrbanasLonLat) {
+        if (_adicionarPolilinhaSuaveAoPath(
+          destino: caminhoContornosCidades,
+          verticesLonLat: viaUrbana,
+          janelaVisivel: janelaVisivel,
+          passoSubdivisaoGraus: passoSubdivisaoGraus,
+          size: size,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          pesoTerreno: pesoTerreno,
+          amostradorElevacaoReal: amostradorElevacaoReal,
+        )) {
+          temContornoCidade = true;
+        }
+      }
+
+      final deltaTempo = (progressoLuz - cidade.tempoAtivacao).clamp(0.0, 1.0);
+      final pulsoChegada =
+          progressoLuz < 1.0 ? math.max(0.0, 1.0 - deltaTempo * 4.2) : 0.0;
+      final raioNoUrbano = (loc.nivel == 1 ? 3.4 : 2.5) + pulsoChegada * 3.6;
+
+      if (pulsoChegada > 0.04) {
+        canvas.drawCircle(
+          pos,
+          raioNoUrbano * 2.4,
+          Paint()
+            ..color = corBrilhoViasAresta.withValues(
+              alpha:
+                  (0.55 * pulsoChegada * opacidadeLuzLaranja).clamp(0.0, 1.0),
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.5),
+        );
+      }
+      canvas.drawCircle(
+        pos,
+        raioNoUrbano,
+        Paint()
+          ..color = corFilamentoQuente.withValues(
+            alpha: (0.92 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+          ),
+      );
+    }
+
+    if (temContornoCidade) {
+      canvas.drawPath(
+        caminhoContornosCidades,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = corLaranjaAresta.withValues(
+            alpha: (0.44 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.4),
+      );
+      canvas.drawPath(
+        caminhoContornosCidades,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.25
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = corBrilhoViasAresta.withValues(
+            alpha: (0.88 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+          ),
+      );
+    }
+  }
+
+  static List<Offset> _recortarFracaoPolilinhaGeo(
+    List<Offset> vertices,
+    double fracao,
+  ) {
+    if (vertices.length < 2 || fracao <= 0.0) return const [];
+    if (fracao >= 1.0) return vertices;
+
+    var compTotal = 0.0;
+    for (var i = 0; i < vertices.length - 1; i++) {
+      compTotal += (vertices[i + 1] - vertices[i]).distance;
+    }
+    if (compTotal <= 1e-7) return const [];
+
