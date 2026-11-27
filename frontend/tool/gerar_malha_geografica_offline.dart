@@ -264,3 +264,89 @@ abstract final class GeradorMalhaGeograficaOffline {
     if (brasil is! List || brasil.length < 10) return false;
     if (estados is! List || estados.length != 27) return false;
 
+    final bytesEstimados = utf8.encode(jsonEncode(dados)).length;
+    if (bytesEstimados > limiteMaximoBytesMalha) return false;
+
+    final ufsEncontradas = <String>{};
+    for (final item in estados) {
+      if (item is! Map) return false;
+      final uf = item['uf'];
+      final poligono = item['poligono'];
+      if (uf is! String || uf.length != 2) return false;
+      if (poligono is! List || poligono.length < 4) return false;
+      ufsEncontradas.add(uf);
+    }
+    return ufsEncontradas.length == 27;
+  }
+
+  /// Valida se o mapa JSON de altimetria possui cotas numéricas plausíveis para cada pico listado.
+  static bool validarEstruturaAltimetria(Map<String, dynamic> dados) {
+    final picos = dados['picos'];
+    if (picos is! Map || picos.isEmpty) return false;
+    for (final entrada in picos.entries) {
+      if (entrada.key is! String || (entrada.key as String).isEmpty) {
+        return false;
+      }
+      final val = entrada.value;
+      if (val is! Map) return false;
+      final base = val['altitude_base_m'];
+      final topo = val['altitude_pico_m'];
+      if (base is! num || topo is! num) return false;
+      if (base < -50 || topo > 4000 || topo < base) return false;
+      final grade = val['grade_dem_m'];
+      if (grade != null) {
+        if (grade is! List || grade.isEmpty) return false;
+      }
+    }
+    return true;
+  }
+
+  /// Coleta online a malha real de massas continentais (Natural Earth 110m) e as 27 UFs oficiais (IBGE v3).
+  static Future<Map<String, dynamic>> buscarMalhaRealIbgeENaturalEarth() async {
+    final cliente = HttpClient()..connectionTimeout = const Duration(seconds: 25);
+    try {
+      final textoLand = await _getTextoHttp(
+        cliente,
+        'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson',
+      );
+      final textoBrasil = await _getTextoHttp(
+        cliente,
+        'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=minima',
+      );
+      final textoUfs = await _getTextoHttp(
+        cliente,
+        'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=UF&formato=application/vnd.geo+json&qualidade=minima',
+      );
+
+      final geoLand = jsonDecode(textoLand) as Map<String, dynamic>;
+      final continentes = <Map<String, dynamic>>[];
+      var idxCont = 0;
+      for (final anel in _extrairAneisGeoJson(geoLand)) {
+        final simplificado = simplificarDouglasPeucker(anel, 0.14);
+        if (simplificado.length >= 5) {
+          continentes.add(<String, dynamic>{
+            'id': 'massa_${idxCont++}',
+            'poligono': _arredondarVertices(simplificado, casas: 2),
+          });
+        }
+      }
+
+      final geoBr = jsonDecode(textoBrasil) as Map<String, dynamic>;
+      final aneisBr = _extrairAneisGeoJson(geoBr);
+      aneisBr.sort((a, b) => b.length.compareTo(a.length));
+      final contornoBrasil = _arredondarVertices(
+        simplificarDouglasPeucker(aneisBr.first, 0.05),
+        casas: 3,
+      );
+
+      final geoUfs = jsonDecode(textoUfs) as Map<String, dynamic>;
+      final featuresUf = geoUfs['features'] as List<dynamic>;
+      final estadosBr = <Map<String, dynamic>>[];
+
+      for (final feat in featuresUf) {
+        final fMap = feat as Map<String, dynamic>;
+        final props = (fMap['properties'] as Map<String, dynamic>?) ?? const {};
+        final cod = (props['codarea'] ?? fMap['id'] ?? '').toString();
+        final uf = _codigoIbgeParaUf[cod];
+        if (uf == null) continue;
+
