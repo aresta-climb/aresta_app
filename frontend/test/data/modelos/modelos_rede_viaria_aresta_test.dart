@@ -28,8 +28,105 @@ void main() {
         codigo: 'BR-040',
         verticesLonLat: [Offset(-43.9386, -19.9191), Offset(-43.80, -20.10)],
       );
-      expect(rodovia.ehPrincipal, isTrue);
-      expect(rodovia.codigo, equals('BR-040'));
+      expect(rodoviaConst.ehPrincipal, isTrue);
+      expect(rodoviaConst.nivelViario, equals(1));
+      expect(rodoviaConst.codigo, equals('BR-040'));
+
+      const rodoviaSecConst = RodoviaRegionalMapa(
+        ehPrincipal: false,
+        codigo: 'MG-010',
+        verticesLonLat: [Offset(-43.93, -19.90), Offset(-43.61, -19.31)],
+      );
+      expect(rodoviaSecConst.nivelViario, equals(2));
+
+      final rodoviaVazia = RodoviaRegionalMapa.comLimites(
+        ehPrincipal: false,
+        codigo: '',
+        verticesLonLat: const [],
+      );
+      expect(rodoviaVazia.minLon, equals(0.0));
+      expect(rodoviaVazia.maxLat, equals(0.0));
+
+      final rodoviaComLimites = RodoviaRegionalMapa.comLimites(
+        ehPrincipal: false,
+        nivelViario: 3,
+        codigo: 'LMG-800',
+        verticesLonLat: const [
+          Offset(-43.95, -19.62),
+          Offset(-44.02, -19.55),
+          Offset(-43.88, -19.70),
+        ],
+      );
+      expect(rodoviaComLimites.nivelViario, equals(3));
+      expect(rodoviaComLimites.minLon, closeTo(-44.02, 1e-6));
+      expect(rodoviaComLimites.maxLon, closeTo(-43.88, 1e-6));
+      expect(rodoviaComLimites.minLat, closeTo(-19.70, 1e-6));
+      expect(rodoviaComLimites.maxLat, closeTo(-19.55, 1e-6));
+      expect(
+        rodoviaComLimites.interceptaJanela(
+          janelaMinLon: -44.00,
+          janelaMaxLon: -43.90,
+          janelaMinLat: -19.65,
+          janelaMaxLat: -19.58,
+        ),
+        isTrue,
+      );
+      expect(
+        rodoviaComLimites.interceptaJanela(
+          janelaMinLon: -42.00,
+          janelaMaxLon: -41.00,
+          janelaMinLat: -19.65,
+          janelaMaxLat: -19.58,
+        ),
+        isFalse,
+      );
+
+      final reconstituida = RodoviaRegionalMapa.deMapa(rodoviaComLimites.paraMapa());
+      expect(reconstituida.nivelViario, equals(3));
+      expect(reconstituida.ehPrincipal, isFalse);
+      expect(reconstituida.codigo, equals('LMG-800'));
+      expect(reconstituida.verticesLonLat, equals(rodoviaComLimites.verticesLonLat));
+
+      final reconstituidaPrincipal = RodoviaRegionalMapa.deMapa(<String, dynamic>{
+        'classe': 'principal',
+        'poligono': const [
+          [-43.9386, -19.9191],
+          [-43.8000, -20.1000],
+        ],
+      });
+      expect(reconstituidaPrincipal.ehPrincipal, isTrue);
+      expect(reconstituidaPrincipal.nivelViario, equals(1));
+
+      final snapshot = SnapshotMalhaViariaOffline(
+        geradoEm: DateTime.utc(2026, 11, 27, 15, 0),
+        versaoHash: 'osm-v1-teste',
+        rodovias: [reconstituidaPrincipal, rodoviaComLimites],
+      );
+      final snapshotLido = SnapshotMalhaViariaOffline.deMapa(snapshot.paraMapa());
+      expect(snapshotLido.versaoHash, equals('osm-v1-teste'));
+      expect(snapshotLido.geradoEm, equals(DateTime.utc(2026, 11, 27, 15, 0)));
+      expect(snapshotLido.rodovias, hasLength(2));
+
+      final snapshotSemData = SnapshotMalhaViariaOffline.deMapa(<String, dynamic>{
+        'versao_hash': 'osm-v1-sem-data',
+        'rodovias': [reconstituidaPrincipal.paraMapa()],
+      });
+      expect(
+        snapshotSemData.geradoEm,
+        equals(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)),
+      );
+
+      expect(
+        () => SnapshotMalhaViariaOffline.deMapa(const {'versao_hash': ''}),
+        throwsFormatException,
+      );
+      expect(
+        () => SnapshotMalhaViariaOffline.deMapa(const {
+          'versao_hash': 'v1',
+          'rodovias': <dynamic>[],
+        }),
+        throwsFormatException,
+      );
 
       const picoSemDem = PicoRelevoReferencia(
         id: 'cipo',
@@ -70,7 +167,7 @@ void main() {
       expect(cidade.ehRelevanteAresta, isTrue);
 
       const rede = RedeViariaArestaGlobo(
-        rodoviasFundo: [rodovia],
+        rodoviasFundo: [rodoviaConst],
         trechosCorredorAresta: [trecho],
         cidadesClassificadas: [cidade],
       );
