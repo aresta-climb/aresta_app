@@ -107,104 +107,7 @@ MarcadorPicoGlobo construirMarcadorGloboPico({
   return (id: crag?.toString() ?? '', nome: padraoPico);
 }
 
-                  downloadingCrags: downloadingCrags,
-                  onDownload: () => onDownload(dados),
-                  onOpen: onOpen != null ? () => onOpen(dados) : null,
-                ),
-              );
-            },
-          ),
-      ],
-    ),
-  );
-}
-
-class _AnimatedMapButton extends StatefulWidget {
-  final VoidCallback onPressed;
-  const _AnimatedMapButton({required this.onPressed});
-
-  @override
-  State<_AnimatedMapButton> createState() => _AnimatedMapButtonState();
-}
-
-class _AnimatedMapButtonState extends State<_AnimatedMapButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-      reverseDuration: const Duration(milliseconds: 100),
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) => _controller.forward(),
-      onPointerUp: (_) => _controller.reverse(),
-      onPointerCancel: (_) => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onPressed,
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.explore_outlined,
-                      color: const Color(0xFFC05244),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'VER NO MAPA',
-                      style: TextStyle(
-                        color: const Color(0xFFC05244),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Wrapper for _CragCard to maintain compatibility with other modules and tests.
+/// Constrói um item de cartão de pico isolado normalizando entradas de metadados ou mapas.
 Widget buildCragListItem(
   dynamic crag,
   ValueListenable<Map<String, double>> downloadingCrags,
@@ -212,7 +115,9 @@ Widget buildCragListItem(
   VoidCallback? onOpen,
   bool isDownloaded = false,
 }) {
-  final item = _normalizarCards([crag]).first;
+  final CardCroquiViewModel item = crag is CardCroquiViewModel
+      ? crag
+      : mapearMetadadosParaCard(crag, salvoOffline: isDownloaded);
   final dados = item.salvoOffline == isDownloaded
       ? item
       : item.comSalvoOffline(isDownloaded);
