@@ -415,3 +415,50 @@ class ModalFiltrosOrdenacaoExplorar extends StatelessWidget {
     );
   }
 
+  Widget _tituloSecao(AppColors colors, String texto) {
+    return Text(
+      texto,
+      style: TextStyle(
+        color: colors.rustIron,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  Widget _opcaoOrdenacao(
+    BuildContext context,
+    String titulo,
+    OrdemOrdenacaoPico ordem,
+  ) {
+    final selecionado = viewModel.ordem == ordem;
+    final colors = context.colors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => viewModel.alterarOrdem(ordem),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(
+                titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selecionado ? colors.rustIron : colors.chalkWhite,
+                  fontSize: 14.5,
+                  fontWeight: selecionado ? FontWeight.w700 : FontWeight.w400,
+                ),
+              ),
+            ),
+            if (selecionado)
+              Icon(Icons.check_rounded, color: colors.rustIron, size: 19),
+          ],
+        ),
+      ),
+    );
+  }
+}
