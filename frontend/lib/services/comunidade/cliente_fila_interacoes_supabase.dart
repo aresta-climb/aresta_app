@@ -307,4 +307,63 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
     );
     final detalheLimpo = detalhe?.trim();
     return _enviarMutacaoRest(
+      metodo: 'PATCH',
+      uri: uri,
+      accessToken: accessToken,
+      corpoJson: <String, dynamic>{
+        'categoria_alerta': categoria.codigoBanco,
+        'texto_comentario':
+            (detalheLimpo != null && detalheLimpo.isNotEmpty) ? detalheLimpo : null,
+      },
+    );
+  }
+
+  @override
+  Future<void> excluirAlerta({
+    required String alertaAlvoUid,
+    required String autorIdPublico,
+    String? accessToken,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/rest/v1/fila_interacoes'
+      '?alerta_alvo_uid=eq.${Uri.encodeQueryComponent(alertaAlvoUid.trim())}'
+      '&autor_id_publico=eq.${Uri.encodeQueryComponent(autorIdPublico.trim())}'
+      '&tipo=eq.ALERTA_SEGURANCA'
+      '&status=eq.PENDENTE',
+    );
+    return _enviarMutacaoRest(
+      metodo: 'DELETE',
+      uri: uri,
+      accessToken: accessToken,
+    );
+  }
+
+  Future<void> _enviarMutacaoRest({
+    required String metodo,
+    required Uri uri,
+    String? accessToken,
+    Map<String, dynamic>? corpoJson,
+  }) async {
+    final requisicao = Request(metodo, uri)
+      ..headers.addAll(<String, String>{
+        ..._construirCabecalhos(
+          accessToken: accessToken,
+          comCorpoJson: corpoJson != null,
+        ),
+        'Prefer': 'return=minimal',
+      });
+    if (corpoJson != null) {
+      requisicao.body = jsonEncode(corpoJson);
+    }
+
+    final resposta = await _clienteHttp.send(requisicao);
+    final corpo = await resposta.stream.bytesToString();
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoHttpFilaInteracoes(
+        codigoStatusHttp: resposta.statusCode,
+        message: 'HTTP ${resposta.statusCode}: $corpo',
+        uri: uri,
+      );
+    }
+  }
 }
