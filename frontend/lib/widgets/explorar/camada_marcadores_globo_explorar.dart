@@ -465,3 +465,86 @@ abstract final class CamadaMarcadoresGloboExplorar {
                     ),
                     width: acesaAresta ? 6.0 : (ehPolo ? 5.0 : 4.0),
                     height: acesaAresta ? 6.0 : (ehPolo ? 5.0 : 4.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: acesaAresta
+                          ? const Color(0xFFFFE3B8)
+                          : const Color(0xFFF8FAFC),
+                      border: Border.all(
+                        color: acesaAresta
+                            ? const Color(0xFFE27D60)
+                            : const Color(0xDD0F172A),
+                        width: acesaAresta ? 1.4 : 1.0,
+                      ),
+                      boxShadow: acesaAresta
+                          ? const [
+                              BoxShadow(
+                                color: Color(0xAAFF9248),
+                                blurRadius: 5,
+                                spreadRadius: 0.6,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 4.5),
+                  Flexible(
+                    child: Text(
+                      loc.nome,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: acesaAresta
+                            ? const Color(0xFFFFF7ED)
+                            : (ehPolo
+                                ? const Color(0xE8F1F5F9)
+                                : const Color(0xCC94A3B8)),
+                        fontSize: ehPolo ? 10.4 : 9.4,
+                        letterSpacing: ehPolo ? 0.25 : 0.1,
+                        fontWeight: acesaAresta || ehPolo
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        shadows: acesaAresta
+                            ? const [
+                                Shadow(color: Color(0xEE090D14), blurRadius: 5),
+                                Shadow(color: Color(0x66E27D60), blurRadius: 8),
+                              ]
+                            : const [
+                                Shadow(color: Color(0xEE090D14), blurRadius: 5),
+                              ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  static List<Offset> _separarPosicoesClusters(
+    List<Offset> originais, {
+    required double larguraMinima,
+    required double alturaMinima,
+  }) {
+    final resultado = List<Offset>.of(originais);
+    for (var iter = 0; iter < 3; iter++) {
+      for (var i = 0; i < resultado.length; i++) {
+        for (var j = i + 1; j < resultado.length; j++) {
+          final dx = resultado[j].dx - resultado[i].dx;
+          final dy = resultado[j].dy - resultado[i].dy;
+          if (dx.abs() < larguraMinima && dy.abs() < alturaMinima) {
+            final empurraoY = (alturaMinima - dy.abs()) * 0.52 + 1.0;
+            final sinalY = dy >= 0 ? 1.0 : -1.0;
+            resultado[i] = resultado[i].translate(0, -sinalY * empurraoY);
+            resultado[j] = resultado[j].translate(0, sinalY * empurraoY);
+          }
+        }
+      }
+    }
+    return resultado;
+  }
+}
