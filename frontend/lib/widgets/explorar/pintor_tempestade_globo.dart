@@ -183,3 +183,88 @@ abstract final class PintorTempestadeGlobo {
         faseSegundos: faseSegundos,
       );
 
+      if (menorLadoMundoPx >= 18.0) {
+        EfeitosParticulasTempestadeGlobo.desenharBandasAdveccaoVento(
+          canvas: canvas,
+          limitesRecorteTela: limites,
+          ancoraMundoTela: centroMundoAncora,
+          menorLadoMundoPx: menorLadoMundoPx,
+          dirTela: dirTela,
+          faseSegundos: faseSegundos,
+          fatorVel: fatorVel,
+          corCrista: paleta.bandaVento,
+        );
+        EfeitosParticulasTempestadeGlobo.desenharCelulasNuvemTempestade(
+          canvas: canvas,
+          bolha: bolha,
+          menorLadoMundoPx: menorLadoMundoPx,
+          uLon: uLon,
+          uLat: uLat,
+          faseSegundos: faseSegundos,
+          fatorVel: fatorVel,
+          tamanhoTela: tamanhoTela,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          sobreRelevo: sobreRelevo,
+          nivel: bolhaAtiva.nivelIntensidade,
+          corNuvem: paleta.nucleo,
+        );
+      }
+
+      final pulsoNucleo =
+          0.88 + 0.12 * math.sin(faseSegundos * 2.1 + bolha.id.length);
+      for (final anelNucleo in bolha.nucleosIntensos) {
+        final projNucleo = _projetarAnelContorno(
+          anel: anelNucleo,
+          tamanhoTela: tamanhoTela,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          sobreRelevo: sobreRelevo,
+          faseSegundos: faseSegundos,
+          uLon: uLon,
+          uLat: uLat,
+          fatorVel: fatorVel,
+          amplitudeOndulacaoGraus: 0.010,
+        );
+        if (projNucleo.visivel) {
+          canvas.drawPath(
+            projNucleo.caminho,
+            Paint()
+              ..color = paleta.nucleo.withValues(
+                alpha: (paleta.nucleo.a * pulsoNucleo).clamp(0.0, 1.0),
+              )
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0),
+          );
+        }
+      }
+
+      if (menorLadoMundoPx >= 10.0) {
+        EfeitosParticulasTempestadeGlobo.desenharPingoPatterChuva(
+          canvas: canvas,
+          bolha: bolha,
+          nivel: bolhaAtiva.nivelIntensidade,
+          pxPorGrau: pxPorGrau,
+          menorLadoMundoPx: menorLadoMundoPx,
+          tamanhoTela: tamanhoTela,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          sobreRelevo: sobreRelevo,
+          faseSegundos: faseSegundos,
+          corGota: paleta.tracoChuva,
+        );
+      }
+
+      canvas.restore();
+
+      final espessuraBase = 0.72 + 0.18 * bolhaAtiva.nivelIntensidade.peso;
+      if (bolhaAtiva.nivelIntensidade == NivelIntensidadeChuva.extrema &&
+          menorLadoMundoPx >= 18.0) {
+        canvas.drawPath(
+          projecaoExterna.caminho,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = espessuraBase + 1.4
+            ..color = paleta.halo
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+        );
+      }
