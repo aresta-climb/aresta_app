@@ -338,3 +338,69 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     _sonarBolhaId = pico.umidade.bolhaIdAssociada;
     _progressoSonar = 0.0;
 
+    controlador.definirElevacaoReferenciaCamera(
+      pico.altitudeBaseMetros.toDouble(),
+    );
+
+    final lodAtual = controlador.lod;
+    final jaEstavaSelecionado = pico.id == picoSelecionadoAtualId;
+    final novoLod = lodExplicito ??
+        (jaEstavaSelecionado
+            ? (lodAtual < 2.75 ? 3.55 : (lodAtual < 3.90 ? 4.20 : lodAtual))
+            : (lodAtual < 1.35
+                ? 2.15
+                : (lodAtual < 2.65 ? 3.35 : math.max(lodAtual, 3.65))));
+
+    controlador.iniciarVooParabolico(
+      destinoLat: pico.latitude,
+      destinoLon: pico.longitude,
+      destinoLod: novoLod,
+    );
+  }
+
+  /// Calcula e dispara o voo de aproximação por duplo-toque em 2D (no ponto tocado) ou 3D (no pico focado).
+  void executarDuploToqueMapa({
+    required ui.Size tamanhoTela,
+    required ui.Offset? posicaoToque,
+    required MarcadorPicoGlobo? picoFocado,
+    required ControladorCameraGlobo controlador,
+  }) {
+    final proximoLod =
+        (controlador.lod + 0.90).clamp(0.0, ControladorCameraGlobo.lodMaximo);
+    if (!controlador.modo3D && posicaoToque != null) {
+      final coord = controlador.converterTelaParaCoordenada2D(
+        pontoTela: posicaoToque,
+        tamanhoTela: tamanhoTela,
+      );
+      controlador.iniciarVooParabolico(
+        destinoLat: coord.latitude,
+        destinoLon: coord.longitude,
+        destinoLod: proximoLod,
+      );
+      return;
+    }
+    controlador.iniciarVooParabolico(
+      destinoLat: picoFocado?.latitude ?? controlador.latitudeCentral,
+      destinoLon: picoFocado?.longitude ?? controlador.longitudeCentral,
+      destinoLod: proximoLod,
+    );
+  }
+
+  /// Retorna a câmera para a visão orbital padrão sobre o Brasil/Minas Gerais.
+  void resetarVisaoGlobo(ControladorCameraGlobo controlador) {
+    controlador.iniciarVooParabolico(
+      destinoLat: -18.5,
+      destinoLon: -44.5,
+      destinoLod: 0.22,
+    );
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    _servicoElevacao.removeListener(_aoAtualizarTilesElevacao);
+    _timerEstrelasAmbiente?.cancel();
+    faseEstrelasSegundos.dispose();
+    super.dispose();
+  }
+}
