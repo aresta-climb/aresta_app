@@ -47,7 +47,7 @@ abstract final class PintorCurvasNivelGlobo {
       raioAparentePx: controlador.raioAparentePx,
       escala2D: controlador.modo3D ? 1.0 : controlador.calcularEscala2D(size),
       tamanhoTela: size,
-      fatorMargem: 1.08,
+      fatorMargem: 1.18,
     );
 
     final conjunto = curvasMundo ??
@@ -88,8 +88,9 @@ abstract final class PintorCurvasNivelGlobo {
       if (g == 2 && alfaGeracao2 <= 0.02) continue;
       if (g == 3 && alfaGeracao3 <= 0.02) continue;
 
+      final ehEscarpaMestra = curva.ehEscarpaPico && g == 0;
       final destino =
-          curva.ehEscarpaPico ? caminhoEscarpasAresta : caminhosGeracao[g];
+          ehEscarpaMestra ? caminhoEscarpasAresta : caminhosGeracao[g];
       final subTraco = <Offset>[];
       var segmentosVisiveis = 0;
 
@@ -125,7 +126,7 @@ abstract final class PintorCurvasNivelGlobo {
       descarregarSubTraco();
 
       if (segmentosVisiveis > 0) {
-        if (curva.ehEscarpaPico) {
+        if (ehEscarpaMestra) {
           temEscarpa = true;
         } else {
           temGeracao[g] = true;

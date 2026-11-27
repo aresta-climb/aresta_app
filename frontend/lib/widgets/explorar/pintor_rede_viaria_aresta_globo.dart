@@ -40,9 +40,9 @@ abstract final class PintorRedeViariaArestaGlobo {
     final rede = redeViaria;
     final lod = controlador.lod;
     final alfaNivel2 =
-        fatorModoViario * ControladorCameraGlobo.smoothstep(1.90, 2.45, lod);
+        fatorModoViario * ControladorCameraGlobo.smoothstep(2.05, 2.65, lod);
     final alfaNivel3 =
-        fatorModoViario * ControladorCameraGlobo.smoothstep(2.65, 3.20, lod);
+        fatorModoViario * ControladorCameraGlobo.smoothstep(2.85, 3.40, lod);
     final janelaVisivel = GeometriaClippingMapa.calcularJanelaVisivelCamera(
       modo3D: controlador.modo3D,
       latitudeCentral: controlador.latitudeCentral,
@@ -53,8 +53,8 @@ abstract final class PintorRedeViariaArestaGlobo {
       tamanhoTela: size,
       fatorMargem: 1.08,
     );
-    final passoSubdivisaoGraus =
-        lod >= 3.40 ? 0.0022 : (lod >= 2.40 ? 0.0070 : 0.024);
+    // Passo fixo em espaço do mundo (0,0080°) para que nenhuma curva rodoviária mude de formato ao dar zoom!
+    const passoSubdivisaoGraus = 0.0080;
 
     // 1. Malha rodoviária hierárquica em 3 níveis progressivos sem pop abrupto
     final escudosRodovia = <({Offset pos, String codigo})>[];
@@ -243,7 +243,7 @@ abstract final class PintorRedeViariaArestaGlobo {
 
       final vertsAtivos = progressoLuz >= trecho.tempoFim
           ? trecho.verticesLonLat
-          : _recortarFracaoPolilinhaGeo(
+          : GeometriaClippingMapa.recortarFracaoPolilinhaGeo(
               trecho.verticesLonLat,
               ((progressoLuz - trecho.tempoInicio) /
                       math.max(1e-4, trecho.tempoFim - trecho.tempoInicio))
@@ -484,39 +484,6 @@ abstract final class PintorRedeViariaArestaGlobo {
     }
   }
 
-  static List<Offset> _recortarFracaoPolilinhaGeo(
-    List<Offset> vertices,
-    double fracao,
-  ) {
-    if (vertices.length < 2 || fracao <= 0.0) return const [];
-    if (fracao >= 1.0) return vertices;
-
-    var compTotal = 0.0;
-    for (var i = 0; i < vertices.length - 1; i++) {
-      compTotal += (vertices[i + 1] - vertices[i]).distance;
-    }
-    if (compTotal <= 1e-7) return const [];
-
-    final alvo = compTotal * fracao;
-    final resultado = <Offset>[vertices.first];
-    var acumulado = 0.0;
-    for (var i = 0; i < vertices.length - 1; i++) {
-      final a = vertices[i];
-      final b = vertices[i + 1];
-      final seg = (b - a).distance;
-      if (acumulado + seg >= alvo) {
-        final t = seg <= 1e-7 ? 1.0 : ((alvo - acumulado) / seg).clamp(0.0, 1.0);
-        resultado.add(
-          Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t),
-        );
-        break;
-      }
-      resultado.add(b);
-      acumulado += seg;
-    }
-    return resultado;
-  }
-
   static void _desenharEscudosCodigoRodovia({
     required Canvas canvas,
     required List<({Offset pos, String codigo})> escudos,
@@ -578,8 +545,12 @@ abstract final class PintorRedeViariaArestaGlobo {
     required ControladorCameraGlobo controlador,
     ValueChanged<Offset>? aoAmostrarPontoCentral,
   }) {
+    // Suavização Chaikin leve em coordenadas FIXAS do mundo ANTES do recorte/subdivisão,
+    // garantindo que o traçado das rodovias seja 100% invariante ao zoom!
+    final verticesSuavesMundo =
+        GeometriaClippingMapa.suavizarCantosPolilinhaMundo(verticesLonLat);
     final cadeiasVisiveis = GeometriaClippingMapa.subdividirERecortarPolilinha(
-      verticesLonLat: verticesLonLat,
+      verticesLonLat: verticesSuavesMundo,
       janela: janelaVisivel,
       passoMaxGraus: passoSubdivisaoGraus,
     );
@@ -601,19 +572,8 @@ abstract final class PintorRedeViariaArestaGlobo {
           aoAmostrarPontoCentral(sub[sub.length ~/ 2]);
         }
         destino.moveTo(sub.first.dx, sub.first.dy);
-        if (sub.length == 2) {
-          destino.lineTo(sub.last.dx, sub.last.dy);
-        } else {
-          for (var i = 1; i < sub.length - 1; i++) {
-            final ctrl = sub[i];
-            final prox = sub[i + 1];
-            final meio = Offset(
-              (ctrl.dx + prox.dx) * 0.5,
-              (ctrl.dy + prox.dy) * 0.5,
-            );
-            destino.quadraticBezierTo(ctrl.dx, ctrl.dy, meio.dx, meio.dy);
-          }
-          destino.lineTo(sub.last.dx, sub.last.dy);
+        for (var i = 1; i < sub.length; i++) {
+          destino.lineTo(sub[i].dx, sub[i].dy);
         }
         sub.clear();
       }
