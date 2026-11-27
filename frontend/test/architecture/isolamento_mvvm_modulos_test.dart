@@ -27,14 +27,22 @@ void main() {
       const alvosUiModular = <String>[
         'lib/pages/login.dart',
         'lib/pages/caderneta.dart',
+        'lib/pages/configuracoes.dart',
         'lib/pages/hub_perfil_caderneta.dart',
+        'lib/pages/explorar.dart',
         'lib/pages/via.dart',
+        'lib/widgets/app_bar_home_aresta.dart',
         'lib/widgets/autenticacao',
         'lib/widgets/caderneta',
+        'lib/widgets/clima',
+        'lib/widgets/configuracoes',
+        'lib/widgets/explorar',
+        'lib/widgets/idioma',
         'lib/widgets/navegacao',
         'lib/widgets/perfil',
         'lib/widgets/via',
         'lib/view/function_library/funcoes_caderneta.dart',
+        'lib/view/function_library/funcoes_explorar.dart',
         'lib/view/function_library/funcoes_hub_perfil_caderneta.dart',
         'lib/view/function_library/via_functions.dart',
       ];
@@ -64,19 +72,29 @@ void main() {
   );
 
   test(
-    'Modelos de domínio em lib/data/modelos permanecem puros sem acoplamento com serviços ou UI',
+    'Modelos de domínio em lib/data/modelos e utilitários puros permanecem sem acoplamento com serviços ou UI',
     () {
+      const escoposPuros = <String>[
+        'lib/data/modelos',
+        'lib/utils/construtor_rede_viaria_aresta.dart',
+        'lib/utils/extrator_curvas_nivel_mundo.dart',
+        'lib/utils/geometria_clipping_mapa.dart',
+        'lib/utils/modelos_apresentacao_via.dart',
+        'lib/utils/extrator_detalhes_tecnicos_via.dart',
+      ];
       final violacoes = <String>[];
-      for (final arquivo in listarArquivosDart('lib/data/modelos')) {
-        final caminho = arquivo.path.replaceAll('\\', '/');
-        final conteudo = arquivo.readAsStringSync();
-        for (final match in regexImport.allMatches(conteudo)) {
-          final importado = match.group(1)!;
-          if (importado.contains('services/') ||
-              importado.contains('view/') ||
-              importado.contains('widgets/') ||
-              importado.contains('pages/')) {
-            violacoes.add('$caminho -> $importado');
+      for (final escopo in escoposPuros) {
+        for (final arquivo in listarArquivosDart(escopo)) {
+          final caminho = arquivo.path.replaceAll('\\', '/');
+          final conteudo = arquivo.readAsStringSync();
+          for (final match in regexImport.allMatches(conteudo)) {
+            final importado = match.group(1)!;
+            if (importado.contains('services/') ||
+                importado.contains('view/') ||
+                importado.contains('widgets/') ||
+                importado.contains('pages/')) {
+              violacoes.add('$caminho -> $importado');
+            }
           }
         }
       }
@@ -85,7 +103,32 @@ void main() {
         violacoes,
         isEmpty,
         reason:
-            'Modelos em lib/data/modelos não podem depender de camadas superiores:\n'
+            'Modelos e algoritmos puros não podem depender de serviços ou UI:\n'
+            '${violacoes.join('\n')}',
+      );
+    },
+  );
+
+  test(
+    'Pintores e widgets Dumb UI de explorar não mantêm estado estático mutável',
+    () {
+      final regexStaticMutavel =
+          RegExp(r'\bstatic\s+(?!const\b|final\b)[A-Za-z0-9_<>,?]+\s+\w+\s*[;=]');
+      final violacoes = <String>[];
+      for (final arquivo in listarArquivosDart('lib/widgets/explorar')) {
+        final caminho = arquivo.path.replaceAll('\\', '/');
+        if (caminho.endsWith('/malha_relevo_lod.dart')) continue;
+        final conteudo = arquivo.readAsStringSync();
+        for (final match in regexStaticMutavel.allMatches(conteudo)) {
+          violacoes.add('$caminho -> ${match.group(0)!.trim()}');
+        }
+      }
+
+      expect(
+        violacoes,
+        isEmpty,
+        reason:
+            'Caches e estado mutável devem residir em instâncias de ViewModel, nunca em campos estáticos de widgets/pintores:\n'
             '${violacoes.join('\n')}',
       );
     },
@@ -96,20 +139,32 @@ void main() {
     () {
       const escopos = <String>[
         'lib/data/modelos',
+        'lib/utils/construtor_rede_viaria_aresta.dart',
+        'lib/utils/extrator_curvas_nivel_mundo.dart',
+        'lib/utils/geometria_clipping_mapa.dart',
         'lib/utils/modelos_apresentacao_via.dart',
         'lib/utils/extrator_detalhes_tecnicos_via.dart',
         'lib/services/autenticacao',
         'lib/services/caderneta',
+        'lib/services/clima/servico_tiles_elevacao_terrarium.dart',
         'lib/services/comunidade',
+        'lib/idioma/controlador_idioma_app.dart',
+        'lib/idioma/tradutor_app.dart',
         'lib/widgets/autenticacao',
         'lib/widgets/caderneta',
+        'lib/widgets/clima',
+        'lib/widgets/configuracoes',
+        'lib/widgets/explorar',
+        'lib/widgets/idioma',
         'lib/widgets/navegacao',
         'lib/widgets/perfil',
         'lib/widgets/via',
+        'lib/view/function_library/funcoes_explorar.dart',
         'lib/view/view_models',
         'lib/pages/login.dart',
         'lib/pages/caderneta.dart',
         'lib/pages/hub_perfil_caderneta.dart',
+        'lib/pages/explorar.dart',
         'lib/pages/via.dart',
       ];
 
