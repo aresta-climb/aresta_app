@@ -90,3 +90,60 @@ void main() {
         'uid_2': PerfilGrauPico(contagemPorPesoBoulder: {500: 2}),
       };
 
+      expect(
+        FiltradorCatalogoExplorar.atendeFaixasGrau(
+          metadados: semPerfil,
+          perfisGrauPorPico: perfis,
+          minGrauVia: null,
+          maxGrauVia: null,
+          minGrauBoulder: null,
+          maxGrauBoulder: null,
+        ),
+        isTrue,
+      );
+      expect(
+        FiltradorCatalogoExplorar.atendeFaixasGrau(
+          metadados: semPerfil,
+          perfisGrauPorPico: perfis,
+          minGrauVia: 700,
+          maxGrauVia: 800,
+          minGrauBoulder: null,
+          maxGrauBoulder: null,
+        ),
+        isFalse,
+      );
+      expect(
+        FiltradorCatalogoExplorar.atendeFaixasGrau(
+          metadados: porId,
+          perfisGrauPorPico: perfis,
+          minGrauVia: 750,
+          maxGrauVia: 800,
+          minGrauBoulder: null,
+          maxGrauBoulder: null,
+        ),
+        isTrue,
+      );
+      expect(
+        FiltradorCatalogoExplorar.atendeFaixasGrau(
+          metadados: porUid,
+          perfisGrauPorPico: perfis,
+          minGrauVia: null,
+          maxGrauVia: null,
+          minGrauBoulder: 400,
+          maxGrauBoulder: 600,
+        ),
+        isTrue,
+      );
+      expect(
+        FiltradorCatalogoExplorar.atendeFaixasGrau(
+          metadados: porUid,
+          perfisGrauPorPico: perfis,
+          minGrauVia: 900,
+          maxGrauVia: 950,
+          minGrauBoulder: 400,
+          maxGrauBoulder: 600,
+        ),
+        isTrue,
+      );
+    });
+
