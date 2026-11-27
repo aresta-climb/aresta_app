@@ -249,3 +249,63 @@ abstract final class GeometriaGeoideGlobo {
     final cosDLam = math.cos(dLam);
     final sinDLam = math.sin(dLam);
 
+    final x0 = cosPhi * sinDLam;
+    final y0 = cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosDLam;
+    final z0 = sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosDLam;
+    final limiteZ = estenderBordaHorizonte
+        ? (lod >= 1.65 ? 0.88 : -0.18)
+        : (lod >= 1.65 ? 0.94 : 0.015);
+    if (z0 < limiteZ) return PontoProjetadoTela.oculto;
+
+    var xEsfera = x0;
+    var yEsfera = y0;
+    var zEsfera = z0;
+    if (zEsfera < 0.0) {
+      final norma = math.max(1e-6, math.sqrt(x0 * x0 + y0 * y0));
+      xEsfera = (x0 / norma) * 1.004;
+      yEsfera = (y0 / norma) * 1.004;
+      zEsfera = 0.0;
+    }
+
+    final pesoGeoide = 1.0 - smoothstep(0.95, 1.85, lod);
+    final rBaseGeoide = 1.0 +
+        (raioNormalizadoGeoide(latitude: latitude, longitude: longitude) -
+                1.0) *
+            pesoGeoide;
+
+    final exageroVertical = 6.0 - 4.55 * smoothstep(2.15, 3.85, lod);
+    final pesoRef = smoothstep(2.35, 3.35, lod);
+    final elevRelativa = math.max(0.0, elevacaoMetros) -
+        (elevacaoReferenciaCameraMetros * pesoRef);
+    final hNormBruto = (elevRelativa / 6371000.0) * exageroVertical;
+    final hNorm =
+        (hNormBruto * raioAparentePx).clamp(-150.0, 255.0) / raioAparentePx;
+    final rad = rBaseGeoide + hNorm;
+    final dx = xEsfera * rad;
+    final dy = yEsfera * rad;
+    final dz = zEsfera * rad - rBaseGeoide;
+
+    final tilt = smoothstep(1.50, 2.75, lod) * 0.66;
+    final cosTilt = math.cos(tilt);
+    final sinTilt = math.sin(tilt);
+
+    final camX = dx;
+    final camY = dy * cosTilt + dz * sinTilt;
+    final camDepth = dy * sinTilt - dz * cosTilt;
+
+    final depthPx = camDepth * raioAparentePx;
+    final perspForca = smoothstep(1.40, 2.55, lod);
+    const perspDist = 650.0;
+    if (depthPx * perspForca < -perspDist * 0.68) {
+      return PontoProjetadoTela.oculto;
+    }
+    final persp = perspDist / math.max(190.0, perspDist + depthPx * perspForca);
+
+    return PontoProjetadoTela(
+      x: tamanhoTela.width * 0.5 + (camX * raioAparentePx) * persp,
+      y: centroVerticalOpticoPx - (camY * raioAparentePx) * persp,
+      profundidade: depthPx,
+      visivel: true,
+    );
+  }
+}
