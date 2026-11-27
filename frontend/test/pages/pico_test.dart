@@ -2151,4 +2151,104 @@ void main() {
       },
     );
   });
+
+  group('PicoDetailsPage - Condicao de umidade do croqui', () {
+    late Directory dirClima;
+    late ServicoClimaAltimetria servicoClima;
+
+    setUp(() async {
+      final agora = DateTime.utc(2026, 11, 25, 12);
+      final snap = SnapshotClimaAltimetria(
+        geradoEm: agora,
+        bolhasChuva: const [],
+        chuvaPorPico: {
+          'pico_muito_molhado': [
+            EventoChuvaPico(
+              data: DateTime.utc(2026, 11, 24),
+              milimetros: 19.0,
+            ),
+          ],
+          'pico_molhado': [
+            EventoChuvaPico(
+              data: DateTime.utc(2026, 11, 24),
+              milimetros: 10.0,
+            ),
+          ],
+          'pico_levemente_molhado': [
+            EventoChuvaPico(
+              data: DateTime.utc(2026, 11, 25),
+              milimetros: 4.0,
+            ),
+          ],
+        },
+        altimetriaPorPico: const {
+          'pico_muito_molhado': CotaAltimetricaPico(
+            altitudeBaseMetros: 800,
+            altitudePicoMetros: 1004,
+          ),
+          'pico_molhado': CotaAltimetricaPico(
+            altitudeBaseMetros: 600,
+            altitudePicoMetros: 761,
+          ),
+          'pico_levemente_molhado': CotaAltimetricaPico(
+            altitudeBaseMetros: 700,
+            altitudePicoMetros: 880,
+          ),
+          'pico_seco': CotaAltimetricaPico(
+            altitudeBaseMetros: 750,
+            altitudePicoMetros: 950,
+          ),
+        },
+      );
+
+      dirClima = await Directory.systemTemp.createTemp('pico_clima_test_');
+      final armazenamento = ArmazenamentoClimaLocal(
+        provedorDiretorioBase: () async => dirClima.path,
+      );
+      await armazenamento.salvarSnapshot(snap);
+
+      servicoClima = ServicoClimaAltimetria(
+        armazenamento: armazenamento,
+        fonteRemota: ClienteClimaAltimetriaFake(snapshotInicial: snap),
+        relogioUtc: () => agora,
+      );
+      await servicoClima.inicializar();
+      await servicoClima.sincronizarSeNecessario();
+    });
+
+    tearDown(() async {
+      servicoClima.dispose();
+      ServicoClimaAltimetria.redefinirParaTestes();
+      if (dirClima.existsSync()) {
+        try {
+          await dirClima.delete(recursive: true);
+        } catch (_) {}
+      }
+    });
+
+    testWidgets(
+      'exibe o cartão conservador de 4 dias na página do pico (hoje, há 1 dia, reinício por chuva recente e estado seco)',
+      (tester) async {
+        final repo = _FakeDatasetRepository();
+
+        Future<void> montarPico(String id, String nome) async {
+          final vm = PicoViewModel(
+            pico: Pico()
+              ..nome = nome
+              ..estado = 'MG',
+            croqui: Croqui(),
+            cragId: id,
+            datasetRepo: repo,
+            servicoClima: servicoClima,
+          );
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: PicoDetailsPage(viewModel: vm),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        await montarPico('pico_muito_molhado', 'Sinuosa');
 }
