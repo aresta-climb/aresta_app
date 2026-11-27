@@ -218,27 +218,20 @@ abstract final class PintorCurvasNivelGlobo {
     }
   }
 
-  static void _desenharAneisTopograficosMacicos({
-    required Canvas canvas,
-    required Size size,
-    required ControladorCameraGlobo controlador,
-    required List<PicoRelevoReferencia> picosReferencia,
-    required double opacidadeTerreno,
-    required double pesoCurvas,
-    required double? Function(double latitude, double longitude)?
-        amostradorElevacaoReal,
-  }) {
-    final lod = controlador.lod;
-    final alfaAnel =
-        ControladorCameraGlobo.smoothstep(2.85, 3.50, lod) * pesoCurvas;
-    if (alfaAnel <= 0.03) return;
-
-    final raioGraus = lod >= 3.85 ? 0.0042 : (lod >= 3.30 ? 0.0085 : 0.015);
-    final pincelAnel = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.90
-      ..color = _corCobreEscarpasAresta.withValues(
-        alpha: (0.34 * alfaAnel).clamp(0.0, 1.0),
+  static void _adicionarSplineSuaveAoPath(Path path, List<Offset> pts) {
+    path.moveTo(pts.first.dx, pts.first.dy);
+    if (pts.length == 2) {
+      path.lineTo(pts.last.dx, pts.last.dy);
+      return;
+    }
+    for (var i = 1; i < pts.length - 1; i++) {
+      final atual = pts[i];
+      final prox = pts[i + 1];
+      path.quadraticBezierTo(
+        atual.dx,
+        atual.dy,
+        (atual.dx + prox.dx) * 0.5,
+        (atual.dy + prox.dy) * 0.5,
       );
     final pincelCardeal = Paint()
       ..style = PaintingStyle.stroke
