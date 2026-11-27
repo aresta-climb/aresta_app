@@ -141,16 +141,41 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     return 8;
   }
 
-  /// Dispara em background (sem bloquear a UI) o download dos tiles Terrarium visíveis na janela.
+  /// Dispara em background (sem bloquear a UI) o download dos tiles Terrarium priorizando
+  /// radialmente o centro óptico da câmera (`latitudeCentral`, `longitudeCentral`) antes das bordas.
   void solicitarTilesVisiveis({
     required double minLat,
     required double maxLat,
     required double minLon,
     required double maxLon,
     required double lod,
+    double? latitudeCentral,
+    double? longitudeCentral,
   }) {
     if (_descartado || lod < 1.85) return;
+    final latAlvo = latitudeCentral ?? (minLat + maxLat) * 0.5;
+    final lonAlvo = longitudeCentral ?? (minLon + maxLon) * 0.5;
     final zoom = escolherZoomTerrarium(lod);
+
+    // Em zoom profundo (z=12), garante primeiro o tile pai z=10 (~38x38 km) sob o centro da câmera
+    if (zoom == 12) {
+      final paiZ10 = TileElevacaoTerrarium.projetarWebMercator(
+        latitude: latAlvo,
+        longitude: lonAlvo,
+        zoom: 10,
+      );
+      _enfileirarTileSeNecessario(
+        zoom: 10,
+        tx: paiZ10.tileX,
+        ty: paiZ10.tileY,
+      );
+    }
+
+    final centroProj = TileElevacaoTerrarium.projetarWebMercator(
+      latitude: latAlvo,
+      longitude: lonAlvo,
+      zoom: zoom,
+    );
     final cantoNoroeste = TileElevacaoTerrarium.projetarWebMercator(
       latitude: maxLat,
       longitude: minLon,
@@ -162,21 +187,44 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
       zoom: zoom,
     );
 
-    var solicitados = 0;
-    for (var ty = cantoNoroeste.tileY; ty <= cantoSudeste.tileY; ty++) {
-      for (var tx = cantoNoroeste.tileX; tx <= cantoSudeste.tileX; tx++) {
-        if (solicitados >= 9) return;
-        solicitados++;
-        final chave = TileElevacaoTerrarium.calcularChave(zoom, tx, ty);
-        if (_cacheLru.containsKey(chave) ||
-            _emVoo.contains(chave) ||
-            _falhasRecentes.contains(chave)) {
-          continue;
-        }
-        _emVoo.add(chave);
-        unawaited(_buscarEDecodificarTile(zoom: zoom, x: tx, y: ty, chave: chave));
+    final candidatos = <({int tx, int ty, int dist2})>[];
+    final txIni = cantoNoroeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
+    final txFim = cantoSudeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
+    final tyIni = cantoNoroeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
+    final tyFim = cantoSudeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
+
+    for (var ty = tyIni; ty <= tyFim; ty++) {
+      for (var tx = txIni; tx <= txFim; tx++) {
+        final dx = tx - centroProj.tileX;
+        final dy = ty - centroProj.tileY;
+        candidatos.add((tx: tx, ty: ty, dist2: dx * dx + dy * dy));
       }
     }
+    candidatos.sort((a, b) => a.dist2.compareTo(b.dist2));
+
+    var solicitados = 0;
+    for (final c in candidatos) {
+      if (solicitados >= 14) return;
+      solicitados++;
+      _enfileirarTileSeNecessario(zoom: zoom, tx: c.tx, ty: c.ty);
+    }
+  }
+
+  void _enfileirarTileSeNecessario({
+    required int zoom,
+    required int tx,
+    required int ty,
+  }) {
+    final chave = TileElevacaoTerrarium.calcularChave(zoom, tx, ty);
+    if (_cacheLru.containsKey(chave) ||
+        _emVoo.contains(chave) ||
+        _falhasRecentes.contains(chave)) {
+      return;
+    }
+    _emVoo.add(chave);
+    unawaited(
+      _buscarEDecodificarTile(zoom: zoom, x: tx, y: ty, chave: chave),
+    );
   }
 
   Future<void> _buscarEDecodificarTile({
