@@ -170,3 +170,92 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
                             height: 44,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: totalAtivos > 0
+                                    ? colors.rustIron
+                                    : Colors.white12,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.tune_rounded,
+                              size: 19,
+                              color: totalAtivos > 0
+                                  ? colors.rustIron
+                                  : colors.chalkWhite,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (totalAtivos > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.rustIron,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$totalAtivos',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (widget.aoSincronizar != null) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      width: 40,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xDF141920),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        tooltip: context.tr(
+                          ChaveTexto.comumSincronizarServingTooltip,
+                        ),
+                        icon: Icon(
+                          Icons.sync_rounded,
+                          size: 18,
+                          color: colors.chalkWhite,
+                        ),
+                        onPressed: widget.aoSincronizar,
+                      ),
+                    ),
+                  ],
+                  if (widget.aoTrocarServing != null) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      width: 40,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xDF141920),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: colors.beastHide.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        tooltip: context.tr(ChaveTexto.explorarTrocarServing),
+                        icon: Icon(
+                          Icons.dns_outlined,
+                          size: 18,
+                          color: colors.beastHide,
+                        ),
+                        onPressed: widget.aoTrocarServing,
+                      ),
+                    ),
+                  ],
