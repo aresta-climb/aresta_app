@@ -58,12 +58,14 @@ class ClienteTilesTerrariumAws implements FonteTilesElevacaoMapa {
   }
 }
 
-/// Serviço reativo que combina a grade regional SRTM embarcada offline com o download sob demanda
-/// de tiles `AWS Open Data Terrarium` (`z=8`, `z=10`, `z=12`) conforme a câmera se move no mapa.
+/// Serviço reativo que combina a grade regional SRTM embarcada offline com tiles canônicos
+/// `AWS Open Data Terrarium` (`z=9` uniforme, `~290 m/px`), mantendo o campo de elevação
+/// 100% invariante ao nível de zoom (`LOD`) para impedir qualquer deformação de curvas de nível.
 class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
   static const String caminhoAssetAltimetria =
       'assets/dados/altimetria_picos_inicial.json';
-  static const int limiteCacheTiles = 48;
+  static const int limiteCacheTiles = 64;
+  static const int zoomCanonicoTerrarium = 9;
 
   static ServicoTilesElevacaoTerrarium? _instanciaCompartilhada;
 
@@ -134,15 +136,11 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     if (!_descartado) notifyListeners();
   }
 
-  /// Seleciona o zoom Terrarium ideal (`8`, `10` ou `12`) para o `LOD` atual da câmera.
-  static int escolherZoomTerrarium(double lod) {
-    if (lod >= 3.55) return 12;
-    if (lod >= 2.72) return 10;
-    return 8;
-  }
+  /// Retorna o zoom Terrarium canônico fixo (`9`), impedindo trocas de superfície DEM durante o zoom.
+  static int escolherZoomTerrarium(double lod) => zoomCanonicoTerrarium;
 
-  /// Dispara em background (sem bloquear a UI) o download dos tiles Terrarium priorizando
-  /// radialmente o centro óptico da câmera (`latitudeCentral`, `longitudeCentral`) antes das bordas.
+  /// Dispara em background (sem bloquear a UI) o download dos tiles Terrarium canônicos (`z=9`)
+  /// priorizando radialmente o centro óptico da câmera antes das bordas.
   void solicitarTilesVisiveis({
     required double minLat,
     required double maxLat,
@@ -156,20 +154,6 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     final latAlvo = latitudeCentral ?? (minLat + maxLat) * 0.5;
     final lonAlvo = longitudeCentral ?? (minLon + maxLon) * 0.5;
     final zoom = escolherZoomTerrarium(lod);
-
-    // Em zoom profundo (z=12), garante primeiro o tile pai z=10 (~38x38 km) sob o centro da câmera
-    if (zoom == 12) {
-      final paiZ10 = TileElevacaoTerrarium.projetarWebMercator(
-        latitude: latAlvo,
-        longitude: lonAlvo,
-        zoom: 10,
-      );
-      _enfileirarTileSeNecessario(
-        zoom: 10,
-        tx: paiZ10.tileX,
-        ty: paiZ10.tileY,
-      );
-    }
 
     final centroProj = TileElevacaoTerrarium.projetarWebMercator(
       latitude: latAlvo,
@@ -188,10 +172,14 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     );
 
     final candidatos = <({int tx, int ty, int dist2})>[];
-    final txIni = cantoNoroeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
-    final txFim = cantoSudeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
-    final tyIni = cantoNoroeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
-    final tyFim = cantoSudeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
+    final txIni =
+        cantoNoroeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
+    final txFim =
+        cantoSudeste.tileX.clamp(centroProj.tileX - 4, centroProj.tileX + 4);
+    final tyIni =
+        cantoNoroeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
+    final tyFim =
+        cantoSudeste.tileY.clamp(centroProj.tileY - 4, centroProj.tileY + 4);
 
     for (var ty = tyIni; ty <= tyFim; ty++) {
       for (var tx = txIni; tx <= txFim; tx++) {
@@ -204,7 +192,7 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
 
     var solicitados = 0;
     for (final c in candidatos) {
-      if (solicitados >= 14) return;
+      if (solicitados >= 16) return;
       solicitados++;
       _enfileirarTileSeNecessario(zoom: zoom, tx: c.tx, ty: c.ty);
     }
@@ -272,45 +260,17 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     if (!_descartado) notifyListeners();
   }
 
-  /// Amostra sincronamente em `O(1)` a melhor elevação SRTM disponível (`z=12 -> z=10 -> z=8 -> offline`).
-  ///
-  /// Quando [lod] é fornecido pela câmera em tempo real, interpola progressivamente a entrada dos tiles
-  /// finos (`z=10` e `z=12`) sobre a base regional para impedir saltos bruscos de relevo durante o zoom.
+  /// Amostra sincronamente em `O(1)` a cota SRTM real de forma estritamente invariante ao `LOD`.
   double? amostrarElevacaoReal({
     required double latitude,
     required double longitude,
-    double? lod,
   }) {
-    if (lod == null) {
-      const niveisZoom = <int>[12, 10, 8];
-      for (final z in niveisZoom) {
-        final cota = _amostrarTileNoZoom(latitude, longitude, z);
-        if (cota != null) return cota;
-      }
-      return _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
+    const niveisZoom = <int>[9, 12, 10, 8];
+    for (final z in niveisZoom) {
+      final cota = _amostrarTileNoZoom(latitude, longitude, z);
+      if (cota != null) return cota;
     }
-
-    final baseOffline =
-        _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
-    final z8 = _amostrarTileNoZoom(latitude, longitude, 8);
-    var cota = z8 ?? baseOffline;
-
-    final pesoZ10 = _smoothstep(2.50, 3.15, lod);
-    if (pesoZ10 > 0.001) {
-      final z10 = _amostrarTileNoZoom(latitude, longitude, 10);
-      if (z10 != null) {
-        cota = cota == null ? z10 : cota + (z10 - cota) * pesoZ10;
-      }
-    }
-
-    final pesoZ12 = _smoothstep(3.40, 4.05, lod);
-    if (pesoZ12 > 0.001) {
-      final z12 = _amostrarTileNoZoom(latitude, longitude, 12);
-      if (z12 != null) {
-        cota = cota == null ? z12 : cota + (z12 - cota) * pesoZ12;
-      }
-    }
-    return cota;
+    return _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
   }
 
   double? _amostrarTileNoZoom(double latitude, double longitude, int zoom) {
@@ -323,11 +283,6 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
         TileElevacaoTerrarium.calcularChave(zoom, proj.tileX, proj.tileY);
     final tile = _cacheLru[chave];
     return tile?.amostrarLocal(proj.localX, proj.localY);
-  }
-
-  static double _smoothstep(double e0, double e1, double x) {
-    final t = ((x - e0) / (e1 - e0)).clamp(0.0, 1.0);
-    return t * t * (3.0 - 2.0 * t);
   }
 
   /// Decodifica um PNG `256x256` em buffer RGBA bruto utilizando o codec nativo C++ do Flutter.
