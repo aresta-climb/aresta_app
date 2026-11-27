@@ -263,3 +263,79 @@ void main() {
         await tester.pump();
         expect(abertosIds, contains('pico_0'));
 
+        // Pilulas rapidas de modalidade no cabecalho (incluindo Paredao)
+        await tester.ensureVisible(
+          find.byKey(const Key('pilula_modalidade_paredao')),
+        );
+        await tester.tap(find.byKey(const Key('pilula_modalidade_paredao')));
+        await tester.pumpAndSettle();
+        expect(
+          viewModel.modalidadesAtivas,
+          contains(ModalidadeExploracaoPico.paredao),
+        );
+
+        // Suporta tambem solicitacaoScrollSetimoPico (focarSetimoPicoProximo)
+        await tester.tap(find.byKey(const Key('encaixe_gaveta_mapa')));
+        await tester.pumpAndSettle();
+        viewModel.focarSetimoPicoProximo();
+        await tester.pumpAndSettle();
+        expect(find.text('PICO GAVETA 6'), findsOneWidget);
+
+        // Estado vazio ao buscar termo inexistente
+        viewModel.alterarTermoBusca('termo_inexistente_xyz');
+        await tester.pumpAndSettle();
+        expect(find.text('Nenhum pico encontrado.'), findsOneWidget);
+
+        // Troca de ViewModel ja com solicitacaoScrollSetimoPico > 0 em didUpdateWidget + initState
+        late BrowseViewModel vm2;
+        await tester.runAsync(() async {
+          vm2 = BrowseViewModel(
+            datasetRepo: repo,
+            syncService: sync,
+            servicoClima: servicoClima,
+          )
+            ..atualizarLocalizacaoUsuario(-20.0, -44.0)
+            ..focarSetimoPicoProximo();
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        addTearDown(vm2.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Stack(
+                children: [
+                  GavetaDeslizanteExplorar(
+                    viewModel: vm2,
+                    alturaGavetaPx: alturaPx,
+                    aoAbrirPico: (_) {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Stack(
+                key: UniqueKey(),
+                children: [
+                  GavetaDeslizanteExplorar(
+                    key: UniqueKey(),
+                    viewModel: vm2,
+                    alturaGavetaPx: alturaPx,
+                    aoAbrirPico: (_) {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      },
+    );
+  });
+}
