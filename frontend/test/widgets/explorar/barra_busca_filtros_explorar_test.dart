@@ -166,3 +166,95 @@ void main() {
           findsNothing,
         );
 
+        // Busca textual + botao limpar
+        await tester.enterText(find.byType(TextField), 'Cipó');
+        await tester.pump();
+        expect(viewModel.termoBusca, equals('Cipó'));
+        expect(find.byKey(const Key('botao_limpar_busca_explorar')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('botao_limpar_busca_explorar')));
+        await tester.pump();
+        expect(viewModel.termoBusca, isEmpty);
+
+        // Limpeza externa (ex.: focarSetimoPicoProximo) sincroniza o TextField
+        await tester.enterText(find.byType(TextField), 'Ouro');
+        await tester.pump();
+        viewModel.focarSetimoPicoProximo();
+        await tester.pump();
+        expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty);
+
+        // Abre modal de Filtros e ajusta RangeSliders de Via e Boulder (incluindo retorno aos extremos null)
+        await tester.tap(find.byIcon(Icons.tune_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byType(RangeSlider), findsNWidgets(2));
+
+        final sliders = tester.widgetList<RangeSlider>(find.byType(RangeSlider)).toList();
+        sliders[0].onChanged!(const RangeValues(6, 12)); // 6º a 8b
+        await tester.pump();
+        expect(viewModel.temFiltroGrauVia, isTrue);
+
+        final slidersAtualizados =
+            tester.widgetList<RangeSlider>(find.byType(RangeSlider)).toList();
+        slidersAtualizados[1].onChanged!(const RangeValues(4, 10)); // V4 a V10
+        await tester.pump();
+        expect(viewModel.temFiltroGrauBoulder, isTrue);
+
+        // Retornar os sliders para a faixa completa (0..max) limpa o filtro para null
+        final slidersReset =
+            tester.widgetList<RangeSlider>(find.byType(RangeSlider)).toList();
+        slidersReset[0].onChanged!(RangeValues(0, slidersReset[0].max));
+        slidersReset[1].onChanged!(RangeValues(0, slidersReset[1].max));
+        await tester.pump();
+        expect(viewModel.temFiltroGrauVia, isFalse);
+        expect(viewModel.temFiltroGrauBoulder, isFalse);
+
+        await tester.tap(find.byKey(const Key('botao_aplicar_filtros_explorar')));
+        await tester.pumpAndSettle();
+
+        // Botoes auxiliares de sincronizar e trocar serving
+        await tester.tap(find.byTooltip('Sincronizar com serving'));
+        await tester.tap(find.byTooltip('Trocar serving'));
+        await tester.pump();
+        expect(sincronizou, isTrue);
+        expect(trocouServing, isTrue);
+
+        // Troca de instancia de BrowseViewModel em didUpdateWidget sincroniza o texto
+        late BrowseViewModel vmAlternativo;
+        await tester.runAsync(() async {
+          vmAlternativo = BrowseViewModel(
+            datasetRepo: repo,
+            syncService: sync,
+            servicoClima: servicoClima,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        addTearDown(vmAlternativo.dispose);
+        vmAlternativo.alterarTermoBusca('Novo Termo');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BarraBuscaFiltrosExplorar(viewModel: vmAlternativo),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 600));
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          equals('Novo Termo'),
+        );
+      },
+    );
+
+    testWidgets(
+      'abre modal completo Filtros e Ordenacao com Paredao, ordenacao, alcance 150 km, offline e chips removiveis',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BarraBuscaFiltrosExplorar(viewModel: viewModel),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
