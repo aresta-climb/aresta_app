@@ -92,3 +92,86 @@ class MutacaoFilaInteracao {
         'novoTexto',
         'O comentário deve ter entre 1 e ${ComentarioComunidadeVia.limiteCaracteres} caracteres.',
       );
+    }
+    return MutacaoFilaInteracao._(
+      tipo: TipoMutacaoFilaInteracao.editarComentario,
+      alvoUid: alvoLimpo,
+      escaladaUid: escaladaUid,
+      autorIdPublico: autorIdPublico,
+      novoTexto: textoLimpo,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Constrói uma mutação validada de exclusão de comentário.
+  factory MutacaoFilaInteracao.excluirComentario({
+    required String alvoUid,
+    required String escaladaUid,
+    required String autorIdPublico,
+    DateTime? criadoEm,
+  }) {
+    final alvoLimpo = _exigirNaoVazio(alvoUid, 'alvoUid');
+    _exigirUid(escaladaUid, 'escaladaUid');
+    _exigirUid(autorIdPublico, 'autorIdPublico');
+    return MutacaoFilaInteracao._(
+      tipo: TipoMutacaoFilaInteracao.excluirComentario,
+      alvoUid: alvoLimpo,
+      escaladaUid: escaladaUid,
+      autorIdPublico: autorIdPublico,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Constrói uma mutação validada de edição de alerta de segurança (`<= 100` caracteres).
+  factory MutacaoFilaInteracao.editarAlerta({
+    required String alvoUid,
+    required String escaladaUid,
+    required String autorIdPublico,
+    required CategoriaAlertaSeguranca novaCategoria,
+    String? detalhe,
+    DateTime? criadoEm,
+  }) {
+    _exigirUid(alvoUid, 'alvoUid');
+    _exigirUid(escaladaUid, 'escaladaUid');
+    _exigirUid(autorIdPublico, 'autorIdPublico');
+    final detalheLimpo = detalhe?.trim();
+    if (detalheLimpo != null &&
+        detalheLimpo.length > AlertaSegurancaVia.limiteCaracteresDetalhe) {
+      throw ArgumentError.value(
+        detalheLimpo.length,
+        'detalhe',
+        'O detalhe do alerta deve ter no máximo ${AlertaSegurancaVia.limiteCaracteresDetalhe} caracteres.',
+      );
+    }
+    return MutacaoFilaInteracao._(
+      tipo: TipoMutacaoFilaInteracao.editarAlerta,
+      alvoUid: alvoUid,
+      escaladaUid: escaladaUid,
+      autorIdPublico: autorIdPublico,
+      novaCategoria: novaCategoria,
+      novoTexto: (detalheLimpo != null && detalheLimpo.isNotEmpty)
+          ? detalheLimpo
+          : null,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Constrói uma mutação validada de exclusão de alerta de segurança.
+  factory MutacaoFilaInteracao.excluirAlerta({
+    required String alvoUid,
+    required String escaladaUid,
+    required String autorIdPublico,
+    DateTime? criadoEm,
+  }) {
+    _exigirUid(alvoUid, 'alvoUid');
+    _exigirUid(escaladaUid, 'escaladaUid');
+    _exigirUid(autorIdPublico, 'autorIdPublico');
+    return MutacaoFilaInteracao._(
+      tipo: TipoMutacaoFilaInteracao.excluirAlerta,
+      alvoUid: alvoUid,
+      escaladaUid: escaladaUid,
+      autorIdPublico: autorIdPublico,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
