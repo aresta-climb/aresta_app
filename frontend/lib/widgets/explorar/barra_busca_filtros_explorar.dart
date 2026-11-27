@@ -327,3 +327,67 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
           aoRemover: () => vm.definirRaioMaximoKm(null),
         ),
       );
+    }
+    if (vm.apenasSalvosOffline) {
+      chips.add(
+        _ChipFiltroRemovivel(
+          key: const Key('chip_ativo_offline'),
+          rotulo: context.tr(ChaveTexto.explorarSalvosOffline),
+          aoRemover: () => vm.definirApenasSalvosOffline(false),
+        ),
+      );
+    }
+    return chips;
+  }
+}
+
+class _ChipFiltroRemovivel extends StatelessWidget {
+  final String rotulo;
+  final VoidCallback aoRemover;
+
+  const _ChipFiltroRemovivel({
+    super.key,
+    required this.rotulo,
+    required this.aoRemover,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Material(
+        color: const Color(0xE618202A),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: aoRemover,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colors.rustIron.withValues(alpha: 0.7),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  rotulo,
+                  style: TextStyle(
+                    color: colors.chalkWhite,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.close_rounded, size: 13, color: colors.rustIron),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
