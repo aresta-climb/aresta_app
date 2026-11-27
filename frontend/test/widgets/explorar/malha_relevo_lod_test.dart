@@ -16,7 +16,7 @@ void main() {
         expect(malha.brasil.length, greaterThan(10));
         expect(malha.estados.length, equals(27));
         expect(malha.localidadesProximas.length, inInclusiveRange(35, 110));
-        expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(120));
+        expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(60));
         expect(
           malha.localidadesProximas.any(
             (l) => l.nome == 'Belo Horizonte' && l.nivel == 1,

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/idioma/dicionario_en.dart';
 import 'package:frontend/idioma/modelo_idioma_app.dart';
 import 'package:frontend/widgets/explorar/botao_camada_clima_mapa.dart';
+import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 
 void main() {
   group('BotaoCamadaClimaMapa e DialogoAvisoPrecisaoClima', () {
@@ -43,17 +44,43 @@ void main() {
           find.byKey(const Key('dialogo_aviso_precisao_clima')),
           findsOneWidget,
         );
-        expect(find.text('~86%'), findsOneWidget);
-        expect(find.textContaining('NASA'), findsOneWidget);
-        expect(find.textContaining('verdade absoluta'), findsOneWidget);
+        expect(find.text('~85%'), findsOneWidget);
+        expect(find.textContaining('Open-Meteo'), findsOneWidget);
+        expect(find.textContaining('RainViewer'), findsOneWidget);
+        expect(find.textContaining('INPE BDQueimadas'), findsOneWidget);
+        expect(find.textContaining('FIRMS'), findsOneWidget);
+        expect(find.textContaining('SRTM'), findsOneWidget);
+        expect(find.textContaining('Blue Marble'), findsOneWidget);
         expect(
           dicionarioIngles[ChaveTexto.explorarAvisoClimaCorpo],
           allOf(
-            contains('~86%'),
+            contains('~85%'),
+            contains('Open-Meteo'),
+            contains('RainViewer'),
+            contains('INPE BDQueimadas'),
             contains('public NASA mission resources'),
             contains('reference tool instead of absolute truth'),
           ),
         );
+
+        // 1b. Tocar em "Ver estatísticas" fecha o diálogo sem ativar a camada e abre a página dedicada de estatísticas
+        expect(
+          find.byKey(const Key('botao_ver_estatisticas_clima')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const Key('botao_ver_estatisticas_clima')));
+        await tester.pumpAndSettle();
+        expect(ativo, isFalse);
+        expect(
+          find.byKey(const Key('pagina_estatisticas_clima')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byType(BotaoVoltarComRetornoInicio));
+        await tester.pumpAndSettle();
+
+        // Reabre o diálogo para testar o botão Cancelar
+        await tester.tap(find.byKey(const Key('botao_camada_clima_mapa')));
+        await tester.pumpAndSettle();
 
         // 2. Cancelar mantém o botão desligado
         await tester.tap(find.byKey(const Key('botao_cancelar_aviso_clima')));
