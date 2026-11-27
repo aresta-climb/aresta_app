@@ -90,3 +90,96 @@ abstract final class PintorTempestadeGlobo {
       final maiorLadoMundoPx =
           math.max(spanLonGeo * cosLatCam, spanLatGeo) * pxPorGrau;
 
+      final elevCentro = sobreRelevo
+          ? math.max(
+                0.0,
+                GeradorRelevoLod.amostrarElevacaoMetros(
+                  latitude: bolha.latitude,
+                  longitude: bolha.longitude,
+                  picosReferencia: picosReferencia,
+                ),
+              ) +
+              18.0
+          : 0.0;
+      final ptCentroMundo = controlador.projetarCoordenada(
+        latitude: bolha.latitude,
+        longitude: bolha.longitude,
+        elevacaoMetros: elevCentro,
+        tamanhoTela: tamanhoTela,
+      );
+      final dLonCentro =
+          ((bolha.longitude - controlador.longitudeCentral + 540.0) % 360.0) -
+              180.0;
+      final centroMundoAncora = ptCentroMundo.visivel
+          ? Offset(ptCentroMundo.x, ptCentroMundo.y)
+          : Offset(
+              tamanhoTela.width * 0.5 + dLonCentro * cosLatCam * pxPorGrau,
+              cyOptico -
+                  (bolha.latitude - controlador.latitudeCentral) * pxPorGrau,
+            );
+
+      final ehSistemaSinotico = alcanceGeoGraus >= 0.85 ||
+          bolha.rastrosPassados.isNotEmpty ||
+          realcada;
+      final realceBolsoCompacto =
+          (!ehSistemaSinotico && bolhaAtiva.nivelIntensidade.peso <= 2)
+              ? 1.26
+              : 1.0;
+      final paleta = EfeitosParticulasTempestadeGlobo.paletaPorIntensidade(
+        bolhaAtiva.nivelIntensidade,
+        atenuacaoLod * realceBolsoCompacto * (realcada ? 1.30 : 1.0),
+      );
+      final dirTela = _estimarVetorVentoTela(
+        bolha: bolha,
+        uLon: uLon,
+        uLat: uLat,
+        tamanhoTela: tamanhoTela,
+        controlador: controlador,
+      );
+
+      // 0. Pegadas pretéritas + setas de deslocamento ancoradas ao centro geográfico real da frente
+      if (ehSistemaSinotico) {
+        _desenharRastroPassadoTempestade(
+          canvas: canvas,
+          bolha: bolha,
+          centroAtualTela: centroMundoAncora,
+          centroAtualVisivel: ptCentroMundo.visivel,
+          menorLadoMundoPx: menorLadoMundoPx,
+          dirTela: dirTela,
+          faseSegundos: faseSegundos,
+          tamanhoTela: tamanhoTela,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          sobreRelevo: sobreRelevo,
+          paleta: paleta,
+        );
+      }
+
+      final raioBlur = (menorLadoMundoPx *
+              (0.12 + 0.045 * bolhaAtiva.nivelIntensidade.peso))
+          .clamp(2.0, 11.0);
+      canvas.drawPath(
+        projecaoExterna.caminho,
+        Paint()
+          ..color = paleta.halo
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, raioBlur),
+      );
+      canvas.drawPath(
+        projecaoExterna.caminho,
+        Paint()..color = paleta.preenchimento,
+      );
+
+      canvas.save();
+      canvas.clipPath(projecaoExterna.caminho);
+
+      EfeitosParticulasTempestadeGlobo.desenharIluminacaoVolumetricaTempestade(
+        canvas: canvas,
+        limitesRecorteTela: limites,
+        centroMundoTela: centroMundoAncora,
+        maiorLadoMundoPx: maiorLadoMundoPx,
+        menorLadoMundoPx: menorLadoMundoPx,
+        nivel: bolhaAtiva.nivelIntensidade,
+        paleta: paleta,
+        faseSegundos: faseSegundos,
+      );
+
