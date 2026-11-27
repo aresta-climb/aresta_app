@@ -49,6 +49,22 @@ void main() {
             metadados: crag,
             isDownloaded: false,
             downloadingCrags: ValueNotifier({}),
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('3 setores • 15 escaladas'), findsOneWidget);
+    expect(find.textContaining('boulders'), findsNothing);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard.deMetadados(
+            metadados: crag,
+            isDownloaded: false,
+            downloadingCrags: ValueNotifier({}),
             showDetailedStats: true,
             onDownload: () {},
           ),
@@ -56,12 +72,56 @@ void main() {
       ),
     );
 
-    // Deve exibir o texto completo com os tipos
     expect(
       find.text('3 setores • 15 escaladas (10 boulders, 5 esportivas)'),
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'buildCragListItem aceita CardCroquiViewModel e Map sincronizando estado salvoOffline',
+    (WidgetTester tester) async {
+      var abriu = false;
+      const card = CardCroquiViewModel.deValores(
+        id: 'c1',
+        titulo: 'PICO CARD',
+        textoEstatisticas: '1 setor • 5 vias',
+        caminhoMiniatura: '',
+        salvoOffline: false,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragListItem(
+              card,
+              ValueNotifier<Map<String, double>>({}),
+              () {},
+              onOpen: () => abriu = true,
+              isDownloaded: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('SALVO OFFLINE'), findsOneWidget);
+      await tester.tap(find.text('PICO CARD'));
+      expect(abriu, isTrue);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragListItem(
+              const {'id': 'm1', 'nome': 'PICO MAPA'},
+              ValueNotifier<Map<String, double>>({}),
+              () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('PICO MAPA'), findsOneWidget);
+    },
+  );
 
   group('CragBackground Downsampling Tests', () {
     late Directory tempDir;
@@ -88,7 +148,7 @@ void main() {
       66, 96, 130
     ];
 
-    testWidgets('buildCragBackground aplica cacheWidth na imagem remota', (
+    testWidgets('buildCragBackground aplica cacheWidth na imagem remota e resolve miniatura local', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -101,21 +161,12 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      final imageFinder = find.byType(Image);
-      expect(imageFinder, findsOneWidget);
-      final Image imageWidget = tester.widget(imageFinder);
-      expect(imageWidget.image, isA<ResizeImage>());
-      final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(450));
-    });
+      final Image remoteImg = tester.widget(find.byType(Image));
+      expect((remoteImg.image as ResizeImage).width, equals(450));
 
-    testWidgets('buildCragBackground resolve miniatura local via ProvedorImagemAresta com ImagemArquivoAresta', (
-      WidgetTester tester,
-    ) async {
-      EditorDeCroqui();
-      final thumbDir = Directory('${tempDir.path}/downloads/thumbnails')..createSync(recursive: true);
-      final thumbFile = File('${thumbDir.path}/crag_local.webp');
-      thumbFile.writeAsBytesSync(bytesPng1);
+      final thumbDir = Directory('${tempDir.path}/downloads/thumbnails')
+        ..createSync(recursive: true);
+      File('${thumbDir.path}/crag_local.webp').writeAsBytesSync(bytesPng1);
 
       await tester.pumpWidget(
         MaterialApp(
