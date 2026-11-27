@@ -171,44 +171,26 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
                         size: 56,
                         color: isError ? Colors.red : AppColors.brandColor,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _obterTextoEtapa(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ] else if (isError) ...[
-                    Text(
-                      _obterTextoEtapa(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _startMigration,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.brandColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 16),
+                      Text(
+                        context.tr(ChaveTexto.sistemaMigracaoTitulo),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
                         ),
                       ),
-                      child: const Text(
-                        'Tentar Novamente',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+                      Text(
+                        context.tr(ChaveTexto.sistemaMigracaoCorpo),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: context.colors.ashGrey,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
