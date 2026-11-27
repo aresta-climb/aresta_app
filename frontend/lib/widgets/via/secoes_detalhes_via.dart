@@ -319,80 +319,8 @@ class SecaoEnfiadasVia extends StatelessWidget {
                   ],
                 ),
               ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-/// Feed declarativo (Dumb UI) de notas e dicas públicas pré-formatadas pelo `ViaViewModel`.
-class SecaoNotasComunidadeVia extends StatelessWidget {
-  /// Notas públicas pré-formatadas para exibição direta.
-  final List<NotaComunidadeApresentacao> notas;
-
-  /// Cria uma instância de [SecaoNotasComunidadeVia].
-  const SecaoNotasComunidadeVia({super.key, required this.notas});
-
-  @override
-  Widget build(BuildContext context) {
-    if (notas.isEmpty) return const SizedBox.shrink();
-    final cores = context.colors;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _TituloSecaoVia(
-            titulo: 'Betas da Comunidade (${notas.length})',
-          ),
-          const SizedBox(height: 10),
-          ...notas.map((nota) {
-            final estilo = nota.rotuloEstilo;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cores.caveShadow,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: cores.graniteEdge),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        nota.cabecalhoAutorData,
-                        style: TextStyle(
-                          color: cores.ashGrey,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (estilo != null) _PilulaDetalheCurto(texto: estilo),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    nota.texto,
-                    style: TextStyle(
-                      color: cores.chalkWhite,
-                      fontSize: 14,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -450,30 +378,21 @@ class SecaoHistoricoEPixVia extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.menu_book_rounded, color: cores.ashGrey, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'HISTÓRICO & CONQUISTA',
-                        style: TextStyle(
-                          color: cores.ashGrey,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                CabecalhoSecaoPadraoVia(
+                  icone: Icons.menu_book_rounded,
+                  tituloCaixaAlta: context.tr(ChaveTexto.viaHistoricoConquista),
                 ),
                 const SizedBox(height: 12),
                 if (conquistadoresTexto != null)
                   _LinhaHistorico(
-                    rotulo: 'CONQUISTADORES',
+                    rotulo: context.tr(ChaveTexto.viaConquistadores),
                     valor: conquistadoresTexto!,
                   ),
                 if (dataAbertura != null)
-                  _LinhaHistorico(rotulo: 'ABERTURA', valor: dataAbertura!),
+                  _LinhaHistorico(
+                    rotulo: context.tr(ChaveTexto.viaAbertura),
+                    valor: dataAbertura!,
+                  ),
                 if (dataManutencao != null)
                   _LinhaHistorico(rotulo: 'MANUTENÇÃO', valor: dataManutencao!),
               ],
