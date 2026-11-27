@@ -262,3 +262,87 @@ export async function decodificarPngRadarParaMmHora(
     return c;
   };
 
+  let src = 0;
+  for (let y = 0; y < altura; y++) {
+    if (src >= descomprimido.length) break;
+    const filtro = descomprimido[src++];
+    for (let i = 0; i < stride; i++) {
+      const bruto = descomprimido[src++] ?? 0;
+      const esq = i >= bppFiltro ? linhaAtual[i - bppFiltro] : 0;
+      const cima = linhaAnterior[i];
+      const diag = i >= bppFiltro ? linhaAnterior[i - bppFiltro] : 0;
+      let rec = bruto;
+      if (filtro === 1) rec = (bruto + esq) & 0xff;
+      else if (filtro === 2) rec = (bruto + cima) & 0xff;
+      else if (filtro === 3) rec = (bruto + ((esq + cima) >> 1)) & 0xff;
+      else if (filtro === 4) rec = (bruto + paeth(esq, cima, diag)) & 0xff;
+      linhaAtual[i] = rec;
+    }
+
+    for (let x = 0; x < largura; x++) {
+      let r = 0,
+        g = 0,
+        b = 0,
+        a = 0;
+      if (tipoCor === 6 && bits === 8) {
+        const idx = x * 4;
+        r = linhaAtual[idx];
+        g = linhaAtual[idx + 1];
+        b = linhaAtual[idx + 2];
+        a = linhaAtual[idx + 3];
+      } else if (tipoCor === 2 && bits === 8) {
+        const idx = x * 3;
+        r = linhaAtual[idx];
+        g = linhaAtual[idx + 1];
+        b = linhaAtual[idx + 2];
+        a = 255;
+      } else if (tipoCor === 3 && paletaRgb) {
+        const pixelsPorByte = 8 / bits;
+        const byteIdx = Math.floor(x / pixelsPorByte);
+        const shift = (pixelsPorByte - 1 - (x % pixelsPorByte)) * bits;
+        const mascara = (1 << bits) - 1;
+        const indicePaleta = (linhaAtual[byteIdx] >> shift) & mascara;
+        r = paletaRgb[indicePaleta * 3] ?? 0;
+        g = paletaRgb[indicePaleta * 3 + 1] ?? 0;
+        b = paletaRgb[indicePaleta * 3 + 2] ?? 0;
+        a =
+          paletaAlfa && indicePaleta < paletaAlfa.length
+            ? paletaAlfa[indicePaleta]
+            : 255;
+      }
+      gradeMm[y * largura + x] = converterUniversalBlueParaMmHora(r, g, b, a);
+    }
+    linhaAnterior.set(linhaAtual);
+  }
+
+  return gradeMm;
+}
+
+/** Converte um pixel RGBA da paleta Universal Blue (`RainViewer color=2`) em taxa `mm/h`. */
+function converterUniversalBlueParaMmHora(
+  r: number,
+  g: number,
+  b: number,
+  a: number,
+): number {
+  if (a < 28) return 0;
+  // Ignora tons neutros puros de neve/gelo de alta latitude (`#ffff` acinzentado sem matiz azul/quente)
+  const sat = Math.max(r, g, b) - Math.min(r, g, b);
+  if (sat < 14 && r > 185 && g > 185 && b > 185) return 0;
+
+  // Núcleos severos convectivos (amarelo, laranja, vermelho, magenta: dBZ >= 40)
+  if (r > b + 16 && r >= 150) {
+    return 5.2 + Math.min(9.0, ((r - b) / 140) * 6.5);
+  }
+
+  // Chuva moderada a forte em azul royal / cobalto profundo (dBZ 26..39)
+  const dominanciaAzul = b - Math.min(r, g);
+  if (b >= 135 && dominanciaAzul >= 48) {
+    const tForte = Math.min(1, (dominanciaAzul - 48) / 140);
+    return 1.55 + tForte * 3.4;
+  }
+
+  // Bolsões convectivos leves a moderados (ciano claro / azul celeste: dBZ 12..25)
+  const pesoAlfa = Math.min(1, (a - 28) / 190);
+  return 0.22 + pesoAlfa * 1.18;
+}
