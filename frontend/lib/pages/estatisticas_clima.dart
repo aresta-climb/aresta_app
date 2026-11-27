@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 
 import '../data/modelos/modelos_estatisticas_clima.dart';
 import '../idioma/tradutor_app.dart';
+import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../widgets/clima/componentes_estatisticas_clima.dart';
 import '../widgets/clima/grafico_distribuicao_z_clima.dart';
-import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 
-/// Página declarativa (Dumb UI) dedicada exclusivamente à demonstração matemática,
-/// verificação pela Tabela Normal Padrão (`Tabela Z`) e detalhamento das 6 fontes de dados
-/// que fundamentam o índice empírico de `~85%` da ferramenta climática do Aresta Climb.
+/// Página declarativa (Dumb UI) integrada à árvore de navegação (`EstatisticasClimaNode`)
+/// dedicada à demonstração matemática, verificação pela Tabela Normal Padrão (`Tabela Z`)
+/// e detalhamento das 6 fontes de dados que fundamentam o índice empírico de `~85%`.
 class PaginaEstatisticasClima extends StatelessWidget {
   const PaginaEstatisticasClima({super.key});
 
@@ -19,6 +21,7 @@ class PaginaEstatisticasClima extends StatelessWidget {
   Widget build(BuildContext context) {
     context.idiomaApp;
     final cores = context.colors;
+    final recuoInferior = MediaQuery.paddingOf(context).bottom;
     const matriz = EstudoEstatisticoClimaAresta.matrizChuvaRegional;
     final ic95 = matriz.intervaloConfianca95Z();
     final zContra50 = matriz.calcularEscoreZContraH0(0.50);
@@ -28,30 +31,20 @@ class PaginaEstatisticasClima extends StatelessWidget {
     return Scaffold(
       key: const Key('pagina_estatisticas_clima'),
       backgroundColor: cores.deepBasalt,
-      appBar: AppBar(
-        backgroundColor: cores.deepBasalt,
-        elevation: 0,
-        leading: BotaoVoltarComRetornoInicio(corIcone: cores.chalkWhite),
-        centerTitle: true,
-        title: Text(
-          context.tr(ChaveTexto.estatClimaTituloPagina),
-          style: TextStyle(
-            fontFamily: 'Montserrat',
-            color: cores.chalkWhite,
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
+      appBar: buildCommonAppBar(
+        context,
+        context.tr(ChaveTexto.estatClimaTituloPagina),
+        onBack: () => AppNav.back(context),
       ),
       body: SafeArea(
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 32),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 28 + recuoInferior),
           children: [
             _construirCartaoHeroi85(context, cores, ic95),
-            const SizedBox(height: 18),
-            _construirSecaoComposicao(context, cores, matriz),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
+            _construirSecaoComposicao(context, matriz),
+            const SizedBox(height: 16),
             _construirSecaoMatrizEFormulas(
               context,
               cores,
@@ -61,16 +54,16 @@ class PaginaEstatisticasClima extends StatelessWidget {
               zContra83,
               zHeidke,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _construirSecaoTabelaZ(context, cores),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _construirSecaoFontesEspecificas(context, cores),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: cores.caveShadow,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: cores.graniteEdge),
               ),
               child: Row(
@@ -101,7 +94,7 @@ class PaginaEstatisticasClima extends StatelessWidget {
     final infPct = (ic95.inferior * 100.0).toStringAsFixed(1);
     final supPct = (ic95.superior * 100.0).toStringAsFixed(1);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: cores.caveShadow,
         borderRadius: BorderRadius.circular(20),
@@ -109,25 +102,35 @@ class PaginaEstatisticasClima extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: cores.rustIron.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: cores.rustIron.withValues(alpha: 0.38)),
+            ),
+            child: Text(
+              'N = 5.133  •  95% Z-CI [$infPct% – $supPct%]',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: cores.chalkWhite,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
             '~${EstudoEstatisticoClimaAresta.taxaReferenciaExibidaPercentual}%',
             style: TextStyle(
               fontFamily: 'Montserrat',
               color: cores.rustIron,
-              fontSize: 40,
+              fontSize: 42,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '95% Z-CI: [$infPct% – $supPct%]  •  N = 5.133',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
-              color: cores.chalkWhite,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
+              height: 1.05,
             ),
           ),
           const SizedBox(height: 10),
@@ -143,35 +146,31 @@ class PaginaEstatisticasClima extends StatelessWidget {
 
   Widget _construirSecaoComposicao(
     BuildContext context,
-    AppColors cores,
     MatrizContingenciaClima matriz,
   ) {
-    return _CartaoSecaoEstatistica(
+    return CartaoSecaoEstatisticaClima(
+      icone: Icons.layers_outlined,
       titulo: context.tr(ChaveTexto.estatClimaSecaoComposicaoTitulo),
-      cores: cores,
       filho: Column(
         children: [
-          _LinhaBarraMetrica(
+          LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoChuvaMapa),
             valorFormatado: '${(matriz.taxaDeteccaoPod * 100).toStringAsFixed(1)}%',
             fator: matriz.taxaDeteccaoPod,
-            cores: cores,
           ),
-          const SizedBox(height: 12),
-          _LinhaBarraMetrica(
+          const SizedBox(height: 14),
+          LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoUmidade4d),
             valorFormatado:
                 '${(EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias * 100).toStringAsFixed(1)}%',
             fator: EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias,
-            cores: cores,
           ),
-          const SizedBox(height: 12),
-          _LinhaBarraMetrica(
+          const SizedBox(height: 14),
+          LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoIncendioNasa),
             valorFormatado:
                 '${(EstudoEstatisticoClimaAresta.taxaDeteccaoIncendioViirsNasa * 100).toStringAsFixed(1)}%',
             fator: EstudoEstatisticoClimaAresta.taxaDeteccaoIncendioViirsNasa,
-            cores: cores,
           ),
         ],
       ),
