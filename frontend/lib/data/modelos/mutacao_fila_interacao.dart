@@ -230,3 +230,64 @@ class MutacaoFilaInteracao {
     return limpo;
   }
 
+  static void _exigirUid(String valor, String campo) {
+    if (!validarUid(valor)) {
+      throw ArgumentError.value(
+        valor,
+        campo,
+        'Identificador deve seguir o padrão NanoID 14c Base62.',
+      );
+    }
+  }
+}
+
+/// Projeta mutações locais ainda retidas na fila offline sobre a lista de [ItemFilaInteracao],
+/// preservando a autoria estrita (`autorIdPublico`) de cada registro.
+List<ItemFilaInteracao> aplicarMutacoesSobreItens(
+  Iterable<ItemFilaInteracao> itens,
+  Iterable<MutacaoFilaInteracao> mutacoes,
+) {
+  final resultado = itens.toList();
+  for (final m in mutacoes) {
+    switch (m.tipo) {
+      case TipoMutacaoFilaInteracao.editarComentario:
+        for (var i = 0; i < resultado.length; i++) {
+          final atual = resultado[i];
+          if (atual.tipo == TipoFilaInteracao.comentario &&
+              atual.id == m.alvoUid &&
+              atual.autorIdPublico == m.autorIdPublico &&
+              m.novoTexto != null) {
+            resultado[i] = atual.comTextoComentario(m.novoTexto!);
+          }
+        }
+      case TipoMutacaoFilaInteracao.excluirComentario:
+        resultado.removeWhere(
+          (atual) =>
+              atual.tipo == TipoFilaInteracao.comentario &&
+              atual.id == m.alvoUid &&
+              atual.autorIdPublico == m.autorIdPublico,
+        );
+      case TipoMutacaoFilaInteracao.editarAlerta:
+        for (var i = 0; i < resultado.length; i++) {
+          final atual = resultado[i];
+          if (atual.tipo == TipoFilaInteracao.alertaSeguranca &&
+              atual.alertaAlvoUid == m.alvoUid &&
+              atual.autorIdPublico == m.autorIdPublico &&
+              m.novaCategoria != null) {
+            resultado[i] = atual.comEdicaoAlerta(
+              categoria: m.novaCategoria!,
+              detalhe: m.novoTexto,
+            );
+          }
+        }
+      case TipoMutacaoFilaInteracao.excluirAlerta:
+        resultado.removeWhere(
+          (atual) =>
+              atual.tipo == TipoFilaInteracao.alertaSeguranca &&
+              atual.alertaAlvoUid == m.alvoUid &&
+              atual.autorIdPublico == m.autorIdPublico,
+        );
+    }
+  }
+  return resultado;
+}
