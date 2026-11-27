@@ -170,3 +170,74 @@ void main() {
       expect(umidoComData.dataChuvaFormatadaCurta, equals('05/09'));
     });
 
+    test('serializa e restaura SnapshotClimaAltimetria completo e rejeita timestamp inválido', () {
+      final original = SnapshotClimaAltimetria(
+        geradoEm: DateTime.utc(2026, 11, 26, 6),
+        bolhasChuva: const [
+          BolhaChuvaRegional(
+            id: 'b1',
+            latitude: -20.0,
+            longitude: -44.0,
+            intensidadeMmHora: 3.2,
+            ventoRumoGraus: 120.0,
+            ventoVelocidadeKmh: 18.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -44.1, latitude: -20.1),
+              PontoContornoGeo(longitude: -43.9, latitude: -20.1),
+              PontoContornoGeo(longitude: -44.0, latitude: -19.9),
+            ],
+          ),
+        ],
+        bolhasIncendio: const [
+          BolhaIncendioRegional(
+            id: 'f1',
+            latitude: -19.5,
+            longitude: -43.5,
+            potenciaFrpMw: 32.0,
+            totalFocos: 4,
+            ventoRumoGraus: 270.0,
+            ventoVelocidadeKmh: 15.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -43.6, latitude: -19.6),
+              PontoContornoGeo(longitude: -43.4, latitude: -19.6),
+              PontoContornoGeo(longitude: -43.5, latitude: -19.4),
+            ],
+          ),
+        ],
+        chuvaPorPico: {
+          'p1': [
+            EventoChuvaPico(data: DateTime.utc(2026, 11, 25), milimetros: 12.0),
+          ],
+        },
+        altimetriaPorPico: const {
+          'p1': CotaAltimetricaPico(
+            altitudeBaseMetros: 800,
+            altitudePicoMetros: 1200,
+          ),
+        },
+      );
+
+      final restaurado = SnapshotClimaAltimetria.deMapa(original.paraMapa());
+      expect(restaurado.bolhasChuva.single.id, equals('b1'));
+      expect(restaurado.bolhasIncendio.single.id, equals('f1'));
+      expect(restaurado.chuvaPorPico['p1']!.single.milimetros, equals(12.0));
+      expect(
+        restaurado.altimetriaPorPico['p1']!.altitudePicoMetros,
+        equals(1200),
+      );
+
+      final semIncendio = SnapshotClimaAltimetria(
+        geradoEm: DateTime.utc(2026, 11, 26),
+        bolhasChuva: const [],
+        chuvaPorPico: const {},
+        altimetriaPorPico: const {},
+      );
+      expect(semIncendio.paraMapa().containsKey('bolhas_incendio'), isFalse);
+
+      expect(
+        () => SnapshotClimaAltimetria.deMapa({'gerado_em': 'invalido'}),
+        throwsFormatException,
+      );
+    });
+  });
+}
