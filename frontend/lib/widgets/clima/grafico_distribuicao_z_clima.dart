@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
 
 /// Gráfico vetorial declarativo (Dumb UI) da Distribuição Normal Padrão (`H₀`) destacando
-/// a região crítica na cauda direita (`Z ≥ 1,96`, `Z = +2,57`) e a projeção extrema `+27,7σ`.
+/// a região crítica na cauda direita (`Z ≥ 1,96`, `Z = +2,57`) e a projeção extrema `+27,7σ`,
+/// com posicionamento escalonado de rótulos livre de colisões ou cortes em telas estreitas.
 class GraficoDistribuicaoZClima extends StatelessWidget {
   final String rotuloH0;
   final String rotuloCaudaDireita;
@@ -22,58 +23,86 @@ class GraficoDistribuicaoZClima extends StatelessWidget {
   Widget build(BuildContext context) {
     final cores = context.colors;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: cores.caveShadow,
-        borderRadius: BorderRadius.circular(16),
+        color: cores.deepBasalt,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: cores.graniteEdge),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 14,
+            runSpacing: 6,
             children: [
-              Flexible(
-                child: Text(
-                  rotuloH0,
-                  style: TextStyle(
-                    color: cores.ashGrey,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              _ItemLegendaCurva(
+                cor: cores.chalkWhite,
+                texto: rotuloH0,
+                corTexto: cores.ashGrey,
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  rotuloCaudaDireita,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: cores.rustIron,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              _ItemLegendaCurva(
+                cor: cores.rustIron,
+                texto: rotuloCaudaDireita,
+                corTexto: cores.rustIron,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 108,
+            height: 128,
+            width: double.infinity,
             child: CustomPaint(
               painter: _PintorCurvaNormalPadrao(
                 corCurva: cores.chalkWhite,
                 corCauda: cores.rustIron,
                 corGrade: cores.graniteEdge,
                 corEixoTexto: cores.ashGrey,
+                corFundoEtiqueta: cores.caveShadow,
               ),
-              size: Size.infinite,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ItemLegendaCurva extends StatelessWidget {
+  final Color cor;
+  final String texto;
+  final Color corTexto;
+
+  const _ItemLegendaCurva({
+    required this.cor,
+    required this.texto,
+    required this.corTexto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: cor, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            texto,
+            style: TextStyle(
+              color: corTexto,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -83,12 +112,14 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
   final Color corCauda;
   final Color corGrade;
   final Color corEixoTexto;
+  final Color corFundoEtiqueta;
 
   const _PintorCurvaNormalPadrao({
     required this.corCurva,
     required this.corCauda,
     required this.corGrade,
     required this.corEixoTexto,
+    required this.corFundoEtiqueta,
   });
 
   static double _pdf(double z) =>
@@ -96,17 +127,18 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const zMin = -3.4;
-    const zMax = 3.9;
-    final baseY = size.height - 20.0;
-    final alturaUtil = math.max(24.0, baseY - 8.0);
+    const zMin = -3.0;
+    const zMax = 4.1;
+    final baseY = size.height - 22.0;
+    final topoCurvaY = 22.0;
+    final alturaUtil = math.max(32.0, baseY - topoCurvaY);
     final pdfPico = _pdf(0.0);
 
     double xDeZ(double z) =>
-        ((z - zMin) / (zMax - zMin)) * (size.width - 16.0) + 8.0;
+        ((z - zMin) / (zMax - zMin)) * (size.width - 20.0) + 10.0;
     double yDeZ(double z) => baseY - (_pdf(z) / pdfPico) * alturaUtil;
 
-    // 1. Área sombreada da cauda direita (Z >= 1.96)
+    // 1. Área sombreada da cauda direita crítica (Z >= 1.96)
     final pathCauda = Path()..moveTo(xDeZ(1.96), baseY);
     for (var s = 0; s <= 36; s++) {
       final z = 1.96 + (zMax - 1.96) * (s / 36.0);
