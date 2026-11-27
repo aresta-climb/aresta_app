@@ -151,3 +151,81 @@ class TileElevacaoTerrarium {
     );
   }
 
+  /// Constrói o tile a partir de bytes RGBA brutos `256x256` na fórmula Terrarium `(R*256 + G + B/256) - 32768`.
+  factory TileElevacaoTerrarium.deRgba256({
+    required int zoom,
+    required int x,
+    required int y,
+    required Uint8List rgba,
+  }) {
+    if (rgba.length < dimensao * dimensao * 4) {
+      throw const FormatException('Buffer RGBA insuficiente para tile 256x256.');
+    }
+    final cotas = Int16List(dimensao * dimensao);
+    for (var i = 0; i < cotas.length; i++) {
+      final idx = i * 4;
+      final r = rgba[idx];
+      final g = rgba[idx + 1];
+      final b = rgba[idx + 2];
+      final metros = (r * 256.0 + g + b / 256.0 - 32768.0).round();
+      cotas[i] = metros.clamp(-11000, 9000);
+    }
+    return TileElevacaoTerrarium(
+      zoom: zoom,
+      x: x,
+      y: y,
+      cotasMetros: cotas,
+    );
+  }
+
+  /// Interpola bilinearmente a cota em metros nas coordenadas locais `[0..255]` do tile.
+  double amostrarLocal(double localX, double localY) {
+    final x0 = localX.floor().clamp(0, dimensao - 1);
+    final y0 = localY.floor().clamp(0, dimensao - 1);
+    final x1 = math.min(dimensao - 1, x0 + 1);
+    final y1 = math.min(dimensao - 1, y0 + 1);
+    final fx = localX - x0;
+    final fy = localY - y0;
+
+    final e00 = cotasMetros[y0 * dimensao + x0].toDouble();
+    final e10 = cotasMetros[y0 * dimensao + x1].toDouble();
+    final e01 = cotasMetros[y1 * dimensao + x0].toDouble();
+    final e11 = cotasMetros[y1 * dimensao + x1].toDouble();
+
+    final topo = e00 + (e10 - e00) * fx;
+    final base = e01 + (e11 - e01) * fx;
+    return topo + (base - topo) * fy;
+  }
+}
+
+/// Curva isométrica individual ancorada em coordenadas geográficas fixas do mundo `(longitude, latitude)`.
+class CurvaNivelMundo {
+  final int cotaMetros;
+  final bool ehMestra;
+  final bool ehEscarpaPico;
+  final List<Offset> verticesLonLat;
+  final Offset? ancoraRotuloLonLat;
+
+  const CurvaNivelMundo({
+    required this.cotaMetros,
+    required this.ehMestra,
+    required this.ehEscarpaPico,
+    required this.verticesLonLat,
+    this.ancoraRotuloLonLat,
+  });
+}
+
+/// Lote imutável e memoizável de isolinhas extraídas em coordenadas fixas do mundo para um bloco geográfico.
+class ConjuntoCurvasNivelMundo {
+  final int chaveBloco;
+  final int nivelDetalhe;
+  final int versaoDadosElevacao;
+  final List<CurvaNivelMundo> curvas;
+
+  const ConjuntoCurvasNivelMundo({
+    required this.chaveBloco,
+    required this.nivelDetalhe,
+    required this.versaoDadosElevacao,
+    required this.curvas,
+  });
+}
