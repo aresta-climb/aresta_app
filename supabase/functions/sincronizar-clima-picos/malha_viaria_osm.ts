@@ -88,3 +88,66 @@ async function consultarOverpass(query: string): Promise<Record<string, unknown>
   throw new Error("Falha ao consultar endpoints Overpass para malha viária.");
 }
 
+/** Extrai rodovias reais OpenStreetMap classificadas em 3 níveis (`motorway/trunk`, `primary`, `secondary/tertiary`). */
+export async function coletarMalhaViariaHierarquicaOsm(
+  picos: PicoCoordenada[],
+): Promise<RodoviaHierarquicaOsm[]> {
+  let minLat = -20.5,
+    maxLat = -19.0,
+    minLon = -44.6,
+    maxLon = -43.2;
+  for (const p of picos) {
+    minLat = Math.min(minLat, p.latitude - 0.6);
+    maxLat = Math.max(maxLat, p.latitude + 0.6);
+    minLon = Math.min(minLon, p.longitude - 0.6);
+    maxLon = Math.max(maxLon, p.longitude + 0.6);
+  }
+
+  const caixasSecundarias = picos
+    .map(
+      (p) =>
+        `way["highway"~"^(secondary|tertiary)$"]["surface"!~"^(unpaved|dirt|gravel|ground|sand|earth)$"](${(p.latitude - 0.16).toFixed(4)},${(p.longitude - 0.16).toFixed(4)},${(p.latitude + 0.16).toFixed(4)},${(p.longitude + 0.16).toFixed(4)});`,
+    )
+    .join("\n");
+
+  const query = `
+    [out:json][timeout:60];
+    (
+      way["highway"~"^(motorway|trunk|primary)$"](${minLat.toFixed(3)},${minLon.toFixed(3)},${maxLat.toFixed(3)},${maxLon.toFixed(3)});
+      ${caixasSecundarias}
+    );
+    out geom;
+  `;
+
+  const elementos = await consultarOverpass(query);
+  const saida: RodoviaHierarquicaOsm[] = [];
+
+  for (const el of elementos) {
+    if (el.type !== "way" || !Array.isArray(el.geometry) || el.geometry.length < 2) {
+      continue;
+    }
+    const tags = (el.tags ?? {}) as Record<string, string>;
+    const hw = tags.highway ?? "";
+    const nivel: 1 | 2 | 3 =
+      hw === "motorway" || hw === "trunk" ? 1 : hw === "primary" ? 2 : 3;
+    const codigo = normalizarCodigoRodovia(tags.ref ?? "");
+    const bruto: [number, number][] = el.geometry.map(
+      (pt: { lon: number; lat: number }) => [Number(pt.lon), Number(pt.lat)],
+    );
+    const eps = nivel === 1 ? 0.0009 : nivel === 2 ? 0.0006 : 0.00035;
+    const simp = simplificarRdp(bruto, eps);
+    if (simp.length >= 2) {
+      saida.push({
+        classe:
+          nivel === 1 ? "principal" : nivel === 2 ? "primaria" : "secundaria",
+        nivel,
+        codigo,
+        poligono: simp.map(([x, y]) => [
+          Number(x.toFixed(5)),
+          Number(y.toFixed(5)),
+        ]),
+      });
+    }
+  }
+  return saida;
+}
