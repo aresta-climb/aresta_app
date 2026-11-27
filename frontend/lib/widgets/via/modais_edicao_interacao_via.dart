@@ -267,3 +267,91 @@ class _FormularioEditarComentarioViaState
   late final TextEditingController _controller;
   late bool _valido;
 
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.textoInicial);
+    _valido = _controller.text.trim().isNotEmpty;
+    _controller.addListener(() {
+      final novoValido = _controller.text.trim().isNotEmpty;
+      if (novoValido != _valido) {
+        setState(() => _valido = novoValido);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              context.tr(ChaveTexto.viaEditarComentarioTitulo),
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.tr(ChaveTexto.viaEditarComentarioSubtitulo),
+              style: TextStyle(color: cores.ashGrey, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              key: const Key('campo_editar_comentario_via'),
+              controller: _controller,
+              maxLines: 4,
+              minLines: 2,
+              maxLength: ComentarioComunidadeVia.limiteCaracteres,
+              style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: cores.caveShadow,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: cores.graniteEdge),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    key: const Key('btn_cancelar_edicao_comentario_via'),
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: cores.chalkWhite,
+                      side: BorderSide(color: cores.graniteEdge),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(context.tr(ChaveTexto.comumCancelar)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    key: const Key('btn_salvar_comentario_editado_via'),
+                    onPressed: _valido
+                        ? () async {
+                            final textoLimpo = _controller.text.trim();
+                            Navigator.of(context).pop();
+                            await widget.aoSalvar(textoLimpo);
+                          }
