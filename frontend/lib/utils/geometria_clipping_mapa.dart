@@ -208,6 +208,68 @@ abstract final class GeometriaClippingMapa {
     return cadeias;
   }
 
+  /// Suaviza cantos rodoviários em coordenadas fixas do mundo (raio físico `0,0018°`),
+  /// mantendo o traçado 100% invariante ao zoom e preservando cortes no antimeridiano.
+  static List<Offset> suavizarCantosPolilinhaMundo(List<Offset> pts) {
+    if (pts.length < 3) return pts;
+    final out = <Offset>[pts.first];
+    for (var i = 1; i < pts.length - 1; i++) {
+      final a = pts[i - 1];
+      final b = pts[i];
+      final c = pts[i + 1];
+      if ((b.dx - a.dx).abs() > 150.0 || (c.dx - b.dx).abs() > 150.0) {
+        out.add(b);
+        continue;
+      }
+      final ab = b - a;
+      final bc = c - b;
+      final dAb = ab.distance;
+      final dBc = bc.distance;
+      final recuoAb = dAb > 1e-6 ? math.min(0.22, 0.0018 / dAb) : 0.0;
+      final recuoBc = dBc > 1e-6 ? math.min(0.22, 0.0018 / dBc) : 0.0;
+      out
+        ..add(Offset(b.dx - ab.dx * recuoAb, b.dy - ab.dy * recuoAb))
+        ..add(Offset(b.dx + bc.dx * recuoBc, b.dy + bc.dy * recuoBc));
+    }
+    out.add(pts.last);
+    return out;
+  }
+
+  /// Recorta o prefixo proporcional `[0..fracao]` de uma polilinha em coordenadas geográficas.
+  static List<Offset> recortarFracaoPolilinhaGeo(
+    List<Offset> vertices,
+    double fracao,
+  ) {
+    if (vertices.length < 2 || fracao <= 0.0) return const [];
+    if (fracao >= 1.0) return vertices;
+
+    var compTotal = 0.0;
+    for (var i = 0; i < vertices.length - 1; i++) {
+      compTotal += (vertices[i + 1] - vertices[i]).distance;
+    }
+    if (compTotal <= 1e-7) return const [];
+
+    final alvo = compTotal * fracao;
+    final resultado = <Offset>[vertices.first];
+    var acumulado = 0.0;
+    for (var i = 0; i < vertices.length - 1; i++) {
+      final a = vertices[i];
+      final b = vertices[i + 1];
+      final seg = (b - a).distance;
+      if (acumulado + seg >= alvo) {
+        final t =
+            seg <= 1e-7 ? 1.0 : ((alvo - acumulado) / seg).clamp(0.0, 1.0);
+        resultado.add(
+          Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t),
+        );
+        break;
+      }
+      resultado.add(b);
+      acumulado += seg;
+    }
+    return resultado;
+  }
+
   static List<Offset> _recortarSemiplano(
     List<Offset> entrada, {
     required bool Function(Offset) dentro,
