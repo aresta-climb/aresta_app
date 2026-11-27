@@ -469,3 +469,59 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
                             ),
                           ),
                         );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirPilulasModalidadeRapida(
+    BrowseViewModel vm,
+    AppColors colors,
+  ) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final mod in _modalidadesRapidas)
+          InkWell(
+            key: Key('pilula_modalidade_${mod.name}'),
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => vm.alternarModalidade(mod),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: vm.modalidadesAtivas.contains(mod)
+                    ? colors.rustIron.withValues(alpha: 0.24)
+                    : colors.deepBasalt,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: vm.modalidadesAtivas.contains(mod)
+                      ? colors.rustIron
+                      : Colors.white12,
+                ),
+              ),
+              child: Text(
+                mod.rotulo,
+                style: TextStyle(
+                  color: vm.modalidadesAtivas.contains(mod)
+                      ? colors.chalkWhite
+                      : colors.ashGrey,
+                  fontSize: 11,
+                  fontWeight: vm.modalidadesAtivas.contains(mod)
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
