@@ -262,3 +262,92 @@ class _PainelBolhasIdioma extends StatelessWidget {
   }
 }
 
+class _ItemBolhaOpcaoIdioma extends StatelessWidget {
+  final IdiomaApp idioma;
+  final bool selecionado;
+  final VoidCallback aoSelecionar;
+
+  const _ItemBolhaOpcaoIdioma({
+    required this.idioma,
+    required this.selecionado,
+    required this.aoSelecionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return InkWell(
+      key: Key('opcao_bolha_idioma_${idioma.codigoIso}'),
+      borderRadius: BorderRadius.circular(16),
+      onTap: aoSelecionar,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selecionado
+              ? cores.rustIron.withValues(alpha: 0.16)
+              : cores.caveShadow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selecionado ? cores.rustIron : cores.graniteEdge,
+            width: selecionado ? 1.4 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
+                color: selecionado
+                    ? cores.rustIron.withValues(alpha: 0.25)
+                    : cores.deepBasalt,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: selecionado ? cores.rustIron : cores.graniteEdge,
+                ),
+              ),
+              child: BandeiraIdiomaApp(
+                key: Key('bandeira_opcao_idioma_${idioma.codigoIso}'),
+                idioma: idioma,
+                largura: 28,
+                altura: 19.5,
+                raioBorda: 4.5,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    idioma.nomeNativo,
+                    style: TextStyle(
+                      color: cores.chalkWhite,
+                      fontSize: 13.5,
+                      fontWeight:
+                          selecionado ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    idioma.subtituloRegiao,
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selecionado)
+              Icon(
+                Icons.check_circle_rounded,
+                size: 18,
+                color: cores.rustIron,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
