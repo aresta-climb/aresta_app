@@ -299,12 +299,56 @@ class PaginaEstatisticasClima extends StatelessWidget {
         children: [
           Text(
             context.tr(ChaveTexto.estatClimaTabelaZExplicacao),
-              'Z (vs H₀ ≤ 83%) = +${zContra83.toStringAsFixed(2)}σ → Φ(+2.57) = 0.9949 (p = 0.0051)',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                color: cores.chalkWhite,
-                fontSize: 11.5,
-                height: 1.55,
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.44),
+          ),
+          const SizedBox(height: 14),
+          GraficoDistribuicaoZClima(
+            rotuloH0: context.tr(ChaveTexto.estatClimaGraficoH0Rotulo),
+            rotuloCaudaDireita: context.tr(ChaveTexto.estatClimaGraficoCaudaRotulo),
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: cores.deepBasalt,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cores.graniteEdge),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _textoCabecalhoTabelaZ(
+                            context.tr(ChaveTexto.estatClimaColunaZ),
+                            cores,
+                            TextAlign.left,
+                          ),
+                        ),
+                        Expanded(
+                          child: _textoCabecalhoTabelaZ(
+                            context.tr(ChaveTexto.estatClimaColunaPhi),
+                            cores,
+                            TextAlign.center,
+                          ),
+                        ),
+                        Expanded(
+                          child: _textoCabecalhoTabelaZ(
+                            context.tr(ChaveTexto.estatClimaColunaCauda),
+                            cores,
+                            TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: cores.graniteEdge),
+                  for (final linha in EstudoEstatisticoClimaAresta.linhasTabelaPadraoZ)
+                    LinhaTabelaZResponsivaClima(linha: linha),
+                ],
               ),
             ),
           ),
