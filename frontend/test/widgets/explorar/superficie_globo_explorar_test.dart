@@ -456,3 +456,97 @@ void main() {
                             PontoContornoGeo(longitude: -44.28, latitude: -20.08),
                             PontoContornoGeo(longitude: -44.31, latitude: -20.04),
                           ],
+                        ),
+                      ),
+                    ],
+                    picoSelecionadoId: selecionadoId,
+                    aoSelecionarPicoNoMapa: (id) =>
+                        setState(() => selecionadoId = id),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Mesmo com a camera bem em cima do cluster em LOD 3.2, sem clique nenhum texto nem Base/Trilha polui a tela!
+        expect(find.textContaining('Pedra Grande'), findsNothing);
+        expect(find.textContaining('Santuário Vizinho'), findsNothing);
+        expect(find.text('Base / Trilha'), findsNothing);
+        expect(find.byKey(const Key('ponto_aresta_igarape')), findsOneWidget);
+        expect(
+          find.byKey(const Key('ponto_aresta_vizinho_colado')),
+          findsOneWidget,
+        );
+        expect(find.byType(IconeMarcaAresta), findsWidgets);
+
+        // Ao clicar em Pedra Grande, SOMENTE a bolha clicada expande (com icone Aresta) e exibe Base / Trilha;
+        // o pico vizinho colado continua compacto sem sobrepor texto!
+        await tester.tap(find.byKey(const Key('ponto_aresta_igarape')));
+        for (var i = 0; i < 24; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+        expect(selecionadoId, equals('igarape'));
+        expect(find.byKey(const Key('pilula_lupa_igarape')), findsOneWidget);
+        expect(find.textContaining('Pedra Grande'), findsOneWidget);
+        expect(find.textContaining('Santuário Vizinho'), findsNothing);
+        // Trilha ficticia removida (nunca exibe Base / Trilha sem dados reais)
+        expect(find.text('Base / Trilha'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('pilula_lupa_igarape')),
+            matching: find.byType(IconeMarcaAresta),
+          ),
+          findsOneWidget,
+        );
+
+        // Tocar em espaco vazio do mapa recolhe a descricao expandida (aguarda janela kDoubleTapTimeout)
+        await tester.tapAt(const Offset(30, 140));
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(selecionadoId, isNull);
+        expect(find.textContaining('Pedra Grande'), findsNothing);
+
+        // Scroll de mouse/trackpad permite dar zoom profundo ate LOD > 4.0
+        final centro = tester.getCenter(find.byType(SuperficieGloboExplorar));
+        final ponteiroMouse = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(ponteiroMouse.hover(centro));
+        for (var i = 0; i < 8; i++) {
+          await tester.sendEventToBinding(
+            ponteiroMouse.scroll(const Offset(0, -240)),
+          );
+        }
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(ctrl.lod, greaterThan(4.0));
+      },
+    );
+
+    testWidgets(
+      'anima estrelas de fundo de forma muito leve e lenta no espaco 3D, pausa em 2D ou disableAnimations e nao trava pumpAndSettle',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(420, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        // 1. Contrato comportamental do calculo estelar: deslocamento presente, porem muito leve e lento
+        const tamanho = Size(420, 800);
+        const centro = Offset(210, 400);
+        final estrelasT0 = PintorCampoEstrelasGlobo.calcularEstrelasVisiveis(
+          tamanho: tamanho,
+          centroGlobo: centro,
+          raioGloboPx: 190.0,
+          tempoSegundos: 0.0,
+        );
+        final estrelasT8 = PintorCampoEstrelasGlobo.calcularEstrelasVisiveis(
+          tamanho: tamanho,
+          centroGlobo: centro,
+          raioGloboPx: 190.0,
+          tempoSegundos: 8.0,
+        );
+        expect(estrelasT0, isNotEmpty);
+        final comumId = estrelasT0.first.indice;
+        final pos0 = estrelasT0.firstWhere((e) => e.indice == comumId).posicao;
+        final pos8 = estrelasT8.firstWhere((e) => e.indice == comumId).posicao;
+        final deslocamento8s = (pos8 - pos0).distance;
+        expect(deslocamento8s, greaterThan(0.4));
+        expect(deslocamento8s, lessThan(10.0));
+
