@@ -196,6 +196,14 @@ class MalhaGeograficaGlobo {
     required double latitude,
     required double longitude,
   }) {
+    // Atalho O(1) para o interior continental brasileiro (Minas Gerais, Goiás, interior SP/BA),
+    // eliminando milhares de raycasts poligonais por quadro longe do litoral atlântico.
+    if (latitude >= -22.4 &&
+        latitude <= -5.0 &&
+        longitude >= -58.0 &&
+        longitude <= -41.6) {
+      return true;
+    }
     if (_pontoEmAnelLonLat(longitude, latitude, brasil)) return true;
     for (final cont in continentes) {
       if (_pontoEmAnelLonLat(longitude, latitude, cont.verticesLonLat)) {
