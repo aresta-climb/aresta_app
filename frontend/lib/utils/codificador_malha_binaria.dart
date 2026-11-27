@@ -171,3 +171,87 @@ abstract final class CodificadorMalhaBinaria {
       ..u8(0)
       ..u16(cotasPorPico.length);
 
+    for (final entry in cotasPorPico.entries) {
+      final c = entry.value;
+      w
+        ..texto(entry.key)
+        ..i16(c.altitudeBaseMetros)
+        ..i16(c.altitudePicoMetros)
+        ..i16(c.altitudePontoMetros ?? -32768)
+        ..u16(c.dimensaoGradeDem)
+        ..f32(c.raioGradeDemGraus)
+        ..u16(c.gradeDemMetros.length);
+      for (final z in c.gradeDemMetros) {
+        w.i16(z);
+      }
+    }
+
+    if (gradeRegional != null) {
+      w
+        ..f32(gradeRegional.latMin)
+        ..f32(gradeRegional.lonMin)
+        ..f32(gradeRegional.passoGraus)
+        ..u16(gradeRegional.linhas)
+        ..u16(gradeRegional.colunas);
+      for (var i = 0; i < gradeRegional.cotasMetros.length; i++) {
+        w.i16(gradeRegional.cotasMetros[i]);
+      }
+    }
+    return w.finalizar();
+  }
+
+  /// Decodifica `altimetria_picos_inicial.bin` diretamente em `Int16List` / objetos imutáveis.
+  static DadosAltimetriaBinariaDecodificados decodificarAltimetriaInicial(
+    Uint8List bytes,
+  ) {
+    final r = _LeitorBinario(bytes);
+    if (r.u32() != magicAltimetria || r.u16() != versaoFormato) {
+      throw const FormatException('Cabeçalho inválido em altimetria_picos_inicial.bin.');
+    }
+    final temGrade = r.u8() == 1;
+    r.u8();
+    final nPicos = r.u16();
+    final cotasPorPico = <String, CotaAltimetricaPico>{};
+    for (var i = 0; i < nPicos; i++) {
+      final id = r.texto();
+      final baseM = r.i16();
+      final picoM = r.i16();
+      final pontoBruto = r.i16();
+      final dim = r.u16();
+      final raio = r.f32();
+      final nAmostras = r.u16();
+      final amostras = List<int>.generate(nAmostras, (_) => r.i16(), growable: false);
+      cotasPorPico[id] = CotaAltimetricaPico(
+        altitudeBaseMetros: baseM,
+        altitudePicoMetros: picoM,
+        altitudePontoMetros: pontoBruto == -32768 ? null : pontoBruto,
+        dimensaoGradeDem: dim,
+        raioGradeDemGraus: raio,
+        gradeDemMetros: amostras,
+      );
+    }
+
+    GradeElevacaoRegionalOffline? grade;
+    if (temGrade) {
+      final latMin = r.f32();
+      final lonMin = r.f32();
+      final passo = r.f32();
+      final linhas = r.u16();
+      final colunas = r.u16();
+      final total = linhas * colunas;
+      final cotas = Int16List(total);
+      for (var i = 0; i < total; i++) {
+        cotas[i] = r.i16();
+      }
+      grade = GradeElevacaoRegionalOffline(
+        latMin: latMin,
+        lonMin: lonMin,
+        passoGraus: passo,
+        linhas: linhas,
+        colunas: colunas,
+        cotasMetros: cotas,
+      );
+    }
+    return (cotasPorPico: cotasPorPico, gradeRegional: grade);
+  }
+
