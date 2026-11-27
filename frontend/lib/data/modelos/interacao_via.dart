@@ -266,8 +266,8 @@ class AlertaSegurancaVia {
     return AlertaSegurancaVia(
       uid: uid,
       escaladaUid: escaladaUid,
-      categoria: categoria,
-      detalhe: detalhe ?? this.detalhe,
+      categoria: categoria ?? this.categoria,
+      detalhe: novoDetalhe,
       autorIdPublico: autorIdPublico,
       autorNomePublico: autorNomePublico,
       criadoEm: criadoEm,
@@ -348,10 +348,13 @@ class ConsensoGrauVia {
     }
     final percentual = ((maiorContagem / totalVotos) * 100).round();
     if (deltaDominante == 0) {
-      return '$percentual% confirmam o grau';
+      return tr(ChaveTexto.viaConfirmamGrauPct, {'pct': '$percentual'});
     }
     final sinal = deltaDominante > 0 ? '+$deltaDominante' : '$deltaDominante';
-    return '$percentual% sugerem $sinal';
+    return tr(ChaveTexto.viaSugeremGrauPct, {
+      'pct': '$percentual',
+      'sinal': sinal,
+    });
   }
 }
 
@@ -373,6 +376,9 @@ class ComentarioComunidadeVia {
   /// Nome ou apelido esportivo exibido junto à nota.
   final String autorNomePublico;
 
+  /// URL pública (`http`/`https`) ou Data URI opcional da foto de perfil do autor.
+  final String? autorAvatarUrl;
+
   /// Data e hora de publicação do comentário.
   final DateTime criadoEm;
 
@@ -387,10 +393,17 @@ class ComentarioComunidadeVia {
     required this.uid,
     required this.autorIdPublico,
     required this.autorNomePublico,
+    String? autorAvatarUrl,
     required this.criadoEm,
     this.estiloAscensao,
     required String texto,
-  }) : texto = _validarTexto(texto);
+  }) : autorAvatarUrl = _normalizarAvatar(autorAvatarUrl),
+       texto = _validarTexto(texto);
+
+  static String? _normalizarAvatar(String? bruto) {
+    final limpo = bruto?.trim();
+    return (limpo != null && limpo.isNotEmpty) ? limpo : null;
+  }
 
   static String _validarTexto(String bruto) {
     final limpo = bruto.trim();
@@ -412,6 +425,25 @@ class ComentarioComunidadeVia {
     final mereceEstrela =
         estilo == TipoAscensao.aVista || estilo == TipoAscensao.flash;
     return mereceEstrela ? '$textoCaixaAlta ★' : textoCaixaAlta;
+  }
+
+  /// Indica se este comentário foi publicado originalmente por [autorId].
+  bool foiCriadoPor(String? autorId) {
+    final limpo = autorId?.trim();
+    return limpo != null && limpo.isNotEmpty && autorIdPublico == limpo;
+  }
+
+  /// Retorna uma cópia imutável atualizando e validando [texto] (`1..280` caracteres).
+  ComentarioComunidadeVia copyWith({String? texto}) {
+    return ComentarioComunidadeVia(
+      uid: uid,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: autorNomePublico,
+      autorAvatarUrl: autorAvatarUrl,
+      criadoEm: criadoEm,
+      estiloAscensao: estiloAscensao,
+      texto: texto ?? this.texto,
+    );
   }
 }
 
