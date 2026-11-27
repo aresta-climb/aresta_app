@@ -172,3 +172,95 @@ abstract final class GeradorMalhaGeograficaOffline {
     }
   }
 
+  static Future<ResultadoGeracaoComSeguranca> _rotacionarJsonComCopiaSeguranca({
+    required String caminhoSaida,
+    required String caminhoSeguranca,
+    required Future<Map<String, dynamic>> Function() buscarDados,
+    required bool Function(Map<String, dynamic> dados) validarDados,
+    required String nomeRecurso,
+  }) async {
+    final arquivoAtual = File(caminhoSaida);
+    final arquivoSeguranca = File(caminhoSeguranca);
+    arquivoAtual.parent.createSync(recursive: true);
+    arquivoSeguranca.parent.createSync(recursive: true);
+
+    try {
+      final novosDados = await buscarDados();
+      if (!validarDados(novosDados)) {
+        throw FormatException('Estrutura inválida recebida para $nomeRecurso.');
+      }
+
+      final conteudoJson = jsonEncode(novosDados);
+      final arquivoTmp = File('$caminhoSaida.tmp');
+      arquivoTmp.writeAsStringSync(conteudoJson, flush: true);
+
+      if (_arquivoJsonIntegro(arquivoAtual, validarDados)) {
+        arquivoAtual.copySync(caminhoSeguranca);
+      } else {
+        arquivoTmp.copySync(caminhoSeguranca);
+      }
+
+      if (arquivoAtual.existsSync()) {
+        arquivoAtual.deleteSync();
+      }
+      arquivoTmp.renameSync(caminhoSaida);
+
+      return ResultadoGeracaoComSeguranca(
+        usouCopiaSeguranca: false,
+        mensagem:
+            'Atualizado $nomeRecurso (${utf8.encode(conteudoJson).length} bytes) e rotacionada cópia única de segurança.',
+      );
+    } catch (erro) {
+      final arquivoTmp = File('$caminhoSaida.tmp');
+      if (arquivoTmp.existsSync()) {
+        arquivoTmp.deleteSync();
+      }
+
+      if (_arquivoJsonIntegro(arquivoAtual, validarDados)) {
+        if (!_arquivoJsonIntegro(arquivoSeguranca, validarDados)) {
+          arquivoAtual.copySync(caminhoSeguranca);
+        }
+        return ResultadoGeracaoComSeguranca(
+          usouCopiaSeguranca: true,
+          mensagem:
+              'Falha ao consultar $nomeRecurso ($erro). Mantida versão local íntegra.',
+        );
+      }
+
+      if (_arquivoJsonIntegro(arquivoSeguranca, validarDados)) {
+        arquivoSeguranca.copySync(caminhoSaida);
+        return ResultadoGeracaoComSeguranca(
+          usouCopiaSeguranca: true,
+          mensagem:
+              'Falha ao consultar $nomeRecurso ($erro). Restaurado a partir da cópia de segurança.',
+        );
+      }
+
+      throw StateError(
+        'Não foi possível obter $nomeRecurso ($erro) e não há cópia de segurança íntegra disponível.',
+      );
+    }
+  }
+
+  static bool _arquivoJsonIntegro(
+    File arquivo,
+    bool Function(Map<String, dynamic>) validador,
+  ) {
+    if (!arquivo.existsSync()) return false;
+    try {
+      final decodificado = jsonDecode(arquivo.readAsStringSync());
+      return decodificado is Map<String, dynamic> && validador(decodificado);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Valida se o mapa JSON de malha geográfica contém continentes, contorno nacional e todas as 27 UFs.
+  static bool validarEstruturaMalha(Map<String, dynamic> dados) {
+    final continentes = dados['continentes'];
+    final brasil = dados['brasil'];
+    final estados = dados['estados_br'];
+    if (continentes is! List || continentes.isEmpty) return false;
+    if (brasil is! List || brasil.length < 10) return false;
+    if (estados is! List || estados.length != 27) return false;
+
