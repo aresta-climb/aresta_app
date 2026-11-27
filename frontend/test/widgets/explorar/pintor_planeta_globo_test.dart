@@ -174,3 +174,83 @@ void main() {
               PontoContornoGeo(longitude: -43.9, latitude: -20.1),
               PontoContornoGeo(longitude: -44.0, latitude: -19.9),
             ],
+          ),
+        ),
+      ];
+      const incendios = <BolhaIncendioAtivaRenderizavel>[
+        BolhaIncendioAtivaRenderizavel(
+          incendio: BolhaIncendioRegional(
+            id: 'f1',
+            latitude: -19.7,
+            longitude: -43.7,
+            potenciaFrpMw: 35.0,
+            totalFocos: 4,
+            ventoRumoGraus: 260.0,
+            ventoVelocidadeKmh: 14.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -43.75, latitude: -19.75),
+              PontoContornoGeo(longitude: -43.65, latitude: -19.75),
+              PontoContornoGeo(longitude: -43.70, latitude: -19.65),
+            ],
+          ),
+        ),
+      ];
+
+      final gravador = ui.PictureRecorder();
+      final canvas = ui.Canvas(gravador);
+      const tela = ui.Size(400, 800);
+
+      final referencias = [picoSonar.paraReferenciaRelevo()];
+      final redeViaria = ConstrutorRedeViariaAresta.construir(
+        rodovias: malhaTeste.rodoviasProximas,
+        localidades: malhaTeste.localidadesProximas,
+        picos: referencias,
+      );
+
+      final pintorLocal = PintorPlanetaGlobo(
+        controlador: ctrlLocal,
+        malha: malhaTeste,
+        redeViaria: redeViaria,
+        texturaNasa: textura,
+        picosReferencia: referencias,
+        sonarPico: picoSonar,
+        progressoSonar: 0.45,
+        progressoLuzViaria: 1.0,
+      );
+      pintorLocal.paint(canvas, tela);
+
+      final atmosferaVazia = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlOrbital,
+        picosReferencia: const [],
+        bolhasAtivas: const [],
+        incendiosAtivos: const [],
+        sonarBolhaId: null,
+        faseTempestadeSegundos: 0.0,
+      );
+      atmosferaVazia.paint(canvas, tela);
+
+      final atmosferaOrbital = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlOrbital,
+        picosReferencia: [picoSonar.paraReferenciaRelevo()],
+        bolhasAtivas: bolhas,
+        incendiosAtivos: incendios,
+        sonarBolhaId: 'b1',
+        faseTempestadeSegundos: 1.2,
+      );
+      atmosferaOrbital.paint(canvas, tela);
+
+      final atmosferaLocal = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlLocal,
+        picosReferencia: [picoSonar.paraReferenciaRelevo()],
+        bolhasAtivas: bolhas,
+        incendiosAtivos: incendios,
+        sonarBolhaId: 'b1',
+        faseTempestadeSegundos: 1.5,
+      );
+      atmosferaLocal.paint(canvas, tela);
+      expect(atmosferaLocal.shouldRepaint(atmosferaOrbital), isTrue);
+
+      gravador.endRecording().dispose();
+    });
+  });
+}
