@@ -259,3 +259,71 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
                       ),
                     ),
                   ],
+                  buildFeedbackButton(context, color: Colors.white70),
+                ],
+              ),
+              if (chipsAtivos.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: chipsAtivos),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _construirChipsAtivos(BuildContext context, BrowseViewModel vm) {
+    final chips = <Widget>[];
+    for (final mod in vm.modalidadesAtivas) {
+      chips.add(
+        _ChipFiltroRemovivel(
+          key: Key('chip_ativo_modalidade_${mod.name}'),
+          rotulo: mod.rotulo,
+          aoRemover: () => vm.alternarModalidade(mod),
+        ),
+      );
+    }
+    if (vm.temFiltroGrauVia) {
+      final resumo = formatarResumoGrauExplorar(
+        OpcoesGrau.grausVia,
+        vm.minGrauVia,
+        vm.maxGrauVia,
+      );
+      chips.add(
+        _ChipFiltroRemovivel(
+          key: const Key('chip_ativo_grau_via'),
+          rotulo: '${context.tr(ChaveTexto.modVias)} $resumo',
+          aoRemover: () => vm.definirFaixaGrauVia(null, null),
+        ),
+      );
+    }
+    if (vm.temFiltroGrauBoulder) {
+      final resumo = formatarResumoGrauExplorar(
+        OpcoesGrau.grausBoulder,
+        vm.minGrauBoulder,
+        vm.maxGrauBoulder,
+      );
+      chips.add(
+        _ChipFiltroRemovivel(
+          key: const Key('chip_ativo_grau_boulder'),
+          rotulo: '${context.tr(ChaveTexto.modBoulder)} $resumo',
+          aoRemover: () => vm.definirFaixaGrauBoulder(null, null),
+        ),
+      );
+    }
+    if (vm.raioMaximoKm != null) {
+      chips.add(
+        _ChipFiltroRemovivel(
+          key: const Key('chip_ativo_raio'),
+          rotulo: context.tr(
+            ChaveTexto.explorarAteKm,
+            {'km': vm.raioMaximoKm!.toInt()},
+          ),
+          aoRemover: () => vm.definirRaioMaximoKm(null),
+        ),
+      );
