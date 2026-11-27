@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -12,8 +13,11 @@ import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
+/// Formata a data ISO (`YYYY-MM-DD`) por extenso no idioma ativo do aplicativo.
 String formatLegalDate(String isoDate) {
+  if (ControladorIdiomaApp.instancia.idiomaAtual != IdiomaApp.portugues) {
+    return TradutorApp.formatarDataExtensoLegal(isoDate);
+  }
   final parts = isoDate.split('-');
   if (parts.length != 3) return isoDate;
 
@@ -64,6 +68,7 @@ class TermsOfUsePage extends StatefulWidget {
 
 class _TermsOfUsePageState extends State<TermsOfUsePage> {
   bool _isChecked = false;
+  bool _loadFailed = false;
   String? _termsMarkdown;
   String? _privacyMarkdown;
   String? _acceptedTimestamp;
@@ -91,6 +96,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         'legal/repo/public/docs/politica-de-privacidade.md',
       );
       setState(() {
+        _loadFailed = false;
         _termsMarkdown = terms;
         _privacyMarkdown = privacy;
       });
@@ -101,9 +107,9 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         stackTrace: stackTrace,
       );
       setState(() {
-        _termsMarkdown =
-            'Erro ao carregar os termos. Por favor, tente novamente mais tarde.';
-        _privacyMarkdown = 'Erro ao carregar a política.';
+        _loadFailed = true;
+        _termsMarkdown = tr(ChaveTexto.legalErroTermos);
+        _privacyMarkdown = tr(ChaveTexto.legalErroPolitica);
       });
     }
   }
@@ -172,41 +178,49 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text(
-              'Política de Privacidade',
-              style: TextStyle(fontSize: 16),
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [buildFeedbackButton(context)],
-          ),
-          body: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              16.0,
-              16.0,
-              16.0,
-              MediaQuery.paddingOf(context).bottom > 0
-                  ? MediaQuery.paddingOf(context).bottom + 16.0
-                  : 32.0,
-            ),
-            child: _privacyMarkdown != null
-                ? MarkdownBody(
-                    data: _privacyMarkdown!,
-                    onTapLink: _onTapLink,
-                    styleSheet: _getSharedMarkdownStyle(),
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
+        return ValueListenableBuilder<IdiomaApp>(
+          valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+          builder: (context, _, _) {
+            final privacyTexto = _loadFailed
+                ? context.tr(ChaveTexto.legalErroPolitica)
+                : _privacyMarkdown;
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  context.tr(ChaveTexto.legalPoliticaTitulo),
+                  style: const TextStyle(fontSize: 16),
+                ),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                actions: [buildFeedbackButton(context)],
+              ),
+              body: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  16.0,
+                  16.0,
+                  16.0,
+                  MediaQuery.paddingOf(context).bottom > 0
+                      ? MediaQuery.paddingOf(context).bottom + 16.0
+                      : 32.0,
+                ),
+                child: privacyTexto != null
+                    ? MarkdownBody(
+                        data: privacyTexto,
+                        onTapLink: _onTapLink,
+                        styleSheet: _getSharedMarkdownStyle(),
+                      )
+                    : const Center(child: CircularProgressIndicator()),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildUpdateBanner() {
+  Widget _buildUpdateBanner(BuildContext context) {
     if (!widget.isUpdatingTerms) return const SizedBox.shrink();
 
     return Container(
@@ -221,7 +235,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
+            context.tr(ChaveTexto.legalBannerAtualizacao),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: context.colors.chalkWhite,
@@ -230,7 +244,9 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Data da atualização: ${formatLegalDate(kLegalLastUpdatedDate)}',
+            context.tr(ChaveTexto.legalDataAtualizacao, {
+              'data': formatLegalDate(kLegalLastUpdatedDate),
+            }),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: context.colors.chalkWhite.withValues(alpha: 0.8),
@@ -243,7 +259,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
     );
   }
 
-  Widget _buildAcceptedBanner() {
+  Widget _buildAcceptedBanner(BuildContext context) {
     if (widget.showAcceptButton || _acceptedTimestamp == null) {
       return const SizedBox.shrink();
     }
@@ -275,7 +291,10 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Aceito em $dateStr às $timeStr',
+              context.tr(ChaveTexto.legalAceitoEm, {
+                'data': dateStr,
+                'hora': timeStr,
+              }),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
