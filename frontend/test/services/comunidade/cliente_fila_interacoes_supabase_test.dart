@@ -212,4 +212,93 @@ void main() {
     expect(await clientePadrao.buscarInteracoesPendentes('x8siJek3FiG3aB'), isEmpty);
     expect(uriPadraoConsultada?.path, '/rest/v1/fila_interacoes');
   });
+
+  test('inclui id UUID ao inserir comentário e executa PATCH/DELETE autenticados para comentários e alertas', () async {
+    final cliente = ClienteFilaInteracoesSupabase(
+      resolvedorBaseUrl: () => baseUrl,
+      resolvedorAnonKey: () => 'sb_publishable_teste123',
+    );
+
+    final comentario = ItemFilaInteracao.comentario(
+      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      autorNomePublico: 'Mariana',
+      escaladaUid: 'x8siJek3FiG3aB',
+      textoComentario: 'Beta inicial',
+    );
+    await cliente.inserirInteracao(comentario, accessToken: 'jwt-mariana');
+    expect(ultimoMetodoHttp, 'POST');
+    expect(ultimoPayloadRecebido!['id'], 'f47ac10b-58cc-4372-a567-0e02b2c3d479');
+
+    await cliente.atualizarComentario(
+      comentarioId: comentario.id,
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      novoTexto: 'Beta editado',
+      accessToken: 'jwt-mariana',
+    );
+    expect(ultimoMetodoHttp, 'PATCH');
+    expect(ultimoAuthHeader, 'Bearer jwt-mariana');
+    expect(ultimoPreferHeader, 'return=minimal');
+    expect(ultimaUriRequisitada?.query, contains('id=eq.${comentario.id}'));
+    expect(ultimaUriRequisitada?.query, contains('tipo=eq.COMENTARIO'));
+    expect(ultimoPayloadRecebido, {'texto_comentario': 'Beta editado'});
+
+    await cliente.excluirComentario(
+      comentarioId: comentario.id,
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      accessToken: 'jwt-mariana',
+    );
+    expect(ultimoMetodoHttp, 'DELETE');
+    expect(ultimaUriRequisitada?.query, contains('id=eq.${comentario.id}'));
+
+    await cliente.atualizarAlerta(
+      alertaAlvoUid: 'alertaAbelha01',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+      detalhe: 'Chapeleta 2 girando',
+      accessToken: 'jwt-mariana',
+    );
+    expect(ultimoMetodoHttp, 'PATCH');
+    expect(ultimaUriRequisitada?.query, contains('alerta_alvo_uid=eq.alertaAbelha01'));
+    expect(ultimoPayloadRecebido, {
+      'categoria_alerta': 'PROTECAO_PRECARIA',
+      'texto_comentario': 'Chapeleta 2 girando',
+    });
+
+    await cliente.atualizarAlerta(
+      alertaAlvoUid: 'alertaAbelha01',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      categoria: CategoriaAlertaSeguranca.fauna,
+      detalhe: '   ',
+      accessToken: 'jwt-mariana',
+    );
+    expect(ultimoPayloadRecebido, {
+      'categoria_alerta': 'FAUNA',
+      'texto_comentario': null,
+    });
+
+    await cliente.excluirAlerta(
+      alertaAlvoUid: 'alertaAbelha01',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      accessToken: 'jwt-mariana',
+    );
+    expect(ultimoMetodoHttp, 'DELETE');
+    expect(ultimaUriRequisitada?.query, contains('tipo=eq.ALERTA_SEGURANCA'));
+
+    statusResposta = 403;
+    await expectLater(
+      () => cliente.excluirAlerta(
+        alertaAlvoUid: 'alertaAbelha01',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        accessToken: 'jwt-mariana',
+      ),
+      throwsA(
+        isA<ExcecaoHttpFilaInteracoes>().having(
+          (e) => e.codigoStatusHttp,
+          'codigoStatusHttp',
+          403,
+        ),
+      ),
+    );
+  });
 }
