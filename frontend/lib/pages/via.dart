@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/via_functions.dart';
@@ -104,15 +105,11 @@ class _ViaPageState extends State<ViaPage> {
   void _abrirModalReportarAlerta(BuildContext context) {
     final despachanteSnack = capturarDespachanteSnackBarSeguro(
       context,
-      recuoExtraInferior:
-          _viewModel.exibirRecursosComunidade && !_viewModel.ehHighline
-          ? 72
-          : 0,
+      recuoExtraInferior: !_viewModel.ehHighline ? 72 : 0,
     );
     if (!_viewModel.usuarioEstaAutenticado) {
       despachanteSnack.exibir(
-        texto:
-            'Entre na sua conta na aba Perfil para reportar alertas de segurança.',
+        texto: tr(ChaveTexto.viaEntreParaReportarToast),
         duracao: const Duration(seconds: 3),
       );
       return;
@@ -126,7 +123,7 @@ class _ViaPageState extends State<ViaPage> {
         );
         if (sucesso) {
           despachanteSnack.exibir(
-            texto: 'Alerta de segurança registrado!',
+            texto: tr(ChaveTexto.viaAlertaRegistradoToast),
             duracao: const Duration(seconds: 2),
           );
         }
@@ -179,7 +176,7 @@ class _ViaPageState extends State<ViaPage> {
                     color: cores.ashGrey,
                     size: 20,
                   ),
-                  tooltip: 'Reportar alerta de segurança',
+                  tooltip: context.tr(ChaveTexto.viaReportarAlertaTooltip),
                   onPressed: () => _abrirModalReportarAlerta(context),
                 ),
               if (_viewModel.possuiUid)
@@ -189,7 +186,7 @@ class _ViaPageState extends State<ViaPage> {
                     color: cores.chalkWhite,
                     size: 20,
                   ),
-                  tooltip: 'Compartilhar escalada',
+                  tooltip: context.tr(ChaveTexto.viaCompartilharTooltip),
                   onPressed: () {
                     _viewModel.compartilharEscalada(
                       cragId: widget.cragId,
