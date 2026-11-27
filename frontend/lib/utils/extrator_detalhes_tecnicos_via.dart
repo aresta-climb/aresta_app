@@ -4,6 +4,7 @@
 import '../aresta_api/proto/generated/beta.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../data/modelos/interacao_via.dart';
+import '../idioma/tradutor_app.dart';
 import 'consulta_dataset.dart';
 import 'formatador_escalada.dart';
 import 'modelos_apresentacao_via.dart';
@@ -13,8 +14,8 @@ export 'modelos_apresentacao_via.dart';
 /// Extrator puro e sem estado responsável por mapear mensagens Protobuf [Escalada] e agregados
 /// comunitários em modelos imutáveis prontos para consumo pelo `ViaViewModel` e Dumb UI.
 abstract final class ExtratorDetalhesTecnicosVia {
-  /// Extrai o rótulo legível da modalidade da [escalada].
-  static String extrairModalidade(Escalada escalada) {
+  /// Extrai a chave canônica interna da modalidade da [escalada] para indexação e filtros.
+  static String extrairChaveModalidade(Escalada escalada) {
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
         return 'Esportiva';
@@ -35,6 +36,37 @@ abstract final class ExtratorDetalhesTecnicosVia {
         return '';
     }
   }
+
+  /// Traduz uma chave canônica de modalidade (`'Esportiva'`, `'Boulder'`, etc.) para o idioma ativo.
+  static String traduzirRotuloModalidade(
+    String chaveModalidade, {
+    bool plural = false,
+  }) {
+    switch (chaveModalidade) {
+      case 'Esportiva':
+        return tr(plural ? ChaveTexto.modEsportivas : ChaveTexto.modEsportiva);
+      case 'Móvel':
+        return tr(plural ? ChaveTexto.modMoveis : ChaveTexto.modMovel);
+      case 'Mista':
+        return tr(ChaveTexto.modMista);
+      case 'Boulder':
+        return tr(plural ? ChaveTexto.modBoulders : ChaveTexto.modBoulder);
+      case 'Multienfiada':
+        return tr(
+          plural ? ChaveTexto.modMultienfiadas : ChaveTexto.modMultienfiada,
+        );
+      case 'Highline':
+        return tr(plural ? ChaveTexto.modHighlines : ChaveTexto.modHighline);
+      case 'Outras':
+        return tr(ChaveTexto.modOutras);
+      default:
+        return chaveModalidade;
+    }
+  }
+
+  /// Extrai o rótulo localizado da modalidade da [escalada] no idioma ativo.
+  static String extrairModalidade(Escalada escalada) =>
+      traduzirRotuloModalidade(extrairChaveModalidade(escalada));
 
   /// Indica se a [escalada] é marcada como clássica/destaque do setor.
   static bool extrairDestaque(Escalada escalada) {
@@ -62,7 +94,7 @@ abstract final class ExtratorDetalhesTecnicosVia {
     if (bruto == null || bruto.isEmpty || bruto.contains('INDEFINIDO')) {
       return null;
     }
-    if (bruto == 'PROJETO') return 'Projeto';
+    if (bruto == 'PROJETO') return tr(ChaveTexto.viaProjeto);
     final formatado = formatarTextoGrau(bruto);
     return formatado.isNotEmpty ? formatado : null;
   }
@@ -75,7 +107,7 @@ abstract final class ExtratorDetalhesTecnicosVia {
         escalada.viaMultiplasEnfiadas.dificuldadeMedia.name,
       );
       if (media.isNotEmpty && media != 'projeto') {
-        partes.add('Média $media');
+        partes.add(tr(ChaveTexto.viaMediaPrefixo, {'media': media}));
       }
     }
     final artificial = _extrairArtificialFormatado(escalada);
@@ -83,11 +115,16 @@ abstract final class ExtratorDetalhesTecnicosVia {
       final livre = _extrairArtificialEmLivreFormatado(escalada);
       partes.add(
         livre != null
-            ? 'Artificial $artificial ($livre em livre)'
-            : 'Artificial $artificial',
+            ? tr(ChaveTexto.viaArtificialLivre, {
+                'art': artificial,
+                'livre': livre,
+              })
+            : tr(ChaveTexto.viaArtificialPuro, {'art': artificial}),
       );
     }
-    return partes.isEmpty ? 'Guia Oficial / Conquistador' : partes.join(' • ');
+    return partes.isEmpty
+        ? tr(ChaveTexto.viaGuiaOficialConquistador)
+        : partes.join(' • ');
   }
 
   /// Extrai a descrição do tipo de parada/ancoragem quando preenchida.
@@ -106,51 +143,18 @@ abstract final class ExtratorDetalhesTecnicosVia {
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
         final v = escalada.viaEsportiva;
-        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
-        _adicionarProtecoes(
-          itens,
-          v.quantidadeProtecoesIntermediarias,
-          v.quantidadeProtecoesParada,
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.parede,
-          'PAREDE',
-          _formatarEnumSimples(v.tipoParede.name),
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.exposicao,
-          'EXPOSIÇÃO',
-          _formatarEnumCodigo(v.exposicao.name),
-        );
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, tr(ChaveTexto.viaSpecExtensao), v.extensao);
+        _adicionarProtecoes(itens, v.quantidadeProtecoesIntermediarias, v.quantidadeProtecoesParada);
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.parede, tr(ChaveTexto.viaSpecParede), _formatarEnumSimples(v.tipoParede.name));
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.exposicao, tr(ChaveTexto.viaSpecExposicao), _formatarEnumCodigo(v.exposicao.name));
       case Escalada_Tipo.viaMovel:
         final v = escalada.viaMovel;
-        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
-        _adicionarProtecoes(
-          itens,
-          v.quantidadeProtecoesIntermediarias,
-          v.quantidadeProtecoesParada,
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.parede,
-          'PAREDE',
-          _formatarEnumSimples(v.tipoParede.name),
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.exposicao,
-          'EXPOSIÇÃO',
-          _formatarEnumCodigo(v.exposicao.name),
-        );
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, tr(ChaveTexto.viaSpecExtensao), v.extensao);
+        _adicionarProtecoes(itens, v.quantidadeProtecoesIntermediarias, v.quantidadeProtecoesParada);
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.parede, tr(ChaveTexto.viaSpecParede), _formatarEnumSimples(v.tipoParede.name));
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.exposicao, tr(ChaveTexto.viaSpecExposicao), _formatarEnumCodigo(v.exposicao.name));
       case Escalada_Tipo.boulder:
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.parede,
-          'PAREDE',
-          _formatarEnumSimples(escalada.boulder.tipoParede.name),
-        );
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.parede, tr(ChaveTexto.viaSpecParede), _formatarEnumSimples(escalada.boulder.tipoParede.name));
       case Escalada_Tipo.viaMultiplasEnfiadas:
         final v = escalada.viaMultiplasEnfiadas;
         if (v.numeroEnfiadas > 0) {
