@@ -1,42 +1,32 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
-import '../../theme/cores_app.dart';
-import 'biblioteca_funcoes_comuns.dart';
-import '../../navigation/funcoes_navegacao.dart';
-import '../view_models/card_croqui_view_model.dart';
+import 'package:flutter/material.dart';
+
+import '../../data/modelos/modelos_clima_pico.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../widgets/card_pico.dart';
+import '../../widgets/explorar/componentes_marcador_globo.dart';
+import '../view_models/card_croqui_view_model.dart';
+
 export '../../widgets/card_pico.dart';
 
-/// Constrói a área de conteúdo principal para a página de Explorar (Browse).
-///
-/// Ela exibe uma barra de pesquisa e uma lista de picos disponíveis que podem ser baixados.
-/// O callback [onSearchChanged] é acionado quando o usuário digita na barra de pesquisa.
-/// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
-Widget buildBrowseBody(
-  BuildContext context,
-  dynamic availableCrags,
-  ValueListenable<Map<String, double>> downloadingCrags, {
-  required ValueChanged<String> onSearchChanged,
-  required Function(dynamic) onDownload,
-  Function(dynamic)? onOpen,
-  VoidCallback? onAddExperimental,
-  VoidCallback? onFilterPressed,
-  VoidCallback? onSyncPressed,
-  bool Function(String picoId)? isDownloadedChecker,
-  ScrollController? scrollController,
-  GlobalKey? chaveSetimoPico,
+/// Extrai a sigla da Unidade Federativa (`UF`, ex.: `'MG'`, `'RJ'`) a partir do slug/caminho
+/// padronizado do catálogo (`br_mg_...`) ou aproxima pela coordenada geográfica.
+String extrairSiglaUfPico({
+  required String id,
+  required String caminhoRelativo,
+  required double latitude,
+  required double longitude,
 }) {
-  final List<CardCroquiViewModel> picos = _normalizarCards(availableCrags);
-  final Set<String> baixadosImplicitos = {
-    for (final pico in picos)
-      if (pico.salvoOffline) pico.id,
-  };
+  final padraoBr = RegExp(r'(?:^|/|_)br_([a-zA-Z]{2})(?:_|/)');
+  final mId = padraoBr.firstMatch(id);
+  if (mId != null) return mId.group(1)!.toUpperCase();
 
-  bool verificarBaixado(String picoId) =>
-      isDownloadedChecker?.call(picoId) ?? baixadosImplicitos.contains(picoId);
+  final mCam = padraoBr.firstMatch(caminhoRelativo);
+  if (mCam != null) return mCam.group(1)!.toUpperCase();
 
   return Column(
     children: [
