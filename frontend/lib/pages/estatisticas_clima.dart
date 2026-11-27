@@ -178,3 +178,101 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
+  Widget _construirSecaoMatrizEFormulas(
+    BuildContext context,
+    AppColors cores,
+    MatrizContingenciaClima matriz,
+    ({double inferior, double superior}) ic95,
+    double zContra50,
+    double zContra83,
+    double zHeidke,
+  ) {
+    final pHat = (matriz.taxaDeteccaoPod * 100).toStringAsFixed(2);
+    final sePct = (matriz.erroPadraoDeteccao * 100).toStringAsFixed(2);
+    final infPct = (ic95.inferior * 100).toStringAsFixed(2);
+    final supPct = (ic95.superior * 100).toStringAsFixed(2);
+    final accPct = (matriz.acuraciaGlobal * 100).toStringAsFixed(2);
+    final csiPct = (matriz.indiceSucessoCriticoCsi * 100).toStringAsFixed(2);
+
+    return _CartaoSecaoEstatistica(
+      titulo: context.tr(ChaveTexto.estatClimaSecaoMatrizTitulo),
+      cores: cores,
+      filho: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.tr(ChaveTexto.estatClimaMatrizExplicacao),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.42),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _CelulaMatriz(
+                  sigla: 'TP = ${matriz.verdadeirosPositivos}',
+                  detalhe: 'Hit (Chuva real)',
+                  destaque: true,
+                  cores: cores,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CelulaMatriz(
+                  sigla: 'FP = ${matriz.falsosPositivos}',
+                  detalhe: 'Alarme falso',
+                  destaque: false,
+                  cores: cores,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _CelulaMatriz(
+                  sigla: 'FN = ${matriz.falsosNegativos}',
+                  detalhe: 'Omissão',
+                  destaque: false,
+                  cores: cores,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CelulaMatriz(
+                  sigla: 'TN = ${matriz.verdadeirosNegativos}',
+                  detalhe: 'Seco confirmado',
+                  destaque: true,
+                  cores: cores,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cores.deepBasalt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: SelectableText(
+              'p̂ (POD) = TP / (TP + FN) = 1306 / 1528 = $pHat%\n'
+              'SE = √[p̂(1 − p̂) / 1528] = $sePct%\n'
+              'IC 95% (Z = 1.96) = $pHat% ± 1.96 × $sePct% = [$infPct%, $supPct%]\n'
+              'Acurácia Global = (TP + TN) / 5133 = $accPct%  |  CSI = $csiPct%\n'
+              'Z (vs H₀ = 50%) = +${zContra50.toStringAsFixed(2)}σ  |  Z (Heidke) = +${zHeidke.toStringAsFixed(2)}σ\n'
+              'Z (vs H₀ ≤ 83%) = +${zContra83.toStringAsFixed(2)}σ → Φ(+2.57) = 0.9949 (p = 0.0051)',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                color: cores.chalkWhite,
+                fontSize: 11.5,
+                height: 1.55,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
