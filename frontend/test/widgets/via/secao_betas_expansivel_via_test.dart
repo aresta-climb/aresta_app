@@ -146,3 +146,73 @@ void main() {
                 texto: 'Beta de outro escalador.',
               ),
             ],
+            aoEditarNota: (n) => editada = n,
+            aoExcluirNota: (n) => excluida = n,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('btn_editar_comentario_nota_minha_01')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('btn_excluir_comentario_nota_minha_01')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('btn_editar_comentario_nota_alheia_02')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('btn_excluir_comentario_nota_alheia_02')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const Key('btn_editar_comentario_nota_minha_01')));
+      expect(editada?.uid, 'nota_minha_01');
+      await tester.tap(find.byKey(const Key('btn_excluir_comentario_nota_minha_01')));
+      expect(excluida?.uid, 'nota_minha_01');
+    },
+  );
+
+  testWidgets(
+    'SecaoBetasMidiaVia inicia recolhida, expande ao tocar e aciona callback de abertura de vídeo',
+    (tester) async {
+      await tester.pumpWidget(
+        envolver(SecaoBetasMidiaVia(midias: const [], aoAbrirMidia: (_) {})),
+      );
+      expect(find.textContaining('VÍDEOS & BETAS'), findsNothing);
+
+      String? urlAberta;
+      await tester.pumpWidget(
+        envolver(
+          SecaoBetasMidiaVia(
+            midias: const [
+              ItemMidiaBetaVia(
+                titulo: 'Beta Oficial no YouTube',
+                url: 'https://youtube.com/watch?v=beta1',
+                origemRotulo: 'YouTube',
+              ),
+            ],
+            aoAbrirMidia: (url) => urlAberta = url,
+          ),
+        ),
+      );
+
+      expect(find.text('VÍDEOS & BETAS (1)'), findsOneWidget);
+      expect(find.text('Beta Oficial no YouTube'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('cabecalho_betas_midia_via')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Beta Oficial no YouTube'), findsOneWidget);
+      await tester.tap(find.text('Beta Oficial no YouTube'));
+      expect(urlAberta, 'https://youtube.com/watch?v=beta1');
+
+      await tester.tap(find.byKey(const Key('cabecalho_betas_midia_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Beta Oficial no YouTube'), findsNothing);
+    },
+  );
+}
