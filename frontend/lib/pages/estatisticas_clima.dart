@@ -462,3 +462,92 @@ class _CartaoSecaoEstatistica extends StatelessWidget {
   }
 }
 
+class _LinhaBarraMetrica extends StatelessWidget {
+  final String rotulo;
+  final String valorFormatado;
+  final double fator;
+  final AppColors cores;
+
+  const _LinhaBarraMetrica({
+    required this.rotulo,
+    required this.valorFormatado,
+    required this.fator,
+    required this.cores,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                rotulo,
+                style: TextStyle(
+                  color: cores.chalkWhite,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              valorFormatado,
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: cores.rustIron,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            height: 6,
+            color: cores.graniteEdge,
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: fator.clamp(0.0, 1.0),
+              child: Container(color: cores.rustIron),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CelulaMatriz extends StatelessWidget {
+  final String sigla;
+  final String detalhe;
+  final bool destaque;
+  final AppColors cores;
+
+  const _CelulaMatriz({
+    required this.sigla,
+    required this.detalhe,
+    required this.destaque,
+    required this.cores,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cores.deepBasalt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: destaque
+              ? cores.rustIron.withValues(alpha: 0.45)
+              : cores.graniteEdge,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
