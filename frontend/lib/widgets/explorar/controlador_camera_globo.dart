@@ -89,3 +89,88 @@ class ControladorCameraGlobo extends ChangeNotifier {
     _elevacaoReferenciaCameraMetros = limpo;
   }
 
+  /// Raio aparente do planeta em pixels na escala exponencial contínua (`142px` -> `~93.000px`).
+  double get raioAparentePx => 142.0 * math.pow(7.6, _lod).toDouble();
+
+  /// Altitude física equivalente da câmera virtual acima da superfície em quilômetros.
+  double get altitudeCameraKm => (220.0 / raioAparentePx) * 6371.0;
+
+  /// Distância euclidiana 3D em quilômetros entre a câmera virtual e um objeto em `(latitude, longitude)`.
+  double distanciaCameraObjetoKm({
+    required double latitude,
+    required double longitude,
+  }) {
+    final dLatKm = (latitude - _latitudeCentral) * 111.32;
+    final dLonGraus =
+        ((longitude - _longitudeCentral + 540.0) % 360.0) - 180.0;
+    final dLonKm = dLonGraus * math.cos(latitude * _grausParaRad) * 111.32;
+    final hKm = altitudeCameraKm;
+    return math.sqrt(dLatKm * dLatKm + dLonKm * dLonKm + hKm * hKm);
+  }
+
+  /// Nível de detalhe progressivo (`0.0 .. 3.0`) calculado individualmente para um objeto pela distância à câmera.
+  double nivelDetalheObjeto({
+    required double latitude,
+    required double longitude,
+  }) {
+    final distKm = distanciaCameraObjetoKm(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    if (distKm < 12.0) {
+      return 3.8 + (12.0 - distKm) / 12.0 * 0.85;
+    }
+    if (distKm < 65.0) {
+      return 3.0 + (65.0 - distKm) / (65.0 - 12.0) * 0.8;
+    }
+    if (distKm < 280.0) {
+      return 2.0 + (280.0 - distKm) / (280.0 - 65.0);
+    }
+    if (distKm < 1800.0) {
+      return 1.0 + (1800.0 - distKm) / (1800.0 - 280.0);
+    }
+    return (1.0 - (distKm - 1800.0) / 4500.0).clamp(0.0, 0.99);
+  }
+
+  /// Índice discreto de nível de detalhe (`0` Globo, `1` Região, `2` Serra/Vale, `3` Maciço 3D).
+  int get indiceLod {
+    if (_lod < 0.75) return 0;
+    if (_lod < 1.65) return 1;
+    if (_lod < 2.50) return 2;
+    return 3;
+  }
+
+  /// Fator contínuo (`0.0` satélite colorido -> `1.0` mapa viário P&B com oceano azul-sutil).
+  double get fatorModoViario => smoothstep(1.30, 1.75, _lod);
+
+  /// Indica se há voo parabólico ou inércia pós-soltura em andamento exigindo quadros de animação.
+  bool get temAnimacaoAtiva =>
+      _vooAtivo != null ||
+      (!_interagindoManual &&
+          (_velLon.abs() > 0.0002 || _velLat.abs() > 0.0002));
+
+  void alternarModo3D() {
+    definirModo3D(!_modo3D);
+  }
+
+  void definirModo3D(bool valor) {
+    if (_modo3D == valor) return;
+    _modo3D = valor;
+    _velLon = 0.0;
+    _velLat = 0.0;
+    _latitudeCentral = _modo3D
+        ? _latitudeCentral.clamp(-68.0, 68.0)
+        : _limitarLatitude2D(_latitudeCentral, _ultimoTamanhoTela);
+    notifyListeners();
+  }
+
+  void atualizarAlturaGaveta(double novaAlturaPx) {
+    if ((_alturaGavetaPx - novaAlturaPx).abs() < 0.25) return;
+    _alturaGavetaPx = novaAlturaPx;
+    if (!_modo3D) {
+      _latitudeCentral =
+          _limitarLatitude2D(_latitudeCentral, _ultimoTamanhoTela);
+    }
+    notifyListeners();
+  }
+
