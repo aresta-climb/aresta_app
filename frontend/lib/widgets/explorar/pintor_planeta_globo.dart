@@ -171,3 +171,97 @@ class PintorPlanetaGlobo extends CustomPainter {
         mViario,
       )!.withValues(alpha: alfaPoligonoContinental.clamp(0.0, 1.0));
 
+      for (final cont in dadosMalha.continentes) {
+        PintorTerrenoVetoresGlobo.desenharPoligonoGeo(
+          canvas: canvas,
+          size: size,
+          controlador: controlador,
+          verticesLonLat: cont.verticesLonLat,
+          preenchimento: corContinente,
+          borda: imgNasa == null ? const Color(0x4093C5FD) : null,
+        );
+      }
+      PintorTerrenoVetoresGlobo.desenharPoligonoGeo(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        verticesLonLat: dadosMalha.brasil,
+        preenchimento: corBrasil,
+        borda: imgNasa == null
+            ? const Color(0x66BAE6FD)
+            : Color.fromRGBO(
+                148,
+                163,
+                184,
+                (0.24 * alfaPoligonoContinental).clamp(0.0, 1.0),
+              ),
+      );
+    }
+
+    if (alfaTerrenoDetalhado > 0.02) {
+      PintorTerrenoVetoresGlobo.desenharTerrenoDetalhadoContinuo(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        dadosMalha: dadosMalha,
+        picosReferencia: picosReferencia,
+        opacidadeBase: alfaTerrenoDetalhado,
+        fatorMonocromatico: mViario,
+        curvasMundo: curvasMundo,
+        amostradorElevacaoReal: amostradorElevacaoReal,
+      );
+    }
+  }
+
+  void _desenharGradesERodovias(Canvas canvas, Size size, double lod) {
+    final alfaGrade = 1.0 - ControladorCameraGlobo.smoothstep(0.45, 1.05, lod);
+    if (alfaGrade > 0.02) {
+      PintorTerrenoVetoresGlobo.desenharGradeEsferica(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        alfaGrade: alfaGrade,
+      );
+    }
+    final dadosMalha = malha;
+    final mViario = controlador.fatorModoViario;
+    final alfaMicroGrade = ControladorCameraGlobo.smoothstep(1.65, 2.35, lod);
+    if (alfaMicroGrade > 0.02 && dadosMalha != null) {
+      PintorTerrenoVetoresGlobo.desenharMicroGradeTopograficaTerrestre(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        dadosMalha: dadosMalha,
+        alfaBase: alfaMicroGrade * (1.0 - 0.35 * mViario),
+      );
+    }
+    if ((mViario > 0.02 || progressoLuzViaria > 0.005) && redeViaria != null) {
+      PintorRedeViariaArestaGlobo.desenharRedeViariaECidades(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        redeViaria: redeViaria,
+        picosReferencia: picosReferencia,
+        fatorModoViario: mViario,
+        progressoLuzViaria: progressoLuzViaria,
+        amostradorElevacaoReal: amostradorElevacaoReal,
+      );
+    }
+  }
+
+  void _desenharFronteirasIbge(Canvas canvas, Size size, double lod) {
+    final dadosMalha = malha;
+    if (dadosMalha == null) return;
+
+    final alfaBrasil = 1.0 - ControladorCameraGlobo.smoothstep(0.80, 1.35, lod);
+    if (alfaBrasil > 0.02) {
+      PintorTerrenoVetoresGlobo.desenharPoligonoGeo(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        verticesLonLat: dadosMalha.brasil,
+        borda: Color.fromRGBO(224, 242, 254, 0.38 * alfaBrasil),
+        espessuraBorda: 1.15,
+      );
+    }
+
