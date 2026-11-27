@@ -265,3 +265,92 @@ abstract final class EfeitosParticulasIncendioGlobo {
         (math.log(2.0 / passoIdealGraus) / math.ln2).clamp(0.0, 14.0).floor();
     final passoGraus = 2.0 / (1 << octavaBase);
 
+    final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
+      modo3D: controlador.modo3D,
+      latitudeCentral: controlador.latitudeCentral,
+      longitudeCentral: controlador.longitudeCentral,
+      lod: controlador.lod,
+      raioAparentePx: controlador.raioAparentePx,
+      escala2D: controlador.modo3D
+          ? 1.0
+          : controlador.calcularEscala2D(tamanhoTela),
+      tamanhoTela: tamanhoTela,
+      fatorMargem: 1.08,
+    );
+    final lonIni = math.max(incendio.minLon, janela.minLon);
+    final lonFim = math.min(incendio.maxLon, janela.maxLon);
+    final latIni = math.max(incendio.minLat, janela.minLat);
+    final latFim = math.min(incendio.maxLat, janela.maxLat);
+    if (lonFim < lonIni || latFim < latIni) return;
+
+    final ixIni = (lonIni / passoGraus).floor();
+    final iyIni = (latIni / passoGraus).floor();
+    final ixFim = math.min(ixIni + 12, (lonFim / passoGraus).ceil());
+    final iyFim = math.min(iyIni + 12, (latFim / passoGraus).ceil());
+    final semente = incendio.id.codeUnits.fold<int>(23, (a, b) => a * 31 + b);
+
+    final pincelBrasa = Paint()..style = PaintingStyle.fill;
+    for (var iy = iyIni; iy <= iyFim; iy++) {
+      for (var ix = ixIni; ix <= ixFim; ix++) {
+        var h = (ix * 73856093) ^ (iy * 19349663) ^ (semente * 83492791);
+        h = (((h >> 16) ^ h) * 0x45d9f3b) & 0x7fffffff;
+        final lon = (ix + 0.16 + 0.68 * ((h & 0x3ff) / 1023.0)) * passoGraus;
+        final lat =
+            (iy + 0.16 + 0.68 * (((h >> 10) & 0x3ff) / 1023.0)) * passoGraus;
+        if (lon < incendio.minLon ||
+            lon > incendio.maxLon ||
+            lat < incendio.minLat ||
+            lat > incendio.maxLat) {
+          continue;
+        }
+        final posSolo = projetarPontoFogo(lon, lat);
+        if (posSolo == null) continue;
+
+        final desvio = ((h >> 8) & 0xff) / 255.0;
+        final ciclo = ((faseSegundos *
+                        (0.38 + 0.08 * severidade.peso) *
+                        fatorVel +
+                    desvio) %
+                1.0 +
+            1.0) %
+            1.0;
+        final espiralX = math.sin(ciclo * math.pi * 3.0 + (h & 15)) * 3.2 +
+            dirVentoTela.dx * ciclo * 8.0;
+        final subidaY = -ciclo * math.min(22.0, menorLadoMundoPx * 0.45);
+        final alfaViva = math.sin(ciclo * math.pi).clamp(0.0, 1.0);
+        final raioBrasa = (menorLadoMundoPx < 24.0 ? 0.95 : 1.35) *
+            (0.85 + 0.12 * severidade.peso) *
+            (1.15 - 0.45 * ciclo);
+
+        pincelBrasa.color = paleta.fagulha.withValues(
+          alpha: (paleta.fagulha.a * alfaViva).clamp(0.0, 1.0),
+        );
+        canvas.drawCircle(
+          posSolo.translate(espiralX, subidaY),
+          raioBrasa,
+          pincelBrasa,
+        );
+      }
+    }
+  }
+
+  /// Desenha o emblema de chama viva com 1 língua (`baixo`), 2 línguas (`moderado`),
+  /// 3 línguas (`alto`) ou coroa tríplice incandescente com fagulhas (`extremo`).
+  static void desenharEmblemaChamaViva({
+    required Canvas canvas,
+    required Offset centro,
+    required double escalaPx,
+    required double faseSegundos,
+    required double inclinacaoVentoX,
+    required NivelSeveridadeIncendio severidade,
+    required double opacidade,
+  }) {
+    final op = opacidade.clamp(0.0, 1.0);
+    canvas.drawCircle(
+      centro,
+      escalaPx * (0.98 + 0.05 * severidade.peso),
+      Paint()
+        ..color = Color.fromRGBO(15, 23, 42, (0.44 * op).clamp(0.0, 1.0))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5),
+    );
+
