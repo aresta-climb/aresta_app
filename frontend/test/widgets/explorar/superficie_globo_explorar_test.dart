@@ -363,3 +363,96 @@ void main() {
         final alturaGaveta2 = ValueNotifier<double>(210);
         addTearDown(alturaGaveta2.dispose);
 
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl2,
+                picos: const [],
+                bolhasAtivas: bolhasTeste,
+                picoSelecionadoId: null,
+                alturaGavetaNotificador: alturaGaveta2,
+                buscandoLocalizacaoUsuario: true,
+                aoCentralizarNoUsuario: () {},
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Respeita preferencia de acessibilidade disableAnimations pausando o ticker continuo
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(disableAnimations: true),
+              child: Scaffold(
+                body: SuperficieGloboExplorar(
+                  controlador: ctrl2,
+                  picos: const [],
+                  bolhasAtivas: bolhasTeste,
+                  picoSelecionadoId: null,
+                  alturaGavetaNotificador: alturaGaveta2,
+                  aoSelecionarPicoNoMapa: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'exibe bolhas compactas com icone Aresta em qualquer zoom e expande descricao exclusivamente ao clicar na bolha',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(420, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        // Cluster denso com dois picos proximos (~3.8 km) em zoom alto (LOD 3.2):
+        // sem selecao, NENHUM texto ou Base / Trilha deve aparecer sobreposto!
+        final clusterDenso = <MarcadorPicoGlobo>[
+          ...picosTeste,
+          const MarcadorPicoGlobo(
+            id: 'vizinho_colado',
+            nome: 'Santuário Vizinho',
+            uf: 'MG',
+            latitude: -20.095,
+            longitude: -44.295,
+            altitudeBaseMetros: 960,
+            altitudePicoMetros: 1380,
+          ),
+        ];
+
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -20.07,
+          longitudeInicial: -44.32,
+          lodInicial: 3.20,
+        );
+        addTearDown(ctrl.dispose);
+
+        String? selecionadoId;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                return Scaffold(
+                  body: SuperficieGloboExplorar(
+                    controlador: ctrl,
+                    picos: clusterDenso,
+                    bolhasAtivas: const [],
+                    incendiosAtivos: const [
+                      BolhaIncendioAtivaRenderizavel(
+                        incendio: BolhaIncendioRegional(
+                          id: 'incendio_vizinho',
+                          latitude: -20.06,
+                          longitude: -44.31,
+                          potenciaFrpMw: 45.0,
+                          totalFocos: 3,
+                          ventoRumoGraus: 270.0,
+                          ventoVelocidadeKmh: 16.0,
+                          contornoExterno: [
+                            PontoContornoGeo(longitude: -44.34, latitude: -20.08),
+                            PontoContornoGeo(longitude: -44.28, latitude: -20.08),
+                            PontoContornoGeo(longitude: -44.31, latitude: -20.04),
+                          ],
