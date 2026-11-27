@@ -257,3 +257,98 @@ abstract final class ConstrutorRedeViariaAresta {
       normalizarTempo: normalizarTempo,
     );
 
+    return RedeViariaArestaGlobo(
+      rodoviasFundo: rodoviasNormalizadas,
+      trechosCorredorAresta: List<TrechoPropagacaoViaria>.unmodifiable(trechos),
+      cidadesClassificadas: List<CidadeClassificadaMapa>.unmodifiable(cidades),
+    );
+  }
+
+  /// Calcula uma assinatura inteira leve para memoização de instância em ViewModels.
+  static int calcularAssinaturaPicos(List<PicoRelevoReferencia> picos) {
+    var h = picos.length;
+    for (final p in picos) {
+      h = (h * 37 + p.id.hashCode) & 0x3fffffff;
+    }
+    return h;
+  }
+
+  static String _limparCodigoEscudoRodovia(String bruto) {
+    final limpo = bruto.trim().toUpperCase();
+    // Ignora siglas genéricas sem número (ex.: 'MG', 'BR') vindas de bases antigas
+    if (!limpo.contains('-') || limpo.length < 4) return '';
+    return limpo;
+  }
+
+  static RedeViariaArestaGlobo _construirSemCorredores({
+    required List<RodoviaRegionalMapa> rodovias,
+    required List<LocalidadeRegionalMapa> localidades,
+  }) {
+    final referenciaApenas = localidades
+        .map(
+          (loc) => CidadeClassificadaMapa(
+            localidade: loc,
+            ehRelevanteAresta: false,
+            tempoAtivacao: double.infinity,
+            viasUrbanasLonLat: const [],
+          ),
+        )
+        .toList(growable: false);
+    return RedeViariaArestaGlobo(
+      rodoviasFundo: rodovias,
+      trechosCorredorAresta: const [],
+      cidadesClassificadas: referenciaApenas,
+    );
+  }
+
+  static List<CidadeClassificadaMapa> _classificarCidades({
+    required List<LocalidadeRegionalMapa> localidades,
+    required List<RodoviaRegionalMapa> rodovias,
+    required List<Offset> nos,
+    required List<double> distKm,
+    required Set<int> nosCorredor,
+    required List<PicoRelevoReferencia> picos,
+    required double Function(double) normalizarTempo,
+  }) {
+    const centroBh = Offset(
+      RedeViariaArestaGlobo.longitudeCentroBeloHorizonte,
+      RedeViariaArestaGlobo.latitudeCentroBeloHorizonte,
+    );
+    final resultado = <CidadeClassificadaMapa>[];
+
+    for (final loc in localidades) {
+      final ptCidade = Offset(loc.longitude, loc.latitude);
+      final distBh = _distanciaKm(ptCidade, centroBh);
+
+      var menorDistCorredor = double.infinity;
+      var distViariaChegada = 0.0;
+      for (final idxNo in nosCorredor) {
+        final d = _distanciaKm(ptCidade, nos[idxNo]);
+        if (d < menorDistCorredor) {
+          menorDistCorredor = d;
+          distViariaChegada = distKm[idxNo];
+        }
+      }
+
+      var menorDistPico = double.infinity;
+      for (final p in picos) {
+        final d = _distanciaKm(ptCidade, Offset(p.longitude, p.latitude));
+        if (d < menorDistPico) menorDistPico = d;
+      }
+
+      final ehBh = distBh <= 7.5;
+      final relevante =
+          ehBh || menorDistCorredor <= 9.5 || menorDistPico <= 12.0;
+
+      if (!relevante) {
+        resultado.add(
+          CidadeClassificadaMapa(
+            localidade: loc,
+            ehRelevanteAresta: false,
+            tempoAtivacao: double.infinity,
+            viasUrbanasLonLat: const [],
+          ),
+        );
+        continue;
+      }
+
