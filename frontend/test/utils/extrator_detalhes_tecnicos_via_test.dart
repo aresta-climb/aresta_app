@@ -214,4 +214,82 @@ void main() {
       expect(estadoComPico.aspectRatioMiniatura, 1.0);
     },
   );
+
+  test(
+    'traduzirRotuloModalidade resolve singular, plural e fallback nos cinco idiomas',
+    () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+
+      await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.holandes);
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Esportiva'),
+        'Sportklimmen',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+          'Esportiva',
+          plural: true,
+        ),
+        'Sportroutes',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Móvel'),
+        'Trad',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+          'Móvel',
+          plural: true,
+        ),
+        'Trad-routes',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Mista'),
+        'Mixed',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Boulder'),
+        'Boulder',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+          'Boulder',
+          plural: true,
+        ),
+        'Boulders',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Multienfiada'),
+        'Multi-pitch',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+          'Multienfiada',
+          plural: true,
+        ),
+        'Multi-pitches',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Highline'),
+        'Highline',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+          'Highline',
+          plural: true,
+        ),
+        'Highlines',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Outras'),
+        'Overige',
+      );
+      expect(
+        ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade('Artificial'),
+        'Artificial',
+      );
+    },
+  );
 }
