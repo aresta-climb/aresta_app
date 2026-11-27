@@ -93,3 +93,81 @@ class PintorCampoEstrelasGlobo extends CustomPainter {
               ? Color.fromRGBO(248, 250, 252, brilho)
               : Color.fromRGBO(226, 238, 255, brilho));
 
+      resultado.add(
+        EstrelaProjetadaCampo(
+          indice: i,
+          posicao: Offset(sx, sy),
+          raioPx: (i % 5 == 0) ? 1.35 : 0.88,
+          cor: cor,
+          possuiHaloSuave: i % 10 == 0,
+        ),
+      );
+    }
+
+    return resultado;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final lod = controlador.lod;
+    final rPx = controlador.raioAparentePx;
+    final cy = controlador.calcularCentroVerticalOptico(size);
+    final skyMix = controlador.modo3D
+        ? ControladorCameraGlobo.smoothstep(1.55, 2.75, lod)
+        : 0.0;
+    final retTela = Offset.zero & size;
+
+    final pinturaFundo = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: skyMix > 0.5
+            ? const [Color(0xFF102238), Color(0xFF1E3A58), Color(0xFF090F18)]
+            : const [Color(0xFF040811), Color(0xFF0A1424), Color(0xFF050A13)],
+      ).createShader(retTela);
+    canvas.drawRect(retTela, pinturaFundo);
+
+    if (controlador.modo3D && rPx < 760.0) {
+      final centroGlobo = Offset(size.width * 0.5, cy);
+      final estrelas = calcularEstrelasVisiveis(
+        tamanho: size,
+        centroGlobo: centroGlobo,
+        raioGloboPx: rPx,
+        tempoSegundos: tempoSegundosListenable.value,
+        longitudeCameraGraus: controlador.longitudeCentral,
+        latitudeCameraGraus: controlador.latitudeCentral,
+      );
+
+      final paintEstrela = Paint()..style = PaintingStyle.fill;
+      for (final e in estrelas) {
+        if (e.possuiHaloSuave) {
+          paintEstrela.color = e.cor.withValues(alpha: e.cor.a * 0.24);
+          canvas.drawCircle(e.posicao, e.raioPx * 2.35, paintEstrela);
+        }
+        paintEstrela.color = e.cor;
+        canvas.drawCircle(e.posicao, e.raioPx, paintEstrela);
+      }
+
+      final caminhoHaloGeoide =
+          controlador.construirCaminhoSilhuetaGeoide(size, escalaExtra: 1.20);
+      final haloAtmosfera = Paint()
+        ..shader = RadialGradient(
+          colors: const [
+            Color(0x5260A5FA),
+            Color(0x2838BDF8),
+            Color(0x0A0284C7),
+            Color(0x000284C7),
+          ],
+          stops: const [0.78, 0.87, 0.95, 1.0],
+        ).createShader(
+          Rect.fromCircle(center: centroGlobo, radius: rPx * 1.22),
+        );
+      canvas.drawPath(caminhoHaloGeoide, haloAtmosfera);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant PintorCampoEstrelasGlobo oldDelegate) =>
+      oldDelegate.controlador != controlador ||
+      oldDelegate.tempoSegundosListenable != tempoSegundosListenable;
+}
