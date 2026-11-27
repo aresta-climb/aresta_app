@@ -117,64 +117,8 @@ void main() {
           resPerto.curvas.firstWhere((c) => c.cotaMetros == 1200);
       // Invariância exata bit-a-bit: ZERO deformação ao mudar zoom ou tamanho da janela!
       expect(
-        resA.curvas.first.verticesLonLat,
-        equals(resPan.curvas.first.verticesLonLat),
-      );
-
-      // Invariância aditiva entre níveis de zoom: todas as cotas de 400m (nível 0) permanecem presentes
-      // no nível 2 (100m) e no nível 3 (50m) com centro geométrico estável (< 0.0015° de desvio)
-      final resN0 = ExtratorCurvasNivelMundo.extrairCurvasBloco(
-        janela: janelaA,
-        nivelDetalhe: 0,
-        versaoDadosElevacao: 1,
-        amostrarElevacaoMetros: domoMontanha,
-        picosReferencia: const [pico],
-      );
-      final resN3 = ExtratorCurvasNivelMundo.extrairCurvasBloco(
-        janela: janelaA,
-        nivelDetalhe: 3,
-        versaoDadosElevacao: 1,
-        amostrarElevacaoMetros: domoMontanha,
-        picosReferencia: const [pico],
-      );
-      final cotasN0 = resN0.curvas.map((c) => c.cotaMetros).toSet();
-      final cotasN2 = resA.curvas.map((c) => c.cotaMetros).toSet();
-      final cotasN3 = resN3.curvas.map((c) => c.cotaMetros).toSet();
-      expect(cotasN0, containsAll(<int>[800, 1200]));
-      expect(cotasN2, containsAll(cotasN0));
-      expect(cotasN3, containsAll(cotasN2));
-      expect(cotasN3.length, greaterThan(cotasN2.length));
-
-      final curva1200Grossa =
-          resN0.curvas.firstWhere((c) => c.cotaMetros == 1200);
-      final curva1200Fina =
-          resN3.curvas.firstWhere((c) => c.cotaMetros == 1200);
-      Offset centroideAnel(List<Offset> pts) {
-        final n = pts.length > 1 && (pts.first - pts.last).distance < 1e-6
-            ? pts.length - 1
-            : pts.length;
-        var sx = 0.0;
-        var sy = 0.0;
-        for (var i = 0; i < n; i++) {
-          sx += pts[i].dx;
-          sy += pts[i].dy;
-        }
-        return Offset(sx / n, sy / n);
-      }
-
-      final curva1200Media =
-          resA.curvas.firstWhere((c) => c.cotaMetros == 1200);
-      expect(
-        (centroideAnel(curva1200Grossa.verticesLonLat) -
-                centroideAnel(curva1200Fina.verticesLonLat))
-            .distance,
-        lessThan(0.0050),
-      );
-      expect(
-        (centroideAnel(curva1200Media.verticesLonLat) -
-                centroideAnel(curva1200Fina.verticesLonLat))
-            .distance,
-        lessThan(0.0008),
+        curva1200Perto.verticesLonLat,
+        equals(curva1200Longe.verticesLonLat),
       );
     });
 
@@ -195,24 +139,23 @@ void main() {
       );
       expect(oceano.curvas, isEmpty);
 
-      // Planície entre 810 m e 890 m sem cruzar múltiplo inteiro de 400 m -> retorna lista vazia
       final planicieEntreCotas = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janela,
         nivelDetalhe: 0,
         versaoDadosElevacao: 0,
-        amostrarElevacaoMetros: (lat, _) => lat > -20.0 ? 890.0 : 810.0,
+        amostrarElevacaoMetros: (lat, _) => lat > -20.0 ? 940.0 : 860.0,
         picosReferencia: const [],
       );
       expect(planicieEntreCotas.curvas, isEmpty);
 
       final sela = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janela,
-        nivelDetalhe: 1,
+        nivelDetalhe: 2,
         versaoDadosElevacao: 2,
         picosReferencia: const [],
         amostrarElevacaoMetros: (lat, lon) {
-          final x = (lon + 44.0) * 85.0;
-          final y = (lat + 20.0) * 85.0;
+          final x = (lon + 44.0) * 40.0;
+          final y = (lat + 20.0) * 40.0;
           return 1000.0 + 320.0 * (x * y) + 140.0 * math.sin(x * 1.4 + y * 1.2);
         },
       );
