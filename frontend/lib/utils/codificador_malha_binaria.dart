@@ -349,3 +349,104 @@ class _EscritorBinario {
     );
   }
 
+  void texto(String s) {
+    final utf = utf8.encode(s);
+    u16(utf.length);
+    if (utf.isNotEmpty) _builder.add(utf);
+  }
+
+  void listaOffsets(List<Offset> pts) {
+    u32(pts.length);
+    final buf = ByteData(pts.length * 8);
+    for (var i = 0; i < pts.length; i++) {
+      buf.setFloat32(i * 8, pts[i].dx, Endian.little);
+      buf.setFloat32(i * 8 + 4, pts[i].dy, Endian.little);
+    }
+    _builder.add(buf.buffer.asUint8List());
+  }
+
+  Uint8List finalizar() => _builder.takeBytes();
+}
+
+class _LeitorBinario {
+  final ByteData _bd;
+  final Uint8List _raw;
+  int _pos = 0;
+
+  _LeitorBinario(Uint8List bytes)
+      : _raw = bytes,
+        _bd = ByteData.sublistView(bytes);
+
+  void _garantir(int n) {
+    if (_pos + n > _raw.length) {
+      throw const FormatException('Fim inesperado do buffer binário.');
+    }
+  }
+
+  int u8() {
+    _garantir(1);
+    return _bd.getUint8(_pos++);
+  }
+
+  int u16() {
+    _garantir(2);
+    final v = _bd.getUint16(_pos, Endian.little);
+    _pos += 2;
+    return v;
+  }
+
+  int i16() {
+    _garantir(2);
+    final v = _bd.getInt16(_pos, Endian.little);
+    _pos += 2;
+    return v;
+  }
+
+  int u32() {
+    _garantir(4);
+    final v = _bd.getUint32(_pos, Endian.little);
+    _pos += 4;
+    return v;
+  }
+
+  int i64() {
+    _garantir(8);
+    final v = _bd.getInt64(_pos, Endian.little);
+    _pos += 8;
+    return v;
+  }
+
+  double f32() {
+    _garantir(4);
+    final v = _bd.getFloat32(_pos, Endian.little);
+    _pos += 4;
+    return v;
+  }
+
+  String texto() {
+    final len = u16();
+    if (len == 0) return '';
+    _garantir(len);
+    final str = utf8.decode(Uint8List.sublistView(_raw, _pos, _pos + len));
+    _pos += len;
+    return str;
+  }
+
+  List<Offset> listaOffsets() {
+    final n = u32();
+    _garantir(n * 8);
+    final out = List<Offset>.generate(
+      n,
+      (i) {
+        final base = _pos + i * 8;
+        return Offset(
+          _bd.getFloat32(base, Endian.little),
+          _bd.getFloat32(base + 4, Endian.little),
+        );
+      },
+      growable: false,
+    );
+    _pos += n * 8;
+    return out;
+  }
+}
