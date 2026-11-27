@@ -187,3 +187,89 @@ class BolhaChuvaRegional {
       return RastroPassadoTempestade(horasAtras: horas, contorno: vertices);
     }
 
+    return <RastroPassadoTempestade>[
+      projetarHorasAtras(6, 0.84),
+      projetarHorasAtras(3, 0.92),
+    ];
+  }
+
+  double get minLon {
+    var m = contornoExterno.first.longitude;
+    for (final p in contornoExterno) {
+      if (p.longitude < m) m = p.longitude;
+    }
+    return m;
+  }
+
+  double get maxLon {
+    var m = contornoExterno.first.longitude;
+    for (final p in contornoExterno) {
+      if (p.longitude > m) m = p.longitude;
+    }
+    return m;
+  }
+
+  double get minLat {
+    var m = contornoExterno.first.latitude;
+    for (final p in contornoExterno) {
+      if (p.latitude < m) m = p.latitude;
+    }
+    return m;
+  }
+
+  double get maxLat {
+    var m = contornoExterno.first.latitude;
+    for (final p in contornoExterno) {
+      if (p.latitude > m) m = p.latitude;
+    }
+    return m;
+  }
+
+  factory BolhaChuvaRegional.deMapa(Map<String, dynamic> mapa) {
+    final id = mapa['id'];
+    final lat = mapa['lat'];
+    final lon = mapa['lon'];
+    final mmHora = mapa['intensidade_mm_h'];
+    final rumo = mapa['vento_rumo_graus'];
+    final velKmh = mapa['vento_kmh'];
+    final contornoBruto = mapa['contorno_externo'];
+    final nucleosBrutos = mapa['nucleos_intensos'];
+    final rastrosBrutos = mapa['rastros_passados'];
+
+    if (id is! String ||
+        id.isEmpty ||
+        lat is! num ||
+        lon is! num ||
+        mmHora is! num ||
+        mmHora < 0 ||
+        rumo is! num ||
+        velKmh is! num ||
+        velKmh < 0 ||
+        contornoBruto is! List ||
+        contornoBruto.length < 3) {
+      throw const FormatException('BolhaChuvaRegional inválida.');
+    }
+
+    final contorno = contornoBruto
+        .map((p) => PontoContornoGeo.deLista(p as List<dynamic>))
+        .toList(growable: false);
+
+    final nucleos = <List<PontoContornoGeo>>[];
+    if (nucleosBrutos != null) {
+      if (nucleosBrutos is! List) {
+        throw const FormatException('nucleos_intensos inválido.');
+      }
+      for (final anelBruto in nucleosBrutos) {
+        if (anelBruto is! List || anelBruto.length < 3) {
+          throw const FormatException(
+            'Anel interno em nucleos_intensos com menos de 3 vértices.',
+          );
+        }
+        nucleos.add(
+          anelBruto
+              .map((p) => PontoContornoGeo.deLista(p as List<dynamic>))
+              .toList(growable: false),
+        );
+      }
+    }
+
