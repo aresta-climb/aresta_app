@@ -425,29 +425,33 @@ abstract final class ExtratorCurvasNivelMundo {
     required bool fechado,
   }) {
     if (pontos.length < 3) return List<Offset>.unmodifiable(pontos);
-    final prox = <Offset>[];
-    if (fechado) {
-      final m = pontos.length - 1;
-      for (var i = 0; i < m; i++) {
-        final a = pontos[i];
-        final b = pontos[(i + 1) % m];
-        prox
-          ..add(Offset(a.dx * 0.82 + b.dx * 0.18, a.dy * 0.82 + b.dy * 0.18))
-          ..add(Offset(a.dx * 0.18 + b.dx * 0.82, a.dy * 0.18 + b.dy * 0.82));
+    var atual = pontos;
+    for (var p = 0; p < 2; p++) {
+      final prox = <Offset>[];
+      if (fechado) {
+        final m = atual.length - 1;
+        for (var i = 0; i < m; i++) {
+          final a = atual[i];
+          final b = atual[(i + 1) % m];
+          prox
+            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
+        }
+        if (prox.isNotEmpty) prox.add(prox.first);
+      } else {
+        prox.add(atual.first);
+        for (var i = 0; i < atual.length - 1; i++) {
+          final a = atual[i];
+          final b = atual[i + 1];
+          prox
+            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
+        }
+        prox.add(atual.last);
       }
-      if (prox.isNotEmpty) prox.add(prox.first);
-    } else {
-      prox.add(pontos.first);
-      for (var i = 0; i < pontos.length - 1; i++) {
-        final a = pontos[i];
-        final b = pontos[i + 1];
-        prox
-          ..add(Offset(a.dx * 0.82 + b.dx * 0.18, a.dy * 0.82 + b.dy * 0.18))
-          ..add(Offset(a.dx * 0.18 + b.dx * 0.82, a.dy * 0.18 + b.dy * 0.82));
-      }
-      prox.add(pontos.last);
+      atual = prox;
     }
-    return List<Offset>.unmodifiable(prox);
+    return List<Offset>.unmodifiable(atual);
   }
 
   /// Escolhe um vértice canônico em espaço do mundo (extremo norte da curva) para ancorar o rótulo.
