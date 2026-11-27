@@ -85,3 +85,93 @@ $$R(\text{lod}) = R_0 \cdot b^{\text{lod}} \quad \text{com } R_0 = 142\text{ px}
 
 Dada uma coordenada geográfica $(\phi, \lambda)$ e elevação $h$ (em metros acima do nível do mar), centrada no foco da câmera $(\phi_0, \lambda_0)$:
 
+1. **Rotação para o referencial esférico local**:
+   $$x_0 = \cos\phi \sin(\lambda - \lambda_0)$$
+   $$y_0 = \cos\phi_0 \sin\phi - \sin\phi_0 \cos\phi \cos(\lambda - \lambda_0)$$
+   $$z_0 = \sin\phi_0 \sin\phi + \cos\phi_0 \cos\phi \cos(\lambda - \lambda_0)$$
+   Pontos no hemisfério oculto ($z_0 < 0{,}015$) são descartados imediatamente (*backface culling*).
+
+2. **Extrusão Topográfica Contínua**:
+   $$r = 1 + \frac{\max(0, h)}{R_{\text{Terra}}} \cdot k_{\text{exagero}}$$
+   Como $h / R_{\text{Terra}}$ é multiplicado por $R(\text{lod})$ na tela, uma montanha de `1.500m` mede naturalmente `0,2 px` no `LOD 0` (esfera lisa) e cresce suavemente até `~110 px` de relevo vertical no `LOD 3`, sem nenhuma troca de cena.
+
+3. **Órbita Azimutal ($\psi$) e Inclinação Progressiva ($\theta$)**:
+   No modo `3D`, a inclinação da câmera $\theta(\text{lod}) = \text{smoothstep}(1{,}50,\; 2{,}75,\; \text{lod}) \cdot 54^\circ$ rotaciona o plano tangente ao redor do ponto focado $(0, 0, 1)$, aplicando perspectiva suave no horizonte. No modo `2D`, $\theta = 0^\circ$ e $\psi = 0^\circ$, projetando o mesmo terreno como carta topográfica plana.
+
+### 3.3. Tabela de Detalhamento dos 4 LODs
+
+| Nível | Faixa de `lod` | Elementos de Mapa | Comportamento dos Marcadores |
+|---|---|---|---|
+| **`LOD 0` • Globo** | `0.00 – 0.75` | Oceano com iluminação esférica, aura atmosférica, América do Sul, África Ocidental, Brasil e brilho sinótico das bolhas de chuva. | **Clusters neutros por UF** (`MG · 14`, `RJ · 9`, `SP · 6`), zero sobreposição de nomes de picos. Toque aproxima para `LOD 1`. |
+| **`LOD 1` • Região** | `0.75 – 1.65` | Divisas estaduais oficiais (IBGE) e **bolhas regionais orgânicas de chuva** (núcleo + halo translúcido + perímetro tracejado). | Pinos individuais com **prevenção automática de colisão**: picos espaçados ou selecionados mostram nome; vizinhos densos exibem ponto limpo até aproximar. |
+| **`LOD 2` • Serra e Vale** | `1.65 – 2.50` | Câmera inicia inclinação (`0° -> 32°`), lente circular de terreno sombreado por encosta, **curvas de nível a cada `250m`** e bolhas de chuva drapiadas sobre o relevo. | Pílulas com nome completo e altitude (`Serra do Cipó · 1120m`). |
+| **`LOD 3` • Maciço 3D** | `2.50 – 3.20` | Câmera alpina (`~54°`) com névoa atmosférica ao fundo, maciço 3D escalonado por `altitude_pico_m`, **curvas finas a cada `80m`** e trilha de aproximação animada. | Cume destacado com altitude + micro-marcadores de setor principal e base/estacionamento. |
+
+---
+
+## 4. Micro-Animações e Sincronia Mapa <-> Lista
+
+Todas as animações operam exclusivamente sobre transformações e parâmetros de câmera/scroll, mantendo custo inferior a `1,5 ms` por quadro:
+
+1. **Auto-Scroll Sincronizado e Destaque no Card**:
+   * A lista na gaveta preserva sempre a ordem de classificação ativa (`Mais próximos`, `Mais escaladas`, `A–Z`).
+   * Quando o usuário toca em um pino no mapa:
+     1. Se a gaveta estiver recolhida em `Mapa`, ela desliza automaticamente para `Dividir` (`280ms`, `Curves.easeOutCubic`).
+     2. O `ScrollController` rola suavemente (`320ms`) até enquadrar o card daquele pico no topo visível da gaveta.
+     3. O card recebe um pulso sutil de borda terracota (`560ms`) para guiar o olhar do usuário.
+2. **Onda Sonar no Pino + Realce Causa-Efeito da Bolha de Chuva**:
+   * O pino clicado emite um anel concêntrico expansivo. Caso o pico esteja úmido, o contorno da bolha de chuva que o atingiu acende brevemente, explicando visualmente qual frente chuvosa afetou aquele setor.
+3. **Voo Parabólico (`Fly-To`)**:
+   * Ao selecionar um pico distante (`> 250 km`) pela lista ou busca, a câmera executa interpolação cúbica em `(lat, lon)` combinada a um recuo parabólico temporário de zoom ($\Delta \text{lod} = -d \sin(\pi t)$), subindo sutilmente sobre os estados antes de pousar no destino.
+4. **Centro Óptico Acoplado à Gaveta**:
+   * O deslocamento vertical `cy` da projeção lê diretamente a altura instantânea da gaveta (`ValueListenable<double>`), mantendo o pico selecionado sempre centralizado na janela útil acima da gaveta enquanto o usuário a arrasta.
+5. **Traçado Progressivo da Trilha no `LOD 3`**:
+   * Ao ingressar no `LOD 3`, a linha tracejada da trilha de aproximação desenha-se progressivamente (`0 -> 100%` em `450ms`) da base até a parede.
+
+---
+
+## 5. Fontes Externas de Dados: IBGE, NASA (NASADEM/SRTM 30m) e Open-Meteo
+
+### 5.1. Separação de Responsabilidades por Provedor Externo
+
+| Dado Necessário | Fonte Externa Escolhida | Frequência de Coleta | Justificativa Técnica |
+|---|---|---|---|
+| **Divisas Estaduais e Costa Brasileira** (`LOD 0–1`) | **API de Malhas do IBGE** (`servicodados.ibge.gov.br/api/v3/malhas`) + Natural Earth | Tempo de build / atualização de release | O IBGE fornece os contornos políticos oficiais das 27 UFs em GeoJSON. *(Nota: as APIs altimétricas do IBGE como `BDG`/`hgeoHNOR` atendem apenas marcos geodésicos de estrada, não oferecendo grade DEM contínua).* |
+| **Altimetria de Base e Cume dos Picos** (`Alt. <N>m` e `LOD 3`) | **NASA NASADEM / SRTM GL1 (`30m`)** via *OpenTopography* / *Registry of Open Data Terrain Tiles* | **1x por pico inédito** (dado geográfico estático) | Resolução espacial de **30 metros** (`3x` superior a grades meteorológicas de `90m+`). Evita achatar monólitos estreitos (Pão de Açúcar, Pedra do Baú, Quixadá) e permite medir uma janela de `~2,5 km` ao redor do estacionamento para separar `altitude_base_m` de `altitude_pico_m`. |
+| **Precipitação Diária e Bolhas Regionais** (`RainTracker`) | **Open-Meteo Forecast API** (`past_days=5`, `daily=precipitation_sum`) via Cron no Supabase | **A cada 3 horas** (agregado no servidor) | Zero atraso temporal (inclui chuva da madrugada/hoje) e consulta até 100 pontos por requisição sem chave paga. *(A API pública `NASA POWER PRECTOTCORR` possui 2 a 3 dias de latência de calibração satelital e grade de `55 km`, o que ocultaria tempestades da véspera).* |
+
+---
+
+## 6. Armazenamento de Cópia Única de Segurança (`atual` + `copia_seguranca`)
+
+Serviços públicos governamentais e científicos (**IBGE** e repositórios ligados a dados **NASA/SRTM**) passam com frequência por janelas de manutenção, instabilidades de DNS ou timeouts (`HTTP 502/503/504`).
+
+Para garantir disponibilidade contínua **sem acumular histórico infinito de versões**, todas as três camadas externas seguem estritamente o protocolo de **Rotação Atômica de Dois Slots (`atual` + `copia_seguranca`)**:
+
+```mermaid
+flowchart LR
+    Coleta["Nova Coleta Externa\n(IBGE / NASA / Open-Meteo)"] --> Valida{"Payload íntegro\ne schema válido?"}
+    Valida -- "NÃO (Serviço offline / erro)" --> Preserva["Aborta escrita\nMantém 'atual' e 'copia_seguranca' intactos\nRegistra aviso no AppLogger/Sentry"]
+    Valida -- "SIM (Dados novos válidos)" --> Rotaciona["1. Move 'atual' -> 'copia_seguranca'\n(descarta cópia antiga anterior)\n2. Promove novo payload -> 'atual'"]
+```
+
+### 6.1. Invariantes da Cópia de Segurança
+1. **Exatamente 1 cópia anterior**: Nunca existem tabelas ou arquivos `_v1`, `_v2`, `_v3`. Apenas dois estados coexistem: `atual` e `copia_seguranca`.
+2. **Validação Prévia Obrigatória**: Nenhum dado recém-baixado entra em `atual` nem empurra `atual` para `copia_seguranca` antes de passar por validação completa de integridade (JSON válido, coordenadas finitas, altitudes dentro de `[-50m, 4000m]`, 27 UFs presentes no caso do IBGE). Assim, uma resposta de erro HTML `503` jamais contamina `atual` nem destrói `copia_seguranca`.
+3. **Aplicação nas 3 Camadas**:
+   * **Build / Tooling (`frontend/tool/gerar_malha_geografica_offline.dart`)**: Mantém `malha_globo_brasil.json` + `malha_globo_brasil.seguranca.json` e `altimetria_picos_inicial.json` + `altimetria_picos_inicial.seguranca.json`. Se IBGE ou NASA estiverem offline durante a execução da ferramenta, preserva/restaura automaticamente a cópia de segurança validada; quando online com novos dados, atualiza a cópia de segurança e descarta o arquivo antigo.
+   * **Supabase PostgreSQL (`public.estado_clima_picos` e `public.snapshots_altimetria_picos`)**: Ambas as tabelas operam com chave `slot TEXT PRIMARY KEY CHECK (slot IN ('atual', 'copia_seguranca'))` atualizada via função PL/pgSQL transacional `public.rotacionar_snapshot_clima(...)` e `public.rotacionar_snapshot_altimetria(...)`.
+   * **Cliente Flutter (`ArmazenamentoClimaLocal`)**: Grava primeiro em `.tmp`, move `<docs>/clima_altimetria_atual.json` sobre `<docs>/clima_altimetria_seguranca.json` (descartando o anterior) e renomeia `.tmp` para `atual`. Em leitura, se `atual` estiver corrompido por desligamento abrupto durante escrita, restaura de `copia_seguranca`.
+
+### 6.2. Esquema SQL Idempotente no Supabase
+
+```sql
+-- Tabela de snapshots de clima (estritamente 2 linhas: 'atual' e 'copia_seguranca')
+CREATE TABLE IF NOT EXISTS public.estado_clima_picos (
+    slot TEXT PRIMARY KEY CHECK (slot IN ('atual', 'copia_seguranca')),
+    gerado_em TIMESTAMPTZ NOT NULL,
+    bolhas_chuva JSONB NOT NULL,
+    chuva_por_pico JSONB NOT NULL,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
