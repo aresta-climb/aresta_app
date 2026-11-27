@@ -6,15 +6,22 @@ import '../../idioma/tradutor_app.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 
+/// Resultado da interação do usuário com o modal [DialogoAvisoPrecisaoClima].
+enum AcaoDialogoAvisoClima { confirmar, verEstatisticas, cancelar }
+
 /// Exibe o modal centralizado no padrão visual do Aresta Climb informando a taxa
 /// empírica de detecção (~85%) e as 6 fontes utilizadas antes de habilitar a camada de clima e fogo.
 Future<bool> exibirDialogoAvisoPrecisaoClima(BuildContext context) async {
-  final confirmado = await showDialog<bool>(
+  final acao = await showDialog<AcaoDialogoAvisoClima>(
     context: context,
     barrierColor: Colors.black87,
     builder: (_) => const DialogoAvisoPrecisaoClima(),
   );
-  return confirmado ?? false;
+  if (acao == AcaoDialogoAvisoClima.verEstatisticas && context.mounted) {
+    AppNav.toEstatisticasClima(context);
+    return false;
+  }
+  return acao == AcaoDialogoAvisoClima.confirmar;
 }
 
 /// Modal declarativo (Dumb UI) alinhado à identidade basalto/ferrugem do Aresta Climb,
@@ -147,7 +154,8 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     key: const Key('botao_confirmar_aviso_clima'),
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () =>
+                        Navigator.of(context).pop(AcaoDialogoAvisoClima.confirmar),
                     icon: const Icon(
                       Icons.layers_rounded,
                       color: Colors.white,
@@ -178,11 +186,9 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     key: const Key('botao_ver_estatisticas_clima'),
-                    onPressed: () {
-                      final navegador = Navigator.of(context);
-                      navegador.pop(false);
-                      AppNav.toEstatisticasClima(navegador.context);
-                    },
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pop(AcaoDialogoAvisoClima.verEstatisticas),
                     icon: Icon(
                       Icons.query_stats_rounded,
                       color: cores.chalkWhite,
@@ -211,7 +217,8 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton(
                     key: const Key('botao_cancelar_aviso_clima'),
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: () =>
+                        Navigator.of(context).pop(AcaoDialogoAvisoClima.cancelar),
                     style: TextButton.styleFrom(
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       padding: const EdgeInsets.symmetric(vertical: 8),
