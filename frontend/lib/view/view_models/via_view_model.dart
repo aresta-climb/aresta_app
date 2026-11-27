@@ -428,6 +428,55 @@ class ViaViewModel extends ChangeNotifier {
     }
   }
 
+  /// Edita a categoria e/ou o detalhe de um alerta de segurança criado pelo próprio escalador.
+  Future<bool> editarAlerta(
+    String alertaUid,
+    CategoriaAlertaSeguranca novaCategoria, {
+    String? detalhe,
+  }) async {
+    if (!possuiUid || !repositorioInteracoes.usuarioEstaAutenticado) {
+      return false;
+    }
+    try {
+      await repositorioInteracoes.editarAlerta(
+        escaladaUid: escalada.uid,
+        alertaUid: alertaUid,
+        novaCategoria: novaCategoria,
+        detalhe: detalhe,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao editar alerta $alertaUid na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Exclui permanentemente um alerta de segurança criado pelo próprio escalador.
+  Future<bool> excluirAlerta(String alertaUid) async {
+    if (!possuiUid || !repositorioInteracoes.usuarioEstaAutenticado) {
+      return false;
+    }
+    _timersResolucaoPendente.remove(alertaUid)?.cancel();
+    try {
+      await repositorioInteracoes.excluirAlerta(
+        escaladaUid: escalada.uid,
+        alertaUid: alertaUid,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao excluir alerta $alertaUid na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   /// Confirma se um alerta ativo ainda está presente na via ou se já foi resolvido.
   Future<bool> confirmarAlerta(
     String alertaUid, {
