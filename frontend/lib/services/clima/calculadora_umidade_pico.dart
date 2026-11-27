@@ -58,3 +58,73 @@ abstract final class CalculadoraUmidadePico {
     );
   }
 
+  /// Avalia o histórico recente de chuva regional do pico, reiniciando o contador de 4 dias
+  /// e a referência de chuva próxima sempre que houver um evento válido mais recente.
+  static EstadoUmidadePico avaliarHistoricoPico({
+    required List<EventoChuvaPico> eventos,
+    required DateTime dataReferencia,
+  }) {
+    EstadoUmidadePico vigente = const EstadoUmidadePico.seco();
+    for (final ev in eventos) {
+      final avaliado = avaliarEventoUnico(
+        milimetros: ev.milimetros,
+        dataChuva: ev.data,
+        dataReferencia: dataReferencia,
+        bolhaId: ev.bolhaId,
+      );
+      if (_devePrevalecer(avaliado, vigente)) {
+        vigente = avaliado;
+      }
+    }
+    return vigente;
+  }
+
+  /// Filtra apenas as tempestades que estão chovendo ao vivo (`>= 0.15 mm/h`) dentro da janela válida.
+  static List<BolhaAtivaRenderizavel> filtrarBolhasAtivas({
+    required List<BolhaChuvaRegional> bolhas,
+    required DateTime geradoEm,
+    required DateTime dataReferencia,
+  }) {
+    final idade = dataReferencia.toUtc().difference(geradoEm.toUtc());
+    if (idade > validadeMaximaRadarAoVivo) {
+      return const [];
+    }
+
+    final resultado = <BolhaAtivaRenderizavel>[];
+    for (final bolha in bolhas) {
+      if (bolha.intensidadeMmHora < limiarChuvaAoVivoMmHora) continue;
+      resultado.add(
+        BolhaAtivaRenderizavel(
+          bolha: bolha,
+          nivelIntensidade: bolha.nivelIntensidade,
+        ),
+      );
+    }
+    return resultado;
+  }
+
+  /// Filtra os perímetros de incêndio florestal vigentes dentro da janela de 24 horas do satélite.
+  static List<BolhaIncendioAtivaRenderizavel> filtrarIncendiosAtivos({
+    required List<BolhaIncendioRegional> incendios,
+    required DateTime geradoEm,
+    required DateTime dataReferencia,
+  }) {
+    final idade = dataReferencia.toUtc().difference(geradoEm.toUtc());
+    if (idade > validadeMaximaIncendioAoVivo) {
+      return const [];
+    }
+    return incendios
+        .map((f) => BolhaIncendioAtivaRenderizavel(incendio: f))
+        .toList(growable: false);
+  }
+
+  static bool _devePrevalecer(EstadoUmidadePico candidato, EstadoUmidadePico atual) {
+    if (candidato.nivel.peso != atual.nivel.peso) {
+      return candidato.nivel.peso > atual.nivel.peso;
+    }
+    if (candidato.diasParaSecar != atual.diasParaSecar) {
+      return candidato.diasParaSecar > atual.diasParaSecar;
+    }
+    return candidato.milimetrosEvento > atual.milimetrosEvento;
+  }
+}
