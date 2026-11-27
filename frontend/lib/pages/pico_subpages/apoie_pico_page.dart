@@ -112,65 +112,49 @@ class ApoiePicoPage extends StatelessWidget {
                     ),
                   ),
 
-            if (categories.apoioProdutos.isNotEmpty)
-              ...categories.apoioProdutos.map(
-                (b) => PicoMenuCard(
-                  title: 'Produtos do pico',
-                  subtitle: b.texto,
-                  icon: Icons.layers,
-                  iconColor: context.colors.beastHide,
+                if (pico.patrocinadores.isNotEmpty)
+                  PicoMenuCard(
+                    title: context.tr(ChaveTexto.picoSubPatrocinador),
+                    subtitle: context.tr(
+                      ChaveTexto.picoSubPatrocinadorSubtitulo,
+                    ),
+                    icon: Icons.star_border,
+                    iconColor: context.colors.dryMoss,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor:
+                        context.colors.chalkWhite.withValues(alpha: 0.7),
+                    onTap: () {
+                      launchUrl(
+                        Uri.parse(
+                          'mailto:contato@aresta.app?subject=Patrocinio ${pico.nome}',
+                        ),
+                      );
+                    },
+                  ),
+
+                PicoMenuCard(
+                  title: context.tr(ChaveTexto.picoSubEnviarInfo),
+                  subtitle: context.tr(ChaveTexto.picoSubEnviarInfoSubtitulo),
+                  icon: Icons.camera_alt_outlined,
+                  iconColor: context.colors.rustIron,
                   backgroundColor: context.colors.caveShadow,
                   titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
-                  ),
-                  onTap: () => _pushTextNode(
-                    context,
-                    'Produtos do pico',
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.shopping_bag,
-                  ),
+                  subtitleColor:
+                      context.colors.chalkWhite.withValues(alpha: 0.7),
+                  onTap: () {
+                    launchUrl(
+                      Uri.parse(
+                        'mailto:contato@aresta.app?subject=Sugestão/Correção ${pico.nome}',
+                      ),
+                    );
+                  },
                 ),
-              ),
-
-            if (pico.patrocinadores.isNotEmpty)
-              PicoMenuCard(
-                title: 'Seja um patrocinador',
-                subtitle: 'Sua marca associada ética e ecologicamente à rocha.',
-                icon: Icons.star_border,
-                iconColor: context.colors.dryMoss,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () {
-                  // If we had a specific page for sponsors we would push here, or we can just open a mailto link
-                  launchUrl(
-                    Uri.parse(
-                      'mailto:contato@aresta.app?subject=Patrocinio ${pico.nome}',
-                    ),
-                  );
-                },
-              ),
-
-            PicoMenuCard(
-              title: 'Envie uma informação',
-              subtitle: 'Contribuir sugerindo novas vias ou correções.',
-              icon: Icons.camera_alt_outlined,
-              iconColor: context.colors.rustIron,
-              backgroundColor: context.colors.caveShadow,
-              titleColor: context.colors.chalkWhite,
-              subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-              onTap: () {
-                launchUrl(
-                  Uri.parse(
-                    'mailto:contato@aresta.app?subject=Sugestão/Correção ${pico.nome}',
-                  ),
-                );
-              },
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
