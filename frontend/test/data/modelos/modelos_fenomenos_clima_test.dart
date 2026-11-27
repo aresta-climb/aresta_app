@@ -189,3 +189,88 @@ void main() {
         isTrue,
       );
 
+      const bolhaLeste = BolhaChuvaRegional(
+        id: 'antimeridiano_leste',
+        latitude: 0.0,
+        longitude: -179.9,
+        intensidadeMmHora: 2.0,
+        ventoRumoGraus: 90.0,
+        ventoVelocidadeKmh: 60.0,
+        contornoExterno: [
+          PontoContornoGeo(longitude: -180.0, latitude: -0.2),
+          PontoContornoGeo(longitude: -179.8, latitude: -0.2),
+          PontoContornoGeo(longitude: -179.9, latitude: 0.2),
+        ],
+      );
+      expect(
+        bolhaLeste.obterPegadasTrajetoria().first.contorno.every(
+          (p) => p.longitude >= -180.0 && p.longitude <= 180.0,
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejeita payloads inválidos em BolhaChuvaRegional e RastroPassadoTempestade', () {
+      expect(
+        () => RastroPassadoTempestade.deMapa({'horas_atras': 0, 'contorno': []}),
+        throwsFormatException,
+      );
+      expect(
+        () => BolhaChuvaRegional.deMapa({'id': '', 'lat': 0, 'lon': 0}),
+        throwsFormatException,
+      );
+      expect(
+        () => BolhaChuvaRegional.deMapa({
+          'id': 'b',
+          'lat': -20.0,
+          'lon': -44.0,
+          'intensidade_mm_h': 1.0,
+          'vento_rumo_graus': 90.0,
+          'vento_kmh': 10.0,
+          'contorno_externo': [
+            [-44.1, -20.1],
+            [-43.9, -20.1],
+            [-44.0, -19.9],
+          ],
+          'nucleos_intensos': 'invalido',
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => BolhaChuvaRegional.deMapa({
+          'id': 'b',
+          'lat': -20.0,
+          'lon': -44.0,
+          'intensidade_mm_h': 1.0,
+          'vento_rumo_graus': 90.0,
+          'vento_kmh': 10.0,
+          'contorno_externo': [
+            [-44.1, -20.1],
+            [-43.9, -20.1],
+            [-44.0, -19.9],
+          ],
+          'nucleos_intensos': [
+            [
+              [-44.0, -20.0],
+            ],
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => BolhaChuvaRegional.deMapa({
+          'id': 'b',
+          'lat': -20.0,
+          'lon': -44.0,
+          'intensidade_mm_h': 1.0,
+          'vento_rumo_graus': 90.0,
+          'vento_kmh': 10.0,
+          'contorno_externo': [
+            [-44.1, -20.1],
+            [-43.9, -20.1],
+            [-44.0, -19.9],
+          ],
+          'rastros_passados': 'invalido',
+        }),
+        throwsFormatException,
+      );
