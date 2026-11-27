@@ -175,3 +175,58 @@ class MutacaoFilaInteracao {
     );
   }
 
+  /// Reconstrói [MutacaoFilaInteracao] a partir do JSON armazenado na fila local.
+  factory MutacaoFilaInteracao.fromJson(Map<String, dynamic> json) {
+    final tipo = TipoMutacaoFilaInteracao.deCodigo(json['tipo'] as String);
+    final catTexto = json['nova_categoria'] as String?;
+    final criadoTexto = json['criado_em'] as String?;
+    return MutacaoFilaInteracao._(
+      tipo: tipo,
+      alvoUid: json['alvo_uid'] as String,
+      escaladaUid: json['escalada_uid'] as String,
+      autorIdPublico: json['autor_id_publico'] as String,
+      novoTexto: json['novo_texto'] as String?,
+      novaCategoria: catTexto != null
+          ? CategoriaAlertaSeguranca.deCodigoBanco(catTexto)
+          : null,
+      criadoEm: criadoTexto != null
+          ? DateTime.parse(criadoTexto).toUtc()
+          : DateTime.now().toUtc(),
+    );
+  }
+
+  /// Serializa a mutação para persistência local no `SharedPreferences`.
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'tipo': tipo.codigo,
+      'alvo_uid': alvoUid,
+      'escalada_uid': escaladaUid,
+      'autor_id_publico': autorIdPublico,
+      if (novoTexto != null) 'novo_texto': novoTexto,
+      if (novaCategoria != null) 'nova_categoria': novaCategoria!.codigoBanco,
+      'criado_em': criadoEm.toUtc().toIso8601String(),
+    };
+  }
+
+  /// Retorna uma cópia reconciliando [autorIdPublico] com o perfil canônico autenticado.
+  MutacaoFilaInteracao comAutor(String autorIdPublico) {
+    _exigirUid(autorIdPublico, 'autorIdPublico');
+    return MutacaoFilaInteracao._(
+      tipo: tipo,
+      alvoUid: alvoUid,
+      escaladaUid: escaladaUid,
+      autorIdPublico: autorIdPublico,
+      novoTexto: novoTexto,
+      novaCategoria: novaCategoria,
+      criadoEm: criadoEm,
+    );
+  }
+
+  static String _exigirNaoVazio(String valor, String campo) {
+    final limpo = valor.trim();
+    if (limpo.isEmpty) {
+      throw ArgumentError.value(valor, campo, 'O identificador não pode ser vazio.');
+    }
+    return limpo;
+  }
+
