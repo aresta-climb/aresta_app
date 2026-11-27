@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:geolocator/geolocator.dart';
+import '../idioma/tradutor_app.dart';
 
 /// Representa um nó compartilhado da malha viária do OpenStreetMap (`catalogo_nos_estrada`)
 /// contendo as distâncias rodoviárias pré-computadas em metros e durações em minutos até os croquis que o alcançam.
@@ -94,7 +95,10 @@ class EstimativaViagemPico {
     if (duracaoMinutos == null) {
       return null;
     }
-    return 'Estimativa sem trânsito: ${formatarTempoArredondado()} (${formatarDistanciaKm()})';
+    return tr(ChaveTexto.modEstimativaSemTransito, {
+      'tempo': formatarTempoArredondado(),
+      'distancia': formatarDistanciaKm(),
+    });
   }
 }
 

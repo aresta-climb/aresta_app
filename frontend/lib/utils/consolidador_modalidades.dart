@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import 'filtro_grau_escalada.dart';
 
 /// Modalidades de escalada suportadas para agregação e exibição em badges.
@@ -66,30 +67,34 @@ abstract class ConsolidadorModalidades {
     final String plural;
     switch (modalidade) {
       case ModalidadeEscaladaEnum.esportiva:
-        singular = 'esportiva';
-        plural = 'esportivas';
+        singular = tr(ChaveTexto.modEsportivaMinusculo);
+        plural = tr(ChaveTexto.modEsportivasMinusculo);
         break;
       case ModalidadeEscaladaEnum.movel:
-        singular = 'móvel';
-        plural = 'móveis';
+        singular = tr(ChaveTexto.modMovelMinusculo);
+        plural = tr(ChaveTexto.modMoveisMinusculo);
         break;
       case ModalidadeEscaladaEnum.boulder:
-        singular = 'boulder';
-        plural = 'boulders';
+        singular = tr(ChaveTexto.modBoulderMinusculo);
+        plural = tr(ChaveTexto.modBouldersMinusculo);
         break;
       case ModalidadeEscaladaEnum.multienfiada:
-        singular = 'multienfiada';
-        plural = 'multienfiadas';
+        singular = tr(ChaveTexto.modMultienfiadaMinusculo);
+        plural = tr(ChaveTexto.modMultienfiadasMinusculo);
         break;
       case ModalidadeEscaladaEnum.highline:
-        singular = 'highline';
-        plural = 'highlines';
+        singular = tr(ChaveTexto.modHighlineMinusculo);
+        plural = tr(ChaveTexto.modHighlinesMinusculo);
         break;
     }
 
     final String textoBase;
     if (quantidadeTotal != null && quantidadeTotal > quantidade) {
-      textoBase = '$quantidade de $quantidadeTotal $plural';
+      textoBase = tr(ChaveTexto.modDeTotal, {
+        'qtd': '$quantidade',
+        'total': '$quantidadeTotal',
+        'plural': plural,
+      });
     } else {
       textoBase = quantidade == 1 ? '1 $singular' : '$quantidade $plural';
     }
@@ -108,9 +113,12 @@ abstract class ConsolidadorModalidades {
     required int totalSetores,
     required int totalEscaladas,
   }) {
-    final rotuloSetor = totalSetores == 1 ? '1 setor' : '$totalSetores setores';
-    final rotuloEscalada =
-        totalEscaladas == 1 ? '1 escalada' : '$totalEscaladas escaladas';
+    final rotuloSetor = totalSetores == 1
+        ? '1 ${tr(ChaveTexto.modSetorMinusculo)}'
+        : '$totalSetores ${tr(ChaveTexto.modSetoresMinusculo)}';
+    final rotuloEscalada = totalEscaladas == 1
+        ? '1 ${tr(ChaveTexto.modEscaladaMinusculo)}'
+        : '$totalEscaladas ${tr(ChaveTexto.modEscaladasMinusculo)}';
     return '$rotuloSetor • $rotuloEscalada';
   }
 

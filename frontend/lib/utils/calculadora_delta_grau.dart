@@ -3,6 +3,7 @@
 
 import '../aresta_api/proto/generated/croqui.pbenum.dart';
 import '../data/modelos/interacao_via.dart';
+import '../idioma/tradutor_app.dart';
 import 'formatador_escalada.dart';
 
 /// Escada ordenada de graus inteiros brasileiros de vias (excluindo `INDEFINIDO`, `PROJETO` e graus com `_BARRA_`).
@@ -135,7 +136,9 @@ String rotuloOpcaoDeltaGrau(
   final textoGrau = formatarGrauPorCodigo(codigoAlvo, ehBoulder: ehBoulder);
 
   if (delta == 0) {
-    return textoGrau != null ? 'Justo ($textoGrau)' : 'Grau Justo (0)';
+    return textoGrau != null
+        ? tr(ChaveTexto.viaGrauJustoComNota, {'grau': textoGrau})
+        : tr(ChaveTexto.viaGrauJustoZero);
   }
   final prefixo = delta > 0 ? '+$delta' : '$delta';
   return textoGrau != null ? '$prefixo ($textoGrau)' : prefixo;
