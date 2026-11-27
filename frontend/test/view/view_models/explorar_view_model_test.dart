@@ -486,68 +486,58 @@ void main() {
         SharedPreferences.setMockInitialValues({});
         RegistroPrimeiraVisita.resetForTesting();
 
-        final clienteHttp = ClienteHttpAresta.paraTestes(
-          MockClient((_) async => http.Response('Erro', 500)),
-        );
+        late HttpServer servidorErro;
+        await tester.runAsync(() async {
+          servidorErro = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+          servidorErro.listen((req) async {
+            await req.drain<void>();
+            req.response.statusCode = 500;
+            await req.response.close();
+          });
+        });
+        addTearDown(() => tester.runAsync(() => servidorErro.close(force: true)));
+
+        SyncService.baseUrlOverride = 'http://127.0.0.1:${servidorErro.port}';
+        addTearDown(() => SyncService.baseUrlOverride = null);
+
         final syncLocal = SyncService(
           datasetRepository: repositorio,
-          client: clienteHttp,
+          client: ClienteHttpAresta.instancia,
         );
         final vmLocal = BrowseViewModel(
           datasetRepo: repositorio,
           syncService: syncLocal,
           telemetria: mockTelemetria,
+          servicoClima: servicoClima,
         );
         addTearDown(vmLocal.dispose);
 
         expect(vmLocal.downloadingCrags, same(syncLocal.downloadingCrags));
 
-        // Dois picos com mesma coordenada + 1 pico sem coordenada e mesma qtd de vias
         repositorio.activeDataset.value = TopoDataset(
           availablePicos: [
-            {
-              'id': 'p_z',
-              'nome': 'Zeta',
-              'latitude': -20.10,
-              'longitude': -44.00,
-              'estatisticas': {'totalVias': 10},
-            },
-            {
-              'id': 'p_a',
-              'nome': 'Alfa',
-              'latitude': -20.10,
-              'longitude': -44.00,
-              'estatisticas': {'totalVias': 10},
-            },
-            {
-              'id': 'p_sem_coord',
-              'nome': 'Sem Coord',
-              'estatisticas': {'totalVias': 10},
-            },
+            {'id': 'p_z', 'nome': 'Zeta', 'latitude': -20.10, 'longitude': -44.00, 'estatisticas': {'totalVias': 10}},
+            {'id': 'p_a', 'nome': 'Alfa', 'latitude': -20.10, 'longitude': -44.00, 'estatisticas': {'totalVias': 10}},
+            {'id': 'p_sem_coord', 'nome': 'Sem Coord', 'estatisticas': {'totalVias': 10}},
           ],
           downloadedPicos: [],
         );
         vmLocal.atualizarLocalizacaoUsuario(-20.00, -44.00);
 
-        final filtradosProx = vmLocal.picosFiltrados;
-        expect(filtradosProx.map((m) => m.id).toList(), <String>[
+        expect(vmLocal.picosFiltrados.map((m) => m.id).toList(), <String>[
           'p_a',
           'p_z',
           'p_sem_coord',
         ]);
 
-        // alterarOrdem para a mesma ordem atual não dispara evento duplicado
         vmLocal.alterarOrdem(OrdemOrdenacaoPico.proximidade);
-        // alterarOrdem para escaladas exercita desempate por nome quando totalEscaladas é igual
         vmLocal.alterarOrdem(OrdemOrdenacaoPico.escaladas);
         expect(vmLocal.picosFiltrados.first.id, equals('p_a'));
 
-        // Debounce de busca após 500ms registra logBuscaCroquis
         vmLocal.alterarTermoBusca('Alfa');
         await tester.pump(const Duration(milliseconds: 550));
         expect(mockTelemetria.recordedEvents, contains('busca_croquis'));
 
-        // baixarPico e baixarPicoPorId com indiceData nulo e preenchido
         repositorio.indiceData.value = null;
         expect(await vmLocal.baixarPico(MetadadosIndice(id: 'p_a')), isFalse);
         expect(await vmLocal.baixarPicoPorId('p_a'), isFalse);
@@ -585,7 +575,6 @@ void main() {
           await vmLocal.baixarPicoPorId('p_a');
           expect(await vmLocal.baixarPicoPorId('inexistente'), isFalse);
 
-          // abrirPico com dataset nulo, encontrado e fallback orElse
           final ds = repositorio.activeDataset.value;
           repositorio.activeDataset.value = null;
           await vmLocal.abrirPico(context, 'p_a');
