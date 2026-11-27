@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../utils/gerador_uid.dart';
 import 'perfil_escalador.dart';
 import 'tipo_ascensao.dart';
@@ -13,38 +14,16 @@ import 'tipo_ascensao.dart';
 /// renderizado na bolha vermelha flutuante da `ViaPage`.
 enum CategoriaAlertaSeguranca {
   /// Presença de abelhas, marimbondos, cobras, aves em ninho ou outros animais na via.
-  fauna(
-    codigoBanco: 'FAUNA',
-    emoji: '🐝',
-    rotulo: 'Fauna',
-    descricaoCurta:
-        'Abelhas, marimbondos, cobras, aves em ninho ou outros animais na via.',
-  ),
+  fauna(codigoBanco: 'FAUNA', emoji: '🐝'),
 
   /// Bloco solto, laca oca ou agarra quebrando na linha de escalada.
-  rochaAgarraInstavel(
-    codigoBanco: 'ROCHA_AGARRA_INSTAVEL',
-    emoji: '🪨',
-    rotulo: 'Rocha ou Agarra Instável',
-    descricaoCurta: 'Bloco solto, laca perigosa ou agarra prestes a quebrar.',
-  ),
+  rochaAgarraInstavel(codigoBanco: 'ROCHA_AGARRA_INSTAVEL', emoji: '🪨'),
 
   /// Chapeleta girando, grampo oxidado, porca frouxa ou parada comprometida.
-  protecaoPrecaria(
-    codigoBanco: 'PROTECAO_PRECARIA',
-    emoji: '🔩',
-    rotulo: 'Proteção Precária',
-    descricaoCurta: 'Chapeleta solta, corrosão severa ou ancoragem danificada.',
-  ),
+  protecaoPrecaria(codigoBanco: 'PROTECAO_PRECARIA', emoji: '🔩'),
 
   /// Lance exposto severo (E4+), risco de queda no chão ou proteção distante.
-  exposicaoE4Mais(
-    codigoBanco: 'EXPOSICAO_E4_MAIS',
-    emoji: '⚠️',
-    rotulo: 'Exposição E4+',
-    descricaoCurta:
-        'Lance exposto severo (E4+), risco de queda no chão ou proteção distante.',
-  );
+  exposicaoE4Mais(codigoBanco: 'EXPOSICAO_E4_MAIS', emoji: '⚠️');
 
   /// Identificador textual persistido em `public.fila_interacoes.categoria_alerta`.
   final String codigoBanco;
@@ -52,18 +31,38 @@ enum CategoriaAlertaSeguranca {
   /// Emoji exibido dentro da bolha vermelha de alerta na tela da via.
   final String emoji;
 
-  /// Título legível em português exibido nos modais de confirmação e relato.
-  final String rotulo;
-
-  /// Explicação concisa auxiliando o escalador na escolha rápida na base da falésia.
-  final String descricaoCurta;
-
   const CategoriaAlertaSeguranca({
     required this.codigoBanco,
     required this.emoji,
-    required this.rotulo,
-    required this.descricaoCurta,
   });
+
+  /// Título legível localizado exibido nos modais de confirmação e relato.
+  String get rotulo => switch (this) {
+    CategoriaAlertaSeguranca.fauna => tr(ChaveTexto.alertaFaunaTitulo),
+    CategoriaAlertaSeguranca.rochaAgarraInstavel => tr(
+      ChaveTexto.alertaRochaInstavelTitulo,
+    ),
+    CategoriaAlertaSeguranca.protecaoPrecaria => tr(
+      ChaveTexto.alertaProtecaoPrecariaTitulo,
+    ),
+    CategoriaAlertaSeguranca.exposicaoE4Mais => tr(
+      ChaveTexto.alertaExposicaoTitulo,
+    ),
+  };
+
+  /// Explicação concisa localizada auxiliando o escalador na escolha rápida na base da falésia.
+  String get descricaoCurta => switch (this) {
+    CategoriaAlertaSeguranca.fauna => tr(ChaveTexto.alertaFaunaDesc),
+    CategoriaAlertaSeguranca.rochaAgarraInstavel => tr(
+      ChaveTexto.alertaRochaInstavelDesc,
+    ),
+    CategoriaAlertaSeguranca.protecaoPrecaria => tr(
+      ChaveTexto.alertaProtecaoPrecariaDesc,
+    ),
+    CategoriaAlertaSeguranca.exposicaoE4Mais => tr(
+      ChaveTexto.alertaExposicaoDesc,
+    ),
+  };
 
   /// Converte o [codigo] proveniente do banco ou YAML na [CategoriaAlertaSeguranca] correspondente.
   static CategoriaAlertaSeguranca deCodigoBanco(String codigo) {
@@ -83,15 +82,18 @@ enum CategoriaAlertaSeguranca {
 /// Papel da contribuição do escalador autenticado sobre um alerta exibido na sua Caderneta.
 enum PapelContribuicaoAlerta {
   /// Alerta aberto originalmente pelo próprio escalador.
-  criadoPorMim('CRIADO POR VOCÊ'),
+  criadoPorMim,
 
   /// Alerta aberto por outro escalador e confirmado (`+1`) pelo usuário atual.
-  confirmadoPorMim('CONFIRMADO (+1)');
+  confirmadoPorMim;
 
-  /// Rótulo em caixa alta exibido no selo visual da `CadernetaPage`.
-  final String rotuloSelo;
-
-  const PapelContribuicaoAlerta(this.rotuloSelo);
+  /// Rótulo localizado em caixa alta exibido no selo visual da `CadernetaPage`.
+  String get rotuloSelo => switch (this) {
+    PapelContribuicaoAlerta.criadoPorMim => tr(ChaveTexto.alertaCriadoPorVoce),
+    PapelContribuicaoAlerta.confirmadoPorMim => tr(
+      ChaveTexto.alertaConfirmadoMaisUm,
+    ),
+  };
 }
 
 /// Estado de permissão e deduplicação do usuário atual diante do modal *"Ainda está lá?"*.
@@ -236,12 +238,31 @@ class AlertaSegurancaVia {
     return EstadoInteracaoAlertaUsuario.podeConfirmar;
   }
 
-  /// Retorna uma nova cópia com os campos informados atualizados.
+  /// Retorna uma nova cópia com os campos informados atualizados e validados sob Fail-Fast.
   AlertaSegurancaVia copyWith({
+    CategoriaAlertaSeguranca? categoria,
     String? detalhe,
+    bool limparDetalhe = false,
     int? confirmacoesAtivas,
     Set<String>? confirmadoresUids,
   }) {
+    String? novoDetalhe;
+    if (limparDetalhe) {
+      novoDetalhe = null;
+    } else if (detalhe != null) {
+      final limpo = detalhe.trim();
+      if (limpo.length > limiteCaracteresDetalhe) {
+        throw ArgumentError.value(
+          limpo.length,
+          'detalhe',
+          'O detalhe do alerta deve ter no máximo $limiteCaracteresDetalhe caracteres.',
+        );
+      }
+      novoDetalhe = limpo.isNotEmpty ? limpo : null;
+    } else {
+      novoDetalhe = this.detalhe;
+    }
+
     return AlertaSegurancaVia(
       uid: uid,
       escaladaUid: escaladaUid,
