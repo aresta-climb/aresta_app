@@ -306,60 +306,6 @@ class SecaoEnfiadasVia extends StatelessWidget {
                           ChaveTexto.viaMovelPrefixo,
                           {'equip': enfiadas[i].equipamentoMovel},
                         ),
-                      ),
-                      if (enf.grau != null)
-                        _PilulaDetalheCurto(texto: enf.grau!),
-                      if (enf.extensao != null)
-                        _PilulaDetalheCurto(texto: enf.extensao!),
-                      if (enf.protecoes != null)
-                        _PilulaDetalheCurto(texto: '${enf.protecoes} prot.'),
-                    ],
-                  ),
-                  if (enf.equipamentoMovel != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Móvel: ${enf.equipamentoMovel}',
-                      style: TextStyle(color: cores.ashGrey, fontSize: 12),
-                    ),
-                  ],
-                  if (enf.descricao != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      enf.descricao!,
-                      style: TextStyle(color: cores.chalkWhite, fontSize: 13),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-/// Lista declarativa (Dumb UI) de cartões clicáveis para vídeos e postagens curadas de beta.
-class SecaoBetasMidiaVia extends StatelessWidget {
-  /// Mídias disponíveis para a escalada.
-  final List<ItemMidiaBetaVia> midias;
-
-  /// Callback acionado ao tocar em um vídeo ou post de beta.
-  final ValueChanged<String> aoAbrirMidia;
-
-  /// Cria uma instância de [SecaoBetasMidiaVia].
-  const SecaoBetasMidiaVia({
-    super.key,
-    required this.midias,
-    required this.aoAbrirMidia,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (midias.isEmpty) return const SizedBox.shrink();
-    final cores = context.colors;
-
-    return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
