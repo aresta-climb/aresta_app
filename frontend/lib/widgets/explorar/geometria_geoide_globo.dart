@@ -26,6 +26,57 @@ class PontoProjetadoTela {
   );
 }
 
+/// Estado cinemático de um arco parabólico (`Fly-To`) sobre o globo ou plano Mercator.
+class TrajetoriaVooParabolico {
+  final double latInicial;
+  final double lonInicial;
+  final double lodInicial;
+  final double latFinal;
+  final double deltaLonCurto;
+  final double lodFinal;
+  final double recuoArco;
+  double progresso = 0.0;
+
+  TrajetoriaVooParabolico({
+    required this.latInicial,
+    required this.lonInicial,
+    required this.lodInicial,
+    required this.latFinal,
+    required this.deltaLonCurto,
+    required this.lodFinal,
+    required this.recuoArco,
+  });
+
+  /// Avança a curva cúbica suave e retorna a pose interpolada `(lat, lon, lod, concluido)`.
+  ({double lat, double lon, double lod, bool concluido}) avancarPasso({
+    required double passoNormalizado,
+    required double lodMinimo,
+    required double lodMaximo,
+  }) {
+    progresso = (progresso + 0.036 * passoNormalizado).clamp(0.0, 1.0);
+    if (progresso >= 1.0) {
+      return (
+        lat: latFinal,
+        lon: GeometriaGeoideGlobo.normalizarLongitude(lonInicial + deltaLonCurto),
+        lod: lodFinal,
+        concluido: true,
+      );
+    }
+    final t = progresso;
+    final ease = t < 0.5
+        ? 4.0 * t * t * t
+        : 1.0 - math.pow(-2.0 * t + 2.0, 3) / 2.0;
+    final lat = latInicial + (latFinal - latInicial) * ease;
+    final lon = GeometriaGeoideGlobo.normalizarLongitude(
+      lonInicial + deltaLonCurto * ease,
+    );
+    final recuoMeioVoo = math.sin(math.pi * ease) * recuoArco;
+    final lod = (lodInicial + (lodFinal - lodInicial) * ease - recuoMeioVoo)
+        .clamp(lodMinimo, lodMaximo);
+    return (lat: lat, lon: lon, lod: lod, concluido: false);
+  }
+}
+
 /// Agrupamento geográfico de picos por unidade federativa para renderização limpa no `LOD 0`.
 class ClusterEstadoGlobo {
   final String uf;
