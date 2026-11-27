@@ -651,3 +651,93 @@ const Map<ChaveTexto, String> dicionarioEspanhol = {
   ChaveTexto.cadTotalCadenas: 'Total de Encadenes',
   ChaveTexto.cadTaxaAVistaFlash: 'Tasa A Vista/Flash',
   ChaveTexto.cadMaiorGrauVias: 'Máximo Grado (Vías)',
+  ChaveTexto.cadMaiorGrauBoulders: 'Máximo Grado (Bloques)',
+  ChaveTexto.cadPiramideTitulo: 'Pirámide de Grados',
+  ChaveTexto.cadNenhumaAscensaoModalidade:
+      'Ninguna ascensión registrada en esta modalidad.',
+  ChaveTexto.cadHistoricoContagem: 'Historial de Ascensiones ({n})',
+  ChaveTexto.cadMeusAlertasContagem: 'Mis Alertas en la Roca ({n})',
+  ChaveTexto.cadNenhumaAscensaoAinda: 'Ninguna ascensión registrada aún',
+  ChaveTexto.cadNenhumaAscensaoSub:
+      'Tus encadenes guardados en las páginas de las vías aparecerán aquí.',
+  ChaveTexto.cadEditarAscensaoTooltip: 'Editar ascensión',
+  ChaveTexto.cadExcluirAscensaoTooltip: 'Eliminar ascensión',
+  ChaveTexto.cadExcluirAscensaoTitulo: '¿Eliminar Ascensión?',
+  ChaveTexto.cadExcluirAscensaoCorpo:
+      'Esto eliminará este registro permanentemente de tu libreta.',
+  ChaveTexto.cadEstiloEsportivoLabel: 'Estilo de Escalada',
+  ChaveTexto.cadTentativasPegasLabel: 'Intentos / Pegues',
+  ChaveTexto.cadDataAscensaoLabel: 'Fecha de Ascensión',
+  ChaveTexto.cadNotasPrivadasLabel: 'Notas Privadas (Crux / Beta)',
+  ChaveTexto.cadNotasPrivadasHint:
+      'Ej: Talón izquierdo en la 3ª chapa, llevar cinta larga...',
+  ChaveTexto.cadCadenaSalvaToast: '¡Encadene guardado en la libreta!',
+  ChaveTexto.cadTentativaSalvaToast: '¡Intento guardado en la libreta!',
+  ChaveTexto.cadContribuicaoPublica: 'CONTRIBUCIÓN PÚBLICA',
+  ChaveTexto.cadPercepcaoGrau: 'Percepción del grado de la línea:',
+  ChaveTexto.cadBetaOpcionalLabel: 'Beta de la Comunidad (opcional)',
+  ChaveTexto.cadBetaOpcionalHint:
+      'Ej.: Cinta 3 larga; buena lectura por la izquierda en el crux.',
+  ChaveTexto.cadConecteParaContribuir:
+      'Conecta tu cuenta en Perfil para enviar votos y betas públicos a la guía comunitaria.',
+  ChaveTexto.cadEditarModalTitulo: 'Editar Ascensión',
+  ChaveTexto.cadRegistrarModalTitulo: 'Registrar Ascensión',
+  ChaveTexto.cadSalvarEContribuir: 'Guardar Encadene y Contribuir',
+  ChaveTexto.cadSalvarNaCaderneta: 'Guardar en la Libreta',
+  ChaveTexto.cadEncadenadaEm: 'Encadenada el {data} ({estilo})',
+  ChaveTexto.cadTentativaEm: 'Intento el {data}',
+  ChaveTexto.cadNovaAscensaoBtn: 'Nueva Ascensión / Intento',
+  ChaveTexto.cadRegistrarCadenaBtn: 'Registrar Encadene / Intento',
+  ChaveTexto.comunidadeHeader: 'MEDIOS, APOYOS Y COMUNIDAD',
+  ChaveTexto.comunidadeSobreTimeTitulo: 'SOBRE EL EQUIPO',
+  ChaveTexto.comunidadeSobreTimeSub:
+      'Conoce a los desarrolladores y colaboradores del proyecto Aresta.',
+  ChaveTexto.comunidadeWhatsappTitulo: 'GRUPO DE WHATSAPP',
+  ChaveTexto.comunidadeWhatsappSub:
+      'Participa para resolver dudas, dar ideas y recibir avisos de Aresta.',
+  ChaveTexto.comunidadeInstagramTitulo: 'INSTAGRAM OFICIAL',
+  ChaveTexto.comunidadeInstagramSub:
+      'Sigue las últimas novedades, actualizaciones y detrás de escena.',
+  ChaveTexto.comunidadeLinkedinTitulo: 'LINKEDIN DEL PROYECTO',
+  ChaveTexto.comunidadeLinkedinSub:
+      'Sigue novedades, crecimiento y el lado institucional de Aresta.',
+  ChaveTexto.comunidadeDiscordTitulo: 'DISCORD DE DESARROLLADORES',
+  ChaveTexto.comunidadeDiscordSub:
+      'Habla con el equipo, sigue el código y colabora con el futuro de Aresta.',
+  ChaveTexto.comunidadeGithubTitulo: 'GITHUB DE ARESTA',
+  ChaveTexto.comunidadeGithubSub:
+      'Accede al perfil con los repositorios abiertos en GitHub.',
+  ChaveTexto.comunidadeTermosTitulo: 'Términos de Uso y Privacidad',
+  ChaveTexto.comunidadeTermosSub:
+      'Asunción voluntaria de riesgos y directrices de privacidad offline.',
+  ChaveTexto.comunidadeRodapeVersao: 'Aresta Climb v{versao} • Beta Abierta',
+  ChaveTexto.comunidadeIniciativaLivre:
+      'Una iniciativa independiente por el montañismo libre.',
+  ChaveTexto.comunidadeTermosModalHeader: 'TÉRMINOS Y PRIVACIDAD',
+  ChaveTexto.comunidadePoliticaModalHeader: 'POLÍTICA DE PRIVACIDAD',
+  ChaveTexto.timeConhecaSubtitulo: 'CONOCE A QUIENES HACEN ARESTA',
+  ChaveTexto.timeOpenSourceTitulo: 'ARESTA ES OPEN SOURCE',
+  ChaveTexto.timeOpenSourceCorpo:
+      '¿Te gustaría contribuir? ¡Entra a nuestro Discord y envíanos un mensaje!',
+  ChaveTexto.timeCargoDesigner: 'Diseñadora',
+  ChaveTexto.timeCargoProduto: 'Producto / Marketing',
+  ChaveTexto.timeCargoProdutoQuebra: 'Producto/\nMarketing',
+  ChaveTexto.timeCargoBackend: 'Backend',
+  ChaveTexto.timeCargoFrontend: 'Frontend',
+  ChaveTexto.legalTermosTitulo: 'Términos de Uso',
+  ChaveTexto.legalPoliticaTitulo: 'Política de Privacidad',
+  ChaveTexto.legalErroTermos:
+      'Error al cargar los términos. Inténtalo más tarde.',
+  ChaveTexto.legalErroPolitica: 'Error al cargar la política.',
+  ChaveTexto.legalBannerAtualizacao:
+      '🌟 Actualizamos nuestros documentos legales. Por favor revísalos y confirma tu aceptación.',
+  ChaveTexto.legalDataAtualizacao: 'Fecha de actualización: {data}',
+  ChaveTexto.legalAceitoEm: 'Aceptado el {data} a las {hora}',
+  ChaveTexto.legalConcordoCheckbox:
+      'He leído y acepto los Términos de Uso y la Política de Privacidad.',
+  ChaveTexto.legalAceitarContinuar: 'Aceptar Términos y Continuar',
+  ChaveTexto.configTitulo: 'Ajustes',
+  ChaveTexto.configIdiomaTitulo: 'IDIOMA',
+  ChaveTexto.configIdiomaSubtitulo:
+      'Cambia al instante el idioma de toda la aplicación.',
+  ChaveTexto.configAparenciaTitulo: 'APARIENCIA',
