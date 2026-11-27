@@ -85,3 +85,95 @@ void main() {
               milimetros: 9.0,
             ),
           ],
+          'pico_5': [
+            EventoChuvaPico(
+              data: DateTime.utc(2026, 11, 24),
+              milimetros: 18.0,
+            ),
+          ],
+        },
+        altimetriaPorPico: const {
+          'pico_0': CotaAltimetricaPico(
+            altitudeBaseMetros: 800,
+            altitudePicoMetros: 1180,
+          ),
+          'pico_5': CotaAltimetricaPico(
+            altitudeBaseMetros: 960,
+            altitudePicoMetros: 1450,
+          ),
+        },
+      ),
+    );
+
+    sync = SyncService(datasetRepository: repo);
+    servicoClima = ServicoClimaAltimetria(
+      armazenamento: ArmazenamentoClimaLocal(
+        provedorDiretorioBase: () async => dirTemp.path,
+      ),
+      fonteRemota: fakeRemoto,
+      relogioUtc: () => agora,
+    );
+    await servicoClima.inicializar();
+    await servicoClima.sincronizarSeNecessario(forcar: true);
+
+    viewModel = BrowseViewModel(
+      datasetRepo: repo,
+      syncService: sync,
+      servicoClima: servicoClima,
+    )..atualizarLocalizacaoUsuario(-20.0, -44.0);
+  });
+
+  tearDown(() async {
+    viewModel.dispose();
+    servicoClima.dispose();
+    await catalogo.fechar();
+    if (await dirTemp.exists()) {
+      try {
+        await dirTemp.delete(recursive: true);
+      } catch (_) {}
+    }
+  });
+
+  group('GavetaDeslizanteExplorar', () {
+    testWidgets(
+      'alterna entre os 3 encaixes (Mapa, Dividir, Lista), exibe altitude e alerta contextual de chuva apenas em picos umidos, e faz auto-scroll ao selecionar no mapa',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 820));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final alturaPx = ValueNotifier<double>(0);
+        addTearDown(alturaPx.dispose);
+        String? focadoNoGlobo;
+        final abertosIds = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Stack(
+                children: [
+                  GavetaDeslizanteExplorar(
+                    viewModel: viewModel,
+                    alturaGavetaPx: alturaPx,
+                    posicaoInicial: PosicaoEncaixeGaveta.mapa,
+                    aoAbrirPico: (card) => abertosIds.add(card.id),
+                    aoFocarPicoNaLista: (id) => focadoNoGlobo = id,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final alturaMapa = alturaPx.value;
+        // No modo Mapa, exibe apenas a borda fina da alca arrastavel (< 40px)
+        expect(alturaMapa, lessThan(40.0));
+
+        // Tocar na borda recolhida restaura Dividir; recolhe de volta para Mapa para testar auto-scroll
+        await tester.tap(find.byKey(const Key('alca_gaveta_explorar')));
+        await tester.pumpAndSettle();
+        expect(alturaPx.value, greaterThan(350.0));
+        await tester.tap(find.byKey(const Key('encaixe_gaveta_mapa')));
+        await tester.pumpAndSettle();
+        expect(alturaPx.value, lessThan(40.0));
+
