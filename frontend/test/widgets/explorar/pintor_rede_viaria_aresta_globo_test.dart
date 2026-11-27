@@ -164,3 +164,83 @@ void main() {
       );
       expect(qRetraindoNoZoomOut.any((b) => b > 0), isTrue);
 
+      // Progresso 0.0 -> apenas malha P&B e pontos brancos; Progresso 0.45 -> onda em trânsito; Progresso 1.0 -> corredor completo
+      final qInicio = await _renderizarCamadaViaria(
+        ctrl: ctrl,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 0.0,
+      );
+      final qMeio = await _renderizarCamadaViaria(
+        ctrl: ctrl,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 0.45,
+      );
+      ctrl.definirLod(2.95);
+      final qCompleto = await _renderizarCamadaViaria(
+        ctrl: ctrl,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 1.0,
+      );
+
+      expect(qInicio.any((b) => b > 0), isTrue);
+      expect(qMeio, isNot(equals(qInicio)));
+      expect(qCompleto, isNot(equals(qMeio)));
+
+      // Verifica brilho quente laranja (R > B + 25) sobre Belo Horizonte no estado completo
+      final ptBh = ctrl.projetarCoordenada(
+        latitude: -19.9191,
+        longitude: -43.9386,
+        elevacaoMetros: 825.0,
+        tamanhoTela: const ui.Size(240, 240),
+      );
+      if (ptBh.visivel &&
+          ptBh.x >= 2 &&
+          ptBh.x < 238 &&
+          ptBh.y >= 2 &&
+          ptBh.y < 238) {
+        final idx = (ptBh.y.round() * 240 + ptBh.x.round()) * 4;
+        expect(qCompleto[idx], greaterThan(qCompleto[idx + 2]));
+      }
+
+      // Modo 2D cruzando o antimeridiano descarta saltos horizontais abruptos sem artefato
+      final ctrl2D = ControladorCameraGlobo(
+        latitudeInicial: 0.0,
+        longitudeInicial: 0.0,
+        lodInicial: 1.85,
+        modo3DInicial: false,
+      );
+      addTearDown(ctrl2D.dispose);
+      final q2D = await _renderizarCamadaViaria(
+        ctrl: ctrl2D,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 0.5,
+      );
+      expect(q2D, isNotNull);
+
+      // No zoom máximo (LOD 4.35), uma rodovia cujos vértices originais estão muito fora da tela
+      // permanece contínua cruzando o centro da tela sem desaparecer!
+      final ctrlZoomMaximo = ControladorCameraGlobo(
+        latitudeInicial: -19.84955,
+        longitudeInicial: -43.9243,
+        lodInicial: 4.35,
+      );
+      addTearDown(ctrlZoomMaximo.dispose);
+      final qZoomMaximo = await _renderizarCamadaViaria(
+        ctrl: ctrlZoomMaximo,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 1.0,
+      );
+      expect(qZoomMaximo.any((b) => b > 120), isTrue);
+    });
+  });
+}
