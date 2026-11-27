@@ -267,3 +267,102 @@ void main() {
         expect(distUrca, greaterThan(300.0));
         expect(lodUrca, lessThan(2.0));
 
+        // Dando zoom maximo (2.9) no meio do Oceano Atlantico (-20.0, -35.0), NENHUM pico entra em LOD 2 ou 3
+        final ctrlOceano = ControladorCameraGlobo(
+          latitudeInicial: -20.0,
+          longitudeInicial: -35.0,
+          lodInicial: 2.9,
+        );
+        addTearDown(ctrlOceano.dispose);
+        expect(
+          ctrlOceano.nivelDetalheObjeto(latitude: -20.07, longitude: -44.32),
+          lessThan(2.0),
+        );
+        expect(
+          ctrlOceano.nivelDetalheObjeto(latitude: -22.95, longitude: -43.16),
+          lessThan(2.0),
+        );
+
+        // Permite zoom profundo ate < 1.2 km do macico (lodMaximo >= 4.5) sem cortar montanhas altas na lente
+        expect(ControladorCameraGlobo.lodMaximo, greaterThanOrEqualTo(4.5));
+        final ctrlCloseUp = ControladorCameraGlobo(
+          latitudeInicial: -20.07,
+          longitudeInicial: -44.32,
+          lodInicial: 4.5,
+        )..definirElevacaoReferenciaCamera(980.0);
+        addTearDown(ctrlCloseUp.dispose);
+        expect(ctrlCloseUp.elevacaoReferenciaCameraMetros, equals(980.0));
+        expect(ctrlCloseUp.altitudeCameraKm, lessThan(1.2));
+        final ptBaseClose = ctrlCloseUp.projetarCoordenada(
+          latitude: -20.07,
+          longitude: -44.32,
+          elevacaoMetros: 980.0,
+          tamanhoTela: const Size(400, 800),
+        );
+        final ptTopoClose = ctrlCloseUp.projetarCoordenada(
+          latitude: -20.07,
+          longitude: -44.32,
+          elevacaoMetros: 1430.0,
+          tamanhoTela: const Size(400, 800),
+        );
+        expect(ptBaseClose.visivel, isTrue);
+        expect(ptTopoClose.visivel, isTrue);
+        expect(ptTopoClose.y, lessThan(ptBaseClose.y - 40.0));
+        expect(
+          ctrlCloseUp.nivelDetalheObjeto(latitude: -20.07, longitude: -44.32),
+          greaterThan(3.8),
+        );
+        expect(
+          ctrl.nivelDetalheObjeto(latitude: -19.0, longitude: -44.32),
+          inInclusiveRange(2.0, 3.0),
+        );
+        ctrl.definirLod(0.1);
+        expect(
+          ctrl.nivelDetalheObjeto(latitude: -20.07, longitude: -44.32),
+          lessThan(1.0),
+        );
+      },
+    );
+
+    test(
+      'navegacao 2D possui zoom estritamente monotono desde LOD 0, pan 1:1 sob o dedo, zero folga vertical, zoom focal 1:1 e inercia apenas apos soltar o dedo',
+      () {
+        const tela = Size(400, 820);
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -19.5,
+          longitudeInicial: -44.0,
+          lodInicial: 0.0,
+          modo3DInicial: false,
+        );
+        addTearDown(ctrl.dispose);
+
+        // 1. Escala 2D cresce imediatamente entre LOD 0.0, 0.15 e 0.30 (sem zona morta de zoom)
+        final esc0 = ctrl.calcularEscala2D(tela);
+        ctrl.definirLod(0.15);
+        final esc15 = ctrl.calcularEscala2D(tela);
+        ctrl.definirLod(0.30);
+        final esc30 = ctrl.calcularEscala2D(tela);
+        expect(esc15, greaterThan(esc0 * 1.05));
+        expect(esc30, greaterThan(esc15 * 1.05));
+
+        // 2. Arrasto 1:1 em 2D: mover ponteiro (+80, -60) desloca o pico exatamente (+80, -60) px na tela
+        ctrl.definirLod(1.2);
+        final antesPan = ctrl.projetarCoordenada(
+          latitude: -19.5,
+          longitude: -44.0,
+          elevacaoMetros: 900,
+          tamanhoTela: tela,
+        );
+        ctrl.iniciarInteracaoManual();
+        ctrl.aplicarGestoContinuo(
+          dxPx: 80.0,
+          dyPx: -60.0,
+          fatorEscala: 1.0,
+          pontoFocalTela: const Offset(200, 410),
+          contagemPonteiros: 1,
+          tamanhoTela: tela,
+        );
+        // Enquanto o dedo permanece apoiado na tela, avancarQuadroFisica NAO aplica inercia parasita!
+        expect(ctrl.temAnimacaoAtiva, isFalse);
+        expect(ctrl.avancarQuadroFisica(0.016), isFalse);
+
