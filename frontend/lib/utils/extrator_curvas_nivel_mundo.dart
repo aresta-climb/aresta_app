@@ -8,18 +8,27 @@ import '../data/modelos/modelos_rede_viaria_aresta.dart';
 import '../data/modelos/modelos_relevo_topografico.dart';
 import 'geometria_clipping_mapa.dart';
 
-/// Extrator cartográfico puro e sem estado de curvas de nível aditivas ancoradas em coordenadas fixas do mundo.
+/// Extrator cartográfico puro e sem estado de curvas de nível aditivas em **tiles fixos do mundo**.
 ///
-/// Garante estabilidade geométrica absoluta durante o zoom:
-/// 1. Utiliza hierarquia diádica estritamente aninhada (`400 m` -> `+200 m` -> `+100 m` -> `+50 m`) para que
-///    nenhuma curva existente desapareça ou mude de cota quando o usuário aproxima ou afasta o zoom.
-/// 2. Avalia um núcleo físico constante em graus do mundo (`0,0040°`, independente do `LOD`), evitando
-///    que mudanças de resolução da grade deformem o formato das curvas existentes.
+/// Elimina 100% da deformação topográfica durante o zoom ao obedecer a duas invariantes:
+/// 1. **Zero `multPasso` dependente de câmera**: o mundo é particionado em ladrilhos geográficos fixos
+///    (`0,45° × 0,45°` com passo fixo `0,0090°` para as cotas estruturais de `400 m` e `200 m`, e
+///    `0,15° × 0,15°` com passo fixo `0,0030°` exclusivamente para as cotas finas de `100 m` e `50 m`).
+/// 2. **Aditividade estrita sem substituição**: aproximar o zoom jamais recalcula nem altera os vértices
+///    das curvas de `400 m` e `200 m` já visíveis; apenas revela novas curvas intermediárias entre elas.
 abstract final class ExtratorCurvasNivelMundo {
   static const double _grausParaRad = math.pi / 180.0;
-  static const double _raioSuavizacaoFisicaGraus = 0.0040;
+  static const double _raioKernelGaussianoGraus = 0.0065;
 
-  /// Determina a geração diádica máxima (`0` = 400m, `1` = 200m, `2` = 100m, `3` = 50m) para [lod].
+  /// Tamanho fixo e passo angular fixo (50 células exatas) dos tiles macro (`400 m` e `200 m`).
+  static const double tamanhoTileMacroGraus = 0.45;
+  static const double passoMacroGraus = 0.0090;
+
+  /// Tamanho fixo e passo angular fixo (50 células exatas) dos tiles finos (`100 m` e `50 m`).
+  static const double tamanhoTileFinoGraus = 0.15;
+  static const double passoFinoGraus = 0.0030;
+
+  /// Determina a geração diádica máxima (`0` = 400m, `1` = 200m, `2` = 100m, `3` = 50m) visível em [lod].
   static int resolverNivelDetalhe(double lod) {
     if (lod >= 3.90) return 3;
     if (lod >= 3.25) return 2;
@@ -27,13 +36,9 @@ abstract final class ExtratorCurvasNivelMundo {
     return 0;
   }
 
-  /// Passo angular fixo no mundo (em graus) correspondente a cada [nivelDetalhe].
-  static double passoGradePorNivel(int nivelDetalhe) => switch (nivelDetalhe) {
-        3 => 0.0022,
-        2 => 0.0044,
-        1 => 0.0088,
-        _ => 0.0264,
-      };
+  /// Passo angular canônico fixo no mundo para a camada macro (`<= 1`) ou fina (`>= 2`).
+  static double passoGradePorNivel(int nivelDetalhe) =>
+      nivelDetalhe >= 2 ? passoFinoGraus : passoMacroGraus;
 
   /// Intervalo vertical diádico estritamente aninhado (`400 -> 200 -> 100 -> 50 m`).
   static double intervaloCotaMenorPorNivel(int nivelDetalhe) =>
@@ -52,46 +57,34 @@ abstract final class ExtratorCurvasNivelMundo {
     return 3;
   }
 
-  /// Calcula o bloco quantizado do mundo que cobre integralmente [janela], mantendo memoização `O(1)` no pan.
-  static ({
-    int chaveBloco,
-    int iMin,
-    int iMax,
-    int jMin,
-    int jMax,
-    double passoGraus,
-  }) calcularGradeBlocoMundo({
+  /// Enumera os identificadores `(tx, ty)` dos tiles canônicos fixos do mundo que cobrem [janela].
+  static List<({int tx, int ty})> listarTilesVisiveis({
     required JanelaGeograficaVisivel janela,
-    required int nivelDetalhe,
+    required bool camadaFina,
   }) {
-    final passoBase = passoGradePorNivel(nivelDetalhe);
-    const maxCelulasEixo = 72;
-    const quarteiraoQuantizado = 6;
+    final tam = camadaFina ? tamanhoTileFinoGraus : tamanhoTileMacroGraus;
+    final limiteEixo = camadaFina ? 4 : 5;
 
-    final spanLat = (janela.maxLat - janela.minLat).clamp(0.01, 16.0);
-    final spanLon = (janela.maxLon - janela.minLon).clamp(0.01, 20.0);
-    final multPasso = math.max(
-      1,
-      (math.max(spanLat, spanLon) / (passoBase * (maxCelulasEixo - 12))).ceil(),
+    final latCentro = (janela.minLat + janela.maxLat) * 0.5;
+    final lonCentro = (janela.minLon + janela.maxLon) * 0.5;
+    final txCentro = (lonCentro / tam).floor();
+    final tyCentro = (latCentro / tam).floor();
+
+    final txMin = math.max(
+      txCentro - limiteEixo,
+      (janela.minLon / tam).floor(),
     );
-    final passo = passoBase * multPasso;
-
-    final jMinBruto = (janela.minLat / passo).floor() - 2;
-    final jMaxBruto = (janela.maxLat / passo).ceil() + 2;
-    final iMinBruto = (janela.minLon / passo).floor() - 2;
-    final iMaxBruto = (janela.maxLon / passo).ceil() + 2;
-
-    final jMin =
-        (jMinBruto / quarteiraoQuantizado).floor() * quarteiraoQuantizado;
-    final jMax = math.min(
-      jMin + maxCelulasEixo,
-      (jMaxBruto / quarteiraoQuantizado).ceil() * quarteiraoQuantizado,
+    final txMax = math.min(
+      txCentro + limiteEixo,
+      (janela.maxLon / tam).floor(),
     );
-    final iMin =
-        (iMinBruto / quarteiraoQuantizado).floor() * quarteiraoQuantizado;
-    final iMax = math.min(
-      iMin + maxCelulasEixo,
-      (iMaxBruto / quarteiraoQuantizado).ceil() * quarteiraoQuantizado,
+    final tyMin = math.max(
+      tyCentro - limiteEixo,
+      (janela.minLat / tam).floor(),
+    );
+    final tyMax = math.min(
+      tyCentro + limiteEixo,
+      (janela.maxLat / tam).floor(),
     );
 
     final chave = Object.hash(nivelDetalhe, multPasso, iMin, iMax, jMin, jMax);
