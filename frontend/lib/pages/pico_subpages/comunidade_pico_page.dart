@@ -1,9 +1,10 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
@@ -40,38 +41,60 @@ class ComunidadePicoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, 'COMUNIDADE', subtitle: pico.nome),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          children: [
-            if (categories.comunidadeInfo.isNotEmpty)
-              ...categories.comunidadeInfo.map(
-                (b) => PicoMenuCard(
-                  title: 'Informações',
-                  subtitle: b.texto,
-                  icon: Icons.info_outline,
-                  iconColor: context.colors.dryMoss,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: buildCommonAppBar(
+            context,
+            context.tr(ChaveTexto.picoSubComunidadeTitulo),
+            subtitle: pico.nome,
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              children: [
+                if (categories.comunidadeInfo.isNotEmpty)
+                  ...categories.comunidadeInfo.map(
+                    (b) => PicoMenuCard(
+                      title: context.tr(ChaveTexto.picoSubInformacoes),
+                      subtitle: b.texto,
+                      icon: Icons.info_outline,
+                      iconColor: context.colors.dryMoss,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.chalkWhite.withValues(
+                        alpha: 0.7,
+                      ),
+                      onTap: () => _pushTextNode(
+                        context,
+                        context.tr(ChaveTexto.picoSubInformacoes),
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.info_outline,
+                      ),
+                    ),
                   ),
-                  onTap: () => _pushTextNode(
-                    context,
-                    'Informações',
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.info_outline,
+
+                if (pico.nomeAssociacao.isNotEmpty &&
+                    pico.urlFiliacaoAssociacao.isNotEmpty)
+                  PicoMenuCard(
+                    title: context.tr(ChaveTexto.picoSubAssociacaoLocal),
+                    subtitle: pico.nomeAssociacao,
+                    icon: Icons.groups,
+                    iconColor: context.colors.clayEarth,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor:
+                        context.colors.chalkWhite.withValues(alpha: 0.7),
+                    onTap: () =>
+                        launchUrl(Uri.parse(pico.urlFiliacaoAssociacao)),
                   ),
-                ),
-              ),
 
             if (pico.nomeAssociacao.isNotEmpty &&
                 pico.urlFiliacaoAssociacao.isNotEmpty)
