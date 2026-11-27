@@ -255,3 +255,92 @@ class ModalFiltrosOrdenacaoExplorar extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            Divider(color: colors.graniteEdge, height: 1),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _tituloSecao(
+                      colors,
+                      context.tr(ChaveTexto.explorarOrdenacaoSecao),
+                    ),
+                    const SizedBox(height: 8),
+                    _opcaoOrdenacao(
+                      context,
+                      context.tr(ChaveTexto.explorarMaisProximos),
+                      OrdemOrdenacaoPico.proximidade,
+                    ),
+                    _opcaoOrdenacao(
+                      context,
+                      context.tr(ChaveTexto.explorarAlfabeticoAZ),
+                      OrdemOrdenacaoPico.alfabetico,
+                    ),
+                    _opcaoOrdenacao(
+                      context,
+                      context.tr(ChaveTexto.explorarMaisEscaladas),
+                      OrdemOrdenacaoPico.escaladas,
+                    ),
+                    const SizedBox(height: 16),
+                    _tituloSecao(
+                      colors,
+                      context.tr(ChaveTexto.explorarModalidadesSecao),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ModalidadeExploracaoPico.values.map((mod) {
+                        final ativo = viewModel.modalidadesAtivas.contains(mod);
+                        return FilterChip(
+                          selected: ativo,
+                          label: Text(mod.rotulo),
+                          selectedColor:
+                              colors.rustIron.withValues(alpha: 0.28),
+                          backgroundColor: colors.deepBasalt,
+                          checkmarkColor: colors.rustIron,
+                          side: BorderSide(
+                            color: ativo ? colors.rustIron : Colors.white12,
+                          ),
+                          labelStyle: TextStyle(
+                            color: ativo ? colors.chalkWhite : colors.ashGrey,
+                            fontWeight:
+                                ativo ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                          onSelected: (_) => viewModel.alternarModalidade(mod),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+                    _tituloSecao(
+                      colors,
+                      context.tr(ChaveTexto.explorarDificuldadeSecao),
+                    ),
+                    const SizedBox(height: 10),
+                    SecaoSlidersGrauExplorar(viewModel: viewModel),
+                    const SizedBox(height: 12),
+                    _tituloSecao(
+                      colors,
+                      context.tr(ChaveTexto.explorarAlcanceSecao),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilterChip(
+                          key: const Key('filtro_raio_150km'),
+                          selected: viewModel.raioMaximoKm == 150.0,
+                          label: Text(
+                            context.tr(
+                              ChaveTexto.explorarAteKm,
+                              {'km': 150},
+                            ),
+                          ),
+                          selectedColor:
+                              colors.rustIron.withValues(alpha: 0.28),
+                          backgroundColor: colors.deepBasalt,
+                          checkmarkColor: colors.rustIron,
