@@ -275,3 +275,99 @@ export async function coletarIncendiosFlorestaisContornos(
   return todasBolhasFogo;
 }
 
+function pontoSobChuvaAtiva(
+  lon: number,
+  lat: number,
+  bolhasChuva: BolhaChuvaJson[],
+): boolean {
+  for (const b of bolhasChuva) {
+    if (pontoEmPoligono(lon, lat, b.contorno_externo)) return true;
+    for (const v of b.contorno_externo) {
+      const dx = lon - v[0];
+      const dy = lat - v[1];
+      if (dx * dx + dy * dy <= 0.042 * 0.042) return true;
+    }
+  }
+  return false;
+}
+
+async function buscarFocosNasaFirmsViirs(
+  regioes: RegiaoSinotica[],
+  chaveNasaFirms: string,
+): Promise<FocoCalorSatelite[]> {
+  const focos: FocoCalorSatelite[] = [];
+  for (const reg of regioes) {
+    const bbox = `${reg.minLon.toFixed(2)},${reg.minLat.toFixed(2)},${reg.maxLon.toFixed(2)},${reg.maxLat.toFixed(2)}`;
+    const url = `${URL_NASA_FIRMS_AREA_CSV}/${encodeURIComponent(chaveNasaFirms)}/VIIRS_SNPP_NRT/${bbox}/1`;
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "ArestaSupabaseClimaSync/2.0" },
+    });
+    if (!resp.ok) {
+      throw new Error(`NASA FIRMS HTTP ${resp.status}`);
+    }
+    const csv = await resp.text();
+    focos.push(
+      ...extrairFocosDeCsv(csv, "latitude", "longitude", "frp", "NASA_FIRMS"),
+    );
+  }
+  return focos;
+}
+
+async function buscarFocosInpeBdQueimadas(
+  regioes: RegiaoSinotica[],
+): Promise<FocoCalorSatelite[]> {
+  const agora = new Date();
+  const datasUtc = [agora];
+  if (agora.getUTCHours() < 12) {
+    datasUtc.push(new Date(agora.getTime() - 86400 * 1000));
+  }
+  const formatarDia = (d: Date): string =>
+    `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+
+  const focos: FocoCalorSatelite[] = [];
+  for (const d of datasUtc) {
+    const url = `${URL_INPE_FOCOS_DIARIO_BR}/focos_diario_br_${formatarDia(d)}.csv`;
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "ArestaSupabaseClimaSync/2.0" },
+    });
+    if (!resp.ok) continue;
+    const csv = await resp.text();
+    for (const f of extrairFocosDeCsv(
+      csv,
+      "lat",
+      "lon",
+      "frp",
+      "INPE_NASA_VIIRS",
+    )) {
+      const dentro = regioes.some(
+        (r) =>
+          f.lat >= r.minLat &&
+          f.lat <= r.maxLat &&
+          f.lon >= r.minLon &&
+          f.lon <= r.maxLon,
+      );
+      if (dentro) focos.push(f);
+    }
+  }
+  return focos;
+}
+
+function extrairFocosDeCsv(
+  csv: string,
+  colLat: string,
+  colLon: string,
+  colFrp: string,
+  fonte: string,
+): FocoCalorSatelite[] {
+  const linhas = csv.split(/\r?\n/);
+  if (linhas.length < 2) return [];
+  const cabecalho = linhas[0].split(",").map((c) => c.trim().toLowerCase());
+  const iLat = cabecalho.indexOf(colLat);
+  const iLon = cabecalho.indexOf(colLon);
+  const iFrp = cabecalho.indexOf(colFrp);
+  const iConf = cabecalho.indexOf("confidence");
+  const iIndustrial = cabecalho.indexOf("id_area_industrial");
+  const iPrecip = cabecalho.indexOf("precipitacao");
+  const iRisco = cabecalho.indexOf("risco_fogo");
+  if (iLat < 0 || iLon < 0) return [];
+
