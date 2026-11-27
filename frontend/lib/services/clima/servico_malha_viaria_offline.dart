@@ -175,3 +175,94 @@ class ClienteMalhaViariaSupabase implements FonteRemotaMalhaViaria {
     });
   }
 
+  Future<Map<String, dynamic>> _consultarComFallbackSlot({
+    required String colunas,
+  }) async {
+    final texto = await _consultarTextoComFallbackSlot(colunas: colunas);
+    final lista = jsonDecode(texto) as List<dynamic>;
+    return Map<String, dynamic>.from(lista.first as Map);
+  }
+
+  Future<String> _consultarTextoComFallbackSlot({
+    required String colunas,
+  }) async {
+    final atual = await _consultarSlotTexto('atual', colunas: colunas);
+    if (atual != null) return atual;
+
+    final seguranca = await _consultarSlotTexto(
+      'copia_seguranca',
+      colunas: colunas,
+    );
+    if (seguranca != null) {
+      AppLogger.instance.logAviso(
+        '[ClienteMalhaViariaSupabase] Slot atual vazio; utilizando slot copia_seguranca.',
+      );
+      return seguranca;
+    }
+
+    throw const HttpException(
+      'Nenhum registro válido em snapshots_malha_viaria_picos (atual/copia_seguranca).',
+    );
+  }
+
+  Future<String?> _consultarSlotTexto(
+    String slot, {
+    required String colunas,
+  }) async {
+    final uri = Uri.parse(
+      '$urlBaseSupabase/rest/v1/$nomeTabela?select=$colunas&slot=eq.$slot&limit=1',
+    );
+    final resp =
+        await _clienteHttp.get(uri, headers: _cabecalhos).timeout(timeoutRequisicao);
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw HttpException(
+        'Erro HTTP ${resp.statusCode} ao consultar $nomeTabela ($slot).',
+        uri: uri,
+      );
+    }
+    final decodificado = jsonDecode(resp.body);
+    if (decodificado is List &&
+        decodificado.isNotEmpty &&
+        decodificado.first is Map) {
+      return resp.body;
+    }
+    return null;
+  }
+}
+
+/// Serviço offline-first que mantém a cópia local da malha viária para setores remotos sem sinal
+/// e sincroniza incrementalmente com o Supabase quando o escalador retorna a área conectada.
+class ServicoMalhaViariaOffline extends ChangeNotifier {
+  static const Duration ttlVerificacao = Duration(hours: 6);
+
+  static ServicoMalhaViariaOffline? _instanciaCompartilhada;
+
+  /// Instância compartilhada usada por [CenaGloboExplorarViewModel].
+  static ServicoMalhaViariaOffline get instancia =>
+      _instanciaCompartilhada ??= ServicoMalhaViariaOffline();
+
+  /// Restaura a instância global entre testes isolados.
+  @visibleForTesting
+  static void redefinirParaTestes() {
+    _instanciaCompartilhada?.dispose();
+    _instanciaCompartilhada = null;
+  }
+
+  final ArmazenamentoMalhaViariaLocal _armazenamento;
+  final FonteRemotaMalhaViaria _fonteRemota;
+  final DateTime Function() _relogioUtc;
+
+  SnapshotMalhaViariaOffline? _snapshotAtivo;
+  DateTime? _ultimaVerificacaoUtc;
+  Future<bool>? _sincronizacaoEmVoo;
+  bool _inicializado = false;
+  bool _descartado = false;
+
+  ServicoMalhaViariaOffline({
+    ArmazenamentoMalhaViariaLocal? armazenamento,
+    FonteRemotaMalhaViaria? fonteRemota,
+    DateTime Function()? relogioUtc,
+  })  : _armazenamento = armazenamento ?? ArmazenamentoMalhaViariaLocal(),
+        _fonteRemota = fonteRemota ?? ClienteMalhaViariaSupabase(),
+        _relogioUtc = relogioUtc ?? (() => DateTime.now().toUtc());
+
