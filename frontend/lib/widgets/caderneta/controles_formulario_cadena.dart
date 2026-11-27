@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../data/modelos/tipo_ascensao.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 
 /// Seletor declarativo em formato de chips para escolha do estilo esportivo da ascensão.
@@ -29,7 +30,7 @@ class SeletorEstiloAscensao extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Estilo Esportivo',
+          context.tr(ChaveTexto.cadEstiloEsportivoLabel),
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
             color: cores.chalkWhite,
             fontWeight: FontWeight.w600,
@@ -99,7 +100,7 @@ class ContadorTentativasAscensao extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            'Tentativas / Pegas',
+            context.tr(ChaveTexto.cadTentativasPegasLabel),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: cores.chalkWhite,
               fontWeight: FontWeight.w600,
@@ -168,7 +169,7 @@ class SeletorDataAscensao extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            'Data da Ascensão',
+            context.tr(ChaveTexto.cadDataAscensaoLabel),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: cores.chalkWhite,
               fontWeight: FontWeight.w600,
@@ -239,7 +240,7 @@ class CampoNotasPrivadasAscensao extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Notas Privadas (Crux / Métodos)',
+                context.tr(ChaveTexto.cadNotasPrivadasLabel),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: cores.chalkWhite,
                   fontWeight: FontWeight.w600,
@@ -273,8 +274,7 @@ class CampoNotasPrivadasAscensao extends StatelessWidget {
               }) => null,
           style: TextStyle(color: cores.chalkWhite),
           decoration: InputDecoration(
-            hintText:
-                'Ex: Crux no 3º grampo com calcanhar esquerdo, levar costura longa...',
+            hintText: context.tr(ChaveTexto.cadNotasPrivadasHint),
             hintStyle: TextStyle(
               color: cores.ashGrey.withValues(alpha: 0.7),
               fontSize: 13,

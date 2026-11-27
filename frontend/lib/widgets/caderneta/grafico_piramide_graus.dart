@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 
 /// Widget visual que renderiza a pirâmide de graduação de escalada com barras horizontais.
@@ -50,7 +51,7 @@ class GraficoPiramideGraus extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Pirâmide de Graduação',
+                    context.tr(ChaveTexto.cadPiramideTitulo),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: cores.chalkWhite,
                           fontWeight: FontWeight.bold,
@@ -75,13 +76,13 @@ class GraficoPiramideGraus extends StatelessWidget {
                       children: [
                         _buildBotaoModalidade(
                           context,
-                          rotulo: 'Vias',
+                          rotulo: context.tr(ChaveTexto.modVias),
                           ativo: modoVias,
                           onTap: () => onAlternarModo?.call(true),
                         ),
                         _buildBotaoModalidade(
                           context,
-                          rotulo: 'Boulders',
+                          rotulo: context.tr(ChaveTexto.modBoulders),
                           ativo: !modoVias,
                           onTap: () => onAlternarModo?.call(false),
                         ),
@@ -112,7 +113,7 @@ class GraficoPiramideGraus extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Nenhuma ascensão registrada nesta modalidade.',
+                      context.tr(ChaveTexto.cadNenhumaAscensaoModalidade),
                       style: TextStyle(color: cores.ashGrey, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),

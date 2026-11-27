@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/secao_caderneta_via_view_model.dart';
 import 'modal_registro_cadena.dart';
@@ -60,8 +61,8 @@ class _SecaoCadernetaViaState extends State<SecaoCadernetaVia> {
       onSalvo: (cadenaSalva) {
         if (!context.mounted) return;
         final mensagem = cadenaSalva.isCadena
-            ? 'Cadena salva na caderneta!'
-            : 'Tentativa salva na caderneta!';
+            ? tr(ChaveTexto.cadCadenaSalvaToast)
+            : tr(ChaveTexto.cadTentativaSalvaToast);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(mensagem),
@@ -75,12 +76,11 @@ class _SecaoCadernetaViaState extends State<SecaoCadernetaVia> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: Listenable.merge([
+        _viewModel,
+        ControladorIdiomaApp.instancia.notificadorIdioma,
+      ]),
       builder: (context, _) {
-        if (!_viewModel.visivel) {
-          return const SizedBox.shrink();
-        }
-
         final cores = context.colors;
         final isCadena = _viewModel.isCadena;
         final resumo = _viewModel.resumoAscensao;

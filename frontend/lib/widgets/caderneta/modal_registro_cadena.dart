@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/registro_cadena_view_model.dart';
 import 'controles_formulario_cadena.dart';
@@ -175,7 +176,10 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: Listenable.merge([
+        _viewModel,
+        ControladorIdiomaApp.instancia.notificadorIdioma,
+      ]),
       builder: (context, _) {
         return SafeArea(
           top: false,

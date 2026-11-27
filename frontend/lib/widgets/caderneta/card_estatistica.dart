@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../data/modelos/estatisticas_caderneta.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 
 /// Card visual conciso para apresentação de métricas esportivas do perfil do escalador.
@@ -124,7 +125,7 @@ class PainelResumoEstatisticasCaderneta extends StatelessWidget {
               Expanded(
                 child: CardEstatistica(
                   key: const Key('card_resumo_total_cadenas'),
-                  titulo: 'Total de Cadenas',
+                  titulo: context.tr(ChaveTexto.cadTotalCadenas),
                   valor: '${estatisticas.totalCadenas}',
                   icone: Icons.check_circle_outline,
                   corIcone: cores.fernGreen,
@@ -134,7 +135,7 @@ class PainelResumoEstatisticasCaderneta extends StatelessWidget {
               Expanded(
                 child: CardEstatistica(
                   key: const Key('card_resumo_taxa_avista_flash'),
-                  titulo: 'Taxa À Vista/Flash',
+                  titulo: context.tr(ChaveTexto.cadTaxaAVistaFlash),
                   valor: '${estatisticas.taxaAVistaFlash.round()}%',
                   icone: Icons.bolt_rounded,
                   corIcone: cores.rustIron,
@@ -151,7 +152,7 @@ class PainelResumoEstatisticasCaderneta extends StatelessWidget {
               Expanded(
                 child: CardEstatistica(
                   key: const Key('card_resumo_maior_grau_via'),
-                  titulo: 'Maior Grau (Vias)',
+                  titulo: context.tr(ChaveTexto.cadMaiorGrauVias),
                   valor: estatisticas.maiorGrauVia ?? '-',
                   icone: Icons.trending_up_rounded,
                   corIcone: cores.rustIron,
@@ -161,7 +162,7 @@ class PainelResumoEstatisticasCaderneta extends StatelessWidget {
               Expanded(
                 child: CardEstatistica(
                   key: const Key('card_resumo_maior_grau_boulder'),
-                  titulo: 'Maior Grau (Boulders)',
+                  titulo: context.tr(ChaveTexto.cadMaiorGrauBoulders),
                   valor: estatisticas.maiorGrauBoulder ?? '-',
                   icone: Icons.landscape_rounded,
                   corIcone: cores.rustIron,

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/registro_cadena_view_model.dart';
 
@@ -63,7 +64,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'CONTRIBUIÇÃO PÚBLICA',
+                  context.tr(ChaveTexto.cadContribuicaoPublica),
                   style: TextStyle(
                     color: cores.rustIron,
                     fontSize: 11,
@@ -76,7 +77,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Percepção do grau técnico da linha:',
+            context.tr(ChaveTexto.cadPercepcaoGrau),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: cores.chalkWhite,
               fontWeight: FontWeight.w600,
@@ -119,7 +120,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Beta da Comunidade (opcional)',
+                    context.tr(ChaveTexto.cadBetaOpcionalLabel),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: cores.chalkWhite,
                       fontWeight: FontWeight.w600,
@@ -155,8 +156,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
                   }) => null,
               style: TextStyle(color: cores.chalkWhite, fontSize: 14),
               decoration: InputDecoration(
-                hintText:
-                    'Ex.: Costura 3 longa; boa leitura pela esquerda no crux.',
+                hintText: context.tr(ChaveTexto.cadBetaOpcionalHint),
                 hintStyle: TextStyle(
                   color: cores.ashGrey.withValues(alpha: 0.7),
                   fontSize: 13,
@@ -179,7 +179,7 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
             ),
           ] else
             Text(
-              'Conecte sua conta na aba Perfil para enviar votos e dicas públicas ao guia comunitário.',
+              context.tr(ChaveTexto.cadConecteParaContribuir),
               style: TextStyle(color: cores.ashGrey, fontSize: 12, height: 1.35),
             ),
         ],
