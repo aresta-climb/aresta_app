@@ -425,6 +425,81 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                     ),
                   ],
                 ),
+                if (estadoUsuario ==
+                        EstadoInteracaoAlertaUsuario.criadoPorMim &&
+                    (aoSolicitarEdicao != null ||
+                        aoSolicitarExclusao != null)) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      if (aoSolicitarEdicao != null)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            key: const Key('btn_editar_alerta_modal'),
+                            onPressed: () {
+                              Navigator.of(modalCtx).pop();
+                              aoSolicitarEdicao();
+                            },
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: cores.chalkWhite,
+                            ),
+                            label: Text(
+                              modalCtx.tr(ChaveTexto.alertaEditarBtn),
+                              style: TextStyle(
+                                color: cores.chalkWhite,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: cores.graniteEdge),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (aoSolicitarEdicao != null &&
+                          aoSolicitarExclusao != null)
+                        const SizedBox(width: 10),
+                      if (aoSolicitarExclusao != null)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            key: const Key('btn_excluir_alerta_modal'),
+                            onPressed: () {
+                              Navigator.of(modalCtx).pop();
+                              aoSolicitarExclusao();
+                            },
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 16,
+                              color: _corVermelhoAlerta,
+                            ),
+                            label: Text(
+                              modalCtx.tr(ChaveTexto.alertaExcluirBtn),
+                              style: const TextStyle(
+                                color: _corVermelhoAlerta,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: _corVermelhoAlerta.withValues(alpha: 0.5),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ],
           ),
@@ -437,27 +512,16 @@ Future<void> exibirModalConfirmacaoAlertaVia(
 /// Abre o modal rápido estilo Waze para reportar um novo alerta de segurança na via.
 Future<void> exibirModalReportarAlertaVia(
   BuildContext context, {
+  AlertaSegurancaVia? alertaInicial,
   required Future<void> Function(
     CategoriaAlertaSeguranca categoria,
     String? detalhe,
   ) aoReportar,
 }) {
-  return showModalBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: context.colors.deepBasalt,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (modalCtx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
-        ),
-        child: _FormularioReportarAlertaVia(aoReportar: aoReportar),
-      );
-    },
+  return exibirModalFormularioAlertaVia(
+    context,
+    alertaInicial: alertaInicial,
+    aoSubmeter: aoReportar,
   );
 }
 
