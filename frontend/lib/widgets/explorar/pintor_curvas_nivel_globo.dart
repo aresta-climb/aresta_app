@@ -28,15 +28,13 @@ abstract final class PintorCurvasNivelGlobo {
     double? Function(double latitude, double longitude)? amostradorElevacaoReal,
   }) {
     final lod = controlador.lod;
-    final alfaGeracao0 = ControladorCameraGlobo.smoothstep(1.92, 2.42, lod) *
+    final alfaGeracao0 = ControladorCameraGlobo.smoothstep(2.72, 3.15, lod) *
         opacidadeTerreno.clamp(0.0, 1.0);
     if (alfaGeracao0 <= 0.02) return;
 
-    final alfaGeracao1 = ControladorCameraGlobo.smoothstep(2.55, 3.05, lod) *
+    final alfaGeracao1 = ControladorCameraGlobo.smoothstep(3.05, 3.48, lod) *
         opacidadeTerreno.clamp(0.0, 1.0);
-    final alfaGeracao2 = ControladorCameraGlobo.smoothstep(3.25, 3.75, lod) *
-        opacidadeTerreno.clamp(0.0, 1.0);
-    final alfaGeracao3 = ControladorCameraGlobo.smoothstep(3.90, 4.35, lod) *
+    final alfaGeracao2 = ControladorCameraGlobo.smoothstep(3.52, 3.98, lod) *
         opacidadeTerreno.clamp(0.0, 1.0);
 
     final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
@@ -71,22 +69,21 @@ abstract final class PintorCurvasNivelGlobo {
           },
         );
 
-    final caminhosGeracao = <Path>[Path(), Path(), Path(), Path()];
-    final temGeracao = <bool>[false, false, false, false];
+    final caminhosGeracao = <Path>[Path(), Path(), Path()];
+    final temGeracao = <bool>[false, false, false];
     final caminhoEscarpasAresta = Path();
     var temEscarpa = false;
 
     final rotulosCotas = <({Offset pos, int metros, bool escarpa})>[];
-    final exibirRotulos400 = lod >= 2.55;
-    final exibirRotulos200 = lod >= 3.35;
+    final exibirRotulos400 = lod >= 3.05;
+    final exibirRotulos200 = lod >= 3.65;
     final margemTelaX = size.width * 0.35;
     final margemTelaY = size.height * 0.35;
 
     for (final curva in conjunto.curvas) {
-      final g = curva.geracaoDetalhe.clamp(0, 3);
+      final g = curva.geracaoDetalhe.clamp(0, 2);
       if (g == 1 && alfaGeracao1 <= 0.02) continue;
       if (g == 2 && alfaGeracao2 <= 0.02) continue;
-      if (g == 3 && alfaGeracao3 <= 0.02) continue;
 
       final ehEscarpaMestra = curva.ehEscarpaPico && g == 0;
       final destino =
@@ -168,23 +165,7 @@ abstract final class PintorCurvasNivelGlobo {
 
     final ganhoMono = 0.65 + 0.35 * fatorMonocromatico;
 
-    // Desenha da subdivisão mais fina (50m) para a mestra (400m) mantendo hierarquia sólida
-    if (temGeracao[3] && alfaGeracao3 > 0.02) {
-      canvas.drawPath(
-        caminhosGeracao[3],
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = 0.85
-          ..color = Color.fromRGBO(
-            148,
-            165,
-            186,
-            (0.28 * alfaGeracao3 * ganhoMono).clamp(0.0, 1.0),
-          ),
-      );
-    }
+    // Desenha da subdivisão mais fina (100m) para a mestra (400m) mantendo poucas linhas sólidas
     if (temGeracao[2] && alfaGeracao2 > 0.02) {
       canvas.drawPath(
         caminhosGeracao[2],
@@ -252,7 +233,7 @@ abstract final class PintorCurvasNivelGlobo {
         canvas: canvas,
         rotulos: rotulosCotas,
         opacidade:
-            (alfaGeracao0 * ControladorCameraGlobo.smoothstep(2.55, 3.10, lod))
+            (alfaGeracao0 * ControladorCameraGlobo.smoothstep(3.05, 3.45, lod))
                 .clamp(0.0, 1.0),
       );
     }
