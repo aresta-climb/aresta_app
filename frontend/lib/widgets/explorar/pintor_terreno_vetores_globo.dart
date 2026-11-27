@@ -91,3 +91,94 @@ abstract final class PintorTerrenoVetoresGlobo {
         );
         elevs[idx] = el;
 
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lon,
+          elevacaoMetros: math.max(0.0, el) * opacidadeBase,
+          tamanhoTela: size,
+          estenderBordaHorizonte: true,
+        );
+        if (pt.visivel) {
+          visiveis[idx] = true;
+          posicoes[idx] = Offset(pt.x, pt.y);
+          profundidades[idx] = pt.profundidade;
+        }
+      }
+    }
+
+    final nevoaHorizonte = controlador.modo3D
+        ? ControladorCameraGlobo.smoothstep(1.80, 2.75, lod) *
+            (1.0 - 0.45 * ControladorCameraGlobo.smoothstep(3.10, 4.10, lod))
+        : 0.0;
+    // Mantém sombreamento direcional vigoroso mesmo no zoom máximo (LOD 4.65) para esculpir vales e cristas
+    final ganhoRelevoLuz = 1.0 + 6.2 * fatorMonocromatico;
+
+    final passoMetrosLat =
+        math.max(4.0, ((latMax - latMin) / rows) * 111320.0);
+    final passoMetrosLon =
+        math.max(4.0, ((lonMax - lonMin) / cols) * 111320.0 * cosLat0);
+
+    for (var j = 0; j <= rows; j++) {
+      final jAnt = math.max(0, j - 1);
+      final jProx = math.min(rows, j + 1);
+      final distY = (jProx - jAnt) * passoMetrosLat;
+
+      for (var i = 0; i <= cols; i++) {
+        final idx = j * (cols + 1) + i;
+        if (!visiveis[idx]) continue;
+
+        final el = elevs[idx];
+        final alfaCosta = ControladorCameraGlobo.smoothstep(1.0, 10.0, el);
+        final alfaVert = opacidadeBase * alfaCosta;
+        if (alfaVert <= 0.01) continue;
+
+        final iAnt = math.max(0, i - 1);
+        final iProx = math.min(cols, i + 1);
+        final distX = (iProx - iAnt) * passoMetrosLon;
+
+        final dzDx =
+            (elevs[j * (cols + 1) + iProx] - elevs[j * (cols + 1) + iAnt]) /
+                distX;
+        final dzDySul =
+            (elevs[jProx * (cols + 1) + i] - elevs[jAnt * (cols + 1) + i]) /
+                distY;
+        final declive = math.sqrt(dzDx * dzDx + dzDySul * dzDySul);
+
+        final corHipsometrica =
+            _corHipsometricaRocha(el, declive, fatorMonocromatico);
+        final dzDxLuz = dzDx * ganhoRelevoLuz;
+        final dzDyLuz = dzDySul * ganhoRelevoLuz;
+        final invNorm =
+            1.0 / math.sqrt(dzDxLuz * dzDxLuz + dzDyLuz * dzDyLuz + 1.0);
+        final solDot = (-dzDxLuz * 0.64 + dzDyLuz * 0.48 + 0.56) * invNorm;
+        final luzSolar =
+            (0.42 + 1.08 * solDot.clamp(0.0, 1.0)).clamp(0.42, 1.48);
+
+        var r = corHipsometrica.r * luzSolar;
+        var g = corHipsometrica.g * luzSolar;
+        var b = corHipsometrica.b * luzSolar;
+
+        final prof = profundidades[idx];
+        if (nevoaHorizonte > 0.02 && prof > 60.0) {
+          final nevoa =
+              ((prof - 60.0) / 480.0).clamp(0.0, 0.52) * nevoaHorizonte;
+          final nr = 24.0 * (1.0 - fatorMonocromatico) +
+              18.0 * fatorMonocromatico;
+          final ng = 48.0 * (1.0 - fatorMonocromatico) +
+              22.0 * fatorMonocromatico;
+          final nb = 74.0 * (1.0 - fatorMonocromatico) +
+              30.0 * fatorMonocromatico;
+          r = r + (nr - r) * nevoa;
+          g = g + (ng - g) * nevoa;
+          b = b + (nb - b) * nevoa;
+        }
+
+        cores[idx] = Color.fromRGBO(
+          r.round().clamp(0, 255),
+          g.round().clamp(0, 255),
+          b.round().clamp(0, 255),
+          alfaVert.clamp(0.0, 1.0),
+        );
+      }
+    }
+
