@@ -332,3 +332,56 @@ void main() {
       );
       expect(moderado.nivelSeveridade, equals(NivelSeveridadeIncendio.moderado));
 
+      const alto = BolhaIncendioRegional(
+        id: 'f_alto',
+        latitude: -19.0,
+        longitude: -43.0,
+        potenciaFrpMw: 44.0,
+        totalFocos: 6,
+        ventoRumoGraus: 90.0,
+        ventoVelocidadeKmh: 15.0,
+        contornoExterno: trianguloPadrao,
+      );
+      expect(alto.nivelSeveridade, equals(NivelSeveridadeIncendio.alto));
+      expect(
+        const BolhaIncendioAtivaRenderizavel(incendio: alto).incendio.id,
+        equals('f_alto'),
+      );
+
+      final extremo = BolhaIncendioRegional.deMapa({
+        'id': 'f_ext',
+        'lat': -19.0,
+        'lon': -43.0,
+        'potencia_frp_mw': 62.0,
+        'total_focos': 9,
+        'vento_rumo_graus': 250.0,
+        'vento_kmh': 22.0,
+        'fonte_satelite': 'NASA_FIRMS_VIIRS_375M',
+        'contorno_externo': [
+          [-43.1, -19.1],
+          [-42.9, -19.1],
+          [-43.0, -18.9],
+        ],
+        'nucleos_intensos': [
+          [
+            [-43.05, -19.05],
+            [-42.95, -19.05],
+            [-43.0, -18.95],
+          ],
+        ],
+      });
+      expect(extremo.nivelSeveridade, equals(NivelSeveridadeIncendio.extremo));
+      expect(extremo.minLon, closeTo(-43.1, 1e-6));
+      expect(extremo.maxLon, closeTo(-42.9, 1e-6));
+      expect(extremo.minLat, closeTo(-19.1, 1e-6));
+      expect(extremo.maxLat, closeTo(-18.9, 1e-6));
+      final restaurado = BolhaIncendioRegional.deMapa(extremo.paraMapa());
+      expect(restaurado.nucleosIntensos, hasLength(1));
+
+      expect(
+        () => BolhaIncendioRegional.deMapa({'id': 'invalido', 'potencia_frp_mw': -1}),
+        throwsFormatException,
+      );
+    });
+  });
+}
