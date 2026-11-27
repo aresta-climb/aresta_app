@@ -3,6 +3,7 @@
 
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 import '../../services/repositorio_dataset.dart';
 
@@ -163,8 +164,9 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
   String get id => _metadados.id;
 
   @override
-  String get titulo =>
-      _metadados.nome.trim().isEmpty ? 'SEM NOME' : _metadados.nome.trim().toUpperCase();
+  String get titulo => _metadados.nome.trim().isEmpty
+      ? tr(ChaveTexto.comumSemNomeCaixaAlta)
+      : _metadados.nome.trim().toUpperCase();
 
   @override
   String get localizacao => _metadados.localizacaoFormatada.toUpperCase();
@@ -188,19 +190,37 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
 
   @override
   String get textoEstatisticas {
-    if (!_metadados.hasPrecomputados()) return '0 setores • 0 escaladas';
+    final sLbl = tr(ChaveTexto.modSetoresMinusculo);
+    final eLbl = tr(ChaveTexto.modEscaladasMinusculo);
+    if (!_metadados.hasPrecomputados()) return '0 $sLbl • 0 $eLbl';
     final p = _metadados.precomputados;
-    final base = '${p.totalSetores} setores • ${p.totalEscaladas} escaladas';
+    final base = '${p.totalSetores} $sLbl • ${p.totalEscaladas} $eLbl';
     if (!estatisticasDetalhadas) return base;
 
     final List<String> modalidades = [];
-    if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
-    if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
-    if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
-    if (p.totalMultiplasEnfiadas > 0) {
-      modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
+    if (p.totalBoulders > 0) {
+      modalidades.add(
+        '${p.totalBoulders} ${tr(ChaveTexto.modBouldersMinusculo)}',
+      );
     }
-    if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
+    if (p.totalEsportivas > 0) {
+      modalidades.add(
+        '${p.totalEsportivas} ${tr(ChaveTexto.modEsportivasMinusculo)}',
+      );
+    }
+    if (p.totalMoveis > 0) {
+      modalidades.add('${p.totalMoveis} ${tr(ChaveTexto.modMoveisMinusculo)}');
+    }
+    if (p.totalMultiplasEnfiadas > 0) {
+      modalidades.add(
+        '${p.totalMultiplasEnfiadas} ${tr(ChaveTexto.modMultiplasEnfiadasMinusculo)}',
+      );
+    }
+    if (p.totalHighlines > 0) {
+      modalidades.add(
+        '${p.totalHighlines} ${tr(ChaveTexto.modHighlinesMinusculo)}',
+      );
+    }
     if (modalidades.isNotEmpty) {
       return '$base (${modalidades.join(', ')})';
     }
@@ -244,7 +264,9 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
     final nomeFonte = _croqui.nome.trim().isNotEmpty
         ? _croqui.nome.trim()
         : (_croqui.picos.isNotEmpty ? _croqui.picos.first.nome.trim() : '');
-    return nomeFonte.isEmpty ? 'SEM NOME' : nomeFonte.toUpperCase();
+    return nomeFonte.isEmpty
+        ? tr(ChaveTexto.comumSemNomeCaixaAlta)
+        : nomeFonte.toUpperCase();
   }
 
   @override
@@ -252,7 +274,9 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
     final localFonte = _croqui.picos.isNotEmpty && _croqui.picos.first.estado.trim().isNotEmpty
         ? _croqui.picos.first.estado.trim()
         : '';
-    return localFonte.isEmpty ? 'LOCAL DESCONHECIDO' : localFonte.toUpperCase();
+    return localFonte.isEmpty
+        ? tr(ChaveTexto.comumLocalDesconhecido)
+        : localFonte.toUpperCase();
   }
 
   @override
@@ -309,11 +333,13 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
 
   @override
   String get textoEstatisticas {
+    final sLbl = tr(ChaveTexto.modSetoresMinusculo);
+    final eLbl = tr(ChaveTexto.modEscaladasMinusculo);
     if (_croqui.picos.isNotEmpty && _croqui.picos.first.hasPrecomputados()) {
       final stats = _croqui.picos.first.precomputados;
-      return '${stats.totalSetores} setores • ${stats.totalEscaladas} escaladas';
+      return '${stats.totalSetores} $sLbl • ${stats.totalEscaladas} $eLbl';
     }
-    return '0 setores • 0 escaladas';
+    return '0 $sLbl • 0 $eLbl';
   }
 
   @override
@@ -401,7 +427,8 @@ class _CardCroquiMapa extends CardCroquiViewModel {
   String get id => _mapa['id']?.toString() ?? '';
 
   @override
-  String get titulo => (_mapa['nome']?.toString() ?? 'Pico').toUpperCase();
+  String get titulo =>
+      (_mapa['nome']?.toString() ?? tr(ChaveTexto.comumPico)).toUpperCase();
 
   @override
   String get localizacao => (_mapa['local']?.toString() ?? '').toUpperCase();
@@ -411,7 +438,8 @@ class _CardCroquiMapa extends CardCroquiViewModel {
 
   @override
   String get textoEstatisticas =>
-      _mapa['stats']?.toString() ?? '0 setores • 0 escaladas';
+      _mapa['stats']?.toString() ??
+      '0 ${tr(ChaveTexto.modSetoresMinusculo)} • 0 ${tr(ChaveTexto.modEscaladasMinusculo)}';
 
   @override
   String get caminhoMiniatura =>
