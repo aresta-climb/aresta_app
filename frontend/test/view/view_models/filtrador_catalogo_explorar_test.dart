@@ -147,3 +147,75 @@ void main() {
       );
     });
 
+    test('executa busca difusa e ordena por proximidade, alfabético e volume de escaladas', () {
+      final pA = criarPico(
+        id: 'a',
+        nome: 'Serra do Cipó',
+        pastaLocal: 'santana_do_riacho',
+        precomputados: PrecomputadosResumoCroqui(totalEscaladas: 40),
+      );
+      final pB = criarPico(
+        id: 'b',
+        nome: 'Pedra Grande',
+        pastaLocal: 'igarape',
+        precomputados: PrecomputadosResumoCroqui(totalEscaladas: 90),
+      );
+      final pC = criarPico(
+        id: 'c',
+        nome: 'Andorinhas',
+        pastaLocal: 'ouro_preto',
+        precomputados: PrecomputadosResumoCroqui(totalEscaladas: 90),
+      );
+
+      final todos = [pA, pB, pC];
+      expect(
+        FiltradorCatalogoExplorar.filtrarPorBuscaDifusa(todos, ''),
+        hasLength(3),
+      );
+      expect(
+        FiltradorCatalogoExplorar.filtrarPorBuscaDifusa(todos, 'cipo').single.id,
+        equals('a'),
+      );
+
+      expect(
+        FiltradorCatalogoExplorar.ordenarPicosFiltrados(
+          itens: [...todos],
+          ordem: OrdemOrdenacaoPico.proximidade,
+          proximidadePorId: const {},
+        ).map((m) => m.id),
+        equals(['c', 'b', 'a']),
+      );
+
+      final proximidades = <String, PicoProximo>{
+        'b': PicoProximo(pico: pB, distanciaKm: 42.0),
+        'a': PicoProximo(pico: pA, distanciaKm: 98.0),
+      };
+      expect(
+        FiltradorCatalogoExplorar.ordenarPicosFiltrados(
+          itens: [...todos],
+          ordem: OrdemOrdenacaoPico.proximidade,
+          proximidadePorId: proximidades,
+        ).map((m) => m.id),
+        equals(['b', 'a', 'c']),
+      );
+
+      expect(
+        FiltradorCatalogoExplorar.ordenarPicosFiltrados(
+          itens: [...todos],
+          ordem: OrdemOrdenacaoPico.alfabetico,
+          proximidadePorId: proximidades,
+        ).map((m) => m.id),
+        equals(['c', 'b', 'a']),
+      );
+
+      expect(
+        FiltradorCatalogoExplorar.ordenarPicosFiltrados(
+          itens: [...todos],
+          ordem: OrdemOrdenacaoPico.escaladas,
+          proximidadePorId: proximidades,
+        ).map((m) => m.id),
+        equals(['c', 'b', 'a']),
+      );
+    });
+  });
+}
