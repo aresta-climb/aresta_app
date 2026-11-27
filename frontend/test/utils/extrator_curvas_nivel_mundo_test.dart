@@ -9,16 +9,28 @@ import 'package:frontend/utils/geometria_clipping_mapa.dart';
 
 void main() {
   group('ExtratorCurvasNivelMundo', () {
-    test('opera em hierarquia diádica estritamente aditiva (400/200/100/50m) sem deformar curvas existentes ao dar zoom ou pan', () {
+    test('extrai tiles canônicos fixos do mundo com zero deformação de vértices ao variar janela ou nível de zoom', () {
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(2.10), equals(0));
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(2.85), equals(1));
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(3.50), equals(2));
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(4.20), equals(3));
 
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(0), closeTo(0.0264, 1e-6));
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(1), closeTo(0.0088, 1e-6));
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(2), closeTo(0.0044, 1e-6));
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(3), closeTo(0.0022, 1e-6));
+      expect(
+        ExtratorCurvasNivelMundo.passoGradePorNivel(0),
+        closeTo(ExtratorCurvasNivelMundo.passoMacroGraus, 1e-6),
+      );
+      expect(
+        ExtratorCurvasNivelMundo.passoGradePorNivel(1),
+        closeTo(ExtratorCurvasNivelMundo.passoMacroGraus, 1e-6),
+      );
+      expect(
+        ExtratorCurvasNivelMundo.passoGradePorNivel(2),
+        closeTo(ExtratorCurvasNivelMundo.passoFinoGraus, 1e-6),
+      );
+      expect(
+        ExtratorCurvasNivelMundo.passoGradePorNivel(3),
+        closeTo(ExtratorCurvasNivelMundo.passoFinoGraus, 1e-6),
+      );
 
       expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(0), equals(400.0));
       expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(1), equals(200.0));
@@ -29,6 +41,22 @@ void main() {
       expect(ExtratorCurvasNivelMundo.classificarGeracaoCota(1000), equals(1));
       expect(ExtratorCurvasNivelMundo.classificarGeracaoCota(900), equals(2));
       expect(ExtratorCurvasNivelMundo.classificarGeracaoCota(950), equals(3));
+
+      final k1 = ExtratorCurvasNivelMundo.calcularChaveTileMundo(
+        camadaFina: false,
+        tx: -98,
+        ty: -44,
+        versaoDadosElevacao: 1,
+        assinaturaPicos: 7,
+      );
+      final k2 = ExtratorCurvasNivelMundo.calcularChaveTileMundo(
+        camadaFina: true,
+        tx: -98,
+        ty: -44,
+        versaoDadosElevacao: 1,
+        assinaturaPicos: 7,
+      );
+      expect(k1, isNot(equals(k2)));
 
       const pico = PicoRelevoReferencia(
         id: 'cipo',
@@ -45,39 +73,49 @@ void main() {
         return 680.0 + 820.0 * math.exp(-r2 / 0.0028);
       }
 
-      const janelaA = JanelaGeograficaVisivel(
-        minLat: -19.405,
-        maxLat: -19.235,
-        minLon: -43.705,
-        maxLon: -43.535,
+      const janelaAmpla = JanelaGeograficaVisivel(
+        minLat: -19.42,
+        maxLat: -19.22,
+        minLon: -43.72,
+        maxLon: -43.52,
       );
-      const janelaPanSuave = JanelaGeograficaVisivel(
-        minLat: -19.404,
-        maxLat: -19.234,
-        minLon: -43.704,
-        maxLon: -43.534,
+      // Mesmo após vários milímetros/níveis de zoom reduzindo a janela pela metade,
+      // os vértices de 800m, 1000m, 1200m e 1400m permanecem BIT-A-BIT IDÊNTICOS!
+      const janelaAproximada = JanelaGeograficaVisivel(
+        minLat: -19.37,
+        maxLat: -19.27,
+        minLon: -43.67,
+        maxLon: -43.57,
       );
 
-      final resA = ExtratorCurvasNivelMundo.extrairCurvasBloco(
-        janela: janelaA,
-        nivelDetalhe: 2,
+      final resLonge = ExtratorCurvasNivelMundo.extrairCurvasBloco(
+        janela: janelaAmpla,
+        nivelDetalhe: 0,
         versaoDadosElevacao: 1,
         amostrarElevacaoMetros: domoMontanha,
         picosReferencia: const [pico],
       );
-      final resPan = ExtratorCurvasNivelMundo.extrairCurvasBloco(
-        janela: janelaPanSuave,
-        nivelDetalhe: 2,
+      final resPerto = ExtratorCurvasNivelMundo.extrairCurvasBloco(
+        janela: janelaAproximada,
+        nivelDetalhe: 3,
         versaoDadosElevacao: 1,
         amostrarElevacaoMetros: domoMontanha,
         picosReferencia: const [pico],
       );
 
-      expect(resA.chaveBloco, equals(resPan.chaveBloco));
-      expect(resA.curvas, isNotEmpty);
-      expect(resA.curvas.any((c) => c.ehMestra), isTrue);
-      expect(resA.curvas.any((c) => c.ehEscarpaPico), isTrue);
-      expect(resA.curvas.any((c) => c.ancoraRotuloLonLat != null), isTrue);
+      expect(resLonge.curvas, isNotEmpty);
+      expect(resPerto.curvas.length, greaterThan(resLonge.curvas.length));
+      expect(resPerto.curvas.any((c) => c.ehMestra), isTrue);
+      expect(resPerto.curvas.any((c) => c.ehEscarpaPico), isTrue);
+      expect(resPerto.curvas.any((c) => c.ancoraRotuloLonLat != null), isTrue);
+      expect(resPerto.curvas.any((c) => c.geracaoDetalhe == 2), isTrue);
+      expect(resPerto.curvas.any((c) => c.geracaoDetalhe == 3), isTrue);
+
+      final curva1200Longe =
+          resLonge.curvas.firstWhere((c) => c.cotaMetros == 1200);
+      final curva1200Perto =
+          resPerto.curvas.firstWhere((c) => c.cotaMetros == 1200);
+      // Invariância exata bit-a-bit: ZERO deformação ao mudar zoom ou tamanho da janela!
       expect(
         resA.curvas.first.verticesLonLat,
         equals(resPan.curvas.first.verticesLonLat),
