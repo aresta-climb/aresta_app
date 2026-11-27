@@ -1,10 +1,11 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
@@ -42,43 +43,74 @@ class ApoiePicoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, 'APOIE O PICO', subtitle: pico.nome),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          children: [
-            if (pico.chavePixManutencao.isNotEmpty)
-              PicoMenuCard(
-                title: 'Doação via Pix',
-                subtitle:
-                    'Ajude a comprar chapeletas e correntes de inox.\nChave: ${pico.chavePixManutencao}',
-                icon: Icons.attach_money,
-                iconColor: Colors.green,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(text: pico.chavePixManutencao),
-                  );
-                  TelemetryService.instance.logApoioPix(cragId);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Chave PIX copiada para a área de transferência!',
-                      ),
-                      backgroundColor: context.colors.mossRock,
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: buildCommonAppBar(
+            context,
+            context.tr(ChaveTexto.picoSubApoieTitulo),
+            subtitle: pico.nome,
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              children: [
+                if (pico.chavePixManutencao.isNotEmpty)
+                  PicoMenuCard(
+                    title: context.tr(ChaveTexto.picoSubDoacaoPix),
+                    subtitle: context.tr(
+                      ChaveTexto.picoSubDoacaoPixSubtitulo,
+                      {'chave': pico.chavePixManutencao},
                     ),
-                  );
-                },
-              ),
+                    icon: Icons.attach_money,
+                    iconColor: Colors.green,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor:
+                        context.colors.chalkWhite.withValues(alpha: 0.7),
+                    onTap: () {
+                      Clipboard.setData(
+                        ClipboardData(text: pico.chavePixManutencao),
+                      );
+                      TelemetryService.instance.logApoioPix(cragId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            tr(ChaveTexto.picoSubPixCopiadoToast),
+                          ),
+                          backgroundColor: context.colors.mossRock,
+                        ),
+                      );
+                    },
+                  ),
+
+                if (categories.apoioProdutos.isNotEmpty)
+                  ...categories.apoioProdutos.map(
+                    (b) => PicoMenuCard(
+                      title: context.tr(ChaveTexto.picoSubProdutos),
+                      subtitle: b.texto,
+                      icon: Icons.layers,
+                      iconColor: context.colors.beastHide,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.chalkWhite.withValues(
+                        alpha: 0.7,
+                      ),
+                      onTap: () => _pushTextNode(
+                        context,
+                        context.tr(ChaveTexto.picoSubProdutos),
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.shopping_bag,
+                      ),
+                    ),
+                  ),
 
             if (categories.apoioProdutos.isNotEmpty)
               ...categories.apoioProdutos.map(
