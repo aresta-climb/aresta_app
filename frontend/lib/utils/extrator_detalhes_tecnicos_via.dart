@@ -263,7 +263,7 @@ abstract final class ExtratorDetalhesTecnicosVia {
         ItemMidiaBetaVia(
           titulo: tr(ChaveTexto.viaAssistirVideoBeta),
           url: urlDireta,
-          origemRotulo: 'Vídeo',
+          origemRotulo: tr(ChaveTexto.viaVideo),
         ),
       );
     }
@@ -342,16 +342,25 @@ abstract final class ExtratorDetalhesTecnicosVia {
 
   /// Formata comentários públicos em [NotaComunidadeApresentacao] para Dumb UI.
   static List<NotaComunidadeApresentacao> formatarNotasComunidade(
-    List<ComentarioComunidadeVia> comentarios,
-  ) {
+    List<ComentarioComunidadeVia> comentarios, {
+    String? autorIdUsuarioAutenticado,
+  }) {
     return comentarios
         .map((c) {
           final dia = c.criadoEm.day.toString().padLeft(2, '0');
           final mes = c.criadoEm.month.toString().padLeft(2, '0');
           return NotaComunidadeApresentacao(
+            uid: c.uid,
             cabecalhoAutorData: '${c.autorNomePublico} • $dia/$mes/${c.criadoEm.year}',
+            iniciaisAutor: NotaComunidadeApresentacao.extrairIniciais(
+              c.autorNomePublico,
+            ),
+            autorAvatarUrl: c.autorAvatarUrl,
             rotuloEstilo: c.rotuloEstilo,
             texto: c.texto,
+            pertenceAoUsuarioAtual:
+                autorIdUsuarioAutenticado != null &&
+                c.foiCriadoPor(autorIdUsuarioAutenticado),
           );
         })
         .toList(growable: false);
@@ -432,7 +441,7 @@ abstract final class ExtratorDetalhesTecnicosVia {
       itens.add(
         AtributoTecnicoVia(
           icone: TipoIconeAtributoVia.protecoes,
-          rotulo: 'PROTEÇÕES',
+          rotulo: tr(ChaveTexto.viaSpecProtecoes),
           valor: '$intermediarias+$parada',
         ),
       );
