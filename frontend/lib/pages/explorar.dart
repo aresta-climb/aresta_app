@@ -92,70 +92,19 @@ class _BrowsePageState extends State<BrowsePage> {
     }
   }
 
-  @override
-  void didUpdateWidget(covariant BrowsePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.viewModel != widget.viewModel) {
-      oldWidget.viewModel.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
-      widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
-    if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
-      _aoSolicitarScrollSetimoPico();
+  void _voarAtePicoSelecionadoNaLista(String picoId) {
+    final destino = widget.viewModel.calcularDestinoVooPico(
+      picoId,
+      lodAtual: _controladorCamera.lod,
+    );
+    if (destino == null) return;
+    if (destino.altitudeBaseMetros != null) {
+      _controladorCamera.definirElevacaoReferenciaCamera(
+        destino.altitudeBaseMetros!,
+      );
     }
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.viewModel.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _aoSolicitarScrollSetimoPico() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final contextoAlvo = _chaveSetimoPico.currentContext;
-      if (contextoAlvo != null) {
-        Scrollable.ensureVisible(
-          contextoAlvo,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          alignment: 0.0,
-        );
-      }
-    });
-  }
-
-  void _mostrarFiltroOrdenacao(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: context.colors.caveShadow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    'ORDENAÇÃO DE PICOS',
-                    style: TextStyle(
-                      color: context.colors.rustIron,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 1.5,
-                    ),
+    _controladorCamera.iniciarVooParabolico(
+      destinoLat: destino.latitude,
                   ),
                 ),
                 Divider(color: context.colors.graniteEdge),
