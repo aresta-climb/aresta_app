@@ -7,21 +7,23 @@ Aplicativo móvel da **ARESTA** para consulta offline e online de guias de escal
 ```text
 aresta_app/
 ├── docs/              Especificações técnicas, scripts SQL e documentos de arquitetura
-│   ├── arquitetura/   Modelagem de UIDs, Supabase, PowerSync, contas e documentos PDF
+│   ├── arquitetura/   Modelagem de UIDs, Supabase, PowerSync, globo/clima e PDFs
+│   ├── recursos/      Inventário completo de APIs, fontes de dados, ativos e licenças
 │   └── sistema_de_acesso.md
 ├── frontend/          Aplicativo Flutter (Android e iOS)
 ├── openspec/          Especificações e propostas de mudança (OpenSpec)
+├── supabase/          Supabase Edge Functions mantidas neste repositório (clima e altimetria)
 ├── CONTRIBUTING.md    Guia de contribuição (DCO)
 └── README.md
 ```
 
-> O submódulo `aresta_api` (definições `.proto` e código Protobuf gerado) fica em `frontend/lib/aresta_api/`.
+> Os submódulos Git ficam em `frontend/lib/aresta_api/` (contratos `.proto`, `.sql` e OpenAPI) e `frontend/legal/repo/` (Termos de Uso, Política de Privacidade e portal `arestaclimb.com`).
 
 ---
 
 ## Visão Geral
 
-O Aresta Climb distribui croquis, betas, mapas de setores, coordenadas GPS e descrições de picos para uso sem conexão de rede em campo. O aplicativo também inclui perfil de escalador, caderneta de ascensões, votação de consenso de grau e alertas de risco nas vias, com sincronização em nuvem via Supabase.
+O Aresta Climb distribui croquis, betas, mapas de setores, coordenadas GPS e descrições de picos para uso sem conexão de rede em campo, com suporte multilíngue reativo offline em **Português**, **English**, **Español**, **Deutsch** e **Nederlands**. O aplicativo também inclui perfil de escalador, caderneta de ascensões, votação de consenso de grau e alertas de risco nas vias, com sincronização em nuvem via Supabase.
 
 Os dados dos guias usam arquivos `.binarypb` (Protocol Buffers) e imagens WebP, distribuídos pela CDN ou por sessão WebSocket do Editor Desktop.
 
@@ -39,8 +41,11 @@ O roteamento utiliza uma **Árvore de Navegação** (`NavNode` / `TreeNavigation
 
 | Documento | Conteúdo |
 |---|---|
+| **[`docs/recursos/README.md`](docs/recursos/README.md)** | **Inventário central de recursos, APIs externas, fontes científicas/cartográficas, serviços em nuvem, ativos e licenças** |
 | [`frontend/README.md`](frontend/README.md) | Funcionalidades, dependências, estrutura de pastas, execução e release |
+| [`supabase/README.md`](supabase/README.md) | Edge Function `sincronizar-clima-picos` (Open-Meteo + NASA SRTM 30m e rotação de snapshots) |
 | [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura de `lib/`: serviços, páginas, navegação, `view`, `widgets` e `utils` |
+| [`frontend/lib/idioma/README.md`](frontend/lib/idioma/README.md) | Motor multilíngue reativo offline e dicionários (`PT`, `EN`, `ES`, `DE`, `NL`) |
 | [`frontend/lib/view/README.md`](frontend/lib/view/README.md) | Camada de apresentação: `function_library` e `view_models` |
 | [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Serviços de dados, autenticação Supabase, interações e Modo Experimental |
 | [`frontend/lib/services/caderneta/README.md`](frontend/lib/services/caderneta/README.md) | Repositório da caderneta, estatísticas e sincronização de ascensões |
@@ -48,10 +53,11 @@ O roteamento utiliza uma **Árvore de Navegação** (`NavNode` / `TreeNavigation
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento do SDK Firebase, telemetria e logs (Crashlytics e Sentry) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Estrutura da suíte de testes e comandos de execução |
 | [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação de NanoID 14c, Supabase, PowerSync, contas e licença ODbL |
-| [`docs/arquitetura/sql/README.md`](docs/arquitetura/sql/README.md) | Scripts SQL e políticas RLS para `perfis`, `cadenas`, `fila_interacoes` e `avatars` |
+| [`docs/arquitetura/mds/arquitetura_unificada_explorar_globo_lods_e_clima.md`](docs/arquitetura/mds/arquitetura_unificada_explorar_globo_lods_e_clima.md) | Arquitetura do globo vetorial em 4 LODs, altimetria NASA 30m e motor `RainTracker` |
+| [`docs/arquitetura/sql/README.md`](docs/arquitetura/sql/README.md) | Scripts SQL e políticas RLS para `perfis`, `cadenas`, `fila_interacoes`, clima/altimetria e `avatars` |
 | [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos de arquitetura em PDF |
 | [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Regras e fluxos de acesso a croquis |
-| [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Configuração de Sentry, GitHub Issues, WAHA e Resend |
+| [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Configuração de Sentry, GitHub Issues, `ntfy`, Discord, WAHA e Resend |
 
 ---
 
