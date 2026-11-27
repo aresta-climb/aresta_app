@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../view/view_models/alertas_mapa_interativo_view_model.dart';
 import 'bolha_alerta_seguranca_via.dart';
 import 'snackbar_flutuante_seguro.dart';
@@ -66,11 +67,54 @@ class CamadaBolhasAlertaMapa extends StatelessWidget {
           item.alerta.uid,
         );
         despachanteSnack.exibir(
-          texto: 'Alerta em ${item.nomeEscalada} marcado como resolvido.',
+          texto: tr(
+            ChaveTexto.alertaResolvidoNaViaToast,
+            {'nome': item.nomeEscalada},
+          ),
           duracao: const Duration(seconds: 4),
-          rotuloAcao: 'Desfazer',
+          rotuloAcao: tr(ChaveTexto.comumDesfazer),
           aoAcionar: () => viewModel.desfazerResolucaoAlerta(item.alerta.uid),
         );
+      },
+      aoSolicitarEdicao: () {
+        if (!context.mounted) return;
+        exibirModalReportarAlertaVia(
+          context,
+          alertaInicial: item.alerta,
+          aoReportar: (novaCategoria, detalhe) async {
+            final ok = await viewModel.editarAlerta(
+              item.escaladaUid,
+              item.alerta.uid,
+              novaCategoria,
+              detalhe: detalhe,
+            );
+            despachanteSnack.exibir(
+              texto: ok
+                  ? tr(ChaveTexto.alertaAtualizadoToast)
+                  : tr(ChaveTexto.alertaFalhaAtualizarToast),
+              duracao: const Duration(seconds: 2),
+            );
+          },
+        );
+      },
+      aoSolicitarExclusao: () async {
+        if (!context.mounted) return;
+        final confirmado = await exibirDialogoConfirmarExclusaoInteracao(
+          context,
+          ehAlerta: true,
+        );
+        if (confirmado == true) {
+          final ok = await viewModel.excluirAlerta(
+            item.escaladaUid,
+            item.alerta.uid,
+          );
+          if (ok) {
+            despachanteSnack.exibir(
+              texto: tr(ChaveTexto.alertaExcluidoToast),
+              duracao: const Duration(seconds: 2),
+            );
+          }
+        }
       },
     );
   }

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/extrator_detalhes_tecnicos_via.dart';
 import '../linha_localizacao_setor.dart';
@@ -100,18 +101,18 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
                     color: _corEstrelaClassica.withValues(alpha: 0.55),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.star_rounded,
                       size: 15,
                       color: _corEstrelaClassica,
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
-                      'CLÁSSICA',
-                      style: TextStyle(
+                      context.tr(ChaveTexto.viaClassica),
+                      style: const TextStyle(
                         color: Color(0xFFFDE68A),
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -422,7 +423,7 @@ class _BlocoConsensoComunidade extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              'CONSENSO DA COMUNIDADE',
+              context.tr(ChaveTexto.viaConsensoComunidade),
               maxLines: 1,
               style: TextStyle(
                 color: cores.rustIron,
@@ -460,7 +461,7 @@ class _BlocoConsensoComunidade extends StatelessWidget {
                   ],
                 )
               : Text(
-                  'Sem votos',
+                  context.tr(ChaveTexto.viaSemVotos),
                   style: TextStyle(
                     color: cores.ashGrey,
                     fontSize: 17,
@@ -547,7 +548,10 @@ class SecaoMapaCroquiVia extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Linha #${estadoCroqui.rotuloLinhaNoMapa}',
+                        context.tr(
+                          ChaveTexto.viaLinhaNumero,
+                          {'n': estadoCroqui.rotuloLinhaNoMapa},
+                        ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -582,20 +586,20 @@ class SecaoMapaCroquiVia extends StatelessWidget {
               color: AppColors.brandColor.withValues(alpha: 0.65),
             ),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.explore_outlined,
                 color: AppColors.brandColor,
                 size: 18,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  'VER NO CROQUI INTERATIVO',
+                  context.tr(ChaveTexto.viaVerNoCroquiInterativo),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
