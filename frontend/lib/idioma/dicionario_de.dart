@@ -287,3 +287,93 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.climaIncendioAtivo: 'Aktiver Waldbrand',
   ChaveTexto.climaIncendioSevero: 'Schwerer Waldbrand',
 
+  // Meus Croquis e Modais Offline
+  ChaveTexto.meusCroquisTitulo: 'MEINE TOPOS',
+  ChaveTexto.meusCroquisSubtitulo: 'OFFLINE-SPEICHER',
+  ChaveTexto.meusCroquisVazio: 'Noch keine Topos offline gespeichert.',
+  ChaveTexto.meusCroquisAbrirOffline: 'OFFLINE ÖFFNEN',
+  ChaveTexto.meusCroquisErroAbrir: 'Fehler beim Öffnen des Offline-Führers.',
+  ChaveTexto.meusCroquisExcluirTitulo: 'Löschen?',
+  ChaveTexto.meusCroquisExcluirPergunta:
+      'Offline-Führer für {nome} wirklich löschen?',
+  ChaveTexto.meusCroquisExcluidoToast: 'Führer gelöscht.',
+  ChaveTexto.meusCroquisErroExcluirToast: 'Fehler beim Löschen des Führers.',
+  ChaveTexto.meusCroquisGuiaRemovidoToast:
+      'Führer aus dem Offline-Speicher entfernt.',
+  ChaveTexto.offlineSalvarComTamanho: 'Offline speichern ({tamanho})',
+  ChaveTexto.offlineSalvarSemTamanho: 'Offline speichern',
+  ChaveTexto.offlineModoOnlineTitulo: 'ONLINE-MODUS',
+  ChaveTexto.offlineModoOnlineDesc:
+      'Du surfst gerade online. Speichere den kompletten Führer für den Einsatz ohne Empfang am Fels.',
+  ChaveTexto.offlineBaixandoPct: 'LÄDT HERUNTER ({pct}%)...',
+  ChaveTexto.offlineSalvarParaPedraTitulo: 'FÜR DEN FELS SPEICHERN?',
+  ChaveTexto.offlineSalvarParaPedraCorpo:
+      'Denk daran: Am Fels gibt es oft keinen Empfang. Speichere {nome} offline, um Topos und Grade jederzeit abzurufen.',
+  ChaveTexto.offlineSairSemSalvar: 'Ohne Speichern verlassen',
+  ChaveTexto.offlineSemConexaoTitulo: 'DU BIST OFFLINE',
+  ChaveTexto.offlineSemConexaoCorpo:
+      'Dieser Inhalt gehört zu {nome} und ist noch nicht offline auf deinem Gerät gespeichert. Verbinde dich mit dem Internet und versuche es erneut.',
+  ChaveTexto.offlineAindaSemConexao:
+      'Weiterhin keine Verbindung. Prüfe dein Netz und versuche es erneut.',
+  ChaveTexto.offlineTentandoConectar: 'Verbinde...',
+
+  // Página do Pico, Subpáginas, Setor, Grupo, Filtros de Índice e Croqui Interativo
+  ChaveTexto.picoCompartilharTooltip: 'Gebiet teilen',
+  ChaveTexto.picoExcluirGuiaTooltip: 'Führer löschen',
+  ChaveTexto.picoBuscarBoulderTooltip: 'Boulder suchen',
+  ChaveTexto.picoBuscarViaTooltip: 'Route suchen',
+  ChaveTexto.picoCardSetoresTitulo: 'Sektoren & Routen',
+  ChaveTexto.picoCardSetoresSubtitulo:
+      'Sektoren, Routen und Boulder mit Filtern und Karten erkunden',
+  ChaveTexto.picoCardExplorarTitulo: 'Gebiet erkunden',
+  ChaveTexto.picoCardExplorarSubtitulo:
+      'Zustieg, Übersichtskarten, Wetter und nützliche Infos.',
+  ChaveTexto.picoCardRegrasTitulo: 'Regeln & Hinweise',
+  ChaveTexto.picoCardRegrasSubtitulo:
+      'Naturschutzregeln, Sicherheitshinweise und Kletterethik vor Ort.',
+  ChaveTexto.picoCardComunidadeTitulo: 'Community',
+  ChaveTexto.picoCardComunidadeSubtitulo:
+      'Social Media, WhatsApp-Gruppe, Partner und lokale Angebote.',
+  ChaveTexto.picoCardCreditosSubtitulo:
+      'Autoren, Mitwirkende und Danksagungen.',
+  ChaveTexto.picoVoltarMapaSetor: 'Zurück zur Sektorkarte',
+  ChaveTexto.picoCroquiPor: 'Topo von {autores}',
+  ChaveTexto.picoInfoLocal: 'Gebietsinformationen',
+  ChaveTexto.picoCampoNome: 'Name',
+  ChaveTexto.picoCampoEstado: 'Bundesstaat',
+  ChaveTexto.picoMaisInfoSecao: 'Weitere Informationen',
+  ChaveTexto.picoMapasGerais: 'Übersichtskarten',
+  ChaveTexto.picoNenhumElemento: 'Keine Einträge verfügbar.',
+  ChaveTexto.picoBuscarBoulderHint: 'Boulder (z. B. V4) oder Sektor suchen...',
+  ChaveTexto.picoBuscarEscaladaHint: 'Route (z. B. 7a) oder Sektor suchen...',
+  ChaveTexto.picoDificuldadePrefixo: 'Grad: {grau}',
+  ChaveTexto.picoUltimaAtualizacaoNaoInformada: 'Letztes Update: Unbekannt',
+  ChaveTexto.picoUltimaAtualizacaoHoje: 'Letztes Update: Heute um {hora}',
+  ChaveTexto.picoUltimaAtualizacaoOntem: 'Letztes Update: Gestern um {hora}',
+  ChaveTexto.picoUltimaAtualizacaoData: 'Letztes Update: {data} um {hora}',
+  ChaveTexto.picoSubExplorarTitulo: 'GEBIET ERKUNDEN',
+  ChaveTexto.picoSubIntroSubtitulo: 'Überblick und Einführung zum Gebiet.',
+  ChaveTexto.picoSubSobreLocal: 'Über das Gebiet',
+  ChaveTexto.picoSubSobreLocalSubtitulo:
+      'Geschichte des Felsmassivs, Erstbegehungen und Besonderheiten.',
+  ChaveTexto.picoSubComoChegar: 'Zustieg & Anfahrt',
+  ChaveTexto.picoSubComoChegarSubtitulo:
+      'Wegbeschreibung und Navigation bis zum Wandfuß.',
+  ChaveTexto.picoSubAbrirMaps: 'In Google Maps öffnen',
+  ChaveTexto.picoSubAbrirMapsSubtitulo:
+      'Standort anzeigen und Route zum Gebiet berechnen.',
+  ChaveTexto.picoSubExtrasSubtitulo: 'Zusätzliche Infos zum Gebiet.',
+  ChaveTexto.picoSubComunidadeTitulo: 'COMMUNITY',
+  ChaveTexto.picoSubInformacoes: 'Informationen',
+  ChaveTexto.picoSubAssociacaoLocal: 'Lokaler Kletterverein',
+  ChaveTexto.picoSubParceiros: 'Partner',
+  ChaveTexto.picoSubComercioLocal: 'Lokales Gewerbe',
+  ChaveTexto.picoSubApoieTitulo: 'GEBIET UNTERSTÜTZEN',
+  ChaveTexto.picoSubDoacaoPix: 'Spende per Pix',
+  ChaveTexto.picoSubDoacaoPixSubtitulo:
+      'Unterstütze Edelstahl-Bohrhaken und Umlenker.\nSchlüssel: {chave}',
+  ChaveTexto.picoSubPixCopiadoToast: 'Pix-Schlüssel kopiert!',
+  ChaveTexto.picoSubProdutos: 'Gebiets-Produkte',
+  ChaveTexto.picoSubPatrocinador: 'Sponsor werden',
+  ChaveTexto.picoSubPatrocinadorSubtitulo:
+      'Verbinde deine Marke nachhaltig mit dem Klettersport.',
