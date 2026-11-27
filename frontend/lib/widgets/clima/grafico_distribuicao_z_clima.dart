@@ -219,15 +219,65 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
     tp.dispose();
   }
 
-    // Indicador de projeção fora de escala na extrema direita (+27.7σ)
-    final setaX = size.width - 10.0;
-    final setaY = baseY - 12.0;
+  void _desenharMarcadorTopoPilula(
+    Canvas canvas,
+    Size size, {
+    required double x,
+    required double yCurva,
+    required double baseY,
+    required String texto,
+    required Color cor,
+  }) {
+    final yEtiqueta = math.min(yCurva - 18.0, baseY - 42.0);
+    canvas.drawLine(
+      Offset(x, yEtiqueta + 12.0),
+      Offset(x, baseY),
+      Paint()
+        ..strokeWidth = 1.2
+        ..color = cor.withValues(alpha: 0.80),
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: texto,
+        style: TextStyle(color: cor, fontSize: 9.5, fontWeight: FontWeight.w800),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final cx = x
+        .clamp(
+          tp.width * 0.5 + 6.0,
+          math.max(tp.width * 0.5 + 6.0, size.width - tp.width * 0.5 - 6.0),
+        )
+        .toDouble();
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(cx, yEtiqueta + 4.0), width: tp.width + 10.0, height: tp.height + 4.0),
+      const Radius.circular(6.0),
+    );
+    canvas.drawRRect(rect, Paint()..color = corFundoEtiqueta);
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..color = cor.withValues(alpha: 0.55),
+    );
+    tp.paint(canvas, Offset(cx - tp.width * 0.5, yEtiqueta + 4.0 - tp.height * 0.5));
+    tp.dispose();
+  }
+
+  void _desenharSetaExtremaDireita(
+    Canvas canvas,
+    Size size, {
+    required double baseY,
+  }) {
+    final setaX = size.width - 8.0;
+    final setaY = baseY - 14.0;
     final pincelSeta = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round
       ..color = corCauda;
-    canvas.drawLine(Offset(setaX - 24.0, setaY), Offset(setaX, setaY), pincelSeta);
+    canvas.drawLine(Offset(setaX - 20.0, setaY), Offset(setaX, setaY), pincelSeta);
     canvas.drawLine(Offset(setaX - 5.0, setaY - 4.0), Offset(setaX, setaY), pincelSeta);
     canvas.drawLine(Offset(setaX - 5.0, setaY + 4.0), Offset(setaX, setaY), pincelSeta);
   }
@@ -237,5 +287,6 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
       oldDelegate.corCurva != corCurva ||
       oldDelegate.corCauda != corCauda ||
       oldDelegate.corGrade != corGrade ||
-      oldDelegate.corEixoTexto != corEixoTexto;
+      oldDelegate.corEixoTexto != corEixoTexto ||
+      oldDelegate.corFundoEtiqueta != corFundoEtiqueta;
 }
