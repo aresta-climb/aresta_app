@@ -78,3 +78,75 @@ void main() {
       });
       expect(semDataJson.tipo, TipoMutacaoFilaInteracao.excluirComentario);
 
+      expect(
+        () => TipoMutacaoFilaInteracao.deCodigo('DESCONHECIDO'),
+        throwsArgumentError,
+      );
+      expect(
+        () => MutacaoFilaInteracao.editarComentario(
+          alvoUid: '   ',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: 'Ok',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => MutacaoFilaInteracao.editarComentario(
+          alvoUid: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: '   ',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => MutacaoFilaInteracao.editarAlerta(
+          alvoUid: 'alertaAbelha01',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novaCategoria: CategoriaAlertaSeguranca.fauna,
+          detalhe: 'x' * 101,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('aplicarMutacoesSobreItens projeta edições e exclusões apenas sobre itens do mesmo autor', () {
+      const mariana = 'c3Lk9P1x4Vw8Mn';
+      const pedro = 'd4Ml0Q2y5Wx9No';
+      const via = 'x8siJek3FiG3aB';
+
+      final itens = [
+        ItemFilaInteracao.comentario(
+          id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          autorIdPublico: mariana,
+          autorNomePublico: 'Mariana',
+          escaladaUid: via,
+          textoComentario: 'Texto original Mariana',
+        ),
+        ItemFilaInteracao.comentario(
+          id: 'a12bc34d-58cc-4372-a567-0e02b2c3d479',
+          autorIdPublico: pedro,
+          autorNomePublico: 'Pedro',
+          escaladaUid: via,
+          textoComentario: 'Texto Pedro intocado',
+        ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: mariana,
+          autorNomePublico: 'Mariana',
+          escaladaUid: via,
+          alertaAlvoUid: 'alertaMariana1',
+          categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+          detalhe: 'Abelha',
+        ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: mariana,
+          autorNomePublico: 'Mariana',
+          escaladaUid: via,
+          alertaAlvoUid: 'alertaMariana2',
+          categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
+          detalhe: 'Para excluir',
+        ),
+      ];
+
