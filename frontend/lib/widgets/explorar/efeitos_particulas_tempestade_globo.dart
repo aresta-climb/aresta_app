@@ -356,3 +356,95 @@ abstract final class EfeitosParticulasTempestadeGlobo {
     final pincelPingo = Paint()..style = PaintingStyle.fill;
     final sementeBolha = bolha.id.codeUnits.fold<int>(19, (a, b) => a * 31 + b);
 
+    var gotasDesenhadas = 0;
+
+    void desenharGotaEmCoordenada({
+      required double lon,
+      required double lat,
+      required int hash,
+      required double pesoOctava,
+    }) {
+      final elev = sobreRelevo
+          ? math.max(
+                0.0,
+                GeradorRelevoLod.amostrarElevacaoMetros(
+                  latitude: lat,
+                  longitude: lon,
+                  picosReferencia: picosReferencia,
+                ),
+              ) +
+              14.0
+          : 0.0;
+
+      final pt = controlador.projetarCoordenada(
+        latitude: lat,
+        longitude: lon,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!pt.visivel) return;
+      gotasDesenhadas++;
+
+      final cadencia = 0.75 + (hash % 4) * 0.20 + nivel.peso * 0.24;
+      final desvioFase = ((hash >> 4) & 0xff) / 255.0;
+      final fase = ((faseSegundos * cadencia + desvioFase) % 1.0 + 1.0) % 1.0;
+      final centro = Offset(pt.x, pt.y);
+
+      if (fase < 0.26 && menorLadoMundoPx >= 16.0) {
+        final tPingo = 1.0 - (fase / 0.26);
+        pincelPingo.color = corGota.withValues(
+          alpha:
+              (corGota.a * pesoOctava * (0.40 + 0.60 * tPingo)).clamp(0.0, 1.0),
+        );
+        canvas.drawCircle(
+          centro,
+          (0.65 + 0.18 * nivel.peso) + 0.90 * tPingo,
+          pincelPingo,
+        );
+      }
+
+      final escalaGota = (hash % 3 == 0) ? 1.16 : 0.82;
+      final raio = (0.9 + fase * raioMaxAnel) * escalaGota;
+      final alfaAnel = (1.0 - fase) * (0.44 + 0.11 * nivel.peso) * pesoOctava;
+      pincelAnel.color = corGota.withValues(
+        alpha: (corGota.a * alfaAnel).clamp(0.0, 1.0),
+      );
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: centro,
+          width: raio * 2.0,
+          height: raio * 1.55,
+        ),
+        pincelAnel,
+      );
+
+      final exibeEco = nivel.peso >= 2 &&
+          fase > 0.22 &&
+          menorLadoMundoPx >= 22.0 &&
+          (nivel.peso == 4 ||
+              (nivel.peso == 3 && hash.isEven) ||
+              (nivel.peso == 2 && hash % 3 == 0));
+      if (exibeEco) {
+        final faseEco = (fase - 0.22) / 0.78;
+        final raioEco = (0.8 + faseEco * raioMaxAnel * 0.60) * escalaGota;
+        pincelAnel.color = corGota.withValues(
+          alpha:
+              (corGota.a * (1.0 - faseEco) * 0.52 * pesoOctava).clamp(0.0, 1.0),
+        );
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: centro,
+            width: raioEco * 2.0,
+            height: raioEco * 1.55,
+          ),
+          pincelAnel,
+        );
+      }
+    }
+
+    for (var iy = iyIni; iy <= iyFim; iy++) {
+      for (var ix = ixIni; ix <= ixFim; ix++) {
+        final ehCelulaBase = ix.isEven && iy.isEven;
+        final pesoOctava = ehCelulaBase ? 1.0 : alfaSub;
+        if (pesoOctava <= 0.04) continue;
+
