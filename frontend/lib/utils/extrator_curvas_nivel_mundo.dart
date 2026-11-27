@@ -155,16 +155,10 @@ abstract final class ExtratorCurvasNivelMundo {
 
     if (!zMax.isFinite || zMax < 25.0) return const [];
 
-    final kIni = math.max(1, (zGlobalMin / cotaPasso).ceil());
-    final kFim = (zGlobalMax / cotaPasso).floor();
-    if (kFim < kIni) {
-      return ConjuntoCurvasNivelMundo(
-        chaveBloco: bloco.chaveBloco,
-        nivelDetalhe: nivelDetalhe,
-        versaoDadosElevacao: versaoDadosElevacao,
-        curvas: const [],
-      );
-    }
+    final cotaPasso = camadaFina ? 50.0 : 200.0;
+    final kIni = math.max(1, (zMin / cotaPasso).ceil());
+    final kFim = (zMax / cotaPasso).floor();
+    if (kFim < kIni) return const [];
 
     const raioPicoGraus2 = 0.035 * 0.035;
     final curvas = <CurvaNivelMundo>[];
@@ -172,15 +166,18 @@ abstract final class ExtratorCurvasNivelMundo {
     for (var k = kIni; k <= kFim; k++) {
       final cota = k * cotaPasso;
       final cotaInt = cota.round();
+      // Aditividade estrita: a camada fina jamais duplica nem substitui múltiplos de 200 m!
+      if (camadaFina && cotaInt % 200 == 0) continue;
+
       final geracao = classificarGeracaoCota(cotaInt);
-      final ehMestra = geracao == 0 || (geracao == 1 && nivelDetalhe >= 2);
+      final ehMestra = geracao <= 1;
       final segmentos = <(Offset, Offset)>[];
 
-      for (var r = 0; r < rows; r++) {
-        final lat0 = (bloco.jMin + r) * passo;
+      for (var row = 0; row < celulas; row++) {
+        final lat0 = latBase + row * passo;
         final lat1 = lat0 + passo;
-        for (var c = 0; c < cols; c++) {
-          final i00 = r * nVertsX + c;
+        for (var col = 0; col < celulas; col++) {
+          final i00 = row * nVertsX + col;
           final z00 = elevs[i00];
           final z10 = elevs[i00 + 1];
           final z11 = elevs[i00 + nVertsX + 1];
@@ -193,7 +190,7 @@ abstract final class ExtratorCurvasNivelMundo {
           if (z01 >= cota) mascara |= 8;
           if (mascara == 0 || mascara == 15) continue;
 
-          final lon0 = (bloco.iMin + c) * passo;
+          final lon0 = lonBase + col * passo;
           final lon1 = lon0 + passo;
 
           Offset interpSul() => Offset(
@@ -261,7 +258,7 @@ abstract final class ExtratorCurvasNivelMundo {
       if (segmentos.isEmpty) continue;
       final polilinhas = _costurarESuavizarPolilinhas(segmentos, passo);
       for (final poli in polilinhas) {
-        if (poli.length < 4) continue;
+        if (poli.length < 3) continue;
         final meio = poli[poli.length ~/ 2];
         final cosLat = math.max(0.35, math.cos(meio.dy * _grausParaRad));
         var ehEscarpa = false;
@@ -276,7 +273,7 @@ abstract final class ExtratorCurvasNivelMundo {
           }
         }
 
-        final ancoraRotulo = (ehMestra && poli.length >= 8)
+        final ancoraRotulo = (ehMestra && poli.length >= 10)
             ? _escolherAncoraDeterministicaMundo(poli, passo)
             : null;
         curvas.add(
@@ -292,11 +289,55 @@ abstract final class ExtratorCurvasNivelMundo {
       }
     }
 
+    return List<CurvaNivelMundo>.unmodifiable(curvas);
+  }
+
+  /// Reúne os tiles fixos visíveis em [janela] sem recalcular nem deformar cotas existentes no zoom.
+  static ConjuntoCurvasNivelMundo extrairCurvasBloco({
+    required JanelaGeograficaVisivel janela,
+    required int nivelDetalhe,
+    required int versaoDadosElevacao,
+    required double Function(double latitude, double longitude)
+        amostrarElevacaoMetros,
+    required List<PicoRelevoReferencia> picosReferencia,
+  }) {
+    final tilesMacro = listarTilesVisiveis(janela: janela, camadaFina: false);
+    final tilesFinos = nivelDetalhe >= 2
+        ? listarTilesVisiveis(janela: janela, camadaFina: true)
+        : const <({int tx, int ty})>[];
+
+    var hashChave = Object.hash(nivelDetalhe >= 2, versaoDadosElevacao);
+    final todas = <CurvaNivelMundo>[];
+    for (final t in tilesMacro) {
+      hashChave = Object.hash(hashChave, t.tx, t.ty);
+      todas.addAll(
+        extrairTileCanonicoMundo(
+          tx: t.tx,
+          ty: t.ty,
+          camadaFina: false,
+          amostrarElevacaoMetros: amostrarElevacaoMetros,
+          picosReferencia: picosReferencia,
+        ),
+      );
+    }
+    for (final t in tilesFinos) {
+      hashChave = Object.hash(hashChave, 100000 + t.tx, 100000 + t.ty);
+      todas.addAll(
+        extrairTileCanonicoMundo(
+          tx: t.tx,
+          ty: t.ty,
+          camadaFina: true,
+          amostrarElevacaoMetros: amostrarElevacaoMetros,
+          picosReferencia: picosReferencia,
+        ),
+      );
+    }
+
     return ConjuntoCurvasNivelMundo(
-      chaveBloco: bloco.chaveBloco,
+      chaveBloco: hashChave,
       nivelDetalhe: nivelDetalhe,
       versaoDadosElevacao: versaoDadosElevacao,
-      curvas: List<CurvaNivelMundo>.unmodifiable(curvas),
+      curvas: List<CurvaNivelMundo>.unmodifiable(todas),
     );
   }
 
@@ -370,16 +411,16 @@ abstract final class ExtratorCurvasNivelMundo {
       final fechado = cadeia.length >= 4 &&
           (cadeia.first - cadeia.last).distanceSquared <
               (passoGraus * 0.08) * (passoGraus * 0.08);
-      final minVerticesBrutos = fechado ? 8 : 5;
-      if (cadeia.length >= minVerticesBrutos) {
-        resultado.add(_suavizarCantoUnico(cadeia, fechado: fechado));
-      }
+      // Preserva continuidade perfeita entre tiles adjacentes para curvas abertas (>= 2 vértices)
+      // e descarta apenas micro-ilhas fechadas menores que 6 segmentos
+      if (fechado && cadeia.length < 6) continue;
+      resultado.add(_suavizarChaikinDuplo(cadeia, fechado: fechado));
     }
     return resultado;
   }
 
-  /// Aplica 1 passada sutil (`0,82 / 0,18`) preservando o lugar geométrico exato da cota sem encolher laços.
-  static List<Offset> _suavizarCantoUnico(
+  /// Aplica 2 passadas de Chaikin (`0,75 / 0,25`) mantendo extremidades de borda de tile fixas.
+  static List<Offset> _suavizarChaikinDuplo(
     List<Offset> pontos, {
     required bool fechado,
   }) {
