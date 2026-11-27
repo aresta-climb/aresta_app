@@ -93,3 +93,92 @@ void main() {
                   PontoContornoGeo(longitude: -43.54, latitude: -19.39),
                   PontoContornoGeo(longitude: -43.58, latitude: -19.28),
                 ],
+              ),
+            ],
+            chuvaPorPico: {
+              'br_mg_igarape_pedra_grande': [
+                EventoChuvaPico(
+                  data: DateTime.utc(2026, 11, 25),
+                  milimetros: 22.0,
+                  bolhaId: 'frente_mg',
+                ),
+              ],
+            },
+            altimetriaPorPico: const {
+              'br_mg_igarape_pedra_grande': CotaAltimetricaPico(
+                altitudeBaseMetros: 982,
+                altitudePicoMetros: 1432,
+              ),
+              'br_es_pancao_pico_novo': CotaAltimetricaPico(
+                altitudeBaseMetros: 220,
+                altitudePicoMetros: 680,
+              ),
+            },
+          ),
+        );
+
+        final servico = ServicoClimaAltimetria(
+          armazenamento: armazenamento,
+          fonteRemota: fake,
+          relogioUtc: () => relogio,
+        );
+
+        expect(servico.inicializado, isFalse);
+        expect(servico.temSnapshotClima, isFalse);
+        await servico.inicializar();
+        expect(servico.inicializado, isTrue);
+        expect(servico.temSnapshotClima, isTrue);
+        // Chamada idempotente
+        await servico.inicializar();
+        expect(servico.obterAltitudePico('pico_cache_previo'), equals(910));
+
+        // Quando todos os picos informados ja existem na semente local, busca APENAS estado_clima_picos
+        expect(
+          await servico.sincronizarSeNecessario(
+            idsPicosCatalogo: const ['br_mg_igarape_pedra_grande'],
+          ),
+          isTrue,
+        );
+        expect(fake.totalChamadas, equals(1));
+        expect(fake.totalChamadasComAltimetria, equals(0));
+        expect(
+          servico.obterUmidadePico('br_mg_igarape_pedra_grande').nivel,
+          equals(NivelUmidadePico.possivelmenteUmido),
+        );
+        expect(
+          servico.obterUmidadePico('pico_seco_sem_chuva').nivel,
+          equals(NivelUmidadePico.seco),
+        );
+        expect(servico.bolhasAtivas.length, equals(1));
+        expect(servico.bolhasAtivas.single.bolha.id, equals('frente_mg'));
+        expect(servico.bolhasIncendioAtivas.length, equals(1));
+        expect(
+          servico.bolhasIncendioAtivas.single.incendio.id,
+          equals('fogo_cipo'),
+        );
+
+        // Dentro do TTL de 30min sem pico novo -> nao refaz requisicao
+        relogio = relogio.add(const Duration(minutes: 15));
+        expect(
+          await servico.sincronizarSeNecessario(
+            idsPicosCatalogo: const ['br_mg_igarape_pedra_grande'],
+          ),
+          isFalse,
+        );
+
+        // Se surgir pico novo ausente da altimetria local, sincroniza imediatamente incluindo altimetria
+        expect(
+          await servico.sincronizarSeNecessario(
+            idsPicosCatalogo: const [
+              'br_mg_igarape_pedra_grande',
+              'br_es_pancao_pico_novo',
+            ],
+          ),
+          isTrue,
+        );
+        expect(fake.totalChamadasComAltimetria, equals(1));
+        expect(
+          servico.obterAltitudePico('br_es_pancao_pico_novo'),
+          equals(680),
+        );
+
