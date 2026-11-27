@@ -6,6 +6,7 @@ import 'package:feedback/feedback.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../application_managers/feedback/orquestrador_feedback.dart';
+import '../idioma/tradutor_app.dart';
 import '../services/firebase/remote_config.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
@@ -132,7 +133,7 @@ class ModalBetaAberto extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Fase Beta Aberta',
+                    context.tr(ChaveTexto.sistemaFaseBetaTitulo),
                     style: TextStyle(
                       color: context.colors.chalkWhite,
                       fontSize: 20,
@@ -142,14 +143,14 @@ class ModalBetaAberto extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.close, color: context.colors.ashGrey),
-                    tooltip: 'Fechar',
+                    tooltip: context.tr(ChaveTexto.comumFechar),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               Text(
-                'O Aresta Climb é uma iniciativa independente e está em desenvolvimento ativo com a comunidade de escaladores.',
+                context.tr(ChaveTexto.sistemaFaseBetaIntro),
                 style: TextStyle(
                   color: context.colors.chalkWhite,
                   fontSize: 14,
@@ -160,22 +161,22 @@ class ModalBetaAberto extends StatelessWidget {
               _construirTopico(
                 context,
                 icone: Icons.explore_outlined,
-                titulo: 'Novos setores e croquis contínuos',
-                descricao: 'Nossa base de vias, croquis e mapas é expandida e atualizada frequentemente.',
+                titulo: context.tr(ChaveTexto.sistemaFaseBetaItem1Titulo),
+                descricao: context.tr(ChaveTexto.sistemaFaseBetaItem1Corpo),
               ),
               const SizedBox(height: 12),
               _construirTopico(
                 context,
                 icone: Icons.construction_outlined,
-                titulo: 'Recursos em constante evolução',
-                descricao: 'Filtros avançados, ferramentas de navegação e melhorias de performance estão a caminho.',
+                titulo: context.tr(ChaveTexto.sistemaFaseBetaItem2Titulo),
+                descricao: context.tr(ChaveTexto.sistemaFaseBetaItem2Corpo),
               ),
               const SizedBox(height: 12),
               _construirTopico(
                 context,
                 icone: Icons.volunteer_activism_outlined,
-                titulo: 'Construção comunitária',
-                descricao: 'Sua experiência na rocha é essencial para identificarmos ajustes e priorizarmos o que importa.',
+                titulo: context.tr(ChaveTexto.sistemaFaseBetaItem3Titulo),
+                descricao: context.tr(ChaveTexto.sistemaFaseBetaItem3Corpo),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -191,9 +192,9 @@ class ModalBetaAberto extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFFE1306C), size: 20),
-                  label: const Text(
-                    'Instagram Oficial',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr(ChaveTexto.sistemaInstagramOficial),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                       fontSize: 13,
@@ -216,9 +217,9 @@ class ModalBetaAberto extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366), size: 20),
-                  label: const Text(
-                    'Comunidade no WhatsApp',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr(ChaveTexto.sistemaComunidadeWhatsapp),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                       fontSize: 13,
@@ -241,9 +242,9 @@ class ModalBetaAberto extends StatelessWidget {
                     ),
                   ),
                   icon: Icon(Icons.feedback_outlined, color: context.colors.beastHide, size: 20),
-                  label: const Text(
-                    'Enviar Sugestão',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr(ChaveTexto.sistemaEnviarSugestao),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                       fontSize: 13,
@@ -278,8 +279,8 @@ class ModalBetaAberto extends StatelessWidget {
                     } else if (!FeedbackOrchestrator.isConfigured) {
                       messenger?.showSnackBar(
                         SnackBar(
-                          content: const Text(
-                            'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+                          content: Text(
+                            tr(ChaveTexto.comumFeedbackIndisponivelDev),
                           ),
                           backgroundColor: Colors.red.shade800,
                         ),
@@ -299,7 +300,10 @@ class ModalBetaAberto extends StatelessWidget {
                   builder: (context, snapshot) {
                     final versao = snapshot.data?.version ?? '0.2.8';
                     return Text(
-                      'Aresta Climb v$versao (Beta Aberto)',
+                      context.tr(
+                        ChaveTexto.sistemaRodapeVersaoBeta,
+                        {'versao': versao},
+                      ),
                       style: TextStyle(
                         color: context.colors.ashGrey.withValues(alpha: 0.7),
                         fontSize: 11,

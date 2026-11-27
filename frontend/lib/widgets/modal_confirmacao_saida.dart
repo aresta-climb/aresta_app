@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../services/firebase/telemetria.dart';
@@ -87,9 +88,13 @@ class ModalConfirmacaoSaida extends StatelessWidget {
     final String rotuloBotao = (tamanhoFormatado != null &&
             tamanhoFormatado!.isNotEmpty &&
             tamanhoFormatado != '0 B' &&
-            tamanhoFormatado != 'Offline')
-        ? 'Salvar Offline ($tamanhoFormatado)'
-        : 'Salvar Offline';
+            tamanhoFormatado != 'Offline' &&
+            tamanhoFormatado != tr(ChaveTexto.comumOffline))
+        ? context.tr(
+            ChaveTexto.offlineSalvarComTamanho,
+            {'tamanho': tamanhoFormatado},
+          )
+        : context.tr(ChaveTexto.offlineSalvarSemTamanho);
 
     return SafeArea(
       child: Padding(
@@ -131,7 +136,7 @@ class ModalConfirmacaoSaida extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'SALVAR PARA A PEDRA?',
+                          context.tr(ChaveTexto.offlineSalvarParaPedraTitulo),
                           style: TextStyle(
                             color: context.colors.chalkWhite,
                             fontWeight: FontWeight.w900,
@@ -148,7 +153,10 @@ class ModalConfirmacaoSaida extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Lembre-se: na rocha não há sinal de internet. Para consultar os croquis e graus de $nomePico sem conexão, salve o guia offline.',
+              context.tr(
+                ChaveTexto.offlineSalvarParaPedraCorpo,
+                {'nome': nomePico},
+              ),
               style: TextStyle(
                 color: context.colors.ashGrey,
                 fontSize: 14,
@@ -184,7 +192,7 @@ class ModalConfirmacaoSaida extends StatelessWidget {
               child: TextButton(
                 onPressed: onSairSemSalvar,
                 child: Text(
-                  'Sair sem Salvar',
+                  context.tr(ChaveTexto.offlineSairSemSalvar),
                   style: TextStyle(
                     color: context.colors.ashGrey,
                     fontWeight: FontWeight.bold,

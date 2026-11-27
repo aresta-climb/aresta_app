@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 
 /// Diálogo modal exibido quando a sessão de prévia (Modo Experimental) do Editor Desktop
@@ -81,7 +82,7 @@ class ModalSessaoExperimentalEncerrada extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Sessão de Prévia Encerrada',
+            context.tr(ChaveTexto.sistemaSessaoPreviaEncerradaTitulo),
             style: TextStyle(
               color: context.colors.chalkWhite,
               fontSize: 18,
@@ -93,7 +94,7 @@ class ModalSessaoExperimentalEncerrada extends StatelessWidget {
         ],
       ),
       content: Text(
-        'A conexão com o Editor Desktop foi finalizada. Como o modo de prévia é temporário, restauramos automaticamente o catálogo oficial do Aresta Climb para você continuar navegando.',
+        context.tr(ChaveTexto.sistemaSessaoPreviaEncerradaCorpo),
         style: TextStyle(
           color: context.colors.ashGrey,
           fontSize: 14,
@@ -121,9 +122,9 @@ class ModalSessaoExperimentalEncerrada extends StatelessWidget {
                 Navigator.of(context, rootNavigator: true).pop();
               }
             },
-            child: const Text(
-              'ENTENDI',
-              style: TextStyle(
+            child: Text(
+              context.tr(ChaveTexto.comumEntendi),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
