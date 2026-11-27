@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../navigation/construtor_reativo_pagina.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
@@ -250,7 +251,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     super.dispose();
   }
 
-  double get _recuoDockInferior => _cadernetaViewModel.visivel ? 72.0 : 0.0;
+  static const double _recuoDockInferior = 72.0;
 
   void _abrirRegistroCadena(BuildContext context) {
     final despachanteSnack = capturarDespachanteSnackBarSeguro(
@@ -263,8 +264,8 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
       viewModel: registroVm,
       onSalvo: (cadenaSalva) {
         final mensagem = cadenaSalva.isCadena
-            ? 'Cadena salva na caderneta!'
-            : 'Tentativa salva na caderneta!';
+            ? tr(ChaveTexto.cadCadenaSalvaToast)
+            : tr(ChaveTexto.cadTentativaSalvaToast);
         despachanteSnack.exibir(
           texto: mensagem,
           duracao: const Duration(seconds: 2),
@@ -297,13 +298,93 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
 
         _viewModel.iniciarResolucaoAlertaComDesfazer(alerta.uid);
         despachanteSnack.exibir(
-          texto: 'Alerta marcado como resolvido.',
+          texto: tr(ChaveTexto.alertaResolvidoToast),
           duracao: const Duration(seconds: 4),
-          rotuloAcao: 'Desfazer',
+          rotuloAcao: tr(ChaveTexto.comumDesfazer),
           aoAcionar: () => _viewModel.desfazerResolucaoAlerta(alerta.uid),
         );
       },
+      aoSolicitarEdicao: () {
+        exibirModalReportarAlertaVia(
+          context,
+          alertaInicial: alerta,
+          aoReportar: (novaCategoria, detalhe) async {
+            final ok = await _viewModel.editarAlerta(
+              alerta.uid,
+              novaCategoria,
+              detalhe: detalhe,
+            );
+            despachanteSnack.exibir(
+              texto: ok
+                  ? tr(ChaveTexto.alertaAtualizadoToast)
+                  : tr(ChaveTexto.alertaFalhaAtualizarToast),
+              duracao: const Duration(seconds: 2),
+            );
+          },
+        );
+      },
+      aoSolicitarExclusao: () async {
+        final confirmado = await exibirDialogoConfirmarExclusaoInteracao(
+          context,
+          ehAlerta: true,
+        );
+        if (confirmado == true) {
+          final ok = await _viewModel.excluirAlerta(alerta.uid);
+          if (ok) {
+            despachanteSnack.exibir(
+              texto: tr(ChaveTexto.alertaExcluidoToast),
+              duracao: const Duration(seconds: 2),
+            );
+          }
+        }
+      },
     );
+  }
+
+  void _abrirEdicaoComentario(
+    BuildContext context,
+    NotaComunidadeApresentacao nota,
+  ) {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
+    exibirModalEditarComentarioVia(
+      context,
+      textoInicial: nota.texto,
+      aoSalvar: (novoTexto) async {
+        final ok = await _viewModel.editarComentario(nota.uid, novoTexto);
+        if (ok) {
+          despachanteSnack.exibir(
+            texto: tr(ChaveTexto.viaComentarioAtualizadoToast),
+            duracao: const Duration(seconds: 2),
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _confirmarExclusaoComentario(
+    BuildContext context,
+    NotaComunidadeApresentacao nota,
+  ) async {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(
+      context,
+      recuoExtraInferior: _recuoDockInferior,
+    );
+    final confirmado = await exibirDialogoConfirmarExclusaoInteracao(
+      context,
+      ehAlerta: false,
+    );
+    if (confirmado == true) {
+      final ok = await _viewModel.excluirComentario(nota.uid);
+      if (ok) {
+        despachanteSnack.exibir(
+          texto: tr(ChaveTexto.viaComentarioExcluidoToast),
+          duracao: const Duration(seconds: 2),
+        );
+      }
+    }
   }
 
   Future<void> _votarGrauDireto(BuildContext context, int delta) async {
@@ -314,13 +395,12 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     final resultado = await _viewModel.votarGrauComunidade(delta);
     if (resultado == ResultadoVotoGrauVia.requerAutenticacao) {
       despachanteSnack.exibir(
-        texto:
-            'Entre na sua conta na aba Perfil para votar no grau da via.',
+        texto: tr(ChaveTexto.viaEntreParaVotarToast),
         duracao: const Duration(seconds: 3),
       );
     } else if (resultado == ResultadoVotoGrauVia.registrado) {
       despachanteSnack.exibir(
-        texto: 'Voto de grau atualizado!',
+        texto: tr(ChaveTexto.viaVotoAtualizadoToast),
         duracao: const Duration(seconds: 2),
       );
     }
@@ -353,7 +433,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     final copiou = await _viewModel.copiarChavePix();
     if (copiou) {
       despachanteSnack.exibir(
-        texto: 'Chave Pix copiada para a área de transferência!',
+        texto: tr(ChaveTexto.viaPixManutencaoCopiadoToast),
         duracao: const Duration(seconds: 2),
       );
     }
@@ -364,7 +444,11 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
     final cores = context.colors;
 
     return ListenableBuilder(
-      listenable: Listenable.merge([_viewModel, _cadernetaViewModel]),
+      listenable: Listenable.merge([
+        _viewModel,
+        _cadernetaViewModel,
+        ControladorIdiomaApp.instancia.notificadorIdioma,
+      ]),
       builder: (context, _) {
         final estadoCroqui = _viewModel.resolverEstadoCroqui(
           pico: widget.pico,
