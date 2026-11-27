@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 
 const Color _corDestaqueCriado = Color(0xFFD93829);
@@ -31,6 +32,12 @@ class SecaoMeusAlertasCaderneta extends StatelessWidget {
   /// Callback acionado ao marcar rapidamente um alerta ativo como resolvido.
   final ValueChanged<AlertaContribuidoCaderneta> aoResolverAlerta;
 
+  /// Callback opcional acionado pelo autor para editar categoria/detalhe de um alerta ativo criado por ele.
+  final ValueChanged<AlertaContribuidoCaderneta>? aoEditarAlerta;
+
+  /// Callback opcional acionado pelo autor para excluir permanentemente um alerta ativo criado por ele.
+  final ValueChanged<AlertaContribuidoCaderneta>? aoExcluirAlerta;
+
   /// Cria uma instância de [SecaoMeusAlertasCaderneta].
   const SecaoMeusAlertasCaderneta({
     super.key,
@@ -41,6 +48,8 @@ class SecaoMeusAlertasCaderneta extends StatelessWidget {
     required this.formatarData,
     required this.aoTocarVia,
     required this.aoResolverAlerta,
+    this.aoEditarAlerta,
+    this.aoExcluirAlerta,
   });
 
   @override
@@ -70,6 +79,9 @@ class SecaoMeusAlertasCaderneta extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final item = alertas[index];
+              final ehMeuAtivo =
+                  item.ativo &&
+                  item.papel == PapelContribuicaoAlerta.criadoPorMim;
               return _CartaoMeuAlertaCaderneta(
                 item: item,
                 nomeVia: obterNomeVia(item.alerta.escaladaUid),
@@ -77,6 +89,12 @@ class SecaoMeusAlertasCaderneta extends StatelessWidget {
                 dataFormatada: formatarData(item.ultimaInteracaoEm),
                 aoTocar: () => aoTocarVia(item.alerta.escaladaUid),
                 aoResolver: item.ativo ? () => aoResolverAlerta(item) : null,
+                aoEditar: ehMeuAtivo && aoEditarAlerta != null
+                    ? () => aoEditarAlerta!(item)
+                    : null,
+                aoExcluir: ehMeuAtivo && aoExcluirAlerta != null
+                    ? () => aoExcluirAlerta!(item)
+                    : null,
               );
             },
           ),
@@ -93,6 +111,8 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
   final String dataFormatada;
   final VoidCallback aoTocar;
   final VoidCallback? aoResolver;
+  final VoidCallback? aoEditar;
+  final VoidCallback? aoExcluir;
 
   const _CartaoMeuAlertaCaderneta({
     required this.item,
@@ -101,6 +121,8 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
     required this.dataFormatada,
     required this.aoTocar,
     required this.aoResolver,
+    this.aoEditar,
+    this.aoExcluir,
   });
 
   @override
@@ -110,8 +132,12 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
     final criadoPorMim = item.papel == PapelContribuicaoAlerta.criadoPorMim;
     final corPapel = criadoPorMim ? _corDestaqueCriado : cores.mossRock;
     final textoStatus = item.ativo
-        ? 'Ativo • ${alerta.confirmacoesAtivas} ${alerta.confirmacoesAtivas == 1 ? 'confirmação' : 'confirmações'}'
-        : 'Resolvido';
+        ? (alerta.confirmacoesAtivas == 1
+              ? context.tr(ChaveTexto.alertaAtivoUmConfirmacao)
+              : context.tr(ChaveTexto.alertaAtivoVariasConfirmacoes, {
+                  'n': '${alerta.confirmacoesAtivas}',
+                }))
+        : context.tr(ChaveTexto.alertaResolvidoStatus);
 
     return Opacity(
       opacity: item.ativo ? 1.0 : 0.68,
@@ -262,32 +288,49 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (aoResolver != null) ...[
+                if (aoResolver != null ||
+                    aoEditar != null ||
+                    aoExcluir != null) ...[
                   const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: OutlinedButton.icon(
-                      key: Key('btn_resolver_meu_alerta_${alerta.uid}'),
-                      onPressed: aoResolver,
-                      icon: Icon(
-                        Icons.check_circle_outline_rounded,
-                        size: 15,
-                        color: cores.fernGreen,
-                      ),
-                      label: Text(
-                        'Marcar resolvido',
-                        style: TextStyle(
-                          color: cores.chalkWhite,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (aoEditar != null)
+                        IconButton(
+                          key: Key('btn_editar_meu_alerta_${alerta.uid}'),
+                          icon: Icon(
+                            Icons.edit_outlined,
+                            size: 17,
+                            color: cores.ashGrey,
+                          ),
+                          tooltip: context.tr(ChaveTexto.alertaEditarBtn),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: aoEditar,
                         ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: cores.graniteEdge),
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                      if (aoExcluir != null)
+                        IconButton(
+                          key: Key('btn_excluir_meu_alerta_${alerta.uid}'),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 17,
+                            color: _corDestaqueCriado,
+                          ),
+                          tooltip: context.tr(ChaveTexto.alertaExcluirBtn),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: aoExcluir,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
