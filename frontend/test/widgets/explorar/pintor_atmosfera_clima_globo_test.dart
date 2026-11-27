@@ -86,3 +86,100 @@ void main() {
               PontoContornoGeo(longitude: -42.5, latitude: -21.5),
               PontoContornoGeo(longitude: -44.0, latitude: -18.5),
             ],
+          ),
+        ),
+        BolhaIncendioAtivaRenderizavel(
+          incendio: BolhaIncendioRegional(
+            id: 'f_fora_frustum',
+            latitude: -11.0,
+            longitude: -49.0,
+            potenciaFrpMw: 15.0,
+            totalFocos: 2,
+            ventoRumoGraus: 180.0,
+            ventoVelocidadeKmh: 10.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -49.2, latitude: -11.2),
+              PontoContornoGeo(longitude: -48.8, latitude: -11.2),
+              PontoContornoGeo(longitude: -49.0, latitude: -10.8),
+            ],
+          ),
+        ),
+        BolhaIncendioAtivaRenderizavel(
+          incendio: BolhaIncendioRegional(
+            id: 'f_antimeridiano',
+            latitude: -20.0,
+            longitude: 179.9,
+            potenciaFrpMw: 20.0,
+            totalFocos: 2,
+            ventoRumoGraus: 90.0,
+            ventoVelocidadeKmh: 12.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: 179.6, latitude: -20.2),
+              PontoContornoGeo(longitude: -179.6, latitude: -20.2),
+              PontoContornoGeo(longitude: 179.8, latitude: -19.8),
+            ],
+          ),
+        ),
+      ];
+
+      const tela = ui.Size(280, 280);
+      final gravador = ui.PictureRecorder();
+      final canvas = ui.Canvas(gravador);
+
+      final vazio = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlOrbital,
+        picosReferencia: picosReferencia,
+        bolhasAtivas: const [],
+        incendiosAtivos: const [],
+        sonarBolhaId: null,
+        faseTempestadeSegundos: 0.0,
+      );
+      vazio.paint(canvas, tela);
+
+      final orbital = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlOrbital,
+        picosReferencia: picosReferencia,
+        bolhasAtivas: bolhas,
+        incendiosAtivos: incendios,
+        sonarBolhaId: 'b1',
+        faseTempestadeSegundos: 1.2,
+      );
+      orbital.paint(canvas, tela);
+
+      final local = PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlLocal,
+        picosReferencia: picosReferencia,
+        bolhasAtivas: bolhas,
+        incendiosAtivos: incendios,
+        sonarBolhaId: 'b1',
+        faseTempestadeSegundos: 1.8,
+      );
+      local.paint(canvas, tela);
+      expect(local.shouldRepaint(orbital), isTrue);
+
+      // Exercita também salto de antimeridiano em 2D nos contornos de incêndio
+      final ctrlAntimeridiano2D = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: 179.9,
+        lodInicial: 0.45,
+        modo3DInicial: false,
+      );
+      addTearDown(ctrlAntimeridiano2D.dispose);
+      PintorFenomenosAtmosfericosGlobo(
+        controlador: ctrlAntimeridiano2D,
+        picosReferencia: picosReferencia,
+        bolhasAtivas: const [],
+        incendiosAtivos: incendios,
+        sonarBolhaId: null,
+        faseTempestadeSegundos: 0.5,
+      ).paint(canvas, tela);
+
+      final pic = gravador.endRecording();
+      final img = await pic.toImage(280, 280);
+      final bytes = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+      pic.dispose();
+      img.dispose();
+      expect(bytes!.buffer.asUint8List().any((b) => b > 0), isTrue);
+    });
+  });
+}
