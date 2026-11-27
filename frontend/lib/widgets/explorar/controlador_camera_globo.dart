@@ -343,3 +343,96 @@ class ControladorCameraGlobo extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _aplicarDeslocamentoPonteiro({
+    required double dxPx,
+    required double dyPx,
+    required Size tamanhoTela,
+    required bool gravarVelocidade,
+  }) {
+    _vooAtivo = null;
+    if (!_modo3D) {
+      final cy = calcularCentroVerticalOptico(tamanhoTela);
+      final escala2D = calcularEscala2D(tamanhoTela);
+      final dLon = (-dxPx / escala2D) / _grausParaRad;
+      final dLat = (dyPx / escala2D) / _grausParaRad;
+      _longitudeCentral =
+          GeometriaGeoideGlobo.normalizarLongitude(_longitudeCentral + dLon);
+      _latitudeCentral = _limitarLatitude2D(
+        _latitudeCentral + dLat,
+        tamanhoTela,
+        cy,
+        escala2D,
+      );
+      _velLon = gravarVelocidade ? dLon : 0.0;
+      _velLat = gravarVelocidade ? dLat : 0.0;
+      return;
+    }
+
+    final grausPorPixel = (1.0 / raioAparentePx) / _grausParaRad;
+    final cosLat = math.max(0.25, math.cos(_latitudeCentral * _grausParaRad));
+    final tilt = smoothstep(1.50, 2.75, _lod) * 0.66;
+    final cosTilt = math.max(0.50, math.cos(tilt));
+
+    final dLon = (-dxPx * grausPorPixel) / cosLat;
+    final dLat = (dyPx / cosTilt) * grausPorPixel;
+    _longitudeCentral =
+        GeometriaGeoideGlobo.normalizarLongitude(_longitudeCentral + dLon);
+    _latitudeCentral = (_latitudeCentral + dLat).clamp(-68.0, 68.0);
+    final permiteInercia3D = gravarVelocidade && _lod < 2.35;
+    _velLon = permiteInercia3D ? dLon : 0.0;
+    _velLat = permiteInercia3D ? dLat : 0.0;
+  }
+
+  /// Inicia animação suave de voo parabólico (`Fly-To`) pelo menor arco longitudinal até um novo pico/escala.
+  void iniciarVooParabolico({
+    required double destinoLat,
+    required double destinoLon,
+    required double destinoLod,
+  }) {
+    _velLon = 0.0;
+    _velLat = 0.0;
+    final lonLimpo = GeometriaGeoideGlobo.normalizarLongitude(destinoLon);
+    final dLat = destinoLat - _latitudeCentral;
+    final dLonCurto =
+        ((lonLimpo - _longitudeCentral + 540.0) % 360.0) - 180.0;
+    final distGraus = math.sqrt(dLat * dLat + dLonCurto * dLonCurto);
+    final recuo = distGraus > 2.2 ? (distGraus * 0.09).clamp(0.22, 0.80) : 0.0;
+    final lodLimpo = destinoLod.clamp(lodMinimo, lodMaximo);
+
+    final double latAlvoFinal;
+    if (_modo3D) {
+      latAlvoFinal = destinoLat.clamp(-68.0, 68.0);
+    } else {
+      final cy = calcularCentroVerticalOptico(_ultimoTamanhoTela);
+      final minEsc = _escalaMinima2D(_ultimoTamanhoTela);
+      final escDestino = minEsc *
+          math.pow(_escalaMaxima2D / minEsc, lodLimpo / lodMaximo).toDouble();
+      latAlvoFinal =
+          _limitarLatitude2D(destinoLat, _ultimoTamanhoTela, cy, escDestino);
+    }
+
+    _vooAtivo = _AnimacaoVooParabolico(
+      latInicial: _latitudeCentral,
+      lonInicial: _longitudeCentral,
+      lodInicial: _lod,
+      latFinal: latAlvoFinal,
+      deltaLonCurto: dLonCurto,
+      lodFinal: lodLimpo,
+      recuoArco: recuo,
+    );
+    notifyListeners();
+  }
+
+  /// Avança um passo temporal de simulação cinemática (`dtSegundos`), retornando `true` se ainda houver movimento.
+  bool avancarQuadroFisica(double dtSegundos) {
+    final passoNormalizado = (dtSegundos / 0.0166).clamp(0.25, 3.0);
+
+    final voo = _vooAtivo;
+    if (voo != null) {
+      voo.progresso =
+          (voo.progresso + 0.036 * passoNormalizado).clamp(0.0, 1.0);
+      final t = voo.progresso;
+      final ease = t < 0.5
+          ? 4.0 * t * t * t
+          : 1.0 - math.pow(-2.0 * t + 2.0, 3) / 2.0;
+
