@@ -3,11 +3,13 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/gerenciador_filtros_croqui.dart';
 import '../theme/cores_app.dart';
+import '../utils/extrator_detalhes_tecnicos_via.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../utils/indexador_escaladas.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -191,34 +193,21 @@ class _GrupoPageState extends State<GrupoPage>
     });
   }
 
-  String _obterNomePluralModalidade(String modalidade) {
-    switch (modalidade) {
-      case 'Esportiva':
-        return 'Esportivas';
-      case 'Boulder':
-        return 'Boulders';
-      case 'Móvel':
-        return 'Móveis';
-      case 'Multienfiada':
-        return 'Multienfiadas';
-      case 'Highline':
-        return 'Highlines';
-      default:
-        return modalidade;
-    }
-  }
-
   String _formatarRotuloAba(String aba) {
     if (aba == 'Setores') {
       final total = widget.grupo.setores.where((s) => s.hasConteudo()).length;
+      final rotuloSetores = tr(ChaveTexto.buscaSetores);
       if (_estadoFiltros.temFiltrosAtivos) {
         final filtrados = _obterSetoresFiltrados().length;
-        return 'Setores ($filtrados/$total)';
+        return '$rotuloSetores ($filtrados/$total)';
       }
-      return 'Setores ($total)';
+      return '$rotuloSetores ($total)';
     }
 
-    final nomePlural = _obterNomePluralModalidade(aba);
+    final nomePlural = ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+      aba,
+      plural: true,
+    );
     final contador = _estadoFiltros.obterContadorModalidade(aba, _todasEscaladas);
     return '$nomePlural $contador';
   }
@@ -309,6 +298,13 @@ class _GrupoPageState extends State<GrupoPage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirConteudo(context),
+    );
+  }
+
+  Widget _construirConteudo(BuildContext context) {
     final colors = context.colors;
     final validMapas = widget.grupo.mapas
         .where((m) =>
@@ -354,7 +350,7 @@ class _GrupoPageState extends State<GrupoPage>
                     Icons.share_outlined,
                     color: context.colors.chalkWhite,
                   ),
-                  tooltip: 'Compartilhar grupo',
+                  tooltip: context.tr(ChaveTexto.setorCompartilharGrupoTooltip),
                   onPressed: () {
                     final nomePico = (widget.croqui != null &&
                             widget.croqui!.picos.isNotEmpty)
@@ -603,7 +599,7 @@ class _GrupoPageState extends State<GrupoPage>
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'Nenhum setor disponível.',
+                context.tr(ChaveTexto.setorNenhumSetorDisponivel),
                 style: TextStyle(color: colors.ashGrey, fontSize: 14),
               ),
             ),
@@ -659,7 +655,7 @@ class _GrupoPageState extends State<GrupoPage>
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'Nenhuma escalada encontrada nos filtros atuais.',
+                context.tr(ChaveTexto.setorNenhumaEscaladaFiltrosAtuais),
                 style: TextStyle(color: colors.ashGrey, fontSize: 14),
               ),
             ),

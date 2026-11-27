@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/function_library/funcoes_home.dart';
 import '../view/view_models/home_view_model.dart';
 import '../theme/cores_app.dart';
@@ -25,18 +26,23 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: context.colors.dryMoss,
-          backgroundColor: context.colors.caveShadow,
-          onRefresh: () async {
-            await viewModel.sincronizarManual(context);
-          },
-          child: buildHomeBody(context, viewModel, onSwitchTab),
-        ),
-      ),
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          body: SafeArea(
+            child: RefreshIndicator(
+              color: context.colors.dryMoss,
+              backgroundColor: context.colors.caveShadow,
+              onRefresh: () async {
+                await viewModel.sincronizarManual(context);
+              },
+              child: buildHomeBody(context, viewModel, onSwitchTab),
+            ),
+          ),
+        );
+      },
     );
   }
 }

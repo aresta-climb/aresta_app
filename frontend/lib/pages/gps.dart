@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/function_library/gps_functions.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 
@@ -11,10 +12,13 @@ class GPSPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, 'GPS'),
-      body: buildGPSBody(),
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: buildCommonAppBar(context, context.tr(ChaveTexto.navGps)),
+        body: buildGPSBody(),
+      ),
     );
   }
 }
