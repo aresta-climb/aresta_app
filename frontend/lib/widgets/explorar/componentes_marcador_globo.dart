@@ -266,3 +266,55 @@ class PilulaExpandidaPicoGlobo extends StatelessWidget {
         ? PaletaUmidadePico.corTexto(pico.umidade.nivel)
         : const Color(0xFFF4F3ED);
 
+    return Positioned(
+      left: (ponto.x - 118).clamp(6.0, tamanhoTela.width - 242.0),
+      top: mostrarAltitudeMar ? ponto.y - 46 : ponto.y - 34,
+      width: 236,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: GestureDetector(
+          onTap: aoTocar,
+          child: AnimatedContainer(
+            key: Key('pilula_lupa_${pico.id}'),
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: 10.5,
+              vertical: mostrarAltitudeMar ? 6.0 : 5.5,
+            ),
+            decoration: BoxDecoration(
+              color: estaUmido
+                  ? PaletaUmidadePico.corFundo(pico.umidade.nivel)
+                  : const Color(0xF20F141B),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: estaUmido
+                    ? PaletaUmidadePico.corBorda(pico.umidade.nivel)
+                    : PaletaUmidadePico.corPontoArestaPadrao,
+                width: 1.5,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x88000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconeMarcaAresta(
+                  largura: 14.0,
+                  cor: estaUmido
+                      ? corUmidade
+                      : PaletaUmidadePico.corPontoArestaPadrao,
+                ),
+                if (estaUmido) ...[
+                  const SizedBox(width: 5),
+                  Icon(
+                    PaletaUmidadePico.icone(pico.umidade.nivel),
+                    size: 12.5,
+                    color: corUmidade,
+                  ),
+                ],
