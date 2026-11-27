@@ -574,7 +574,64 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, isEmpty);
 
-    // 6. Se dispose ocorrer durante janela pendente, efetiva a resolução imediatamente
+    // 6. Edição e exclusão de comentários e alertas próprios + guardas de UID/autenticação/erro
+    await repoFake.registrarAvaliacaoAscensao(
+      escaladaUid: uidVia,
+      deltaGrau: 0,
+      comentarioPublico: 'Beta original',
+    );
+    expect(vm.notasComunidadeApresentacao.single.pertenceAoUsuarioAtual, isTrue);
+    final comUid = vm.notasComunidadeApresentacao.single.uid;
+
+    repoFake.autenticadoSimulado = false;
+    expect(vm.notasComunidadeApresentacao.single.pertenceAoUsuarioAtual, isFalse);
+    expect(await vm.editarComentario(comUid, 'Bloqueado'), isFalse);
+    expect(await vm.excluirComentario(comUid), isFalse);
+    expect(
+      await vm.editarAlerta('qualquer', CategoriaAlertaSeguranca.fauna),
+      isFalse,
+    );
+    expect(await vm.excluirAlerta('qualquer'), isFalse);
+    repoFake.autenticadoSimulado = true;
+
+    expect(await vm.editarComentario(comUid, 'Beta atualizado'), isTrue);
+    expect(vm.notasComunidadeApresentacao.single.texto, 'Beta atualizado');
+
+    repoFake.erroSimulado = StateError('Erro em comentário');
+    expect(await vm.editarComentario(comUid, 'Falha'), isFalse);
+    expect(await vm.excluirComentario(comUid), isFalse);
+    repoFake.erroSimulado = null;
+    expect(await vm.excluirComentario(comUid), isTrue);
+    expect(vm.notasComunidadeApresentacao, isEmpty);
+
+    await vm.reportarAlerta(CategoriaAlertaSeguranca.fauna, detalhe: 'Abelha');
+    final meuAlertaUid = vm.alertasAtivos.single.uid;
+    expect(
+      await vm.editarAlerta(
+        meuAlertaUid,
+        CategoriaAlertaSeguranca.protecaoPrecaria,
+        detalhe: 'Grampo 1 solto',
+      ),
+      isTrue,
+    );
+    expect(
+      vm.alertasAtivos.single.categoria,
+      CategoriaAlertaSeguranca.protecaoPrecaria,
+    );
+
+    repoFake.erroSimulado = StateError('Erro em alerta');
+    expect(
+      await vm.editarAlerta(meuAlertaUid, CategoriaAlertaSeguranca.fauna),
+      isFalse,
+    );
+    expect(await vm.excluirAlerta(meuAlertaUid), isFalse);
+    repoFake.erroSimulado = null;
+
+    vm.iniciarResolucaoAlertaComDesfazer(meuAlertaUid);
+    expect(await vm.excluirAlerta(meuAlertaUid), isTrue);
+    expect(repoFake.obterDadosEscalada(uidVia).alertasAtivos, isEmpty);
+
+    // 7. Se dispose ocorrer durante janela pendente, efetiva a resolução imediatamente
     await vm.reportarAlerta(CategoriaAlertaSeguranca.exposicaoE4Mais);
     final segundoAlertaId = vm.alertasAtivos.single.uid;
     vm.iniciarResolucaoAlertaComDesfazer(segundoAlertaId);
