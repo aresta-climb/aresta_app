@@ -165,6 +165,8 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
       minLon: janela.minLon,
       maxLon: janela.maxLon,
       lod: lod,
+      latitudeCentral: controlador.latitudeCentral,
+      longitudeCentral: controlador.longitudeCentral,
     );
 
     final nivel = ExtratorCurvasNivelMundo.resolverNivelDetalhe(lod);

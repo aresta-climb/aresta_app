@@ -45,15 +45,15 @@ abstract final class PintorTerrenoVetoresGlobo {
       fatorMargem: 1.06,
     );
 
-    // Passo fixo no mundo por faixa discreta de LOD para eliminar cintilação ao arrastar o mapa
+    // Passo fixo no mundo por faixa discreta de LOD cobrindo 100% da janela visível sem cortes
     final passoBase = lod >= 3.55
-        ? 0.0040
-        : (lod >= 2.72 ? 0.0125 : (lod >= 1.95 ? 0.0400 : 0.1200));
+        ? 0.0032
+        : (lod >= 2.72 ? 0.0105 : (lod >= 1.95 ? 0.0350 : 0.1100));
     final spanLatBruto = (janela.maxLat - janela.minLat).clamp(0.02, 18.0);
     final spanLonBruto = (janela.maxLon - janela.minLon).clamp(0.02, 22.0);
     final multPasso = math.max(
       1,
-      (math.max(spanLatBruto, spanLonBruto) / (passoBase * 40.0)).ceil(),
+      (math.max(spanLatBruto, spanLonBruto) / (passoBase * 52.0)).ceil(),
     );
     final passoMundo = passoBase * multPasso;
 
@@ -61,8 +61,8 @@ abstract final class PintorTerrenoVetoresGlobo {
     final jMax = (janela.maxLat / passoMundo).ceil();
     final iMin = (janela.minLon / passoMundo).floor();
     final iMax = (janela.maxLon / passoMundo).ceil();
-    final rows = (jMax - jMin).clamp(2, 44);
-    final cols = (iMax - iMin).clamp(2, 44);
+    final rows = (jMax - jMin).clamp(2, 56);
+    final cols = (iMax - iMin).clamp(2, 56);
     final latMax = (jMin + rows) * passoMundo;
     final latMin = jMin * passoMundo;
     final lonMin = iMin * passoMundo;
@@ -286,15 +286,13 @@ abstract final class PintorTerrenoVetoresGlobo {
       return (r: rNat, g: gNat, b: bNat);
     }
 
-    // Versão monocromática basalto/prata esculpida com realce mineral em paredes íngremes
-    final cotaNorm = (el / 1600.0).clamp(0.0, 1.0);
-    final degrauNorm = ((el / 200.0).floorToDouble() / 8.0).clamp(0.0, 1.0);
-    final cinzaBase =
-        21.0 + 30.0 * cotaNorm + 16.0 * degrauNorm + 40.0 * exposicaoRocha;
+    // Versão monocromática basalto/prata contínua (sem bandas artificiais em degrau!)
+    final cotaNorm = ((el - 450.0) / 1250.0).clamp(0.0, 1.0);
+    final cinzaBase = 20.0 + 34.0 * cotaNorm + 36.0 * exposicaoRocha;
     final m = fatorMonocromatico.clamp(0.0, 1.0);
-    final rMono = cinzaBase + 8.0 * exposicaoRocha;
-    final gMono = cinzaBase + 2.5 + 3.0 * exposicaoRocha;
-    final bMono = cinzaBase + 6.5 - 2.0 * exposicaoRocha;
+    final rMono = cinzaBase + 6.0 * exposicaoRocha;
+    final gMono = cinzaBase + 2.0 + 2.5 * exposicaoRocha;
+    final bMono = cinzaBase + 5.5 - 1.5 * exposicaoRocha;
     return (
       r: rNat + (rMono - rNat) * m,
       g: gNat + (gMono - gNat) * m,
