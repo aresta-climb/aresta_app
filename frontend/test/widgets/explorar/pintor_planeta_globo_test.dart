@@ -90,3 +90,87 @@ void main() {
         ctrl2D.dispose();
       });
 
+      const tela = ui.Size(400, 800);
+      final gravador = ui.PictureRecorder();
+      final canvas = ui.Canvas(gravador);
+
+      final pintorComTextura3D = PintorPlanetaGlobo(
+        controlador: ctrl3D,
+        malha: malhaTeste,
+        texturaNasa: textura,
+        picosReferencia: const [],
+        sonarPico: null,
+        progressoSonar: 1.0,
+        progressoLuzViaria: 0.0,
+      );
+      pintorComTextura3D.paint(canvas, tela);
+
+      final pintorComTextura2D = PintorPlanetaGlobo(
+        controlador: ctrl2D,
+        malha: malhaTeste,
+        texturaNasa: textura,
+        picosReferencia: const [],
+        sonarPico: null,
+        progressoSonar: 1.0,
+        progressoLuzViaria: 0.4,
+      );
+      pintorComTextura2D.paint(canvas, tela);
+
+      final pintorFallbackMalha = PintorPlanetaGlobo(
+        controlador: ctrl3D,
+        malha: malhaTeste,
+        texturaNasa: null,
+        picosReferencia: const [],
+        sonarPico: null,
+        progressoSonar: 1.0,
+        progressoLuzViaria: 0.0,
+      );
+      pintorFallbackMalha.paint(canvas, tela);
+      expect(pintorComTextura3D.shouldRepaint(pintorFallbackMalha), isTrue);
+
+      gravador.endRecording().dispose();
+    });
+
+    test('compõe terreno contínuo P&B, onda sonar e camada atmosférica superior (orbital e local)', () async {
+      final textura = await _criarTexturaTeste16x8();
+      final ctrlOrbital = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: -44.0,
+        lodInicial: 0.45,
+      );
+      final ctrlLocal = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: -44.0,
+        lodInicial: 2.95,
+      );
+      addTearDown(() {
+        textura.dispose();
+        ctrlOrbital.dispose();
+        ctrlLocal.dispose();
+      });
+
+      const picoSonar = MarcadorPicoGlobo(
+        id: 'p1',
+        nome: 'Pedra Grande',
+        uf: 'MG',
+        latitude: -20.0,
+        longitude: -44.0,
+        altitudeBaseMetros: 900,
+        altitudePicoMetros: 1420,
+      );
+
+      const bolhas = <BolhaAtivaRenderizavel>[
+        BolhaAtivaRenderizavel(
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+          bolha: BolhaChuvaRegional(
+            id: 'b1',
+            latitude: -20.0,
+            longitude: -44.0,
+            intensidadeMmHora: 3.5,
+            ventoRumoGraus: 120.0,
+            ventoVelocidadeKmh: 18.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -44.1, latitude: -20.1),
+              PontoContornoGeo(longitude: -43.9, latitude: -20.1),
+              PontoContornoGeo(longitude: -44.0, latitude: -19.9),
+            ],
