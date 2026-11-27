@@ -308,94 +308,21 @@ void main() {
     expect(find.text('PEDRA GRANDE'), findsOneWidget);
     expect(find.text('PÃO DE AÇÚCAR'), findsNothing);
 
-  testWidgets('BrowsePage filters list based on search query', (
-    WidgetTester tester,
-  ) async {
-    mockRepo.activeDataset.value = TopoDataset(
-      availablePicos: [
-        {'id': 'pico_1', 'nome': 'Pico Alpha', 'url': 'fake1.url'},
-        {'id': 'pico_2', 'nome': 'Pico Beta', 'url': 'fake2.url'},
-      ],
-      downloadedPicos: [],
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
-        ),
-      ),
-    );
+    // Toque no card baixado abre o croqui
+    await tester.tap(find.text('PEDRA GRANDE'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     await tester.pumpAndSettle();
-
-    expect(find.text('PICO ALPHA'), findsOneWidget);
-    expect(find.text('PICO BETA'), findsOneWidget);
-
-    // Enter search query
-    await tester.enterText(find.byType(TextField), 'Alpha');
-    await tester.pump(const Duration(milliseconds: 600)); // wait for debounce
-    await tester.pumpAndSettle();
-
-    expect(find.text('PICO ALPHA'), findsOneWidget);
-    expect(find.text('PICO BETA'), findsNothing);
   });
 
   testWidgets(
-    'BrowsePage shows CircularProgressIndicator when tapping a downloaded crag',
+    'BrowsePage ordena por Mais proximos, Alfabetico (A-Z) e Mais escaladas pelo modal unificado e exibe badges de distancia',
     (WidgetTester tester) async {
-      mockRepo.activeDataset.value = TopoDataset(
-        availablePicos: [
-          {
-            'id': 'pico_1',
-            'nome': 'Pico Baixado',
-            'url': 'fake.url',
-            'isDownloaded': true,
-          },
-        ],
-        downloadedPicos: [
-          {'id': 'pico_1', 'nome': 'Pico Baixado'},
-        ],
-      );
+      await tester.binding.setSurfaceSize(const Size(800, 860));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.runAsync(() => MalhaGeograficaGlobo.carregarDoAssetBundle());
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Tapping a downloaded crag directly opens it (triggers AppNav.toPico which shows indicator in tests)
-      await tester.tap(find.text('PICO BAIXADO'));
-
-      // Process microtasks from async first-visit check and pump dialog frame
-      await tester.pump();
-      await tester.pump();
-
-      // The CircularProgressIndicator should be visible
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      // Settle to let the dialog close
-      await tester.pumpAndSettle();
-    },
-  );
-
-  testWidgets(
-    'BrowsePage ordena por Mais próximos (padrão), Alfabético (A-Z) e Mais escaladas exibindo badges de distância',
-    (WidgetTester tester) async {
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [
           {
@@ -424,11 +351,8 @@ void main() {
       );
       mockRepo.indiceData.value = Indice();
 
-      final vm = BrowseViewModel(
-        datasetRepo: mockRepo,
-        syncService: mockSync,
-        telemetria: mockTelemetry,
-      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
+      final vm = (await criarVmAssincrono(tester))
+        ..atualizarLocalizacaoUsuario(-20.0, -44.0);
 
       await tester.pumpWidget(
         MaterialApp(
