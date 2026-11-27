@@ -88,3 +88,92 @@ void main() {
     ),
   ];
 
+  final bolhasTeste = <BolhaAtivaRenderizavel>[
+    const BolhaAtivaRenderizavel(
+      bolha: BolhaChuvaRegional(
+        id: 'bolha_mg',
+        latitude: -20.05,
+        longitude: -43.95,
+        intensidadeMmHora: 6.2,
+        ventoRumoGraus: 48.0,
+        ventoVelocidadeKmh: 26.0,
+        contornoExterno: [
+          PontoContornoGeo(longitude: -45.2, latitude: -21.2),
+          PontoContornoGeo(longitude: -42.8, latitude: -20.9),
+          PontoContornoGeo(longitude: -43.1, latitude: -18.8),
+          PontoContornoGeo(longitude: -45.0, latitude: -19.0),
+        ],
+        nucleosIntensos: [
+          [
+            PontoContornoGeo(longitude: -44.6, latitude: -20.5),
+            PontoContornoGeo(longitude: -43.4, latitude: -20.4),
+            PontoContornoGeo(longitude: -43.8, latitude: -19.5),
+          ],
+        ],
+      ),
+      nivelIntensidade: NivelIntensidadeChuva.forte,
+    ),
+  ];
+
+  group('SuperficieGloboExplorar', () {
+    testWidgets(
+      'carrega malha assincronamente quando cache frio e renderiza clusters separados por UF no LOD 0',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 760));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -20.5,
+          longitudeInicial: -43.8,
+          lodInicial: 0.25,
+        );
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: bolhasTeste,
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        // Desbloqueia Isolate.run e os dois passos nativos do codec da textura NASA
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 150)),
+        );
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 150)),
+        );
+        await tester.pump();
+
+        expect(MalhaGeograficaGlobo.cacheMemoria, isNotNull);
+        expect(TexturaGloboNasa.cacheMemoria, isNotNull);
+        expect(find.text('MG 3'), findsOneWidget);
+        expect(find.text('RJ 1'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'transiciona pelos 4 LODs ao tocar clusters e pinos, suporta pinch/duplo-toque, alterna 3D/2D e reage a troca de controlador',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(420, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -20.5,
+          longitudeInicial: -43.8,
+          lodInicial: 0.25,
+        );
+        addTearDown(ctrl.dispose);
+
+        final alturaGaveta = ValueNotifier<double>(180);
+        addTearDown(alturaGaveta.dispose);
+        String? selecionadoNoMapa;
+
