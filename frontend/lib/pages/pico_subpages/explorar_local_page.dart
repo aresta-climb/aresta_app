@@ -235,57 +235,12 @@ class ExplorarLocalPage extends StatelessWidget {
                   ...categories.outros.map(
                     (b) => PicoMenuCard(
                       title: b.texto,
-                      content: b.destino.secaoTextual.conteudo,
-                      icon: Icons.menu_book,
-                    )).toList();
-                    final treeNav = TreeNavigationWrapper.currentTreeController;
-                    if (treeNav != null) {
-                      treeNav.navigateTo(
-                        TextCarouselNode(
-                          cragId: cragId,
-                          texts: carouselData,
-                          parent: treeNav.currentNode,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            if (categories.sobre.isEmpty && pico.descricao.isNotEmpty)
-              PicoMenuCard(
-                title: 'Sobre o local',
-                subtitle:
-                    'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
-                icon: Icons.menu_book,
-                iconColor: context.colors.dryMoss,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.fishBone,
-                onTap: () =>
-                    _pushTextNode(context, 'Sobre o local', pico.descricao, icon: Icons.menu_book),
-              ),
-
-            if (categories.comoChegar.isNotEmpty)
-              PicoMenuCard(
-                title: 'Como chegar',
-                subtitle: categories.comoChegar.length == 1
-                    ? categories.comoChegar.first.texto
-                    : 'Instruções de acesso e navegação até a base da montanha.',
-                icon: Icons.near_me,
-                iconColor: context.colors.rustIron,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.fishBone,
-                onTap: () {
-                  if (categories.comoChegar.length == 1) {
-                    _pushTextNode(
-                      context,
-                      'Como chegar',
-                      categories.comoChegar.first.destino.secaoTextual.conteudo,
-                      icon: Icons.near_me,
-                    );
-                  } else {
-                    final carouselData = categories.comoChegar.map((b) => TextCarouselData(
+                      subtitle: context.tr(ChaveTexto.picoSubExtrasSubtitulo),
+                      icon: Icons.info_outline,
+                      iconColor: context.colors.ashGrey,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.fishBone,
                       title: b.texto,
                       content: b.destino.secaoTextual.conteudo,
                       icon: Icons.near_me,
