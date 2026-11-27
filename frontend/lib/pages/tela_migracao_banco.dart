@@ -192,14 +192,66 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
                           height: 1.4,
                         ),
                       ),
-                    ),
-                  ],
-                ],
+                      const SizedBox(height: 24),
+                      if (isLoading) ...[
+                        const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: AppColors.brandColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _obterTextoEtapa(context),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else if (isError) ...[
+                        Text(
+                          _obterTextoEtapa(context),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _startMigration,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.brandColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            context.tr(
+                              ChaveTexto.sistemaMigracaoTentarNovamente,
+                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
