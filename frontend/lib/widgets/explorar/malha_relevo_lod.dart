@@ -180,3 +180,92 @@ class MalhaGeograficaGlobo {
         .toList(growable: false);
   }
 
+  /// Determina em espaço geográfico exato `(longitude, latitude)` se o ponto pertence à terra firme
+  /// (Brasil ou massas continentais), evitando qualquer recorte incorreto de horizonte 3D sobre estados internos.
+  bool contemPontoTerrestre({
+    required double latitude,
+    required double longitude,
+  }) {
+    if (_pontoEmAnelLonLat(longitude, latitude, brasil)) return true;
+    for (final cont in continentes) {
+      if (_pontoEmAnelLonLat(longitude, latitude, cont.verticesLonLat)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _pontoEmAnelLonLat(
+    double lon,
+    double lat,
+    List<Offset> anel,
+  ) {
+    var dentro = false;
+    for (var i = 0, j = anel.length - 1; i < anel.length; j = i++) {
+      final xi = anel[i].dx;
+      final yi = anel[i].dy;
+      final xj = anel[j].dx;
+      final yj = anel[j].dy;
+      final cruza = ((yi > lat) != (yj > lat)) &&
+          (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+      if (cruza) dentro = !dentro;
+    }
+    return dentro;
+  }
+}
+
+/// Gerador determinístico de elevação local por objeto (`LOD 2` e `LOD 3`) interpolando grades DEM reais
+/// (`NASA SRTM 30m`) estritamente na vizinhança de cada pico catalogado.
+abstract final class GeradorRelevoLod {
+  static const double _grausParaRad = math.pi / 180.0;
+
+  /// Calcula a elevação em metros de `(latitude, longitude)` apenas dentro do raio dos [picosReferencia],
+  /// retornando `0.0` em oceanos ou regiões distantes sem picos catalogados.
+  static double amostrarElevacaoMetros({
+    required double latitude,
+    required double longitude,
+    required List<PicoRelevoReferencia> picosReferencia,
+  }) {
+    var somaCota = 0.0;
+    var somaPeso = 0.0;
+
+    for (final p in picosReferencia) {
+      final amostra = amostrarElevacaoObjetoComPeso(
+        latitude: latitude,
+        longitude: longitude,
+        pico: p,
+      );
+      if (amostra.peso <= 0.0) continue;
+      somaCota += amostra.elevacaoMetros * amostra.peso;
+      somaPeso += amostra.peso;
+    }
+
+    if (somaPeso <= 0.0) return 0.0;
+    return somaCota / somaPeso;
+  }
+
+  /// Amostra o campo topográfico real contínuo em `(latitude, longitude)`, priorizando
+  /// as malhas locais `NASA SRTM 30m` dos picos e os tiles `AWS Terrarium` / grade regional SRTM
+  /// providos por [amostradorElevacaoReal], sem gerar ondas senoidais procedurais irreais.
+  static double amostrarTerrenoRegionalContinuo({
+    required double latitude,
+    required double longitude,
+    required List<PicoRelevoReferencia> picosReferencia,
+    bool? ehTerraConfirmada,
+    double? Function(double latitude, double longitude)? amostradorElevacaoReal,
+  }) {
+    if (ehTerraConfirmada == false) return 0.0;
+
+    var somaDem = 0.0;
+    var pesoDem = 0.0;
+    var somaPlanalto = 0.0;
+    var pesoPlanalto = 0.0;
+    var menorDist2 = double.infinity;
+
+    final cosLat = math.max(0.35, math.cos(latitude * _grausParaRad));
+    for (final p in picosReferencia) {
+      final dx = (longitude - p.longitude) * cosLat;
+      final dy = latitude - p.latitude;
+      final d2 = dx * dx + dy * dy;
+      if (d2 < menorDist2) menorDist2 = d2;
+
