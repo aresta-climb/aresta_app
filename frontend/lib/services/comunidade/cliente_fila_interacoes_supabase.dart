@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/item_fila_interacao.dart';
 import '../firebase/app_logger.dart';
 import '../firebase/remote_config.dart';
@@ -56,15 +57,41 @@ abstract interface class ClienteFilaInteracoes {
     ItemFilaInteracao item, {
     String? accessToken,
   });
+
+  /// Atualiza o texto de um `COMENTARIO` pendente pertencente a [autorIdPublico] sob RLS.
+  Future<void> atualizarComentario({
+    required String comentarioId,
+    required String autorIdPublico,
+    required String novoTexto,
+    String? accessToken,
+  });
+
+  /// Exclui permanentemente um `COMENTARIO` pendente pertencente a [autorIdPublico] sob RLS.
+  Future<void> excluirComentario({
+    required String comentarioId,
+    required String autorIdPublico,
+    String? accessToken,
+  });
+
+  /// Atualiza a categoria e/ou o detalhe de um `ALERTA_SEGURANCA` pendente pertencente a [autorIdPublico].
+  Future<void> atualizarAlerta({
+    required String alertaAlvoUid,
+    required String autorIdPublico,
+    required CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+    String? accessToken,
+  });
+
+  /// Exclui permanentemente um `ALERTA_SEGURANCA` pendente pertencente a [autorIdPublico] sob RLS.
+  Future<void> excluirAlerta({
+    required String alertaAlvoUid,
+    required String autorIdPublico,
+    String? accessToken,
+  });
 }
 
 /// Implementação de produção de [ClienteFilaInteracoes] apoiada em [ClienteHttpAresta].
 class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
-  static const String _colunasSelecao =
-      'id,autor_id_publico,autor_nome_publico,escalada_uid,tipo,'
-      'categoria_alerta,alerta_alvo_uid,alerta_ativo,grau_sugerido,'
-      'delta_grau,tipo_ascensao,texto_comentario,criado_em';
-
   final ClienteHttpAresta _clienteHttp;
   final String Function() _resolvedorBaseUrl;
   final String Function() _resolvedorAnonKey;
@@ -115,7 +142,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
       '?escalada_uid=eq.$uidLimpo'
       '&status=eq.PENDENTE'
       '&order=criado_em.asc'
-      '&select=$_colunasSelecao',
+      '&select=*',
     );
     return _executarGetLista(uri);
   }
@@ -138,7 +165,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
       '?escalada_uid=in.(${uidsUnicos.join(',')})'
       '&status=eq.PENDENTE'
       '&order=criado_em.asc'
-      '&select=$_colunasSelecao',
+      '&select=*',
     );
     return _executarGetLista(uri);
   }
@@ -157,7 +184,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
       '?autor_id_publico=eq.$autorLimpo'
       '&status=eq.PENDENTE'
       '&order=criado_em.asc'
-      '&select=$_colunasSelecao',
+      '&select=*',
     );
     final proprios = await _executarGetLista(uriAutor);
     final viasDeAlerta = proprios
@@ -201,6 +228,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
     String? accessToken,
   }) async {
     final uri = Uri.parse('$_baseUrl/rest/v1/fila_interacoes');
+    final incluirUuidProprio = ItemFilaInteracao.ehUuidValido(item.id);
 
     final resposta = await _clienteHttp.post(
       uri,
@@ -208,7 +236,7 @@ class ClienteFilaInteracoesSupabase implements ClienteFilaInteracoes {
         accessToken: accessToken,
         comCorpoJson: true,
       ),
-      body: jsonEncode(item.toJson(incluirId: false)),
+      body: jsonEncode(item.toJson(incluirId: incluirUuidProprio)),
     );
 
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
