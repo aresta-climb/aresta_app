@@ -56,3 +56,63 @@ void main() {
         PathProviderPlatform.instance = _PathProviderDocumentosFake(subDir);
         final armazenamento = ArmazenamentoClimaLocal();
 
+        expect(await armazenamento.lerSnapshot(), isNull);
+
+        await armazenamento.salvarSnapshot(
+          criarSnapshot(DateTime.utc(2026, 11, 23), 1100),
+        );
+        await armazenamento.salvarSnapshot(
+          criarSnapshot(DateTime.utc(2026, 11, 24), 1200),
+        );
+        await armazenamento.salvarSnapshot(
+          criarSnapshot(DateTime.utc(2026, 11, 25), 1300),
+        );
+
+        final lidoAtual = await armazenamento.lerSnapshot();
+        final lidoSeguranca = await armazenamento.lerCopiaSeguranca();
+
+        expect(
+          lidoAtual!.altimetriaPorPico['pico_teste']!.altitudePicoMetros,
+          equals(1300),
+        );
+        expect(
+          lidoSeguranca!.altimetriaPorPico['pico_teste']!.altitudePicoMetros,
+          equals(1200),
+        );
+        expect(Directory(subDir).listSync().whereType<File>().length, equals(2));
+      },
+    );
+
+    test(
+      'deve restaurar da copia_seguranca se atual for truncado ou nao-objeto e retornar nulo se ambos invalidos',
+      () async {
+        final armazenamento = ArmazenamentoClimaLocal(
+          provedorDiretorioBase: () async => dirTemp.path,
+        );
+
+        await armazenamento.salvarSnapshot(
+          criarSnapshot(DateTime.utc(2026, 11, 24), 1430),
+        );
+        await armazenamento.salvarSnapshot(
+          criarSnapshot(DateTime.utc(2026, 11, 25), 1435),
+        );
+
+        File('${dirTemp.path}/clima_altimetria_atual.json')
+            .writeAsStringSync('[]');
+
+        final recuperado = await armazenamento.lerSnapshot();
+        expect(
+          recuperado!.altimetriaPorPico['pico_teste']!.altitudePicoMetros,
+          equals(1430),
+        );
+
+        // Corrompe ambos
+        File('${dirTemp.path}/clima_altimetria_atual.json')
+            .writeAsStringSync('{invalido');
+        File('${dirTemp.path}/clima_altimetria_seguranca.json')
+            .writeAsStringSync('{invalido');
+        expect(await armazenamento.lerSnapshot(), isNull);
+      },
+    );
+  });
+}
