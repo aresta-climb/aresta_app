@@ -591,5 +591,99 @@ void main() {
         expect(find.text('Trocar serving'), findsOneWidget);
       },
     );
+
+    test(
+      'obterLocalizacaoTempoReal hidrata cache previo e trata GPS desligado, permissoes negadas, fallback lastKnown e sucesso',
+      () async {
+        final geo = MockGeolocatorPlatform();
+        GeolocatorPlatform.instance = geo;
+
+        SharedPreferences.setMockInitialValues({
+          'last_known_latitude': -19.92,
+          'last_known_longitude': -43.94,
+        });
+
+        final vmGps = BrowseViewModel(
+          datasetRepo: repositorio,
+          syncService: servicoSync,
+          telemetria: mockTelemetria,
+          servicoClima: servicoClima,
+        );
+        addTearDown(vmGps.dispose);
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(vmGps.latitudeUsuario, closeTo(-19.92, 0.001));
+        expect(vmGps.longitudeUsuario, closeTo(-43.94, 0.001));
+
+        // 1. GPS desligado com cache conhecido -> retorna cache com aviso informativo
+        geo.isLocationServiceEnabledResult = false;
+        final resCache = await vmGps.obterLocalizacaoTempoReal();
+        expect(resCache.coordenada?.latitude, closeTo(-19.92, 0.001));
+        expect(resCache.aviso, isNotNull);
+
+        // 2. GPS desligado sem cache -> retorna coordenada nula e aviso
+        SharedPreferences.setMockInitialValues({});
+        final vmSemCache = BrowseViewModel(
+          datasetRepo: repositorio,
+          syncService: servicoSync,
+          telemetria: mockTelemetria,
+          servicoClima: servicoClima,
+        );
+        addTearDown(vmSemCache.dispose);
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        final resDesligado = await vmSemCache.obterLocalizacaoTempoReal();
+        expect(resDesligado.coordenada, isNull);
+        expect(resDesligado.aviso, contains('GPS'));
+
+        // 3. Permissao negada permanentemente -> abre configuracoes e retorna aviso
+        geo.isLocationServiceEnabledResult = true;
+        geo.checkPermissionResult = LocationPermission.denied;
+        geo.requestPermissionResult = LocationPermission.deniedForever;
+        final resNegada = await vmSemCache.obterLocalizacaoTempoReal();
+        expect(resNegada.coordenada, isNull);
+        expect(geo.openAppSettingsCalled, isTrue);
+
+        // 4. Excecao em getCurrentPosition -> cai para getLastKnownPosition; se ambos nulos sem cache -> aviso
+        geo.checkPermissionResult = LocationPermission.whileInUse;
+        geo.currentPositionException = Exception('Timeout GPS');
+        geo.lastKnownPositionResult = null;
+        final resSemSinal = await vmSemCache.obterLocalizacaoTempoReal();
+        expect(resSemSinal.coordenada, isNull);
+        expect(resSemSinal.aviso, isNotNull);
+
+        // 5. Fallback via getLastKnownPosition valido e depois getCurrentPosition direto
+        geo.lastKnownPositionResult = Position(
+          latitude: -19.55,
+          longitude: -43.75,
+          timestamp: DateTime.utc(2026, 11, 25),
+          accuracy: 8.0,
+          altitude: 800.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+        final resLastKnown = await vmSemCache.obterLocalizacaoTempoReal();
+        expect(resLastKnown.coordenada?.latitude, closeTo(-19.55, 0.001));
+        expect(resLastKnown.aviso, isNull);
+
+        geo.currentPositionException = null;
+        geo.currentPositionResult = Position(
+          latitude: -20.12,
+          longitude: -44.22,
+          timestamp: DateTime.utc(2026, 11, 25),
+          accuracy: 4.0,
+          altitude: 950.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+        final resAtual = await vmSemCache.obterLocalizacaoTempoReal();
+        expect(resAtual.coordenada?.latitude, closeTo(-20.12, 0.001));
+        expect(vmSemCache.latitudeUsuario, closeTo(-20.12, 0.001));
+
+        // Instancia padrao compartilhada de ServicoClimaAltimetria
   });
 }
