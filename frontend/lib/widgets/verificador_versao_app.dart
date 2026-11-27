@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -7,6 +7,7 @@ import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import '../idioma/tradutor_app.dart';
 
 /// Widget de controle mestre e não-bloqueante de versão do aplicativo.
 ///
@@ -209,8 +210,10 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
                     Expanded(
                       child: Text(
                         showSoftBanner
-                            ? 'Atualize o Aresta para voltar a baixar e sincronizar croquis.'
-                            : 'Atualização Recomendada: uma nova versão está disponível.',
+                            ? context.tr(ChaveTexto.sistemaAtualizeParaBaixar)
+                            : context.tr(
+                                ChaveTexto.sistemaAtualizacaoRecomendada,
+                              ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
@@ -223,7 +226,7 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
                         foregroundColor: Colors.white,
                         visualDensity: VisualDensity.compact,
                       ),
-                      child: const Text('ATUALIZAR'),
+                      child: Text(context.tr(ChaveTexto.sistemaAtualizar)),
                     ),
                   ],
                 ),
@@ -269,9 +272,9 @@ class AppVersionHardBlockScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'ATUALIZAÇÃO\nNECESSÁRIA',
-                  style: TextStyle(
+                Text(
+                  context.tr(ChaveTexto.sistemaAtualizacaoNecessaria),
+                  style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.5,
@@ -282,7 +285,7 @@ class AppVersionHardBlockScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Sua versão do Aresta é muito antiga e não é mais suportada. Para continuar usando o app e explorando croquis, por favor, atualize-o na loja.',
+                  context.tr(ChaveTexto.sistemaVersaoAntigaCorpo),
                   style: TextStyle(
                     fontSize: 16,
                     height: 1.5,
@@ -304,9 +307,9 @@ class AppVersionHardBlockScreen extends StatelessWidget {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'ATUALIZAR AGORA',
-                      style: TextStyle(
+                    child: Text(
+                      context.tr(ChaveTexto.sistemaAtualizarAgora),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,

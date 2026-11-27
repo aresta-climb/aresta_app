@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../view/function_library/funcoes_hub_perfil_caderneta.dart';
 import '../../view/view_models/edicao_perfil_view_model.dart';
@@ -90,7 +91,10 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
     final cores = context.colors;
 
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: Listenable.merge([
+        _viewModel,
+        ControladorIdiomaApp.instancia.notificadorIdioma,
+      ]),
       builder: (context, _) {
         final provedorImagem = construirProvedorAvatarPerfil(
           _viewModel.fotoUrlExibida,
@@ -103,7 +107,7 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
             side: BorderSide(color: cores.graniteEdge),
           ),
           title: Text(
-            'Editar Perfil',
+            context.tr(ChaveTexto.perfilDialogEditarTitulo),
             style: TextStyle(
               color: cores.chalkWhite,
               fontWeight: FontWeight.bold,
@@ -129,9 +133,9 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
                             )
                           : null,
                     ),
-                    label: const Text(
-                      'Alterar foto de perfil',
-                      style: TextStyle(color: Color(0xFFE05A47)),
+                    label: Text(
+                      context.tr(ChaveTexto.perfilAlterarFoto),
+                      style: const TextStyle(color: Color(0xFFE05A47)),
                     ),
                   ),
                 ),
@@ -143,7 +147,7 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
                 autofocus: true,
                 style: TextStyle(color: cores.chalkWhite),
                 decoration: InputDecoration(
-                  labelText: 'Nome do atleta',
+                  labelText: context.tr(ChaveTexto.perfilNomeAtletaLabel),
                   labelStyle: TextStyle(color: cores.ashGrey),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: cores.graniteEdge),
@@ -158,9 +162,9 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(color: Color(0xFF94A3B8)),
+              child: Text(
+                context.tr(ChaveTexto.comumCancelar),
+                style: const TextStyle(color: Color(0xFF94A3B8)),
               ),
             ),
             ElevatedButton(
@@ -174,7 +178,7 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
                   context,
                 ).pop(_viewModel.obterNomeNormalizadoParaSalvar());
               },
-              child: const Text('Salvar'),
+              child: Text(context.tr(ChaveTexto.comumSalvar)),
             ),
           ],
         );
@@ -228,7 +232,7 @@ class ModalDadosPrivacidade extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Dados e Privacidade',
+              context.tr(ChaveTexto.perfilPrivacidadeTitulo),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: cores.chalkWhite,
                 fontWeight: FontWeight.bold,
@@ -236,9 +240,7 @@ class ModalDadosPrivacidade extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'O Aresta Climb respeita a soberania e a privacidade dos seus dados. '
-              'Sua caderneta é estritamente privada. Contribuições públicas de graduação '
-              'e alertas utilizam exclusivamente seu ID de Autor público, sem expor dados pessoais.',
+              context.tr(ChaveTexto.perfilPrivacidadeCorpo),
               style: TextStyle(
                 color: cores.ashGrey,
                 fontSize: 13,
@@ -259,9 +261,9 @@ class ModalDadosPrivacidade extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'ID DE AUTOR PÚBLICO (NANOID)',
-                        style: TextStyle(
+                      Text(
+                        context.tr(ChaveTexto.perfilIdPublicoLabel),
+                        style: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -286,7 +288,7 @@ class ModalDadosPrivacidade extends StatelessWidget {
                       Icons.copy_rounded,
                       color: Color(0xFFE05A47),
                     ),
-                    tooltip: 'Copiar ID público',
+                    tooltip: context.tr(ChaveTexto.perfilCopiarIdTooltip),
                     onPressed: () {
                       aoCopiarId();
                       Navigator.of(context).pop();
@@ -326,22 +328,22 @@ class DialogoConfirmarSaida extends StatelessWidget {
         side: BorderSide(color: cores.graniteEdge),
       ),
       title: Text(
-        'Deseja realmente sair?',
+        context.tr(ChaveTexto.perfilSairPergunta),
         style: TextStyle(
           color: cores.chalkWhite,
           fontWeight: FontWeight.bold,
         ),
       ),
       content: Text(
-        'Sua caderneta pessoal e histórico permanecem preservados com segurança no dispositivo.',
+        context.tr(ChaveTexto.perfilSairCorpo),
         style: TextStyle(color: cores.ashGrey, fontSize: 13),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
-            'Cancelar',
-            style: TextStyle(color: Color(0xFF94A3B8)),
+          child: Text(
+            context.tr(ChaveTexto.comumCancelar),
+            style: const TextStyle(color: Color(0xFF94A3B8)),
           ),
         ),
         ElevatedButton(
@@ -351,7 +353,7 @@ class DialogoConfirmarSaida extends StatelessWidget {
             foregroundColor: cores.chalkWhite,
           ),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Sair'),
+          child: Text(context.tr(ChaveTexto.perfilSair)),
         ),
       ],
     );
@@ -383,23 +385,22 @@ class DialogoConfirmarExclusaoConta extends StatelessWidget {
         side: BorderSide(color: cores.graniteEdge),
       ),
       title: Text(
-        'Excluir conta permanentemente?',
+        context.tr(ChaveTexto.perfilExcluirPergunta),
         style: TextStyle(
           color: cores.chalkWhite,
           fontWeight: FontWeight.bold,
         ),
       ),
       content: Text(
-        'Esta ação é irreversível. Sua conta, foto de perfil e todas as cadenas '
-        'sincronizadas serão apagadas permanentemente da nuvem e deste dispositivo.',
+        context.tr(ChaveTexto.perfilExcluirCorpo),
         style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.4),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
-            'Cancelar',
-            style: TextStyle(color: Color(0xFF94A3B8)),
+          child: Text(
+            context.tr(ChaveTexto.comumCancelar),
+            style: const TextStyle(color: Color(0xFF94A3B8)),
           ),
         ),
         ElevatedButton(
@@ -409,7 +410,7 @@ class DialogoConfirmarExclusaoConta extends StatelessWidget {
             foregroundColor: cores.chalkWhite,
           ),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Excluir conta'),
+          child: Text(context.tr(ChaveTexto.perfilExcluirConta)),
         ),
       ],
     );
