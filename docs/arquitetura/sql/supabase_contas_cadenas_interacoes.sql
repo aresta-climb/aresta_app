@@ -258,6 +258,41 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
 ALTER TABLE public.fila_interacoes
     ADD COLUMN IF NOT EXISTS tipo_ascensao SMALLINT;
 
+ALTER TABLE public.fila_interacoes
+    ADD COLUMN IF NOT EXISTS autor_avatar_url TEXT;
+
+-- Hidratação automática da foto pública do autor a partir de public.perfis (sem expor user_id privado)
+CREATE OR REPLACE FUNCTION public.hidratar_avatar_fila_interacoes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.autor_avatar_url IS NULL OR char_length(btrim(NEW.autor_avatar_url)) = 0 THEN
+        SELECT p.avatar_url
+        INTO NEW.autor_avatar_url
+        FROM public.perfis p
+        WHERE p.autor_id_publico = NEW.autor_id_publico
+        LIMIT 1;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_fila_hidratar_avatar ON public.fila_interacoes;
+CREATE TRIGGER trg_fila_hidratar_avatar
+    BEFORE INSERT ON public.fila_interacoes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.hidratar_avatar_fila_interacoes();
+
+UPDATE public.fila_interacoes f
+SET autor_avatar_url = p.avatar_url
+FROM public.perfis p
+WHERE p.autor_id_publico = f.autor_id_publico
+  AND f.autor_avatar_url IS NULL
+  AND p.avatar_url IS NOT NULL;
+
 -- Migração idempotente das categorias de alerta renomeadas (ABELHAS_INSETOS -> FAUNA, RISCO_EXPOSICAO -> EXPOSICAO_E4_MAIS)
 ALTER TABLE public.fila_interacoes
     DROP CONSTRAINT IF EXISTS chk_fila_categoria_alerta;
@@ -270,13 +305,15 @@ UPDATE public.fila_interacoes
 SET categoria_alerta = 'EXPOSICAO_E4_MAIS'
 WHERE categoria_alerta = 'RISCO_EXPOSICAO';
 
+DELETE FROM public.fila_interacoes
+WHERE categoria_alerta = 'VIA_MOLHADA';
+
 ALTER TABLE public.fila_interacoes
     ADD CONSTRAINT chk_fila_categoria_alerta CHECK (
         categoria_alerta IS NULL OR categoria_alerta IN (
             'FAUNA',
             'ROCHA_AGARRA_INSTAVEL',
             'PROTECAO_PRECARIA',
-            'VIA_MOLHADA',
             'EXPOSICAO_E4_MAIS'
         )
     );
@@ -391,6 +428,7 @@ BEGIN
             SELECT 1
             FROM public.fila_interacoes a
             WHERE a.status = 'PENDENTE'
+              AND a.id <> NEW.id
               AND a.tipo = 'ALERTA_SEGURANCA'
               AND a.escalada_uid = NEW.escalada_uid
               AND a.categoria_alerta = NEW.categoria_alerta
@@ -416,9 +454,38 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_fila_validar_contribuicao_unica_alerta ON public.fila_interacoes;
 CREATE TRIGGER trg_fila_validar_contribuicao_unica_alerta
-    BEFORE INSERT ON public.fila_interacoes
+    BEFORE INSERT OR UPDATE OF categoria_alerta ON public.fila_interacoes
     FOR EACH ROW
     EXECUTE FUNCTION public.validar_contribuicao_unica_alerta();
+
+-- Impede que atualizações autenticadas de edição alterem colunas imutáveis de autoria/identidade
+CREATE OR REPLACE FUNCTION public.proteger_campos_imutaveis_fila_interacoes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+    IF current_user <> 'service_role' AND current_user <> 'postgres' THEN
+        IF NEW.id <> OLD.id
+           OR NEW.autor_id_publico <> OLD.autor_id_publico
+           OR NEW.escalada_uid <> OLD.escalada_uid
+           OR NEW.tipo <> OLD.tipo
+           OR COALESCE(NEW.alerta_alvo_uid, '') <> COALESCE(OLD.alerta_alvo_uid, '')
+           OR NEW.status <> OLD.status
+           OR NEW.criado_em <> OLD.criado_em THEN
+            RAISE EXCEPTION 'Não é permitido alterar metadados imutáveis da interação.'
+                USING ERRCODE = '42501';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_fila_proteger_campos_imutaveis ON public.fila_interacoes;
+CREATE TRIGGER trg_fila_proteger_campos_imutaveis
+    BEFORE UPDATE ON public.fila_interacoes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.proteger_campos_imutaveis_fila_interacoes();
 
 -- Habilitação obrigatória de RLS em public.fila_interacoes
 ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
@@ -428,6 +495,8 @@ DROP POLICY IF EXISTS "fila_interacoes_leitura" ON public.fila_interacoes;
 DROP POLICY IF EXISTS "fila_interacoes_leitura_publica" ON public.fila_interacoes;
 DROP POLICY IF EXISTS "fila_interacoes_insercao" ON public.fila_interacoes;
 DROP POLICY IF EXISTS "fila_interacoes_insercao_autenticada" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_atualizacao_proprio_autor" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_exclusao_proprio_autor" ON public.fila_interacoes;
 DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima" ON public.fila_interacoes;
 
 -- Política 1: Transparência total de leitura das interações e alertas pendentes para todos (com ou sem conta)
