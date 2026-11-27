@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../data/modelos/perfil_escalador.dart';
+import '../../idioma/tradutor_app.dart';
 import '../caderneta/repositorio_caderneta.dart';
 import '../firebase/app_logger.dart';
 import '../firebase/remote_config.dart';
@@ -193,8 +194,8 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
         !partes[1].contains('.') ||
         partes[1].startsWith('.') ||
         partes[1].endsWith('.')) {
-      throw const ExcecaoAutenticacao(
-        'Informe um endereço de e-mail válido.',
+      throw ExcecaoAutenticacao(
+        tr(ChaveTexto.authSrvEmailInvalido),
         ehErroUsuario: true,
       );
     }
@@ -205,8 +206,8 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   static String validarFormatoCodigoOtp(String codigo) {
     final normalizado = codigo.replaceAll(RegExp(r'\s+'), '');
     if (!_regexCodigoSeisDigitos.hasMatch(normalizado)) {
-      throw const ExcecaoAutenticacao(
-        'Informe o código numérico de 6 dígitos enviado por e-mail.',
+      throw ExcecaoAutenticacao(
+        tr(ChaveTexto.authValidacaoCodigo6Digitos),
         ehErroUsuario: true,
       );
     }
@@ -216,8 +217,8 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   String _exigirAnonKey() {
     final anonKey = _obterAnonKeySupabase().trim();
     if (anonKey.isEmpty) {
-      throw const ExcecaoAutenticacao(
-        'Serviço de autenticação indisponível no momento.',
+      throw ExcecaoAutenticacao(
+        tr(ChaveTexto.authServicoIndisponivel),
         ehErroUsuario: false,
         causaTecnica: 'supabaseAnonKey vazia em ServicoAutenticacaoLocal',
       );

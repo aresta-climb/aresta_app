@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
+import '../../idioma/tradutor_app.dart';
 
 final RegExp _regexCooldownAposSegundos = RegExp(
   r'for security purposes,\s*you can only request this after (\d+) seconds?',
@@ -15,38 +16,30 @@ final RegExp _regexCooldownCadaSegundos = RegExp(
   caseSensitive: false,
 );
 
-/// Mapa de traduções amigáveis para mensagens de erro retornadas pelo servidor GoTrue / OAuth / OTP.
-const Map<String, String> _traducoesErrosServidorAutenticacao = {
-  'invalid api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-  'no api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-  'token has expired or is invalid':
-      'O código de acesso expirou ou é inválido.',
-  'otp_expired': 'O código de acesso expirou ou é inválido.',
-  'unable to validate email': 'Informe um endereço de e-mail válido.',
-  'invalid_email': 'Informe um endereço de e-mail válido.',
-  'provider_disabled':
-      'Provedor de autenticação não está habilitado no servidor.',
-  'provider is not enabled':
-      'Provedor de autenticação não está habilitado no servidor.',
-  'otp_disabled': 'Provedor de autenticação não está habilitado no servidor.',
-  'unacceptable audience':
-      'Não foi possível validar a credencial nativa no servidor.',
-  'bad_jwt': 'Não foi possível validar a credencial nativa no servidor.',
-  'invalid_grant': 'Não foi possível validar a credencial nativa no servidor.',
-  'nonce': 'Não foi possível validar a credencial nativa no servidor.',
-  'email rate limit exceeded':
-      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
-  'over_email_send_rate_limit':
-      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
-  'rate limit':
-      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
-  'for security purposes':
-      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
-  'expired': 'Sua sessão expirou. Faça login novamente.',
-  'invalid token': 'Sua sessão expirou. Faça login novamente.',
-  'refresh_token_not_found': 'Sua sessão expirou. Faça login novamente.',
-  'access_denied': 'Autenticação cancelada pelo escalador.',
-  'user_cancelled': 'Autenticação cancelada pelo escalador.',
+/// Mapa de chaves localizadas para mensagens de erro retornadas pelo servidor GoTrue / OAuth / OTP.
+const Map<String, ChaveTexto> _chavesErrosServidorAutenticacao = {
+  'invalid api key': ChaveTexto.authSrvChaveInvalida,
+  'no api key': ChaveTexto.authSrvChaveInvalida,
+  'token has expired or is invalid': ChaveTexto.authSrvCodigoExpirado,
+  'otp_expired': ChaveTexto.authSrvCodigoExpirado,
+  'unable to validate email': ChaveTexto.authSrvEmailInvalido,
+  'invalid_email': ChaveTexto.authSrvEmailInvalido,
+  'provider_disabled': ChaveTexto.authSrvProvedorDesabilitado,
+  'provider is not enabled': ChaveTexto.authSrvProvedorDesabilitado,
+  'otp_disabled': ChaveTexto.authSrvProvedorDesabilitado,
+  'unacceptable audience': ChaveTexto.authSrvCredencialInvalida,
+  'bad_jwt': ChaveTexto.authSrvCredencialInvalida,
+  'invalid_grant': ChaveTexto.authSrvCredencialInvalida,
+  'nonce': ChaveTexto.authSrvCredencialInvalida,
+  'email rate limit exceeded': ChaveTexto.authSrvLimiteEnvio,
+  'over_email_send_rate_limit': ChaveTexto.authSrvLimiteEnvio,
+  'rate limit': ChaveTexto.authSrvLimiteEnvio,
+  'for security purposes': ChaveTexto.authSrvLimiteEnvio,
+  'expired': ChaveTexto.authSrvSessaoExpirada,
+  'invalid token': ChaveTexto.authSrvSessaoExpirada,
+  'refresh_token_not_found': ChaveTexto.authSrvSessaoExpirada,
+  'access_denied': ChaveTexto.authSrvCancelado,
+  'user_cancelled': ChaveTexto.authSrvCancelado,
 };
 
 const List<String> _padroesErroEntradaUsuario = [
@@ -74,21 +67,23 @@ String traduzirMensagemServidorAutenticacao(
   final matchApos = _regexCooldownAposSegundos.firstMatch(limpo);
   if (matchApos != null) {
     final segundos = int.parse(matchApos.group(1)!);
-    final unidade = segundos == 1 ? 'segundo' : 'segundos';
-    return 'Por motivos de segurança, você só pode solicitar um novo código após $segundos $unidade.';
+    return segundos == 1
+        ? tr(ChaveTexto.authSrvCooldownAposUm)
+        : tr(ChaveTexto.authSrvCooldownAposVarios, {'s': '$segundos'});
   }
 
   final matchCada = _regexCooldownCadaSegundos.firstMatch(limpo);
   if (matchCada != null) {
     final segundos = int.parse(matchCada.group(1)!);
-    final unidade = segundos == 1 ? 'segundo' : 'segundos';
-    return 'Por motivos de segurança, você só pode solicitar um novo código a cada $segundos $unidade.';
+    return segundos == 1
+        ? tr(ChaveTexto.authSrvCooldownCadaUm)
+        : tr(ChaveTexto.authSrvCooldownCadaVarios, {'s': '$segundos'});
   }
 
   final minusculo = limpo.toLowerCase();
-  for (final entrada in _traducoesErrosServidorAutenticacao.entries) {
+  for (final entrada in _chavesErrosServidorAutenticacao.entries) {
     if (minusculo.contains(entrada.key)) {
-      return entrada.value;
+      return tr(entrada.value);
     }
   }
   return limpo;
