@@ -273,3 +273,99 @@ class BolhaChuvaRegional {
       }
     }
 
+    final rastros = <RastroPassadoTempestade>[];
+    if (rastrosBrutos != null) {
+      if (rastrosBrutos is! List) {
+        throw const FormatException('rastros_passados inválido.');
+      }
+      for (final item in rastrosBrutos) {
+        if (item is! Map) {
+          throw const FormatException('Elemento inválido em rastros_passados.');
+        }
+        rastros.add(
+          RastroPassadoTempestade.deMapa(Map<String, dynamic>.from(item)),
+        );
+      }
+      rastros.sort((a, b) => b.horasAtras.compareTo(a.horasAtras));
+    }
+
+    return BolhaChuvaRegional(
+      id: id,
+      latitude: lat.toDouble(),
+      longitude: lon.toDouble(),
+      intensidadeMmHora: mmHora.toDouble(),
+      ventoRumoGraus: (rumo.toDouble() % 360.0 + 360.0) % 360.0,
+      ventoVelocidadeKmh: velKmh.toDouble(),
+      contornoExterno: contorno,
+      nucleosIntensos: List<List<PontoContornoGeo>>.unmodifiable(nucleos),
+      rastrosPassados: List<RastroPassadoTempestade>.unmodifiable(rastros),
+    );
+  }
+
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'id': id,
+        'lat': latitude,
+        'lon': longitude,
+        'intensidade_mm_h': intensidadeMmHora,
+        'vento_rumo_graus': ventoRumoGraus,
+        'vento_kmh': ventoVelocidadeKmh,
+        'contorno_externo':
+            contornoExterno.map((p) => p.paraLista()).toList(growable: false),
+        if (nucleosIntensos.isNotEmpty)
+          'nucleos_intensos': nucleosIntensos
+              .map(
+                (anel) => anel.map((p) => p.paraLista()).toList(growable: false),
+              )
+              .toList(growable: false),
+        if (rastrosPassados.isNotEmpty)
+          'rastros_passados':
+              rastrosPassados.map((r) => r.paraMapa()).toList(growable: false),
+      };
+}
+
+/// Tempestade ao vivo validada para pintura animada de isoietas e vento sobre o globo/relevo.
+class BolhaAtivaRenderizavel {
+  final BolhaChuvaRegional bolha;
+  final NivelIntensidadeChuva nivelIntensidade;
+
+  const BolhaAtivaRenderizavel({
+    required this.bolha,
+    required this.nivelIntensidade,
+  });
+}
+
+/// Quatro níveis visuais de severidade termal de incêndio florestal derivados da análise
+/// orbital (`FRP` em megawatts, densidade de focos de calor e núcleos em brasa).
+enum NivelSeveridadeIncendio {
+  baixo(peso: 1),
+  moderado(peso: 2),
+  alto(peso: 3),
+  extremo(peso: 4);
+
+  /// Peso ordinal (`1..4`) para escalar coluna de fumaça, ondas de calor, fagulhas e emblema.
+  final int peso;
+
+  const NivelSeveridadeIncendio({required this.peso});
+
+  /// Rótulo localizado da severidade do incêndio florestal.
+  String get rotulo => switch (this) {
+        NivelSeveridadeIncendio.baixo => tr(ChaveTexto.climaFocoIsolado),
+        NivelSeveridadeIncendio.moderado => tr(ChaveTexto.climaFocoQueimada),
+        NivelSeveridadeIncendio.alto => tr(ChaveTexto.climaIncendioAtivo),
+        NivelSeveridadeIncendio.extremo => tr(ChaveTexto.climaIncendioSevero),
+      };
+}
+
+/// Zona regional de incêndio florestal ativo delimitada por contornos reais (NASA FIRMS / INPE VIIRS-MODIS) e vento.
+class BolhaIncendioRegional {
+  final String id;
+  final double latitude;
+  final double longitude;
+  final double potenciaFrpMw;
+  final int totalFocos;
+  final double ventoRumoGraus;
+  final double ventoVelocidadeKmh;
+  final String fonteSatelite;
+  final List<PontoContornoGeo> contornoExterno;
+  final List<List<PontoContornoGeo>> nucleosIntensos;
+
