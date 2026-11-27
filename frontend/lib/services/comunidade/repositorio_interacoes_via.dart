@@ -474,21 +474,84 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
         validarUid(resultado.uid)) {
-      final evento = ItemFilaInteracao.alertaSeguranca(
-        autorIdPublico: perfil.autorIdPublico,
-        autorNomePublico: perfil.autorNomePublico,
-        escaladaUid: uidVia,
-        alertaAlvoUid: resultado.uid,
-        categoriaAlerta: categoria,
-        detalhe: detalhe,
+      await _persistirEDespacharEventoAlerta(
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          escaladaUid: uidVia,
+          alertaAlvoUid: resultado.uid,
+          categoriaAlerta: categoria,
+          detalhe: detalhe,
+        ),
       );
-      await _registrarEventoAlertaLocal(evento);
-      if (_clienteFila != null) {
-        await _despachante.enfileirarEDespachar(_clienteFila, [evento]);
-      }
     }
     _versaoNotifier.value++;
     return resultado;
+  }
+
+  @override
+  Future<AlertaSegurancaVia> editarAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+    required CategoriaAlertaSeguranca novaCategoria,
+    String? detalhe,
+  }) async {
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
+    await _hidratarDadosViaAPartirCacheAlertas(uidVia);
+    final perfil = _repositorioCaderneta.obterPerfil();
+    final (dadosAtualizados, alertaAtualizado) = obterDadosEscalada(uidVia)
+        .comAlertaEditado(
+          alertaUid: alertaUid,
+          autorIdPublico: perfil.autorIdPublico,
+          novaCategoria: novaCategoria,
+          detalhe: detalhe,
+        );
+    _dadosPorEscalada[uidVia] = dadosAtualizados;
+
+    if (validarUid(uidVia) &&
+        validarUid(perfil.autorIdPublico) &&
+        validarUid(alertaAtualizado.uid)) {
+      await _persistirEDespacharMutacaoAlerta(
+        uidVia,
+        MutacaoFilaInteracao.editarAlerta(
+          alvoUid: alertaAtualizado.uid,
+          escaladaUid: uidVia,
+          autorIdPublico: perfil.autorIdPublico,
+          novaCategoria: novaCategoria,
+          detalhe: detalhe,
+        ),
+      );
+    }
+    _versaoNotifier.value++;
+    return alertaAtualizado;
+  }
+
+  @override
+  Future<void> excluirAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+  }) async {
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
+    await _hidratarDadosViaAPartirCacheAlertas(uidVia);
+    final perfil = _repositorioCaderneta.obterPerfil();
+    _dadosPorEscalada[uidVia] = obterDadosEscalada(uidVia).semAlertaDoAutor(
+      alertaUid: alertaUid,
+      autorIdPublico: perfil.autorIdPublico,
+    );
+
+    if (validarUid(uidVia) &&
+        validarUid(perfil.autorIdPublico) &&
+        validarUid(alertaUid)) {
+      await _persistirEDespacharMutacaoAlerta(
+        uidVia,
+        MutacaoFilaInteracao.excluirAlerta(
+          alvoUid: alertaUid,
+          escaladaUid: uidVia,
+          autorIdPublico: perfil.autorIdPublico,
+        ),
+      );
+    }
+    _versaoNotifier.value++;
   }
 
   @override
