@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 
 /// Constrói um [ImageProvider] a partir de uma URL remota (`http`/`https`) ou Data URI (`data:image/...;base64,...`).
@@ -144,7 +145,7 @@ Widget buildCabecalhoHubPerfil({
                 border: Border.all(color: const Color(0xFF3F4248)),
               ),
               child: Text(
-                'Editar perfil',
+                context.tr(ChaveTexto.perfilEditarBtn),
                 style: TextStyle(
                   color: cores.chalkWhite,
                   fontSize: 12,
@@ -185,7 +186,7 @@ Widget buildBarraMetricasHub({
                 corIcone: corCadenas,
                 corBorda: corCadenas.withValues(alpha: 0.28),
                 valor: '$totalCadenas',
-                rotulo: 'CADENAS',
+                rotulo: context.tr(ChaveTexto.perfilMetricaCadenas),
               ),
             ),
             const SizedBox(width: 8),
@@ -196,7 +197,7 @@ Widget buildBarraMetricasHub({
                 corIcone: corTentativas,
                 corBorda: corTentativas.withValues(alpha: 0.28),
                 valor: '$totalTentativas',
-                rotulo: 'TENTATIVAS',
+                rotulo: context.tr(ChaveTexto.perfilMetricaTentativas),
               ),
             ),
             const SizedBox(width: 8),
@@ -207,7 +208,7 @@ Widget buildBarraMetricasHub({
                 corIcone: corPicos,
                 corBorda: corPicos.withValues(alpha: 0.22),
                 valor: '$totalPicos',
-                rotulo: 'PICOS',
+                rotulo: context.tr(ChaveTexto.perfilMetricaPicos),
               ),
             ),
             const SizedBox(width: 8),
@@ -218,7 +219,7 @@ Widget buildBarraMetricasHub({
                 corIcone: corVias,
                 corBorda: corVias.withValues(alpha: 0.28),
                 valor: '$totalVias',
-                rotulo: 'VIAS',
+                rotulo: context.tr(ChaveTexto.perfilMetricaVias),
               ),
             ),
           ],
@@ -310,32 +311,34 @@ Widget buildMenuOpcoesHub({
   VoidCallback? onConfirmarExclusaoConta,
   VoidCallback? onEntrarNaConta,
 }) {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      if (onEntrarNaConta != null) ...[
-        buildItemMenuHub(
-          key: const Key('item_menu_entrar_conta'),
-          icone: Icons.login_rounded,
-          titulo: 'Entrar na conta',
-          onTap: onEntrarNaConta,
-        ),
-        const SizedBox(height: 10),
-      ],
-      buildItemMenuHub(
-        key: const Key('item_menu_minha_caderneta'),
-        icone: Icons.menu_book_outlined,
-        titulo: 'Minha caderneta',
-        onTap: onAbrirCaderneta,
-      ),
-      const SizedBox(height: 10),
-      buildItemMenuHub(
-        key: const Key('item_menu_configuracoes'),
-        icone: Icons.settings_outlined,
-        titulo: 'Configurações',
-        onTap: onAbrirConfiguracoes,
-      ),
-      const SizedBox(height: 10),
+  return Builder(
+    builder: (context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (onEntrarNaConta != null) ...[
+            buildItemMenuHub(
+              key: const Key('item_menu_entrar_conta'),
+              icone: Icons.login_rounded,
+              titulo: context.tr(ChaveTexto.perfilEntrarConta),
+              onTap: onEntrarNaConta,
+            ),
+            const SizedBox(height: 10),
+          ],
+          buildItemMenuHub(
+            key: const Key('item_menu_minha_caderneta'),
+            icone: Icons.menu_book_outlined,
+            titulo: context.tr(ChaveTexto.perfilMinhaCaderneta),
+            onTap: onAbrirCaderneta,
+          ),
+          const SizedBox(height: 10),
+          buildItemMenuHub(
+            key: const Key('item_menu_configuracoes'),
+            icone: Icons.settings_outlined,
+            titulo: context.tr(ChaveTexto.configTitulo),
+            onTap: onAbrirConfiguracoes,
+          ),
+          const SizedBox(height: 10),
       buildItemMenuHub(
         key: const Key('item_menu_dados_privacidade'),
         icone: Icons.lock_outline_rounded,
