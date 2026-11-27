@@ -266,3 +266,86 @@ class ServicoMalhaViariaOffline extends ChangeNotifier {
         _fonteRemota = fonteRemota ?? ClienteMalhaViariaSupabase(),
         _relogioUtc = relogioUtc ?? (() => DateTime.now().toUtc());
 
+  /// Verdadeiro após verificar a cópia local em disco.
+  bool get inicializado => _inicializado;
+
+  /// Último snapshot offline persistido em disco (ou `null` quando a semente do APK é a vigente).
+  SnapshotMalhaViariaOffline? get snapshotAtivo => _snapshotAtivo;
+
+  /// Versão hash atualmente persistida no cache local em disco.
+  String? get versaoAtiva => _snapshotAtivo?.versaoHash;
+
+  /// Hidrata imediatamente a cópia local em disco sem exigir rede.
+  Future<void> inicializar() async {
+    if (_inicializado || _descartado) return;
+    final cacheDisco = await _armazenamento.lerSnapshot();
+    if (_descartado) return;
+    _snapshotAtivo = cacheDisco;
+    _inicializado = true;
+    if (cacheDisco != null) {
+      notifyListeners();
+    }
+  }
+
+  /// Verifica se o Supabase possui uma `versao_hash` mais recente que [versaoSementeEmbarcada]
+  /// ou o cache local, baixando e rotacionando a cópia offline quando houver cobertura de rede.
+  Future<bool> sincronizarSeDisponivel({
+    bool forcar = false,
+    String? versaoSementeEmbarcada,
+  }) {
+    final emVoo = _sincronizacaoEmVoo;
+    if (emVoo != null) return emVoo;
+    final futuro = _executarSincronizacao(
+      forcar: forcar,
+      versaoSementeEmbarcada: versaoSementeEmbarcada,
+    );
+    _sincronizacaoEmVoo = futuro;
+    return futuro.whenComplete(() => _sincronizacaoEmVoo = null);
+  }
+
+  Future<bool> _executarSincronizacao({
+    required bool forcar,
+    required String? versaoSementeEmbarcada,
+  }) async {
+    final agora = _relogioUtc();
+    if (!forcar &&
+        _ultimaVerificacaoUtc != null &&
+        agora.difference(_ultimaVerificacaoUtc!) < ttlVerificacao) {
+      return false;
+    }
+
+    try {
+      if (_descartado) return false;
+      final versaoRemota = await _fonteRemota.consultarVersaoRemota();
+      if (_descartado) return false;
+
+      final versaoLocal = _snapshotAtivo?.versaoHash ?? versaoSementeEmbarcada;
+      if (versaoRemota == null ||
+          (!forcar && versaoLocal != null && versaoRemota == versaoLocal)) {
+        _ultimaVerificacaoUtc = agora;
+        return false;
+      }
+
+      final novoSnapshot = await _fonteRemota.buscarSnapshotRemoto();
+      if (_descartado) return false;
+      await _armazenamento.salvarSnapshot(novoSnapshot);
+      if (_descartado) return false;
+
+      _snapshotAtivo = novoSnapshot;
+      _ultimaVerificacaoUtc = agora;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      AppLogger.instance.logAviso(
+        '[ServicoMalhaViariaOffline] Sem conexão ou área remota; mantendo cópia offline local ($e).',
+      );
+      return false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    super.dispose();
+  }
+}
