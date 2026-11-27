@@ -165,9 +165,75 @@ class ExplorarLocalPage extends StatelessWidget {
                       tituloSobre,
                       pico.descricao,
                       icon: Icons.menu_book,
-                    );
-                  } else {
-                    final carouselData = categories.sobre.map((b) => TextCarouselData(
+                    ),
+                  ),
+
+                if (categories.comoChegar.isNotEmpty)
+                  PicoMenuCard(
+                    title: tituloChegar,
+                    subtitle: categories.comoChegar.length == 1
+                        ? categories.comoChegar.first.texto
+                        : context.tr(ChaveTexto.picoSubComoChegarSubtitulo),
+                    icon: Icons.near_me,
+                    iconColor: context.colors.rustIron,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      if (categories.comoChegar.length == 1) {
+                        _pushTextNode(
+                          context,
+                          tituloChegar,
+                          categories
+                              .comoChegar.first.destino.secaoTextual.conteudo,
+                          icon: Icons.near_me,
+                        );
+                      } else {
+                        final carouselData = categories.comoChegar
+                            .map(
+                              (b) => TextCarouselData(
+                                title: b.texto,
+                                content: b.destino.secaoTextual.conteudo,
+                                icon: Icons.near_me,
+                              ),
+                            )
+                            .toList();
+                        final treeNav =
+                            TreeNavigationWrapper.currentTreeController;
+                        if (treeNav != null) {
+                          treeNav.navigateTo(
+                            TextCarouselNode(
+                              cragId: cragId,
+                              texts: carouselData,
+                              parent: treeNav.currentNode,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+
+                if (urlMaps != null)
+                  PicoMenuCard(
+                    title: context.tr(ChaveTexto.picoSubAbrirMaps),
+                    subtitle: context.tr(ChaveTexto.picoSubAbrirMapsSubtitulo),
+                    icon: Icons.map_outlined,
+                    iconColor: context.colors.rustIron,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () async {
+                      if (aoAbrirLinkExterno != null) {
+                        await aoAbrirLinkExterno!(urlMaps, 'Google Maps');
+                      } else {
+                        await abrirLinkExterno(urlMaps, 'Google Maps');
+                      }
+                    },
+                  ),
+
+                if (categories.outros.isNotEmpty)
+                  ...categories.outros.map(
+                    (b) => PicoMenuCard(
                       title: b.texto,
                       content: b.destino.secaoTextual.conteudo,
                       icon: Icons.menu_book,
