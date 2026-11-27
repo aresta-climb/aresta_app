@@ -173,3 +173,92 @@ class _PainelBolhasIdioma extends StatelessWidget {
           idioma: idiomaAtual,
         );
 
+        return Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 316),
+            child: Container(
+              key: const Key('painel_seletor_bolhas_idioma'),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cores.deepBasalt,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: cores.graniteEdge, width: 1.2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xAA000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: cores.rustIron.withValues(alpha: 0.16),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.language_rounded,
+                          size: 16,
+                          color: cores.rustIron,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          titulo,
+                          style: TextStyle(
+                            color: cores.chalkWhite,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitulo,
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  for (final opcao in IdiomaApp.values)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: opcao == IdiomaApp.values.last ? 0 : 8,
+                      ),
+                      child: _ItemBolhaOpcaoIdioma(
+                        idioma: opcao,
+                        selecionado: opcao == idiomaAtual,
+                        aoSelecionar: () async {
+                          HapticFeedback.selectionClick();
+                          await controlador.definirIdioma(opcao);
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
