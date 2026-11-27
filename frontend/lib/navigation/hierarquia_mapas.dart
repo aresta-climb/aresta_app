@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import 'arvore_navegacao.dart' show CarrosselItemData;
 
 /// Representa o destino de navegação hierárquica a partir de um mapa.
@@ -77,7 +78,7 @@ class HierarquiaMapas {
 
       return MapDestination(
         mapasData: mapasData,
-        label: 'Mapa Geral',
+        label: tr(ChaveTexto.comumMapaGeral),
         grupoContext: null, // Subiu para o Geral, perde o contexto de Grupo
         setorContext: null, // Subiu para o Geral, perde o contexto de Setor
       );

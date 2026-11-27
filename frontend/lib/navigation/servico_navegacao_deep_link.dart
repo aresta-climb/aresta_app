@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../idioma/tradutor_app.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/performance_telemetria.dart';
@@ -143,8 +144,10 @@ class DeepLinkNavigatorService {
       final conector = conectorSessaoPrevia ?? _conectarSessaoPreviaPadrao;
       final idCroqui = await conector(codigoPrevia);
       if (idCroqui == null) {
-        final msg =
-            'Não foi possível conectar à sessão de prévia "${EditorDeCroqui.formatarCodigo(codigoPrevia)}".';
+        final msg = tr(
+          ChaveTexto.sistemaPreviaFalhaConectar,
+          {'codigo': EditorDeCroqui.formatarCodigo(codigoPrevia)},
+        );
         _notificarAviso(msg, mensageiro, corErro);
         return false;
       }
@@ -243,8 +246,10 @@ class DeepLinkNavigatorService {
       );
 
       if (notificarFalha) {
-        final mensagem =
-            'Não foi possível encontrar a via ou setor correspondente ao código "$uid". Verifique sua conexão à internet ou baixe o pico previamente.';
+        final mensagem = tr(
+          ChaveTexto.sistemaDeepLinkNaoEncontrado,
+          {'uid': uid},
+        );
         _notificarAviso(mensagem, mensageiro, corErro);
       }
       return false;

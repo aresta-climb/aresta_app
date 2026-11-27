@@ -9,7 +9,6 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/formatador_escalada.dart';
 import '../services/autenticacao/servico_autenticacao.dart';
-import '../services/controlador_interacoes_usuario.dart';
 import '../services/repositorio_dataset.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
@@ -133,55 +132,6 @@ abstract final class AppNav {
         parent: ctrl.currentNode,
       ),
     );
-  }
-
-  /// Navega para o Mapa Global.
-  ///
-  /// Permite especificar [picoIds] em texto ou lista [crags] contendo cards/picos,
-  /// normalizando os identificadores para armazenamento no [MapaGlobalNode].
-  static void toMapaGlobal(
-    BuildContext context, {
-    dynamic crags,
-    List<String>? picoIds,
-  }) {
-    final ctrl = _ctrl(context);
-    if (ctrl == null) return;
-
-    final List<String> ids = [];
-    if (picoIds != null) {
-      ids.addAll(picoIds);
-    }
-
-    final List<dynamic> picos;
-    if (crags is Iterable) {
-      picos = crags.toList();
-      if (ids.isEmpty) {
-        for (final item in picos) {
-          if (item is String && item.isNotEmpty) {
-            ids.add(item);
-          } else {
-            try {
-              final id = (item as dynamic).id?.toString();
-              if (id != null && id.isNotEmpty) {
-                ids.add(id);
-              }
-            } catch (_) {
-              if (item is Map && item['id'] != null) {
-                ids.add(item['id'].toString());
-              }
-            }
-          }
-        }
-      }
-    } else {
-      picos = const [];
-    }
-
-    ctrl.navigateTo(MapaGlobalNode(
-      picoIds: ids,
-      crags: picos,
-      parent: ctrl.currentNode,
-    ));
   }
 
   /// Navega para a página de um Setor.
@@ -373,15 +323,11 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para a página de Login e Criação de Conta ([LoginNode]) na árvore de nós,
-  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
+  /// Navega para a página de Login e Criação de Conta ([LoginNode]) na árvore de nós.
   ///
   /// Quando acionado a partir do [PerfilNode], substitui o nó de perfil mantendo o
   /// mesmo ancestral base para evitar ciclos entre Login e Perfil.
   static void toLogin(BuildContext context) {
-    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
-      return;
-    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       final ancestralBase = ctrl.currentNode is PerfilNode
@@ -401,15 +347,11 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós,
-  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
+  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós.
   ///
   /// Quando chamado a partir do [LoginNode] (após autenticação ou ao escolher
   /// continuar sem conta), substitui o [LoginNode] preservando o ancestral base.
   static void toPerfil(BuildContext context) {
-    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
-      return;
-    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       final ancestralBase = ctrl.currentNode is LoginNode
@@ -419,12 +361,8 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para a página de Caderneta Esportiva pessoal ([CadernetaNode]) na árvore de nós,
-  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
+  /// Navega para a página de Caderneta Esportiva pessoal ([CadernetaNode]) na árvore de nós.
   static void toCaderneta(BuildContext context) {
-    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
-      return;
-    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       ctrl.navigateTo(CadernetaNode(ctrl.currentNode));
