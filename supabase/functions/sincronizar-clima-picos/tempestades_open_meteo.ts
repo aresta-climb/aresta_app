@@ -87,3 +87,92 @@ export async function coletarHistoricoChuvaPicosOpenMeteo(
         );
       }
 
+      const eventosValidos: EventoChuvaJson[] = [];
+      for (const [dataLocal, somaMm] of acumuladoPorDiaLocal.entries()) {
+        if (somaMm >= 1.0) {
+          eventosValidos.push({
+            data: dataLocal,
+            mm: Math.round(somaMm * 10) / 10,
+          });
+        }
+      }
+
+      if (eventosValidos.length > 0) {
+        chuvaPorPico[lote[k].id] = eventosValidos;
+      }
+    }
+  }
+
+  return chuvaPorPico;
+}
+
+/**
+ * Funde o composto global de radar em tempo real (`RainViewer z=6`, `~2,2 km/px`) com o campo
+ * mesoescala de vento e precipitação do `Open-Meteo` sobre uma malha fina (`~0,14° ≈ 15 km`),
+ * preservando tanto grandes frentes multi-celulares quanto pequenos bolsões de chuva nos estados.
+ */
+export async function coletarTempestadesAoVivoContornosOpenMeteo(
+  picos: PicoCoordenada[],
+): Promise<BolhaChuvaJson[]> {
+  const regioes = agruparRegioesSinoticas(picos);
+  const metadadosRadar = await carregarMetadadosRadarRainViewer();
+  const cacheTilesRadar = new Map<string, Float32Array>();
+  const candidatosGlobais: Array<{
+    bolha: Omit<BolhaChuvaJson, "id">;
+    relevancia: number;
+  }> = [];
+
+  for (const regiao of regioes) {
+    const spanLat = regiao.maxLat - regiao.minLat;
+    const spanLon = regiao.maxLon - regiao.minLon;
+
+    // 1. Malha mesoescala Open-Meteo (até 22x22 = 484 pontos em lotes paralelos) para vento real 10m + chuva NWP
+    const rowsMeteo = Math.max(10, Math.min(22, Math.round(spanLat / 0.55) + 1));
+    const colsMeteo = Math.max(10, Math.min(22, Math.round(spanLon / 0.55) + 1));
+    const passoLatMeteo = spanLat / (rowsMeteo - 1);
+    const passoLonMeteo = spanLon / (colsMeteo - 1);
+
+    const pontosMeteo: Array<{
+      r: number;
+      c: number;
+      lat: number;
+      lon: number;
+    }> = [];
+    for (let r = 0; r < rowsMeteo; r++) {
+      const lat = regiao.minLat + r * passoLatMeteo;
+      for (let c = 0; c < colsMeteo; c++) {
+        pontosMeteo.push({
+          r,
+          c,
+          lat,
+          lon: regiao.minLon + c * passoLonMeteo,
+        });
+      }
+    }
+
+    const gradeMeteo: AmostraGradeClima[][] = Array.from(
+      { length: rowsMeteo },
+      () =>
+        Array.from({ length: colsMeteo }, () => ({
+          mmHora: 0,
+          ventoWx: 0,
+          ventoWy: 0,
+        })),
+    );
+
+    const tamanhoLote = 90;
+    const lotesMeteo: Array<typeof pontosMeteo> = [];
+    for (let ini = 0; ini < pontosMeteo.length; ini += tamanhoLote) {
+      lotesMeteo.push(pontosMeteo.slice(ini, ini + tamanhoLote));
+    }
+
+    const mosaicoRadarPromessa = metadadosRadar
+      ? carregarMosaicoRadarRegiao(metadadosRadar, regiao, cacheTilesRadar)
+      : Promise.resolve(null);
+
+    const [, mosaicoRadar] = await Promise.all([
+      executarEmConcorrenciaLimitada(lotesMeteo, 3, async (lote) => {
+        const latsStr = lote.map((p) => p.lat.toFixed(3)).join(",");
+        const lonsStr = lote.map((p) => p.lon.toFixed(3)).join(",");
+        const url = `${URL_OPEN_METEO_FORECAST}?latitude=${latsStr}&longitude=${lonsStr}&current=precipitation,rain,showers,wind_speed_10m,wind_direction_10m&timezone=UTC`;
+
