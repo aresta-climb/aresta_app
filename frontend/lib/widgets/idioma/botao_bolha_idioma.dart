@@ -81,3 +81,95 @@ class BotaoBolhaIdioma extends StatelessWidget {
                         offset: Offset(0, 2),
                       ),
                     ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BandeiraIdiomaApp(
+                        key: Key('bandeira_bolha_ativa_${idiomaAtivo.codigoIso}'),
+                        idioma: idiomaAtivo,
+                        largura: 22,
+                        altura: 15.5,
+                        raioBorda: 4.0,
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.expand_more_rounded,
+                        size: 15,
+                        color: sobreFundoFotografico
+                            ? Colors.white70
+                            : cores.ashGrey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Abre o diálogo flutuante em estilo bolha para escolha imediata entre os 5 idiomas suportados.
+Future<void> exibirSeletorBolhasIdioma(
+  BuildContext context, {
+  ControladorIdiomaApp? controlador,
+}) {
+  final ctrl = controlador ?? ControladorIdiomaApp.instancia;
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Fechar seletor de idioma',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 190),
+    pageBuilder: (dialogContext, _, _) {
+      return SafeArea(
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
+            child: _PainelBolhasIdioma(controlador: ctrl),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (_, animacao, _, filho) {
+      final curva = CurvedAnimation(
+        parent: animacao,
+        curve: Curves.easeOutBack,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: animacao,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.88, end: 1.0).animate(curva),
+          alignment: Alignment.topRight,
+          child: filho,
+        ),
+      );
+    },
+  );
+}
+
+class _PainelBolhasIdioma extends StatelessWidget {
+  final ControladorIdiomaApp controlador;
+
+  const _PainelBolhasIdioma({required this.controlador});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: controlador.notificadorIdioma,
+      builder: (context, idiomaAtual, _) {
+        final titulo = TradutorApp.texto(
+          ChaveTexto.seletorIdiomaTitulo,
+          idioma: idiomaAtual,
+        );
+        final subtitulo = TradutorApp.texto(
+          ChaveTexto.seletorIdiomaSubtitulo,
+          idioma: idiomaAtual,
+        );
+
