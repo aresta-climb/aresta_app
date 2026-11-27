@@ -96,63 +96,52 @@ class ComunidadePicoPage extends StatelessWidget {
                         launchUrl(Uri.parse(pico.urlFiliacaoAssociacao)),
                   ),
 
-            if (pico.nomeAssociacao.isNotEmpty &&
-                pico.urlFiliacaoAssociacao.isNotEmpty)
-              PicoMenuCard(
-                title: 'Associação Local',
-                subtitle: pico.nomeAssociacao,
-                icon: Icons.groups,
-                iconColor: context.colors.clayEarth,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () => launchUrl(Uri.parse(pico.urlFiliacaoAssociacao)),
-              ),
+                if (categories.comunidadeParceiros.isNotEmpty)
+                  ...categories.comunidadeParceiros.map(
+                    (b) => PicoMenuCard(
+                      title: context.tr(ChaveTexto.picoSubParceiros),
+                      subtitle: b.texto,
+                      icon: Icons.handshake,
+                      iconColor: context.colors.rustIron,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.chalkWhite.withValues(
+                        alpha: 0.7,
+                      ),
+                      onTap: () => _pushTextNode(
+                        context,
+                        context.tr(ChaveTexto.picoSubParceiros),
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.handshake,
+                      ),
+                    ),
+                  ),
 
-            if (categories.comunidadeParceiros.isNotEmpty)
-              ...categories.comunidadeParceiros.map(
-                (b) => PicoMenuCard(
-                  title: 'Parceiros',
-                  subtitle: b.texto,
-                  icon: Icons.handshake,
-                  iconColor: context.colors.rustIron,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
+                if (categories.comunidadeComercio.isNotEmpty)
+                  ...categories.comunidadeComercio.map(
+                    (b) => PicoMenuCard(
+                      title: context.tr(ChaveTexto.picoSubComercioLocal),
+                      subtitle: b.texto,
+                      icon: Icons.storefront,
+                      iconColor: context.colors.clayEarth,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.chalkWhite.withValues(
+                        alpha: 0.7,
+                      ),
+                      onTap: () => _pushTextNode(
+                        context,
+                        context.tr(ChaveTexto.picoSubComercioLocal),
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.storefront,
+                      ),
+                    ),
                   ),
-                  onTap: () => _pushTextNode(
-                    context,
-                    'Parceiros',
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.handshake,
-                  ),
-                ),
-              ),
-
-            if (categories.comunidadeComercio.isNotEmpty)
-              ...categories.comunidadeComercio.map(
-                (b) => PicoMenuCard(
-                  title: 'Comércio local',
-                  subtitle: b.texto,
-                  icon: Icons.storefront,
-                  iconColor: context.colors.clayEarth,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
-                  ),
-                  onTap: () => _pushTextNode(
-                    context,
-                    'Comércio local',
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.storefront,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
