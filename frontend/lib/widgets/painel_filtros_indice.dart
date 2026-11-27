@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/arvore_navegacao.dart';
 import '../navigation/wrapper_navegacao_arvore.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
+import '../utils/extrator_detalhes_tecnicos_via.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import 'barra_ordenacao_exploracao.dart';
@@ -319,9 +321,12 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) {
-          return ValueListenableBuilder<int>(
-            valueListenable: _versaoNotificador,
-            builder: (context, versao, child) {
+          return ListenableBuilder(
+            listenable: Listenable.merge([
+              _versaoNotificador,
+              ControladorIdiomaApp.instancia.notificadorIdioma,
+            ]),
+            builder: (context, _) {
               return _buildModalControlesConteudo(sheetContext);
             },
           );
@@ -386,7 +391,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            'Filtros e Ordenação',
+                            tr(ChaveTexto.explorarFiltrosOrdenacao),
                             style: TextStyle(
                               color: colors.chalkWhite,
                               fontWeight: FontWeight.bold,
@@ -410,7 +415,11 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                               ),
                             ),
                             child: Text(
-                              '$totalAtivos ativo${totalAtivos > 1 ? 's' : ''}',
+                              totalAtivos == 1
+                                  ? tr(ChaveTexto.filtroAtivoSingular)
+                                  : tr(ChaveTexto.filtroAtivoPlural, {
+                                      'n': '$totalAtivos',
+                                    }),
                               style: TextStyle(
                                 color: colors.rustIron,
                                 fontSize: 11,
@@ -427,7 +436,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
-                              'Limpar',
+                              tr(ChaveTexto.comumLimpar),
                               style: TextStyle(
                                 color: colors.ashGrey,
                                 fontSize: 13,
@@ -444,7 +453,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                   IconButton(
                     icon: Icon(Icons.close, size: 20, color: colors.ashGrey),
                     onPressed: () => Navigator.of(context).pop(),
-                    tooltip: 'Fechar',
+                    tooltip: tr(ChaveTexto.comumFechar),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -457,7 +466,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSecaoTitulo(context, 'ORDENAÇÃO'),
+                    _buildSecaoTitulo(
+                      context,
+                      tr(ChaveTexto.explorarOrdenacaoSecao),
+                    ),
                     const SizedBox(height: 10),
                     BarraOrdenacaoExploracao(
                       ordenacaoAtual: _isUnificado
@@ -482,11 +494,17 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       },
                     ),
                     const SizedBox(height: 20),
-                    _buildSecaoTitulo(context, 'FILTROS'),
+                    _buildSecaoTitulo(
+                      context,
+                      tr(ChaveTexto.filtroSecaoFiltros),
+                    ),
                     const SizedBox(height: 12),
 
                     if (_isModoSetores && widget.modalidadesDisponiveis.isNotEmpty) ...[
-                      _buildSecaoTitulo(context, 'Modalidades'),
+                      _buildSecaoTitulo(
+                        context,
+                        tr(ChaveTexto.filtroModalidadesTitulo),
+                      ),
                       const SizedBox(height: 8),
                       _buildSeletorModalidadesAtivas(context),
                       const SizedBox(height: 16),
@@ -515,14 +533,20 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                     ],
 
                     if (!_isModoSetores) ...[
-                      _buildSecaoTitulo(context, 'Localização'),
+                      _buildSecaoTitulo(
+                        context,
+                        tr(ChaveTexto.filtroLocalizacao),
+                      ),
                       const SizedBox(height: 8),
                       _buildSeletorLocalizacao(context),
                       const SizedBox(height: 16),
                     ],
 
                     if (temConquistadoresCadastrados) ...[
-                      _buildSecaoTitulo(context, 'Conquista (Autores)'),
+                      _buildSecaoTitulo(
+                        context,
+                        tr(ChaveTexto.filtroConquistaAutores),
+                      ),
                       const SizedBox(height: 8),
                       _buildSeletorConquistadores(context),
                       const SizedBox(height: 16),
@@ -532,7 +556,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       FilterChip(
                         selected: apenasClassicasAtivo,
                         label: Text(
-                          'Apenas Clássicas (★)',
+                          tr(ChaveTexto.filtroApenasClassicas),
                           style: TextStyle(
                             color: apenasClassicasAtivo
                                 ? colors.deepBasalt
@@ -597,13 +621,23 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
   String _obterTextoBotaoAplicar() {
     final total = widget.totalResultados;
     if (total == null) {
-      return 'Aplicar';
+      return tr(ChaveTexto.comumAplicar);
     }
-    return 'Aplicar ($total resultado${total == 1 ? '' : 's'})';
+    if (total == 1) {
+      return tr(ChaveTexto.comumAplicarUmResultado);
+    }
+    return tr(ChaveTexto.comumAplicarVariosResultados, {'total': '$total'});
   }
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirPainel(context),
+    );
+  }
+
+  Widget _construirPainel(BuildContext context) {
     final colors = context.colors;
     final totalAtivos = _contarFiltrosAtivos();
     final chips = _obterListaChips(context);
@@ -641,7 +675,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Filtros e Ordenação',
+                      context.tr(ChaveTexto.explorarFiltrosOrdenacao),
                       style: TextStyle(
                         color: colors.chalkWhite,
                         fontWeight: FontWeight.bold,
@@ -751,7 +785,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           label: Text(
-            mod,
+            ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(mod),
             style: TextStyle(
               color: isSelected ? colors.chalkWhite : colors.ashGrey,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -832,9 +866,9 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     final seta = u.direcaoCrescente ? '▲' : '▼';
     switch (u.tipoOrdenacao) {
       case TipoOrdenacaoExploracao.padrao:
-        return 'Padrão $seta';
+        return '${tr(ChaveTexto.filtroPadraoMisto)} $seta';
       case TipoOrdenacaoExploracao.grau:
-        return 'Grau $seta';
+        return '${tr(ChaveTexto.filtroGrauMisto)} $seta';
       case TipoOrdenacaoExploracao.alfabetico:
         return u.direcaoCrescente ? 'A-Z ▲' : 'Z-A ▼';
     }
@@ -882,7 +916,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         for (final mod in widget.modalidadesDisponiveis.where((m) => u.modalidadesAtivas.contains(m))) {
           chips.add(
             Chip(
-              label: Text(mod, style: TextStyle(color: colors.chalkWhite, fontSize: 12)),
+              label: Text(
+                ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(mod),
+                style: TextStyle(color: colors.chalkWhite, fontSize: 12),
+              ),
               backgroundColor: colors.rustIron.withValues(alpha: 0.3),
               side: BorderSide(color: colors.rustIron),
               deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
@@ -937,9 +974,11 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         if (startIdx > endIdx) startIdx = endIdx;
         final rotulo = startIdx == endIdx
             ? opcoes[startIdx].rotulo
-            : '${opcoes[startIdx].rotulo} a ${opcoes[endIdx].rotulo}';
+            : '${opcoes[startIdx].rotulo} ${tr(ChaveTexto.filtroConectorA)} ${opcoes[endIdx].rotulo}';
         final textoRotulo = (_isModoSetores && temMultiplasCategorias)
-            ? (cat == 'Via' ? 'Vias: $rotulo' : 'Boulders: $rotulo')
+            ? (cat == 'Via'
+                ? '${tr(ChaveTexto.modVias)}: $rotulo'
+                : '${tr(ChaveTexto.modBoulders)}: $rotulo')
             : rotulo;
 
         chips.add(
@@ -1023,8 +1062,14 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       if (u.apenasClassicas) {
         chips.add(
           Chip(
-            label: const Text('Clássicas (★)',
-                style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
+            label: Text(
+              tr(ChaveTexto.filtroClassicas),
+              style: const TextStyle(
+                color: Colors.amber,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             backgroundColor: Colors.amber.withValues(alpha: 0.15),
             side: const BorderSide(color: Colors.amber),
             deleteIcon: const Icon(Icons.close, size: 16, color: Colors.amber),
@@ -1054,7 +1099,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
         final rotulo = startIdx == endIdx
             ? opcoes[startIdx].rotulo
-            : '${opcoes[startIdx].rotulo} a ${opcoes[endIdx].rotulo}';
+            : '${opcoes[startIdx].rotulo} ${tr(ChaveTexto.filtroConectorA)} ${opcoes[endIdx].rotulo}';
 
         chips.add(
           Chip(
