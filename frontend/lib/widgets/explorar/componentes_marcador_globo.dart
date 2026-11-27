@@ -318,3 +318,62 @@ class PilulaExpandidaPicoGlobo extends StatelessWidget {
                     color: corUmidade,
                   ),
                 ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pico.nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: corTextoPrimario,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (mostrarAltitudeMar)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1.5),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.terrain_rounded,
+                                size: 10.5,
+                                color: corTextoPrimario.withValues(alpha: 0.78),
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  context.tr(
+                                    ChaveTexto.explorarAcimaDoMar,
+                                    {'metros': pico.altitudePicoMetros},
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: corTextoPrimario.withValues(
+                                      alpha: 0.82,
+                                    ),
+                                    fontSize: 9.6,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
