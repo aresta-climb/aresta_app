@@ -173,9 +173,10 @@ abstract final class ConstrutorRedeViariaAresta {
       if (atual.custo > custoMin[atual.no] + 1e-6) continue;
       final distBase = distKm[atual.no];
       for (final ar in adj[atual.no]) {
-        final novoCusto = atual.custo + ar.pesoKm;
-        if (novoCusto + 1e-6 < distKm[ar.vizinho]) {
-          distKm[ar.vizinho] = novoCusto;
+        final novoCusto = atual.custo + ar.custoPondKm;
+        if (novoCusto + 1e-6 < custoMin[ar.vizinho]) {
+          custoMin[ar.vizinho] = novoCusto;
+          distKm[ar.vizinho] = distBase + ar.distRealKm;
           pai[ar.vizinho] = atual.no;
           arestaPaiVirtual[ar.vizinho] = ar.virtual;
           fila.inserir(ar.vizinho, novoCusto);
@@ -185,35 +186,25 @@ abstract final class ConstrutorRedeViariaAresta {
 
     final arestasAtivas = <int, ({int u, int v})>{};
     final nosCorredor = <int>{origemBh};
-    final ramaisCurtoAcesso =
-        <({Offset de, Offset para, double dIni, double dFim})>[];
     var maiorDistTotalKm = 18.0;
 
     for (final pico in picos) {
-      final alvo = Offset(pico.longitude, pico.latitude);
+      final cosPico = math.cos(pico.latitude * _grausParaRad);
       var melhorNo = origemBh;
-      var menorGapKm = _distanciaKm(nos[origemBh], alvo);
+      var menorDist2 = double.infinity;
       for (var i = 0; i < totalNos; i++) {
         if (!distKm[i].isFinite) continue;
-        final d = _distanciaKm(nos[i], alvo);
-        if (d < menorGapKm) {
-          menorGapKm = d;
+        final dx = (nos[i].dx - pico.longitude) * cosPico;
+        final dy = nos[i].dy - pico.latitude;
+        final d2 = dx * dx + dy * dy;
+        if (d2 < menorDist2) {
+          menorDist2 = d2;
           melhorNo = i;
         }
       }
 
-      final distChegadaPico = distKm[melhorNo] + menorGapKm;
-      if (distChegadaPico > maiorDistTotalKm) {
-        maiorDistTotalKm = distChegadaPico;
-      }
-      // Apenas trilha curtíssima de estacionamento -> base da pedra (<= 1,4 km)
-      if (menorGapKm > 0.12 && menorGapKm <= 1.4) {
-        ramaisCurtoAcesso.add((
-          de: nos[melhorNo],
-          para: alvo,
-          dIni: distKm[melhorNo],
-          dFim: distChegadaPico,
-        ));
+      if (distKm[melhorNo] > maiorDistTotalKm) {
+        maiorDistTotalKm = distKm[melhorNo];
       }
 
       var cursor = melhorNo;
@@ -266,18 +257,6 @@ abstract final class ConstrutorRedeViariaAresta {
           ),
         );
       }
-    }
-
-    for (final ramal in ramaisCurtoAcesso) {
-      final tIni = normalizarTempo(ramal.dIni);
-      final tFim = math.max(tIni + 0.020, normalizarTempo(ramal.dFim));
-      trechos.add(
-        TrechoPropagacaoViaria(
-          verticesLonLat: <Offset>[ramal.de, ramal.para],
-          tempoInicio: tIni,
-          tempoFim: tFim.clamp(0.0, 1.0),
-        ),
-      );
     }
     trechos.sort((a, b) => a.tempoInicio.compareTo(b.tempoInicio));
 
@@ -407,7 +386,7 @@ abstract final class ConstrutorRedeViariaAresta {
   }
 
   /// Extrai exclusivamente os trechos de rodovias e avenidas arteriais REAIS que cruzam o perímetro
-  /// urbano de [loc], sem jamais fabricar polígonos artificiais ao redor da cidade.
+  /// urbano de [loc], descartando vias distantes em `O(1)` pela caixa envolvente.
   static List<List<Offset>> _extrairViasUrbanasReaisDaCidade({
     required LocalidadeRegionalMapa loc,
     required bool ehBh,
@@ -417,10 +396,19 @@ abstract final class ConstrutorRedeViariaAresta {
         ? 0.115
         : (loc.nivel == 1 ? 0.048 : (loc.nivel == 2 ? 0.032 : 0.022));
     final cosLat = math.max(0.35, math.cos(loc.latitude * _grausParaRad));
+    final raioLon = raioGraus / cosLat;
     final r2 = raioGraus * raioGraus;
     final vias = <List<Offset>>[];
 
     for (final via in rodovias) {
+      if (!via.interceptaJanela(
+        janelaMinLon: loc.longitude - raioLon,
+        janelaMaxLon: loc.longitude + raioLon,
+        janelaMinLat: loc.latitude - raioGraus,
+        janelaMaxLat: loc.latitude + raioGraus,
+      )) {
+        continue;
+      }
       var sub = <Offset>[];
       for (final v in via.verticesLonLat) {
         final dx = (v.dx - loc.longitude) * cosLat;
