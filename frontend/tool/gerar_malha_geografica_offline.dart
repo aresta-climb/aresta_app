@@ -350,3 +350,97 @@ abstract final class GeradorMalhaGeograficaOffline {
         final uf = _codigoIbgeParaUf[cod];
         if (uf == null) continue;
 
+        final aneisUf = _extrairAneisDeGeometria(
+          fMap['geometry'] as Map<String, dynamic>,
+        );
+        if (aneisUf.isEmpty) continue;
+        aneisUf.sort((a, b) => b.length.compareTo(a.length));
+        final simplificado = simplificarDouglasPeucker(aneisUf.first, 0.035);
+        estadosBr.add(<String, dynamic>{
+          'uf': uf,
+          'poligono': _arredondarVertices(simplificado, casas: 3),
+        });
+      }
+
+      estadosBr.sort(
+        (a, b) => (a['uf'] as String).compareTo(b['uf'] as String),
+      );
+
+      return <String, dynamic>{
+        'versao': '2026.11-ibge-v3-ne110m',
+        'fonte': 'IBGE API v3 Malhas Oficiais + Natural Earth 110m Land',
+        'continentes': continentes,
+        'brasil': contornoBrasil,
+        'estados_br': estadosBr,
+      };
+    } finally {
+      cliente.close(force: true);
+    }
+  }
+
+  /// Coleta online a altimetria real NASA SRTM 30m (AWS Open Data Terrarium `z=12`, `~35m/px`)
+  /// e extrai a grade `13x13` de relevo real ao redor das coordenadas de cada pico em `indice.binarypb`.
+  static Future<Map<String, dynamic>> buscarAltimetriaRealDemParaIndice({
+    required String caminhoIndiceBinaryPb,
+    String urlBaseTerrarium =
+        'https://s3.amazonaws.com/elevation-tiles-prod/terrarium',
+  }) async {
+    final arquivo = File(caminhoIndiceBinaryPb);
+    if (!arquivo.existsSync()) {
+      throw ArgumentError(
+        'Arquivo de índice não encontrado: $caminhoIndiceBinaryPb',
+      );
+    }
+
+    final indice = Indice.fromBuffer(arquivo.readAsBytesSync());
+    final picos = <({String id, double lat, double lon})>[];
+    for (final c in indice.croquis) {
+      if (c.id.isEmpty || !c.hasLocalizacao()) continue;
+      final lat = c.localizacao.latitude / 10000000.0;
+      final lon = c.localizacao.longitude / 10000000.0;
+      if (lat == 0 && lon == 0) continue;
+      picos.add((id: c.id, lat: lat, lon: lon));
+    }
+
+    const zoom = 12;
+    const n = dimensaoGradeDem;
+    const span = raioGradeDemGraus;
+    final cacheTiles = <String, List<double>>{};
+
+    final cliente = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 25);
+    try {
+      Future<double> amostrarSrtm30m(double lat, double lon) async {
+        final escalaMundo = 256.0 * (1 << zoom);
+        final pxGlobal = ((lon + 180.0) / 360.0) * escalaMundo;
+        final latRad = lat * math.pi / 180.0;
+        final pyGlobal =
+            ((1.0 -
+                    math.log(math.tan(latRad) + 1.0 / math.cos(latRad)) /
+                        math.pi) *
+                0.5) *
+            escalaMundo;
+
+        final tx = (pxGlobal ~/ 256).clamp(0, (1 << zoom) - 1);
+        final ty = (pyGlobal ~/ 256).clamp(0, (1 << zoom) - 1);
+        final chave = '$zoom/$tx/$ty';
+
+        var gradeTile = cacheTiles[chave];
+        if (gradeTile == null) {
+          final bytesPng = await _getBytesHttp(
+            cliente,
+            '$urlBaseTerrarium/$chave.png',
+          );
+          gradeTile = decodificarPngTerrarium256(bytesPng);
+          cacheTiles[chave] = gradeTile;
+        }
+
+        final lx = (pxGlobal - tx * 256).clamp(0.0, 255.0);
+        final ly = (pyGlobal - ty * 256).clamp(0.0, 255.0);
+        final x0 = lx.floor().clamp(0, 255);
+        final y0 = ly.floor().clamp(0, 255);
+        final x1 = math.min(255, x0 + 1);
+        final y1 = math.min(255, y0 + 1);
+        final fx = lx - x0;
+        final fy = ly - y0;
+
