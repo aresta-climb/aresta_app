@@ -288,3 +288,93 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.climaIncendioAtivo: 'Actieve bosbrand',
   ChaveTexto.climaIncendioSevero: 'Zware bosbrand',
 
+  // Meus Croquis e Modais Offline
+  ChaveTexto.meusCroquisTitulo: "MIJN TOPO'S",
+  ChaveTexto.meusCroquisSubtitulo: 'OFFLINE OPSLAG',
+  ChaveTexto.meusCroquisVazio: "Nog geen topo's offline opgeslagen.",
+  ChaveTexto.meusCroquisAbrirOffline: 'OFFLINE OPENEN',
+  ChaveTexto.meusCroquisErroAbrir: 'Fout bij openen van offline gids.',
+  ChaveTexto.meusCroquisExcluirTitulo: 'Verwijderen?',
+  ChaveTexto.meusCroquisExcluirPergunta:
+      'Offline gids voor {nome} verwijderen?',
+  ChaveTexto.meusCroquisExcluidoToast: 'Gids verwijderd.',
+  ChaveTexto.meusCroquisErroExcluirToast: 'Fout bij verwijderen van gids.',
+  ChaveTexto.meusCroquisGuiaRemovidoToast:
+      'Gids verwijderd uit offline opslag.',
+  ChaveTexto.offlineSalvarComTamanho: 'Offline opslaan ({tamanho})',
+  ChaveTexto.offlineSalvarSemTamanho: 'Offline opslaan',
+  ChaveTexto.offlineModoOnlineTitulo: 'ONLINE MODUS',
+  ChaveTexto.offlineModoOnlineDesc:
+      'Je bladert nu online. Sla de volledige gids op om zonder bereik bij de rots te gebruiken.',
+  ChaveTexto.offlineBaixandoPct: 'DOWNLOADEN ({pct}%)...',
+  ChaveTexto.offlineSalvarParaPedraTitulo: 'OPSLAAN VOOR DE ROTS?',
+  ChaveTexto.offlineSalvarParaPedraCorpo:
+      "Denk eraan: bij de rots is vaak geen bereik. Sla de gids op om de topo's en graden van {nome} offline te bekijken.",
+  ChaveTexto.offlineSairSemSalvar: 'Verlaten zonder opslaan',
+  ChaveTexto.offlineSemConexaoTitulo: 'JE BENT OFFLINE',
+  ChaveTexto.offlineSemConexaoCorpo:
+      'Deze inhoud hoort bij {nome} en staat nog niet offline op je toestel. Maak verbinding met internet en probeer het opnieuw.',
+  ChaveTexto.offlineAindaSemConexao:
+      'Nog steeds geen internetverbinding. Controleer je netwerk.',
+  ChaveTexto.offlineTentandoConectar: 'Verbinden...',
+
+  // Página do Pico, Subpáginas, Setor, Grupo, Filtros de Índice e Croqui Interativo
+  ChaveTexto.picoCompartilharTooltip: 'Gebied delen',
+  ChaveTexto.picoExcluirGuiaTooltip: 'Gids verwijderen',
+  ChaveTexto.picoBuscarBoulderTooltip: 'Boulder zoeken',
+  ChaveTexto.picoBuscarViaTooltip: 'Route zoeken',
+  ChaveTexto.picoCardSetoresTitulo: 'Sectoren & Routes',
+  ChaveTexto.picoCardSetoresSubtitulo:
+      'Verken sectoren, routes en boulders met filters en kaarten',
+  ChaveTexto.picoCardExplorarTitulo: 'Gebied verkennen',
+  ChaveTexto.picoCardExplorarSubtitulo:
+      'Aanlooproute, overzichtskaarten, weer en praktische info.',
+  ChaveTexto.picoCardRegrasTitulo: 'Regels & richtlijnen',
+  ChaveTexto.picoCardRegrasSubtitulo:
+      'Natuurregels, veiligheid, klimethiek en lokale afspraken.',
+  ChaveTexto.picoCardComunidadeTitulo: 'Community',
+  ChaveTexto.picoCardComunidadeSubtitulo:
+      'Social media, WhatsApp-kanaal, sponsors en lokale ondernemers.',
+  ChaveTexto.picoCardCreditosSubtitulo:
+      'Ontmoet de auteurs, bijdragers en dankbetuigingen.',
+  ChaveTexto.picoVoltarMapaSetor: 'Terug naar sectorkaart',
+  ChaveTexto.picoCroquiPor: 'Topo door {autores}',
+  ChaveTexto.picoInfoLocal: 'Gebiedsinformatie',
+  ChaveTexto.picoCampoNome: 'Naam',
+  ChaveTexto.picoCampoEstado: 'Deelstaat',
+  ChaveTexto.picoMaisInfoSecao: 'Meer informatie',
+  ChaveTexto.picoMapasGerais: 'Overzichtskaarten',
+  ChaveTexto.picoNenhumElemento: 'Geen items beschikbaar.',
+  ChaveTexto.picoBuscarBoulderHint: 'Zoek boulder (bijv. V4) of sector...',
+  ChaveTexto.picoBuscarEscaladaHint: 'Zoek route (bijv. 7a) of sector...',
+  ChaveTexto.picoDificuldadePrefixo: 'Graad: {grau}',
+  ChaveTexto.picoUltimaAtualizacaoNaoInformada: 'Laatste update: Onbekend',
+  ChaveTexto.picoUltimaAtualizacaoHoje: 'Laatste update: Vandaag om {hora}',
+  ChaveTexto.picoUltimaAtualizacaoOntem: 'Laatste update: Gisteren om {hora}',
+  ChaveTexto.picoUltimaAtualizacaoData: 'Laatste update: {data} om {hora}',
+  ChaveTexto.picoSubExplorarTitulo: 'GEBIED VERKENNEN',
+  ChaveTexto.picoSubIntroSubtitulo: 'Algemene introductie van het gebied.',
+  ChaveTexto.picoSubSobreLocal: 'Over het gebied',
+  ChaveTexto.picoSubSobreLocalSubtitulo:
+      'Geschiedenis van het massief, eerste beklimmingen en weetjes.',
+  ChaveTexto.picoSubComoChegar: 'Bereikbaarheid',
+  ChaveTexto.picoSubComoChegarSubtitulo:
+      'Aanloopinstructies en navigatie tot onderaan de rots.',
+  ChaveTexto.picoSubAbrirMaps: 'Openen in Google Maps',
+  ChaveTexto.picoSubAbrirMapsSubtitulo:
+      'Bekijk locatie en plan de route naar het gebied.',
+  ChaveTexto.picoSubExtrasSubtitulo: 'Extra informatie over het gebied.',
+  ChaveTexto.picoSubComunidadeTitulo: 'COMMUNITY',
+  ChaveTexto.picoSubInformacoes: 'Informatie',
+  ChaveTexto.picoSubAssociacaoLocal: 'Lokale klimvereniging',
+  ChaveTexto.picoSubParceiros: 'Partners',
+  ChaveTexto.picoSubComercioLocal: 'Lokale horeca & winkels',
+  ChaveTexto.picoSubApoieTitulo: 'STEUN HET GEBIED',
+  ChaveTexto.picoSubDoacaoPix: 'Donatie via Pix',
+  ChaveTexto.picoSubDoacaoPixSubtitulo:
+      'Help mee aan RVS-boorhaken en relais.\nSleutel: {chave}',
+  ChaveTexto.picoSubPixCopiadoToast: 'Pix-sleutel gekopieerd!',
+  ChaveTexto.picoSubProdutos: 'Producten van het gebied',
+  ChaveTexto.picoSubPatrocinador: 'Word sponsor',
+  ChaveTexto.picoSubPatrocinadorSubtitulo:
+      'Verbind je merk duurzaam en ethisch met de klimsport.',
