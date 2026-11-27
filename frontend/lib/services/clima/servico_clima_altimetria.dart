@@ -180,3 +180,80 @@ class ServicoClimaAltimetria extends ChangeNotifier {
     super.dispose();
   }
 
+  Future<void> _carregarSementeAltimetriaAsset() async {
+    try {
+      final texto = await _assetBundle.loadString(
+        caminhoAssetSementeAltimetria,
+        cache: false,
+      );
+      final mapa = jsonDecode(texto) as Map<String, dynamic>;
+      final picos = mapa['picos'] as Map<String, dynamic>? ?? const {};
+      for (final entry in picos.entries) {
+        _altimetriaPorPico[entry.key] = CotaAltimetricaPico.deMapa(
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.instance.logError(
+        '[ServicoClimaAltimetria] Falha ao carregar semente inicial de altimetria',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  /// Sincroniza `estado_clima_picos` (~3 KB) caso o TTL de 3 horas tenha expirado ou [forcar] seja
+  /// verdadeiro, consultando `snapshots_altimetria_picos` apenas se surgir algum pico em
+  /// [idsPicosCatalogo] ainda ausente da base altimétrica local.
+  Future<bool> sincronizarSeNecessario({
+    bool forcar = false,
+    Iterable<String> idsPicosCatalogo = const [],
+  }) {
+    final emVoo = _sincronizacaoEmAndamento;
+    if (emVoo != null) return emVoo;
+    final futuro = _executarSincronizacao(
+      forcar: forcar,
+      idsPicosCatalogo: idsPicosCatalogo,
+    );
+    _sincronizacaoEmAndamento = futuro;
+    return futuro.whenComplete(() => _sincronizacaoEmAndamento = null);
+  }
+
+  Future<bool> _executarSincronizacao({
+    required bool forcar,
+    required Iterable<String> idsPicosCatalogo,
+  }) async {
+    final agora = _relogioUtc();
+    final precisaAltimetria = _altimetriaPorPico.isEmpty ||
+        idsPicosCatalogo.any(
+          (id) => id.isNotEmpty && !_altimetriaPorPico.containsKey(id),
+        );
+    if (!forcar &&
+        !precisaAltimetria &&
+        _ultimaSincronizacaoUtc != null &&
+        agora.difference(_ultimaSincronizacaoUtc!) < ttlSincronizacao) {
+      return false;
+    }
+
+    try {
+      if (_descartado) return false;
+      final remoto = await _fonteRemota.buscarSnapshotRemoto(
+        incluirAltimetria: forcar || precisaAltimetria,
+      );
+      if (_descartado) return false;
+      final altMesclada = <String, CotaAltimetricaPico>{
+        ..._altimetriaPorPico,
+      };
+      for (final entry in remoto.altimetriaPorPico.entries) {
+        altMesclada[entry.key] = entry.value.preservandoGradeSeAusente(
+          _altimetriaPorPico[entry.key],
+        );
+      }
+      final consolidado = SnapshotClimaAltimetria(
+        geradoEm: remoto.geradoEm,
+        bolhasChuva: remoto.bolhasChuva,
+        bolhasIncendio: remoto.bolhasIncendio,
+        chuvaPorPico: remoto.chuvaPorPico,
+        altimetriaPorPico: altMesclada,
+      );
+
