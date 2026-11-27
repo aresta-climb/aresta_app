@@ -603,19 +603,41 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     await _despachante.registrarMutacao(_clienteFila, mutacao);
   }
 
-  Future<void> _persistirCacheAlertasUsuario() =>
-      _armazenamentoFila.salvarCacheAlertasUsuario([
-        for (final lista in _eventosAlertasPorVia.values) ...lista,
-      ]);
+  Future<void> _hidratarDadosViaAPartirCacheAlertas(String uidVia) async {
+    await _hidratarEstadoLocalSeNecessario();
+    if (_dadosPorEscalada.containsKey(uidVia)) return;
+    final evs = [
+      ...?_armazenamentoFila.eventosAlertasPorVia[uidVia],
+      ..._despachante.itensPendentes.where((i) => i.escaladaUid == uidVia),
+    ];
+    if (evs.isEmpty) return;
+    _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
+      aplicarMutacoesSobreItens(evs, _despachante.mutacoesPendentes),
+      ehBoulder: false,
+      avataresPorAutor: _mapaAvatarPerfilLocal(),
+    );
+  }
+
+  static String _exigirEscaladaUidNaoVazio(String escaladaUid) {
+    final limpo = escaladaUid.trim();
+    if (limpo.isEmpty) {
+      throw ArgumentError.value(escaladaUid, 'escaladaUid', 'UID vazio.');
+    }
+    return limpo;
+  }
+
+  Map<String, String> _mapaAvatarPerfilLocal() {
+    final p = _repositorioCaderneta.obterPerfil();
+    final f = p.fotoUrl?.trim();
+    return (f != null && f.isNotEmpty && p.autorIdPublico.isNotEmpty)
+        ? {p.autorIdPublico: f}
+        : const {};
+  }
 
   Future<void> _hidratarEstadoLocalSeNecessario() async {
     if (_cacheCarregado) return;
     _cacheCarregado = true;
     await _despachante.garantirCarregada();
-    for (final ev in await _armazenamentoFila.carregarCacheAlertasUsuario()) {
-      _eventosAlertasPorVia
-          .putIfAbsent(ev.escaladaUid, () => <ItemFilaInteracao>[])
-          .add(ev);
-    }
+    await _armazenamentoFila.hidratarMemoriaAlertas();
   }
 }
