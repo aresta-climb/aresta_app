@@ -188,3 +188,91 @@ abstract final class PintorIncendioGlobo {
         );
       }
 
+      // 2. Halo termal pulsante + cicatriz incandescente
+      final pulsoCalor = 0.84 +
+          0.16 *
+              math.sin(
+                faseSegundos * (3.2 + 0.5 * severidade.peso) + f.id.length,
+              );
+      final raioBlur =
+          (menorLadoMundoPx * (0.16 + 0.03 * severidade.peso)).clamp(2.4, 12.0);
+      canvas.drawPath(
+        caminhoSeco,
+        Paint()
+          ..color = paleta.haloTermal.withValues(
+            alpha: (paleta.haloTermal.a * pulsoCalor).clamp(0.0, 1.0),
+          )
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, raioBlur),
+      );
+      canvas.drawPath(
+        caminhoSeco,
+        Paint()..color = paleta.preenchimento,
+      );
+
+      // 3. Iluminação termal radial + línguas de chama + núcleos em brasa + fagulhas fixas no mundo
+      canvas.save();
+      canvas.clipPath(caminhoSeco);
+
+      if (ptCentroFogo.visivel &&
+          severidade.peso >= 2 &&
+          menorLadoMundoPx >= 16.0) {
+        final raioLuz = math.max(12.0, maiorLadoMundoPx * 0.55);
+        final alfaCentro = severidade == NivelSeveridadeIncendio.extremo
+            ? 0.52
+            : (severidade.peso == 3 ? 0.34 : 0.18);
+        canvas.drawRect(
+          limites.inflate(6.0),
+          Paint()
+            ..shader = ui.Gradient.radial(
+              centroMundoFogo,
+              raioLuz,
+              <Color>[
+                paleta.nucleoBrasa.withValues(
+                  alpha: (alfaCentro * pulsoCalor).clamp(0.0, 1.0),
+                ),
+                Colors.transparent,
+              ],
+            ),
+        );
+      }
+
+      EfeitosParticulasIncendioGlobo.desenharChamasEFagulhasAscendentes(
+        canvas: canvas,
+        incendio: f,
+        pxPorGrau: pxPorGrau,
+        menorLadoMundoPx: menorLadoMundoPx,
+        dirVentoTela: dirVentoTela,
+        faseSegundos: faseSegundos,
+        fatorVel: fatorVel,
+        tamanhoTela: tamanhoTela,
+        controlador: controlador,
+        picosReferencia: picosReferencia,
+        sobreRelevo: sobreRelevo,
+        severidade: severidade,
+        paleta: paleta,
+      );
+
+      for (final nuc in f.nucleosIntensos) {
+        final projNuc = _projetarAnel(
+          anel: nuc,
+          tamanhoTela: tamanhoTela,
+          controlador: controlador,
+          picosReferencia: picosReferencia,
+          sobreRelevo: sobreRelevo,
+          faseSegundos: faseSegundos * 1.35,
+          uLon: uLon,
+          uLat: uLat,
+          amplitudeCintilacaoGraus: 0.005,
+        );
+        if (!projNuc.visivel) continue;
+        canvas.drawPath(
+          projNuc.caminho,
+          Paint()
+            ..color = paleta.nucleoBrasa.withValues(
+              alpha: (paleta.nucleoBrasa.a * pulsoCalor).clamp(0.0, 1.0),
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+        );
+      }
+      canvas.restore();
+
