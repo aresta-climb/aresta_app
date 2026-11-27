@@ -148,3 +148,53 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
         ..color = corGrade,
     );
 
+    final marcadores = <({double z, String texto, Color cor})>[
+      (z: 0.0, texto: '0σ', cor: corEixoTexto),
+      (z: 1.96, texto: '+1.96σ', cor: corCauda),
+      (z: 2.57, texto: '+2.57σ', cor: corCauda),
+    ];
+
+    for (final m in marcadores) {
+      final x = xDeZ(m.z);
+      canvas.drawLine(
+        Offset(x, yDeZ(m.z)),
+        Offset(x, baseY),
+        Paint()
+          ..strokeWidth = 1.1
+          ..color = m.cor.withValues(alpha: 0.65),
+      );
+      final tp = TextPainter(
+        text: TextSpan(
+          text: m.texto,
+          style: TextStyle(
+            color: m.cor,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(x - tp.width * 0.5, baseY + 4.0));
+      tp.dispose();
+    }
+
+    // Indicador de projeção fora de escala na extrema direita (+27.7σ)
+    final setaX = size.width - 10.0;
+    final setaY = baseY - 12.0;
+    final pincelSeta = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..color = corCauda;
+    canvas.drawLine(Offset(setaX - 24.0, setaY), Offset(setaX, setaY), pincelSeta);
+    canvas.drawLine(Offset(setaX - 5.0, setaY - 4.0), Offset(setaX, setaY), pincelSeta);
+    canvas.drawLine(Offset(setaX - 5.0, setaY + 4.0), Offset(setaX, setaY), pincelSeta);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PintorCurvaNormalPadrao oldDelegate) =>
+      oldDelegate.corCurva != corCurva ||
+      oldDelegate.corCauda != corCauda ||
+      oldDelegate.corGrade != corGrade ||
+      oldDelegate.corEixoTexto != corEixoTexto;
+}
