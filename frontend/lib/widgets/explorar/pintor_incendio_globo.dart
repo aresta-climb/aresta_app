@@ -369,3 +369,92 @@ abstract final class PintorIncendioGlobo {
       }
     }
 
+    var lonAnt = 0.0;
+    for (final vert in vertices) {
+      final lon = vert.dx;
+      final lat = vert.dy;
+      final elev = sobreRelevo
+          ? math.max(
+              0.0,
+              GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+                    latitude: lat,
+                    longitude: lon,
+                    picosReferencia: picosReferencia,
+                  ) +
+                  28.0,
+            )
+          : 0.0;
+      final pt = controlador.projetarCoordenada(
+        latitude: lat,
+        longitude: lon,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!pt.visivel) continue;
+      if (pts.isNotEmpty && (lon - lonAnt).abs() > 150.0) {
+        continue;
+      }
+      lonAnt = lon;
+      pts.add(Offset(pt.x, pt.y));
+      if (pt.x < minX) minX = pt.x;
+      if (pt.x > maxX) maxX = pt.x;
+      if (pt.y < minY) minY = pt.y;
+      if (pt.y > maxY) maxY = pt.y;
+    }
+
+    if (pts.length < 3 ||
+        maxX < -40 ||
+        minX > tamanhoTela.width + 40 ||
+        maxY < -40 ||
+        minY > tamanhoTela.height + 40) {
+      return (caminho: Path(), limites: Rect.zero, visivel: false);
+    }
+
+    final caminho = Path()
+      ..moveTo(
+        (pts.last.dx + pts.first.dx) * 0.5,
+        (pts.last.dy + pts.first.dy) * 0.5,
+      );
+    for (var i = 0; i < pts.length; i++) {
+      final atual = pts[i];
+      final prox = pts[(i + 1) % pts.length];
+      caminho.quadraticBezierTo(
+        atual.dx,
+        atual.dy,
+        (atual.dx + prox.dx) * 0.5,
+        (atual.dy + prox.dy) * 0.5,
+      );
+    }
+    caminho.close();
+    return (
+      caminho: caminho,
+      limites: Rect.fromLTRB(minX, minY, maxX, maxY),
+      visivel: true,
+    );
+  }
+
+  static Offset _estimarVetorVentoTela({
+    required BolhaIncendioRegional incendio,
+    required double uLon,
+    required double uLat,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+  }) {
+    final p0 = controlador.projetarCoordenada(
+      latitude: incendio.latitude,
+      longitude: incendio.longitude,
+      elevacaoMetros: 0,
+      tamanhoTela: tamanhoTela,
+    );
+    final p1 = controlador.projetarCoordenada(
+      latitude: (incendio.latitude + uLat * 0.25).clamp(-89.0, 89.0),
+      longitude: incendio.longitude + uLon * 0.25,
+      elevacaoMetros: 0,
+      tamanhoTela: tamanhoTela,
+    );
+    final dx = p1.x - p0.x;
+    final dy = p1.y - p0.y;
+    final n = math.max(1e-3, math.sqrt(dx * dx + dy * dy));
+    return Offset(dx / n, dy / n);
+  }
+}
