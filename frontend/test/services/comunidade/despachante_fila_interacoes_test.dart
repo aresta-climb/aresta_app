@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/item_fila_interacao.dart';
+import 'package:frontend/data/modelos/mutacao_fila_interacao.dart';
 import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/comunidade/armazenamento_fila_interacoes.dart';
@@ -105,4 +106,91 @@ void main() {
       expect(despachante.itensPendentes, hasLength(2));
     },
   );
+
+  test(
+    'coalesce edições/exclusões sobre itens ainda não enviados e reconcilia mutações remotas (401/403/409/500/offline)',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+      await repoCaderneta.inicializar();
+      await repoCaderneta.salvarPerfil(
+        PerfilEscalador(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          userId: 'uuid-mariana',
+          accessToken: 'jwt-inicial',
+          refreshToken: 'refresh-mariana',
+        ),
+      );
+      final authFake = ServicoAutenticacaoFake(repositorio: repoCaderneta);
+      final clienteFake = ClienteFilaInteracoesFake();
+      final armazenamento = ArmazenamentoFilaInteracoes(preferencias: prefs);
+      final despachante = DespachanteFilaInteracoes(
+        repositorioCaderneta: repoCaderneta,
+        servicoAutenticacao: authFake,
+        armazenamentoFila: armazenamento,
+      );
+
+      // 1. Retém comentário e alerta ainda não enviados (offline) e coalesce edição/exclusão in-place
+      clienteFake.erroSimulado = const SocketException('Offline inicial');
+      final comOffline = ItemFilaInteracao.comentario(
+        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        escaladaUid: 'x8siJek3FiG3aB',
+        textoComentario: 'Rascunho offline',
+      );
+      final alertaOffline = ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        escaladaUid: 'x8siJek3FiG3aB',
+        alertaAlvoUid: 'alertaOff00001',
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+      );
+      await despachante.enfileirarEDespachar(clienteFake, [
+        comOffline,
+        alertaOffline,
+      ]);
+      expect(despachante.itensPendentes, hasLength(2));
+
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.editarComentario(
+          alvoUid: comOffline.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novoTexto: 'Rascunho editado offline',
+        ),
+      );
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.editarAlerta(
+          alvoUid: 'alertaOff00001',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          novaCategoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+          detalhe: 'Chapeleta frouxa',
+        ),
+      );
+      expect(despachante.mutacoesPendentes, isEmpty);
+      expect(
+        despachante.itensPendentes.first.textoComentario,
+        'Rascunho editado offline',
+      );
+      expect(
+        despachante.itensPendentes.last.categoriaAlerta,
+        CategoriaAlertaSeguranca.protecaoPrecaria,
+      );
+
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: comOffline.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      await despachante.registrarMutacao(
+        clienteFake,
 }
