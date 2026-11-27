@@ -740,3 +740,87 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
       'Wijzig direct de weergavetaal van de hele app.',
   ChaveTexto.configAparenciaTitulo: 'WEERGAVE',
   ChaveTexto.configAparenciaSub: 'Pas het thema van de app aan.',
+  ChaveTexto.configEscolherTemaManual: 'Thema handmatig kiezen',
+  ChaveTexto.configTemaEscuro: 'DONKER',
+  ChaveTexto.configPerfilCadernetaTitulo: 'PROFIEL & LOGBOEK',
+  ChaveTexto.configPerfilCadernetaSub:
+      'Toon of verberg je profiel en klimlogboek zonder lokale gegevens te wissen.',
+  ChaveTexto.configExibirPerfilSwitch: 'Profiel & Logboek tonen',
+  ChaveTexto.configConectarEditorTitulo: 'Editor verbinden',
+  ChaveTexto.configConectarEditorInstrucao:
+      'Voer de 8-cijferige code uit de Desktop Editor in of scan de QR-code.',
+  ChaveTexto.configConectarEditorHint: 'bijv. k9x2-p83a of volledige URL',
+  ChaveTexto.configEscanearQrBtn: 'QR-CODE SCANNEN',
+  ChaveTexto.configComoFuncionaEditor:
+      'Hoe werkt de Desktop Editor? Meer info',
+  ChaveTexto.configConectarBtn: 'VERBINDEN',
+  ChaveTexto.configModoExperimentalTitulo: 'EXPERIMENTELE / VOORBEELDMODUS',
+  ChaveTexto.configModoExperimentalSub:
+      "Live gesynchroniseerde topo's bekijken vanuit de Desktop Editor.",
+  ChaveTexto.configVoltarModoOficialBtn: 'TERUG NAAR OFFICIËLE MODUS',
+  ChaveTexto.configModoOficialTitulo: 'OFFICIËLE MODUS',
+  ChaveTexto.configModoOficialSub:
+      "Verbonden met de officiële Aresta Climb-catalogus. Verbind met de Desktop Editor om nieuwe topo's live te testen.",
+  ChaveTexto.configConectarEditorPreviaBtn: 'VERBINDEN MET EDITOR / PREVIEW',
+  ChaveTexto.configComoFazerSaibaMais: 'Hoe werkt dit? Meer info',
+  ChaveTexto.configVoltandoOficialToast: 'Terugkeren naar officiële catalogus...',
+  ChaveTexto.configReativandoExpToast:
+      'Lokale voorbeeldgegevens herstellen...',
+  ChaveTexto.configReativarExpBtn: 'VOORBEELDMODUS HERACTIVEREN',
+  ChaveTexto.configApagarTudoTitulo: 'Alles wissen?',
+  ChaveTexto.configApagarTudoCorpo:
+      'Hiermee worden de voorbeeldindex en alle daarin gedownloade gebieden definitief gewist. Doorgaan?',
+  ChaveTexto.configApagarTudoBtn: 'ALLES WISSEN',
+  ChaveTexto.configAmbienteExpLimpoToast: 'Voorbeeldomgeving gewist.',
+  ChaveTexto.configLimparExpBtn: 'VOORBEELDGEGEVENS WISSEN',
+  ChaveTexto.configConectadoEditorToast: 'Verbonden met editor-repository!',
+  ChaveTexto.configErroIndiceStatus:
+      'Fout: Index niet bereikbaar (Status {status})',
+  ChaveTexto.configErroConexaoUrl: 'Verbindingsfout: Controleer de URL',
+  ChaveTexto.qrTituloPagina: 'QR-code scannen',
+  ChaveTexto.qrAponteCamera: 'Richt de camera op de\nQR-code van de repository',
+  ChaveTexto.feedbackPerguntaTipo: 'Waar gaat je suggestie over?',
+  ChaveTexto.feedbackSobreCroqui: 'Over de Topo',
+  ChaveTexto.feedbackSobreApp: 'Over de App',
+  ChaveTexto.feedbackHintDescricao: 'Beschrijf het probleem of je idee...',
+  ChaveTexto.feedbackAvisoPublico:
+      'Openbare feedback. Er worden geen privégegevens gedeeld.',
+  ChaveTexto.feedbackEnviarBtn: 'Versturen',
+  ChaveTexto.shareConfiraPico:
+      'Bekijk de topo van {pico}{loc} op Aresta:\n{url}',
+  ChaveTexto.shareConfiraGrupo: 'Bekijk {grupo} bij {pico} op Aresta:\n{url}',
+  ChaveTexto.shareConfiraSetor: 'Bekijk {setor} bij {pico} op Aresta:\n{url}',
+  ChaveTexto.shareConfiraEscalada:
+      'Bekijk {via}{grau}{setor} bij {pico} op Aresta:\n{url}',
+  ChaveTexto.gpsDesligadoUltimaConhecida:
+      'GPS uitgeschakeld; centreren op laatst bekende locatie.',
+  ChaveTexto.gpsAtiveAparelho:
+      'Schakel GPS in op je toestel om op je locatie te centreren.',
+  ChaveTexto.gpsPermissaoNegada: 'Locatietoestemming geweigerd.',
+  ChaveTexto.gpsSinalIndisponivel:
+      'Kon op dit moment geen GPS-signaal ontvangen.',
+  ChaveTexto.filtroSecaoFiltros: 'FILTERS',
+  ChaveTexto.filtroModalidadesTitulo: 'Disciplines',
+  ChaveTexto.setorNenhumaEscaladaFiltrosAtuais:
+      'Geen klimmen gevonden met de huidige filters.',
+  ChaveTexto.modEsportivaMinusculo: 'sportroute',
+  ChaveTexto.modMovelMinusculo: 'trad-route',
+  ChaveTexto.modBoulderMinusculo: 'boulder',
+  ChaveTexto.modMultienfiadaMinusculo: 'multi-pitch',
+  ChaveTexto.modMultienfiadasMinusculo: 'multi-pitches',
+  ChaveTexto.modHighlineMinusculo: 'highline',
+  ChaveTexto.comumFecharCaixaAlta: 'SLUITEN',
+  ChaveTexto.authValidacaoCodigo6Digitos:
+      'Voer de 6-cijferige code in die per e-mail is verzonden.',
+  ChaveTexto.authServicoIndisponivel:
+      'Authenticatieservice is momenteel niet beschikbaar.',
+  ChaveTexto.configTestarObsolescenciaBtn: 'VEROUDERINGSWAARSCHUWING TESTEN',
+  ChaveTexto.configTestarBloqueioBtn: 'BLOKKEERSCHERM TESTEN',
+  ChaveTexto.notifBaixandoPct: 'Downloaden... {pct}%',
+  ChaveTexto.notifCroquiSalvoOffline: '✓ Topo opgeslagen voor offline gebruik.',
+  ChaveTexto.notifFalhaBaixarCroqui:
+      'Downloaden van topo mislukt. Controleer je verbinding.',
+  ChaveTexto.feedbackRecebidoObrigado:
+      'Feedback ontvangen! Heel erg bedankt voor het helpen verbeteren van de app.',
+  ChaveTexto.sistemaMigracaoTentarNovamente: 'Opnieuw proberen',
+};
