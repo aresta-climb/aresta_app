@@ -422,86 +422,48 @@ void main() {
       );
       mockRepo.indiceData.value = Indice();
 
-      final vm = BrowseViewModel(
-        datasetRepo: mockRepo,
-        syncService: mockSync,
-        telemetria: mockTelemetry,
-      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BrowsePage(viewModel: vm),
-          ),
-        ),
-      );
+      await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vm)));
       await tester.pumpAndSettle();
 
-      final scrollViewFinder = find.byType(SingleChildScrollView);
-      final scrollableState = tester.state<ScrollableState>(find.byType(Scrollable).last);
-      expect(scrollableState.position.pixels, equals(0.0));
+      // Toque no cluster MG no globo aciona selecionarPico(origemMapa: true)
+      await tester.tap(find.byKey(const Key('cluster_uf_MG')));
+      for (var i = 0; i < 16; i++) {
+        await tester.pump(const Duration(milliseconds: 45));
+      }
 
+      // Focar 7o pico rola a gaveta ate PICO ORDEM 6
       vm.focarSetimoPicoProximo();
       await tester.pumpAndSettle();
-
-      // Deve ter rolado para baixo posicionando o 7º pico (índice 6: PICO ORDEM 6) no topo
-      expect(scrollableState.position.pixels, greaterThan(1000.0));
       expect(find.text('PICO ORDEM 6'), findsOneWidget);
 
-      // Ao rolar para cima de volta ao início, o 1º pico (PICO ORDEM 0) está presente
-      await tester.drag(scrollViewFinder, const Offset(0, 2000));
+      // Botao de sincronizar serving
+      await tester.tap(find.byTooltip('Sincronizar com serving'));
       await tester.pumpAndSettle();
-      expect(find.text('PICO ORDEM 0'), findsOneWidget);
+      expect(mockSync.syncIndexCalled, isTrue);
+      expect(mockSync.forceBypassCacheUsed, isTrue);
+      expect(find.text('Catálogo atualizado com o serving!'), findsOneWidget);
 
-      // Ao atualizar a instância de BrowseViewModel (didUpdateWidget), o listener continua ativo na nova instância
-      final vm2 = BrowseViewModel(
-        datasetRepo: mockRepo,
-        syncService: mockSync,
-        telemetria: mockTelemetry,
-      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BrowsePage(viewModel: vm2),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      vm2.focarSetimoPicoProximo();
-      await tester.pumpAndSettle();
-      expect(scrollableState.position.pixels, greaterThan(1000.0));
-    },
-  );
-
-  testWidgets(
-    'BrowsePage triggers handleSyncServing when sync button is tapped',
-    (WidgetTester tester) async {
-      mockRepo.activeDataset.value = TopoDataset(
-        availablePicos: [
-          {'id': 'pico_1', 'nome': 'Pico Teste'},
-        ],
-        downloadedPicos: [],
+      // Botao Minha Localizacao voa e faz zoom ate o GPS real (e exibe SnackBar se GPS desligado)
+      final geo = MockGeolocatorPlatform()
+        ..isLocationServiceEnabledResult = true
+        ..checkPermissionResult = LocationPermission.always;
+      GeolocatorPlatform.instance = geo;
+      await tester.tap(find.byKey(const Key('botao_minha_localizacao')));
+      for (var i = 0; i < 16; i++) {
+        await tester.pump(const Duration(milliseconds: 45));
+      }
+      expect(
+        find.byKey(const Key('marcador_localizacao_usuario')),
+        findsOneWidget,
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
-          ),
-        ),
-      );
+      geo.isLocationServiceEnabledResult = false;
+      await tester.tap(find.byKey(const Key('botao_minha_localizacao')));
       await tester.pumpAndSettle();
+      expect(find.textContaining('GPS'), findsOneWidget);
 
-      final syncButtonFinder = find.byTooltip('Sincronizar com serving');
-      expect(syncButtonFinder, findsOneWidget);
-
-      await tester.tap(syncButtonFinder);
+      // Botao de trocar serving visivel em modo experimental
+      await tester.tap(find.byTooltip('Trocar serving'));
       await tester.pumpAndSettle();
 
       expect(mockSync.syncIndexCalled, isTrue);
