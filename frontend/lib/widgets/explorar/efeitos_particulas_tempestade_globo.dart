@@ -448,3 +448,95 @@ abstract final class EfeitosParticulasTempestadeGlobo {
         final pesoOctava = ehCelulaBase ? 1.0 : alfaSub;
         if (pesoOctava <= 0.04) continue;
 
+        final h = _hashCelulaMundo(ix, iy, sementeBolha);
+        final uJitter = (h & 0x3ff) / 1023.0;
+        final vJitter = ((h >> 10) & 0x3ff) / 1023.0;
+        final lon = (ix + 0.14 + 0.72 * uJitter) * passoFino;
+        final lat = (iy + 0.14 + 0.72 * vJitter) * passoFino;
+        if (lon < bolha.minLon ||
+            lon > bolha.maxLon ||
+            lat < bolha.minLat ||
+            lat > bolha.maxLat) {
+          continue;
+        }
+        desenharGotaEmCoordenada(
+          lon: lon,
+          lat: lat,
+          hash: h,
+          pesoOctava: pesoOctava,
+        );
+      }
+    }
+
+    // Se um bolsão compacto ficar entre nós da malha mundial, ancora 1 gota fixa em seu centro geográfico
+    if (gotasDesenhadas == 0) {
+      desenharGotaEmCoordenada(
+        lon: bolha.longitude,
+        lat: bolha.latitude,
+        hash: sementeBolha & 0x7fffffff,
+        pesoOctava: 1.0,
+      );
+    }
+  }
+
+  static int _hashCelulaMundo(int ix, int iy, int semente) {
+    var h = (ix * 73856093) ^ (iy * 19349663) ^ (semente * 83492791);
+    h = ((h >> 16) ^ h) * 0x45d9f3b;
+    h = ((h >> 16) ^ h) & 0x7fffffff;
+    return h;
+  }
+
+  /// Desenha o emblema central da nuvem com assinatura luminosa distinta nos 4 níveis.
+  static void desenharEmblemaNuvemChuva({
+    required Canvas canvas,
+    required Offset centro,
+    required double escalaPx,
+    required double faseSegundos,
+    required NivelIntensidadeChuva nivel,
+    required Color corBorda,
+  }) {
+    final oscY = math.sin(faseSegundos * 2.2) * 0.9;
+    final c = centro.translate(0, oscY - escalaPx * 0.14);
+    final r = escalaPx * (0.44 + 0.04 * nivel.peso);
+
+    canvas.drawCircle(
+      centro,
+      escalaPx * (0.95 + 0.08 * nivel.peso),
+      Paint()
+        ..color = nivel.peso >= 3
+            ? const Color(0x78090D16)
+            : const Color(0x440F172A)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.8),
+    );
+
+    final nuvem = Path()
+      ..addOval(
+        Rect.fromCircle(
+          center: c.translate(-r * 0.65, r * 0.18),
+          radius: r * 0.68,
+        ),
+      )
+      ..addOval(
+        Rect.fromCircle(
+          center: c.translate(r * 0.05, -r * 0.15),
+          radius: r * 0.86,
+        ),
+      )
+      ..addOval(
+        Rect.fromCircle(
+          center: c.translate(r * 0.75, r * 0.22),
+          radius: r * 0.62,
+        ),
+      )
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(
+            c.dx - r * 1.15,
+            c.dy,
+            c.dx + r * 1.18,
+            c.dy + r * 0.78,
+          ),
+          Radius.circular(r * 0.4),
+        ),
+      );
+
