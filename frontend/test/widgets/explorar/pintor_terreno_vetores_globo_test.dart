@@ -90,3 +90,82 @@ void main() {
         ctrl2D.dispose();
       });
 
+      const tela = Size(400, 800);
+      final gravador = PictureRecorder();
+      final canvas = Canvas(gravador);
+
+      PintorTerrenoVetoresGlobo.desenharTerrenoDetalhadoContinuo(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrl3D,
+        dadosMalha: malhaCompleta,
+        picosReferencia: const [],
+        opacidadeBase: 1.0,
+      );
+      PintorTerrenoVetoresGlobo.desenharTerrenoDetalhadoContinuo(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrl3D,
+        dadosMalha: malhaCompleta,
+        picosReferencia: picosVariados,
+        opacidadeBase: 0.95,
+      );
+      PintorTerrenoVetoresGlobo.desenharTerrenoDetalhadoContinuo(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrl2D,
+        dadosMalha: malhaCompleta,
+        picosReferencia: picosVariados,
+        opacidadeBase: 1.0,
+        fatorMonocromatico: 1.0,
+      );
+
+      final picture = gravador.endRecording();
+      expect(picture, isNotNull);
+      picture.dispose();
+    });
+
+    test('desenha grade esférica, micro-grade topográfica terrestre, polígonos e rodovias Bézier', () {
+      final ctrlOrbital = ControladorCameraGlobo(lodInicial: 0.2);
+      final ctrlLocal = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: -44.0,
+        lodInicial: 3.65,
+      );
+      addTearDown(() {
+        ctrlOrbital.dispose();
+        ctrlLocal.dispose();
+      });
+
+      const tela = Size(400, 800);
+      final gravador = PictureRecorder();
+      final canvas = Canvas(gravador);
+
+      PintorTerrenoVetoresGlobo.desenharGradeEsferica(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrlOrbital,
+        alfaGrade: 1.0,
+      );
+      PintorTerrenoVetoresGlobo.desenharPoligonoGeo(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrlOrbital,
+        verticesLonLat: malhaCompleta.brasil,
+        preenchimento: const Color(0xFF375540),
+        borda: const Color(0x66BAE6FD),
+      );
+      PintorTerrenoVetoresGlobo.desenharMicroGradeTopograficaTerrestre(
+        canvas: canvas,
+        size: tela,
+        controlador: ctrlLocal,
+        dadosMalha: malhaCompleta,
+        alfaBase: 0.8,
+      );
+
+      final picture = gravador.endRecording();
+      expect(picture, isNotNull);
+      picture.dispose();
+    });
+  });
+}
