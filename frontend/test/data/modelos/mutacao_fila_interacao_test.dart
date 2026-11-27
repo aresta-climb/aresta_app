@@ -150,3 +150,50 @@ void main() {
         ),
       ];
 
+      final aposEdicao = aplicarMutacoesSobreItens(itens, [
+        MutacaoFilaInteracao.editarComentario(
+          alvoUid: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          escaladaUid: via,
+          autorIdPublico: mariana,
+          novoTexto: 'Texto editado Mariana',
+        ),
+        // Tentativa de mutação por outro autor não altera comentário de Pedro
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: 'a12bc34d-58cc-4372-a567-0e02b2c3d479',
+          escaladaUid: via,
+          autorIdPublico: mariana,
+        ),
+        MutacaoFilaInteracao.editarAlerta(
+          alvoUid: 'alertaMariana1',
+          escaladaUid: via,
+          autorIdPublico: mariana,
+          novaCategoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          detalhe: 'Laca solta',
+        ),
+        MutacaoFilaInteracao.excluirAlerta(
+          alvoUid: 'alertaMariana2',
+          escaladaUid: via,
+          autorIdPublico: mariana,
+        ),
+      ]);
+
+      expect(aposEdicao, hasLength(3));
+      expect(aposEdicao[0].textoComentario, 'Texto editado Mariana');
+      expect(aposEdicao[1].textoComentario, 'Texto Pedro intocado');
+      expect(
+        aposEdicao[2].categoriaAlerta,
+        CategoriaAlertaSeguranca.rochaAgarraInstavel,
+      );
+      expect(aposEdicao[2].textoComentario, 'Laca solta');
+
+      final aposExclusaoComentario = aplicarMutacoesSobreItens(aposEdicao, [
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          escaladaUid: via,
+          autorIdPublico: mariana,
+        ),
+      ]);
+      expect(aposExclusaoComentario, hasLength(2));
+    });
+  });
+}
