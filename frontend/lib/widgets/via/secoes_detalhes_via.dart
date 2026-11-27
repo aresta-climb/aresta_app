@@ -240,35 +240,71 @@ class SecaoEnfiadasVia extends StatelessWidget {
     final cores = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _TituloSecaoVia(titulo: 'Enfiadas'),
-          const SizedBox(height: 12),
-          ...enfiadas.map((enf) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cores.caveShadow,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: cores.graniteEdge),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cores.caveShadow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cores.graniteEdge),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CabecalhoSecaoPadraoVia(
+              icone: Icons.format_list_numbered_rounded,
+              tituloCaixaAlta: context.tr(
+                ChaveTexto.viaEnfiadasContagem,
+                {'n': enfiadas.length},
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
+            ),
+            const SizedBox(height: 12),
+            for (var i = 0; i < enfiadas.length; i++)
+              Container(
+                margin: EdgeInsets.only(
+                  bottom: i == enfiadas.length - 1 ? 0 : 10,
+                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cores.deepBasalt,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cores.graniteEdge),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          enfiadas[i].titulo,
+                          style: TextStyle(
+                            color: cores.chalkWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (enfiadas[i].grau != null)
+                          PilulaDetalheCurtoVia(texto: enfiadas[i].grau!),
+                        if (enfiadas[i].extensao != null)
+                          PilulaDetalheCurtoVia(texto: enfiadas[i].extensao!),
+                        if (enfiadas[i].protecoes != null)
+                          PilulaDetalheCurtoVia(
+                            texto: context.tr(
+                              ChaveTexto.viaProtecoesAbrev,
+                              {'n': enfiadas[i].protecoes},
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (enfiadas[i].equipamentoMovel != null) ...[
+                      const SizedBox(height: 6),
                       Text(
-                        enf.titulo,
-                        style: TextStyle(
-                          color: cores.chalkWhite,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                        context.tr(
+                          ChaveTexto.viaMovelPrefixo,
+                          {'equip': enfiadas[i].equipamentoMovel},
                         ),
                       ),
                       if (enf.grau != null)
