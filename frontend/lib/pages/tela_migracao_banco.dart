@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -8,6 +8,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/theme/cores_app.dart';
+import '../idioma/tradutor_app.dart';
 
 /// Etapas do processo de migração de banco de dados.
 enum EtapaMigracao {
@@ -120,16 +121,16 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
   }
 
   /// Retorna o texto descritivo correspondente à etapa atual.
-  String _obterTextoEtapa() {
+  String _obterTextoEtapa(BuildContext context) {
     switch (_etapa) {
       case EtapaMigracao.verificando:
-        return 'Verificando conexão com a internet...';
+        return context.tr(ChaveTexto.sistemaMigracaoVerificando);
       case EtapaMigracao.sincronizando:
-        return 'Baixando novo catálogo de croquis...';
+        return context.tr(ChaveTexto.sistemaMigracaoBaixando);
       case EtapaMigracao.concluido:
-        return 'Catálogo atualizado com sucesso!';
+        return context.tr(ChaveTexto.comumCatalogoAtualizadoSucesso);
       case EtapaMigracao.erro:
-        return 'Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.';
+        return context.tr(ChaveTexto.sistemaMigracaoErro);
     }
   }
 
@@ -140,64 +141,35 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
         _etapa == EtapaMigracao.sincronizando;
     final bool isError = _etapa == EtapaMigracao.erro;
 
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-            child: Container(
-              padding: const EdgeInsets.all(24.0),
-              decoration: BoxDecoration(
-                color: context.colors.caveShadow,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: context.colors.graniteEdge),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Ícone de cabeçalho
-                  Icon(
-                    isError ? Icons.error_outline : Icons.cloud_sync_outlined,
-                    size: 56,
-                    color: isError ? Colors.red : AppColors.brandColor,
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 24.0,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(24.0),
+                  decoration: BoxDecoration(
+                    color: context.colors.caveShadow,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: context.colors.graniteEdge),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Título principal
-                  const Text(
-                    'ATUALIZAÇÃO DE BASE DE DADOS',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Mensagem contextual explicando a necessidade da migração
-                  Text(
-                    'Esta nova versão do aplicativo inclui atualizações estruturais no catálogo de croquis e precisa sincronizar pela internet uma única vez.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.colors.ashGrey,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Indicador de progresso ou erro
-                  if (isLoading) ...[
-                    const SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: AppColors.brandColor,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isError
+                            ? Icons.error_outline
+                            : Icons.cloud_sync_outlined,
+                        size: 56,
+                        color: isError ? Colors.red : AppColors.brandColor,
                       ),
                     ),
                     const SizedBox(height: 16),
