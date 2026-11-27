@@ -1,32 +1,39 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/clima/armazenamento_clima_local.dart';
+import 'package:frontend/data/modelos/modelos_clima_pico.dart';
+import 'package:frontend/services/clima/servico_clima_altimetria.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
-import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/cliente_http_aresta.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 import 'package:frontend/view/view_models/explorar_view_model.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
-import '../../mocks/mock_telemetria.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'dart:io';
+import 'package:geolocator/geolocator.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-class _PlataformaCaminhosMock extends PathProviderPlatform
+import '../../fakes/cliente_clima_altimetria_fake.dart';
+import '../../mocks/mock_geolocator_platform.dart';
+import '../../mocks/mock_telemetria.dart';
+
+class _PlataformaCaminhosFake extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
   final String caminhoTemp;
-  _PlataformaCaminhosMock(this.caminhoTemp);
+  _PlataformaCaminhosFake(this.caminhoTemp);
 
   @override
   Future<String?> getApplicationDocumentsPath() async => caminhoTemp;
@@ -36,34 +43,95 @@ class _PlataformaCaminhosMock extends PathProviderPlatform
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
+  sqfliteFfiInit();
 
   late Directory tempDir;
+  late RepositorioCatalogo repoCatalogo;
   late DatasetRepository repositorio;
   late SyncService servicoSync;
   late EditorDeCroqui editor;
   late MockTelemetryService mockTelemetria;
+  late ServicoClimaAltimetria servicoClima;
+  late ClienteClimaAltimetriaFake fakeClima;
   late BrowseViewModel viewModel;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     tempDir = Directory.systemTemp.createTempSync('browse_vm_test_');
-    PathProviderPlatform.instance = _PlataformaCaminhosMock(tempDir.path);
+    PathProviderPlatform.instance = _PlataformaCaminhosFake(tempDir.path);
     editor = EditorDeCroqui();
-    repositorio = DatasetRepository(editorDeCroqui: editor);
+    repoCatalogo = RepositorioCatalogo(
+      provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+      fabricaBanco: databaseFactoryFfi,
+    );
+    repositorio = DatasetRepository(
+      editorDeCroqui: editor,
+      repositorioCatalogo: repoCatalogo,
+    );
     servicoSync = SyncService(datasetRepository: repositorio);
     mockTelemetria = MockTelemetryService();
     TelemetryService.instance = mockTelemetria;
+
+    fakeClima = ClienteClimaAltimetriaFake(
+      snapshotInicial: SnapshotClimaAltimetria(
+        geradoEm: DateTime.utc(2026, 11, 25, 12),
+        bolhasChuva: const [
+          BolhaChuvaRegional(
+            id: 'bolha_igarape',
+            latitude: -20.04,
+            longitude: -44.24,
+            intensidadeMmHora: 5.5,
+            ventoRumoGraus: 45.0,
+            ventoVelocidadeKmh: 22.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -44.8, latitude: -20.6),
+              PontoContornoGeo(longitude: -43.7, latitude: -20.5),
+              PontoContornoGeo(longitude: -44.1, latitude: -19.5),
+            ],
+          ),
+        ],
+        chuvaPorPico: {
+          'p_igarape': [
+            EventoChuvaPico(
+              data: DateTime.utc(2026, 11, 25),
+              milimetros: 22.0,
+              bolhaId: 'bolha_igarape',
+            ),
+          ],
+        },
+        altimetriaPorPico: const {
+          'p_igarape': CotaAltimetricaPico(
+            altitudeBaseMetros: 980,
+            altitudePicoMetros: 1430,
+          ),
+        },
+      ),
+    );
+    servicoClima = ServicoClimaAltimetria(
+      armazenamento: ArmazenamentoClimaLocal(
+        provedorDiretorioBase: () async => tempDir.path,
+      ),
+      fonteRemota: fakeClima,
+      relogioUtc: () => DateTime.utc(2026, 11, 25, 14),
+    );
 
     viewModel = BrowseViewModel(
       datasetRepo: repositorio,
       syncService: servicoSync,
       telemetria: mockTelemetria,
+      servicoClima: servicoClima,
     );
   });
 
-  tearDown(() {
+  tearDown(() async {
     viewModel.dispose();
+    servicoClima.dispose();
+    await repoCatalogo.fechar();
     if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     }
   });
 
@@ -119,14 +187,12 @@ void main() {
       expect(viewModel.latitudeUsuario, equals(-22.0));
       expect(viewModel.longitudeUsuario, equals(-45.0));
 
-      // Os 6 primeiros picos de BrowseViewModel devem ser idênticos aos 6 de HomeViewModel
       final idsHome = homeVm.picosProximos.map((p) => p.id).toList();
       final idsExplorarTop6 = viewModel.picosFiltrados.take(6).map((p) => p.id).toList();
       expect(idsExplorarTop6, equals(idsHome));
       expect(viewModel.picosFiltrados.length, equals(8));
       expect(viewModel.picosFiltrados[6].id, equals('pico_6'));
 
-      // As badges de distância nos 6 primeiros cards devem ser idênticas às da Home
       final distHome = homeVm.picosProximos.map((p) => p.paraCardCroquiViewModel().textoDistancia).toList();
       final distExplorarTop6 = viewModel.picosCards.take(6).map((c) => c.textoDistancia).toList();
       expect(distExplorarTop6, equals(distHome));
