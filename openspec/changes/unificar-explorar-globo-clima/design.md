@@ -63,3 +63,63 @@ sequenceDiagram
   * O aplicativo realiza **no máximo 1 `GET` leve (`~5 KB`) a cada 3 horas** para `/rest/v1/estado_clima_picos?slot=eq.atual` (e sincroniza `snapshots_altimetria_picos?slot=eq.atual` apenas se houver picos sem altitude no cache local).
   * Timeout curto (`4 segundos`), não bloqueante: se o aparelho estiver sem sinal, a UI renderiza imediatamente com o cache local sem exibir erro intrusivo ao usuário; falhas inesperadas de protocolo/parsing ou restauração via `copia_seguranca` são registradas via `AppLogger`.
 
+---
+
+## 3. Regra de Negócio: Curva Determinística de Secagem (5 Dias)
+
+A calculadora pura `CalculadoraUmidadePico` recebe `(precipitacaoMm, dataChuvaUtc, dataReferenciaLocal)`:
+
+1. **Classificação Inicial no Dia do Evento (`diasDecorridos == 0`)**:
+   * `< 1.0 mm`: `NivelUmidadePico.seco`
+   * `1.0 mm` a `< 5.0 mm`: `NivelUmidadePico.levementeMolhado` (duração: **1 dia**)
+   * `5.0 mm` a `< 15.0 mm`: `NivelUmidadePico.molhado` (duração neste estágio: **2 dias**, depois decai para `levementeMolhado` por **1 dia** -> total **3 dias** até `seco`)
+   * `>= 15.0 mm`: `NivelUmidadePico.muitoMolhado` (duração neste estágio: **2 dias** -> `molhado` por **2 dias** -> `levementeMolhado` por **1 dia** -> total **5 dias** até `seco`)
+2. **Múltiplos Dias de Chuva nos Últimos 5 Dias**:
+   * Para cada um dos últimos 5 dias no histórico do pico, calcula-se o estado remanescente hoje e adota-se o **maior nível de umidade vigente** (e maior tempo restante para secagem), registrando a data do evento dominante (`Chuva dia DD/MM`).
+3. **Regra de Exibição Contextual**:
+   * Quando `nivel == NivelUmidadePico.seco`, **nenhum** badge, texto ou ícone meteorológico é exibido no pino ou no card do pico.
+   * Quando `nivel != seco`, exibe-se a paleta azul/musgo:
+     * `muitoMolhado`: azul índigo intenso (`#6366F1` / `#818CF8`)
+     * `molhado`: azul médio (`#3B82F6` / `#60A5FA`)
+     * `levementeMolhado`: verde musgo do tema (`dryMoss` `#7B8B6F` / `#9BB38A`)
+
+---
+
+## 4. Motor de Câmera Contínua e 4 LODs (`GloboTerrenoController` + `PintorGloboTerreno`)
+
+Uma única função matemática `projetarCoordenadaMundo(lat, lon, elevacaoMetros)` governa todos os 4 LODs usando escala exponencial do raio planetário (`R = R0 * pow(base, lod)`, `lod` em `[0.0, 3.2]`):
+
+| Estágio | Intervalo `lod` | Geometria Renderizada | Marcadores / Pinos |
+|---|---|---|---|
+| **LOD 0 • Globo** | `0.00 – 0.75` | Esfera 3D ortográfica com iluminação atmosférica, continentes e Brasil | Clusters limpos por UF (`MG · 12`, `RJ · 8`) sem nomes individuais |
+| **LOD 1 • Região** | `0.75 – 1.65` | Divisas estaduais IBGE + bolhas orgânicas translúcidas de chuva | Pinos com prevenção automática de colisão de rótulos |
+| **LOD 2 • Serra e Vale** | `1.65 – 2.50` | Câmera inclina suavemente (`0° -> 32°`), lente circular de terreno sombreado + curvas `250m` + bolhas sobre o relevo | Pílulas com nome do pico e altitude (`Alt. 1120m`) |
+| **LOD 3 • Maciço 3D** | `2.50 – 3.20` | Câmera alpina (`~54°`) com névoa de horizonte, maciço 3D escalonado por `altitudePicoM`, curvas `80m` e trilha animada | Cume com altitude + micro-marcadores de setor principal e base/trilha |
+
+* **Modo `2D`**: Zera a inclinação (`tilt = 0`, `yaw = 0`) e alterna a projeção esférica para projeção cilíndrica/plana equidistante centrada na câmera, mantendo os mesmos 4 níveis de detalhe e curvas de nível.
+* **Adaptação para Dispositivos Modestos (`ClassificadorDispositivo`)**: Em aparelhos classificados com RAM baixa (`<= 3 GB`), a subdivisão da malha nos `LODs 2–3` reduz automaticamente de `32x32` para `22x22` vértices (`< 0.8ms`/frame).
+
+---
+
+## 5. Agregação de Graus e Modalidades no Catálogo (`RepositorioCatalogo`)
+
+Para evitar acoplamento com recompilação imediata do submódulo `aresta_api`, `RepositorioCatalogo` expõe `carregarPerfisGrauPorCroqui()`:
+* Executa uma query SQL única em `catalogo_aresta` (`WHERE tipo = 'escalada'`), convertendo `escalada_grau` e `escalada_tipo` em máscaras de bits / intervalos por `id_slug` usando a tabela de pesos existente em `filtro_grau_escalada.dart` (executada em `< 3 ms` e cacheada em memória até `versaoNotificador` mudar).
+* No filtro da aba `Explorar`:
+  * **Barra Superior**: Campo de busca textual + botão rápido `Grau` (abre popover com `RangeSlider` duplo para Vias `1º–12a` e Boulder `V0–V15`) + botão `Icons.tune_rounded` com contador de filtros ativos (abre modal completo com Ordenação, Modalidades `Esportiva`, `Boulder`, `Móvel / Trad`, `Paredão` e `Highline`, Faixa de Grau, `Salvos Offline` e raio de distância).
+  * **Cabeçalho da Gaveta**: Pílulas rápidas sincronizadas (`Esportiva`, `Boulder`, `Móvel / Trad`, `Paredão`).
+
+---
+
+## 6. Sincronia Mapa <-> Gaveta e Micro-Animações
+
+1. **Auto-Scroll Sincronizado (`ScrollController` + índices determinísticos)**:
+   - A lista da gaveta usa `ListView.builder` (ou alturas fixas/medidas por chave) mantendo a ordem de classificação ativa.
+   - Tocar em um pino no mapa:
+     1. Se a gaveta estiver no estágio recolhido (`Mapa`), expande suavemente para `Dividir`.
+     2. Anima o scroll da lista (`animateTo` com `Curves.easeOutCubic`, `320ms`) até posicionar o card do pico selecionado no topo visível e aciona o destaque temporário de borda no card.
+     3. Dispara a onda sonar no pino e, se o pico estiver úmido, realça temporariamente o contorno da bolha de chuva correspondente.
+2. **Voo Parabólico (`Fly-To`)**:
+   - Ao selecionar um pico distante (`distanciaGeodesica > 250 km`), `GloboTerrenoController` interpola `(lat, lon)` com `Curves.easeInOutCubic` aplicando um recuo parabólico temporário em `lod` (`-dip * sin(pi * t)`).
+3. **Centro Óptico Acoplado**:
+   - `ValueListenable<double> alturaGavetaPx` desloca continuamente o centro vertical `cy` da projeção no `CustomPainter` sem reconstruir a lista de cards.
