@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import '../../idioma/tradutor_app.dart';
+
 /// Define as modalidades esportivas de realização de uma ascensão de escalada.
 ///
 /// Segue fielmente a modelagem da tabela `cadenas` e as convenções esportivas:
@@ -10,24 +12,29 @@
 /// * [tentativa]: Pega ou tentativa em que a via não foi completada sem quedas/repousos na corda.
 enum TipoAscensao {
   /// Primeira ascensão sem informação prévia ou queda (código 1).
-  aVista(1, 'À Vista'),
+  aVista(1),
 
   /// Primeira ascensão com informação prévia sem queda (código 2).
-  flash(2, 'Flash'),
+  flash(2),
 
   /// Ascensão completada com sucesso após tentativas prévias (código 3).
-  trabalhado(3, 'Trabalhado'),
+  trabalhado(3),
 
   /// Tentativa em que a via não foi encadenada (código 4).
-  tentativa(4, 'Tentativa');
+  tentativa(4);
 
   /// Código numérico compacto persistido no banco de dados / PowerSync.
   final int codigo;
 
-  /// Rótulo em português brasileiro para apresentação na interface.
-  final String rotulo;
+  const TipoAscensao(this.codigo);
 
-  const TipoAscensao(this.codigo, this.rotulo);
+  /// Rótulo localizado para apresentação na interface.
+  String get rotulo => switch (this) {
+    TipoAscensao.aVista => tr(ChaveTexto.estiloAVista),
+    TipoAscensao.flash => tr(ChaveTexto.estiloFlash),
+    TipoAscensao.trabalhado => tr(ChaveTexto.estiloTrabalhado),
+    TipoAscensao.tentativa => tr(ChaveTexto.estiloTentativa),
+  };
 
   /// Indica se a ascensão é considerada uma cadena completada com sucesso.
   bool get isCadena => this != TipoAscensao.tentativa;

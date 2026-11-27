@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import '../../idioma/tradutor_app.dart';
+
 /// Define as modalidades de escalada suportadas para registro de ascensões.
 ///
 /// Segue os códigos numéricos alinhados ao esquema físico do banco de dados:
@@ -10,24 +12,29 @@
 /// * [solo]: Escalada solo sem corda em falésia.
 enum TipoEscalada {
   /// Escalada guiada pelo atleta (código 1).
-  guiado(1, 'Guiado'),
+  guiado(1),
 
   /// Escalada no Top Rope (código 2).
-  topRope(2, 'Top Rope'),
+  topRope(2),
 
   /// Escalada de boulder (código 3).
-  boulder(3, 'Boulder'),
+  boulder(3),
 
   /// Escalada solo sem segurança de corda (código 4).
-  solo(4, 'Solo');
+  solo(4);
 
   /// Código numérico compacto persistido no banco de dados / PowerSync.
   final int codigo;
 
-  /// Rótulo em português brasileiro para apresentação na interface.
-  final String rotulo;
+  const TipoEscalada(this.codigo);
 
-  const TipoEscalada(this.codigo, this.rotulo);
+  /// Rótulo localizado para apresentação na interface.
+  String get rotulo => switch (this) {
+    TipoEscalada.guiado => tr(ChaveTexto.estiloGuiado),
+    TipoEscalada.topRope => tr(ChaveTexto.estiloTopRope),
+    TipoEscalada.boulder => tr(ChaveTexto.modBoulder),
+    TipoEscalada.solo => tr(ChaveTexto.estiloSolo),
+  };
 
   /// Retorna `true` se a modalidade for bloco / boulder.
   bool get isBoulder => this == TipoEscalada.boulder;
