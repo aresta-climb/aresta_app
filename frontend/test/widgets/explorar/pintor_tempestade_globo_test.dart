@@ -424,3 +424,70 @@ void main() {
           nivelIntensidade: NivelIntensidadeChuva.forte,
         );
 
+        final qCentrado = await _renderizarPixels(
+          ctrl: ctrlA,
+          bolhas: const [bolha],
+          faseSegundos: 0.5,
+        );
+
+        // Arrasta o mapa exatamente +44 px para a direita (câmera vai para oeste)
+        ctrlB.aplicarArrasto(
+          dxPx: 44.0,
+          dyPx: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final qDeslocado = await _renderizarPixels(
+          ctrl: ctrlB,
+          bolhas: const [bolha],
+          faseSegundos: 0.5,
+        );
+
+        final ptNuvemAntes = ctrlA.projetarCoordenada(
+          latitude: -20.5,
+          longitude: -43.8,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final ptNuvemDepois = ctrlB.projetarCoordenada(
+          latitude: -20.5,
+          longitude: -43.8,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        expect(ptNuvemDepois.x - ptNuvemAntes.x, closeTo(44.0, 0.5));
+
+        final idxCentroTela =
+            (ptNuvemAntes.y.round() * 220 + ptNuvemAntes.x.round()) * 4;
+        final idxNuvemDeslocada =
+            (ptNuvemDepois.y.round() * 220 + ptNuvemDepois.x.round()) * 4;
+
+        // No quadro deslocado, o pixel claro do emblema da nuvem está na nova coordenada projetada (+44 px),
+        // e NÃO ficou preso no centro da tela!
+        expect(
+          qDeslocado[idxNuvemDeslocada + 3],
+          closeTo(qCentrado[idxCentroTela + 3], 4),
+        );
+        expect(
+          qDeslocado[idxCentroTela + 3],
+          lessThan(qCentrado[idxCentroTela + 3] - 40),
+        );
+
+        // Exercita também o ramo 3D inclinado em que o centroide da tempestade fica atrás da câmera (ao sul),
+        // mas a borda norte da frente permanece visível no topo da tela sem emblema preso à câmera
+        final ctrlNorte3D = ControladorCameraGlobo(
+          latitudeInicial: -18.7,
+          longitudeInicial: -43.8,
+          lodInicial: 2.95,
+          modo3DInicial: true,
+        );
+        addTearDown(ctrlNorte3D.dispose);
+        final qNorte3D = await _renderizarPixels(
+          ctrl: ctrlNorte3D,
+          bolhas: const [bolha],
+          faseSegundos: 0.5,
+        );
+        expect(qNorte3D.any((b) => b > 0), isTrue);
+      },
+    );
+  });
+}
