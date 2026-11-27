@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/repositorio_dataset.dart';
 import '../../services/editor_croqui.dart';
 import 'biblioteca_funcoes_comuns.dart';
@@ -19,7 +19,6 @@ import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../../widgets/configuracoes/cartao_preferencia_caderneta.dart';
 import '../../widgets/modal_beta_aberto.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
@@ -141,7 +140,9 @@ Future<bool> conectarEditor(
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Erro: Não foi possível acessar o índice (Status ${response.statusCode})',
+              tr(ChaveTexto.configErroIndiceStatus, {
+                'status': '${response.statusCode}',
+              }),
             ),
           ),
         );
@@ -151,7 +152,7 @@ Future<bool> conectarEditor(
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro de conexão: Verifique a URL')),
+        SnackBar(content: Text(tr(ChaveTexto.configErroConexaoUrl))),
       );
     }
     return false;
@@ -238,8 +239,8 @@ void mostrarDialogConexao(
                 navegarAposConexaoExperimental(navContext, datasetRepo);
                 if (navContext.mounted) {
                   ScaffoldMessenger.of(navContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Conectado ao repositório editor!'),
+                    SnackBar(
+                      content: Text(tr(ChaveTexto.configConectadoEditorToast)),
                     ),
                   );
                 }
@@ -258,7 +259,7 @@ void mostrarDialogConexao(
                 Icon(Icons.link, color: brandColor, size: 32),
                 const SizedBox(height: 8),
                 Text(
-                  titulo ?? 'Conectar Editor',
+                  titulo ?? dialogContext.tr(ChaveTexto.configConectarEditorTitulo),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -276,7 +277,7 @@ void mostrarDialogConexao(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Digite o código de 8 caracteres gerado no Editor ou escaneie o QR Code.',
+                    dialogContext.tr(ChaveTexto.configConectarEditorInstrucao),
                     style: TextStyle(
                       color: context.colors.ashGrey,
                       fontSize: 13,
@@ -293,7 +294,9 @@ void mostrarDialogConexao(
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      hintText: 'ex: k9x2-p83a ou URL completa',
+                      hintText: dialogContext.tr(
+                        ChaveTexto.configConectarEditorHint,
+                      ),
                       hintStyle: TextStyle(
                         color: context.colors.ashGrey.withValues(alpha: 0.5),
                         fontSize: 13,
@@ -323,7 +326,7 @@ void mostrarDialogConexao(
                         size: 20,
                       ),
                       label: Text(
-                        'ESCANEAR QR CODE',
+                        dialogContext.tr(ChaveTexto.configEscanearQrBtn),
                         style: TextStyle(
                           color: brandColor,
                           fontWeight: FontWeight.bold,
@@ -377,7 +380,7 @@ void mostrarDialogConexao(
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Como funciona o Editor Desktop? Saiba mais',
+                          dialogContext.tr(ChaveTexto.configComoFuncionaEditor),
                           style: TextStyle(
                             color: context.colors.ashGrey,
                             fontSize: 11,
@@ -403,7 +406,7 @@ void mostrarDialogConexao(
                     Navigator.of(dialogContext).pop();
                   },
                   child: Text(
-                    'CANCELAR',
+                    dialogContext.tr(ChaveTexto.comumCancelarCaixaAlta),
                     style: TextStyle(
                       color: context.colors.ashGrey,
                       fontWeight: FontWeight.bold,
@@ -431,9 +434,9 @@ void mostrarDialogConexao(
                       ),
                     );
                   } else {
-                    buttonChild = const Text(
-                      'CONECTAR',
-                      style: TextStyle(
+                    buttonChild = Text(
+                      dialogContext.tr(ChaveTexto.configConectarBtn),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -492,16 +495,14 @@ Widget buildEditorCard({
 
           if (isEditor) {
             statusIcon = Icons.science;
-            statusLabel = 'MODO EXPERIMENTAL / PRÉVIA';
-            description =
-                'Visualizando croquis sincronizados em tempo real com o Editor Desktop.';
-            buttonText = 'VOLTAR PARA MODO OFICIAL';
+            statusLabel = context.tr(ChaveTexto.configModoExperimentalTitulo);
+            description = context.tr(ChaveTexto.configModoExperimentalSub);
+            buttonText = context.tr(ChaveTexto.configVoltarModoOficialBtn);
           } else {
             statusIcon = Icons.verified;
-            statusLabel = 'MODO OFICIAL';
-            description =
-                'Conectado à base oficial do Aresta Climb. Você pode conectar ao Editor Desktop para testar novos croquis em tempo real.';
-            buttonText = 'CONECTAR AO EDITOR / PRÉVIA';
+            statusLabel = context.tr(ChaveTexto.configModoOficialTitulo);
+            description = context.tr(ChaveTexto.configModoOficialSub);
+            buttonText = context.tr(ChaveTexto.configConectarEditorPreviaBtn);
           }
 
           return Card(
@@ -581,9 +582,11 @@ Widget buildEditorCard({
                                       color: Color(0xFFC04F34),
                                     ),
                                     const SizedBox(width: 4),
-                                    const Text(
-                                      'Como fazer? Saiba mais',
-                                      style: TextStyle(
+                                    Text(
+                                      context.tr(
+                                        ChaveTexto.configComoFazerSaibaMais,
+                                      ),
+                                      style: const TextStyle(
                                         color: Color(0xFFC04F34),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -632,9 +635,9 @@ Widget buildEditorCard({
                         await configService.disconnect();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Voltando ao repositório oficial...',
+                                tr(ChaveTexto.configVoltandoOficialToast),
                               ),
                             ),
                           );
@@ -692,9 +695,12 @@ Widget buildEditorCard({
                                         ScaffoldMessenger.of(
                                           navContext,
                                         ).showSnackBar(
-                                          const SnackBar(
+                                          SnackBar(
                                             content: Text(
-                                              'Reativando dados experimentais locais...',
+                                              tr(
+                                                ChaveTexto
+                                                    .configReativandoExpToast,
+                                              ),
                                             ),
                                           ),
                                         );
@@ -724,7 +730,9 @@ Widget buildEditorCard({
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'REATIVAR MODO EXPERIMENTAL',
+                                            context.tr(
+                                              ChaveTexto.configReativarExpBtn,
+                                            ),
                                             style: TextStyle(
                                               color: context.colors.ashGrey,
                                               fontSize: 12,
@@ -752,15 +760,15 @@ Widget buildEditorCard({
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  title: const Text(
-                                    'Apagar Tudo?',
-                                    style: TextStyle(
+                                  title: Text(
+                                    context.tr(ChaveTexto.configApagarTudoTitulo),
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   content: Text(
-                                    'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
+                                    context.tr(ChaveTexto.configApagarTudoCorpo),
                                     style: TextStyle(
                                       color: context.colors.ashGrey,
                                     ),
@@ -770,7 +778,9 @@ Widget buildEditorCard({
                                       onPressed: () =>
                                           Navigator.pop(context, false),
                                       child: Text(
-                                        'CANCELAR',
+                                        context.tr(
+                                          ChaveTexto.comumCancelarCaixaAlta,
+                                        ),
                                         style: TextStyle(
                                           color: context.colors.ashGrey,
                                           fontWeight: FontWeight.bold,
@@ -780,9 +790,11 @@ Widget buildEditorCard({
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.pop(context, true),
-                                      child: const Text(
-                                        'APAGAR TUDO',
-                                        style: TextStyle(
+                                      child: Text(
+                                        context.tr(
+                                          ChaveTexto.configApagarTudoBtn,
+                                        ),
+                                        style: const TextStyle(
                                           color: Colors.red,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -800,9 +812,12 @@ Widget buildEditorCard({
                                 datasetRepo.loadEmpty();
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
-                                        'Ambiente experimental limpo.',
+                                        tr(
+                                          ChaveTexto
+                                              .configAmbienteExpLimpoToast,
+                                        ),
                                       ),
                                     ),
                                   );
@@ -830,7 +845,7 @@ Widget buildEditorCard({
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'LIMPAR DADOS EXPERIMENTAIS',
+                                    context.tr(ChaveTexto.configLimparExpBtn),
                                     style: TextStyle(
                                       color: Colors.red.withValues(alpha: 0.8),
                                       fontSize: 12,
@@ -873,7 +888,9 @@ Widget buildEditorCard({
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'TESTAR ALERTA DE OBSOLESCÊNCIA',
+                                    context.tr(
+                                      ChaveTexto.configTestarObsolescenciaBtn,
+                                    ),
                                     style: TextStyle(
                                       color: Colors.orange.withValues(
                                         alpha: 0.8,
