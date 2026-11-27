@@ -278,3 +278,94 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
                 final cards = vm.picosCards;
                 final mostraCabecalho = alturaPx >= 52.0;
 
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _construirAlcaCabecalho(
+                      context: context,
+                      colors: colors,
+                      totalCards: cards.length,
+                      mostraCabecalho: mostraCabecalho,
+                    ),
+                    Expanded(
+                      child: Opacity(
+                        opacity: mostraCabecalho ? 1.0 : 0.0,
+                        child: IgnorePointer(
+                          ignoring: !mostraCabecalho,
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _construirPilulasModalidadeRapida(vm, colors),
+                                const SizedBox(height: 10),
+                                if (cards.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 24),
+                                    child: Center(
+                                      child: Text(
+                                        context.tr(
+                                          ChaveTexto
+                                              .explorarNenhumPicoEncontrado,
+                                        ),
+                                        style: TextStyle(
+                                          color: colors.ashGrey,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  for (var i = 0; i < cards.length; i++)
+                                    Padding(
+                                      key: _obterChaveCard(cards[i].id, i),
+                                      padding:
+                                          const EdgeInsets.only(bottom: 14),
+                                      child: CartaoItemGavetaExplorar(
+                                        card: cards[i],
+                                        altitudeMetros:
+                                            vm.obterAltitudePico(cards[i].id),
+                                        umidade:
+                                            vm.obterUmidadePico(cards[i].id),
+                                        selecionado: vm.picoSelecionadoId ==
+                                            cards[i].id,
+                                        emPulsoDestaque:
+                                            _picoComPulsoDestaque ==
+                                                cards[i].id,
+                                        downloadingCrags: vm.downloadingCrags,
+                                        aoAbrir: () =>
+                                            widget.aoAbrirPico(cards[i]),
+                                        aoFocarNoGlobo: () {
+                                          if (_encaixeAtual ==
+                                              PosicaoEncaixeGaveta.lista) {
+                                            _animarParaEncaixe(
+                                              PosicaoEncaixeGaveta.dividir,
+                                            );
+                                          }
+                                          vm.selecionarPico(
+                                            cards[i].id,
+                                            origemMapa: false,
+                                          );
+                                          widget.aoFocarPicoNaLista
+                                              ?.call(cards[i].id);
+                                        },
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
