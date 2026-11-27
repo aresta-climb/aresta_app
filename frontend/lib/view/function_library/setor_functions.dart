@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import 'biblioteca_funcoes_comuns.dart';
 import 'markdown_offline.dart';
 import 'via_functions.dart';
@@ -67,11 +68,11 @@ Widget buildSetorBody(
             // Use common function to check if area is predominantly boulders
             final bool boulderArea = isBoulderArea(sortedEscaladas);
 
-            String headerText = 'Vias';
-            String emptyText = 'Nenhuma via disponível.';
+            String headerText = context.tr(ChaveTexto.modVias);
+            String emptyText = context.tr(ChaveTexto.setorNenhumaViaDisponivel);
             if (boulderArea) {
-              headerText = 'Boulders';
-              emptyText = 'Nenhum boulder disponível.';
+              headerText = context.tr(ChaveTexto.modBoulders);
+              emptyText = context.tr(ChaveTexto.setorNenhumBoulderDisponivel);
             }
 
             return Column(
@@ -207,7 +208,7 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
       destaque = escalada.highline.destaque;
       break;
     case Escalada_Tipo.notSet:
-      nome = 'Sem Nome';
+      nome = tr(ChaveTexto.comumSemNome);
       break;
   }
   return (nome, info, destaque);

@@ -1,20 +1,29 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/telemetria.dart';
 
 /// Representa um membro da equipe com seus metadados e redes sociais.
 class MembroTime {
-  /// Papel ou cargo principal do membro na equipe.
-  final String role;
+  final String? _roleFixo;
+  final ChaveTexto? _chaveCargo;
+  final String? _collapsedRoleFixo;
+  final ChaveTexto? _chaveCargoRecolhido;
+
+  /// Papel ou cargo principal do membro na equipe (localizado quando associado a [ChaveTexto]).
+  String get role =>
+      _chaveCargo != null ? tr(_chaveCargo) : (_roleFixo ?? '');
 
   /// Papel exibido de forma abreviada ou com quebra de linha quando recolhido.
-  final String? collapsedRole;
+  String? get collapsedRole => _chaveCargoRecolhido != null
+      ? tr(_chaveCargoRecolhido)
+      : _collapsedRoleFixo;
 
   /// Nome completo do membro.
   final String name;
@@ -30,13 +39,18 @@ class MembroTime {
 
   /// Cria uma instância imutável de [MembroTime].
   const MembroTime({
-    required this.role,
-    this.collapsedRole,
+    String? role,
+    ChaveTexto? chaveCargo,
+    String? collapsedRole,
+    ChaveTexto? chaveCargoRecolhido,
     required this.name,
     this.linkedin = '',
     this.github = '',
     required this.image,
-  });
+  }) : _roleFixo = role,
+       _chaveCargo = chaveCargo,
+       _collapsedRoleFixo = collapsedRole,
+       _chaveCargoRecolhido = chaveCargoRecolhido;
 }
 
 Widget buildQuadrantCollapsedContent(BuildContext context, MembroTime data, int index) {
@@ -118,26 +132,26 @@ Widget buildQuadrantCollapsedContent(BuildContext context, MembroTime data, int 
 
 const List<MembroTime> teamData = [
   MembroTime(
-    role: 'Designer',
+    chaveCargo: ChaveTexto.timeCargoDesigner,
     name: 'Lorena Carla',
     linkedin: 'https://www.linkedin.com/in/lorenamelor/',
     image: 'assets/team/lorena.webp',
   ),
   MembroTime(
-    role: 'Produto / Marketing',
-    collapsedRole: 'Produto/\nMarketing',
+    chaveCargo: ChaveTexto.timeCargoProduto,
+    chaveCargoRecolhido: ChaveTexto.timeCargoProdutoQuebra,
     name: 'Evandro Jaconi',
     linkedin: 'https://www.linkedin.com/in/evandrojaconi/',
     image: 'assets/team/evandro.webp',
   ),
   MembroTime(
-    role: 'Backend',
+    chaveCargo: ChaveTexto.timeCargoBackend,
     name: 'Renato Utsch',
     github: 'https://github.com/renatoutsch',
     image: 'assets/team/renato.webp',
   ),
   MembroTime(
-    role: 'Frontend',
+    chaveCargo: ChaveTexto.timeCargoFrontend,
     name: 'Eduardo Utsch',
     linkedin: 'https://www.linkedin.com/in/eduardo-utsch-205745350/',
     github: 'https://github.com/eduardoutsch',
