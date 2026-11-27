@@ -179,3 +179,91 @@ void main() {
         expect(ctrl.longitudeCentral, closeTo(lonAntesV, 1e-6));
         expect(ctrl.giroLocalRad, equals(0.0));
 
+        // Representacao nitida do Geoide Terrestre (WGS84 achatado nos polos + ondulacoes gravitacionais NASA EGM96)
+        final rEquador = ControladorCameraGlobo.raioNormalizadoGeoide(
+          latitude: -5.0,
+          longitude: 146.0,
+        );
+        final rPoloNorte = ControladorCameraGlobo.raioNormalizadoGeoide(
+          latitude: 90.0,
+          longitude: 0.0,
+        );
+        final rBaixaOceanoIndico = ControladorCameraGlobo.raioNormalizadoGeoide(
+          latitude: 4.0,
+          longitude: 79.0,
+        );
+        expect(rEquador - rPoloNorte, greaterThan(0.055));
+        expect(rEquador - rBaixaOceanoIndico, greaterThan(0.045));
+
+        ctrl.definirLod(0.22);
+        final silhueta = ctrl.construirCaminhoSilhuetaGeoide(
+          const Size(400, 800),
+        );
+        final boundsGeoide = silhueta.getBounds();
+        expect(boundsGeoide.width, greaterThan(boundsGeoide.height * 1.045));
+      },
+    );
+
+    test(
+      'deve agrupar clusters por estado e prevenir colisao de rotulos mesmo entre multiplos itens prioritarios',
+      () {
+        final clusters = ControladorCameraGlobo.agruparPorEstado(const [
+          (id: 'c1', uf: 'MG', lat: -19.0, lon: -43.0),
+          (id: 'c2', uf: 'MG', lat: -20.0, lon: -44.0),
+          (id: 'u1', uf: 'RJ', lat: -22.9, lon: -43.1),
+        ]);
+        expect(clusters.length, equals(2));
+        final mg = clusters.firstWhere((c) => c.uf == 'MG');
+        expect(mg.quantidade, equals(2));
+        expect(mg.latitudeMedia, closeTo(-19.5, 0.01));
+
+        final semColisao = ControladorCameraGlobo.selecionarIdsSemColisaoRotulos(
+          const [
+            (id: 'vizinho', nome: 'Pico Vizinho Longo', posicao: Offset(100, 100), prioritario: false),
+            (id: 'selecionado', nome: 'Pico Selecionado', posicao: Offset(108, 104), prioritario: true),
+            (id: 'outro_prio_colado', nome: 'Cidade Colada', posicao: Offset(112, 106), prioritario: true),
+            (id: 'afastado', nome: 'Pico Distante', posicao: Offset(290, 240), prioritario: false),
+          ],
+        );
+
+        expect(semColisao, contains('selecionado'));
+        expect(semColisao, contains('afastado'));
+        expect(semColisao.contains('vizinho'), isFalse);
+        expect(semColisao.contains('outro_prio_colado'), isFalse);
+      },
+    );
+
+    test(
+      'deve calcular distancia 3D camera-objeto e nivelDetalheObjeto apenas ao redor do objeto proximo (nunca no mar aberto)',
+      () {
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -20.07,
+          longitudeInicial: -44.32,
+          lodInicial: 2.9,
+        );
+        addTearDown(ctrl.dispose);
+
+        // Camera colada sobre Igarape -> distancia 3D curta (< 42 km) -> LOD 3 no objeto Igarape
+        final distIgarape = ctrl.distanciaCameraObjetoKm(
+          latitude: -20.07,
+          longitude: -44.32,
+        );
+        final lodIgarape = ctrl.nivelDetalheObjeto(
+          latitude: -20.07,
+          longitude: -44.32,
+        );
+        expect(distIgarape, lessThan(42.0));
+        expect(lodIgarape, greaterThanOrEqualTo(3.0));
+
+        // No mesmo zoom alto (2.9), Urca esta a >340 km de distancia -> permanece em LOD 1 (< 2.0)
+        final distUrca = ctrl.distanciaCameraObjetoKm(
+          latitude: -22.95,
+          longitude: -43.16,
+        );
+        final lodUrca = ctrl.nivelDetalheObjeto(
+          latitude: -22.95,
+          longitude: -43.16,
+        );
+        expect(distUrca, greaterThan(300.0));
+        expect(lodUrca, lessThan(2.0));
+
