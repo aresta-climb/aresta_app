@@ -436,3 +436,94 @@ class ControladorCameraGlobo extends ChangeNotifier {
           ? 4.0 * t * t * t
           : 1.0 - math.pow(-2.0 * t + 2.0, 3) / 2.0;
 
+      _latitudeCentral = _lerp(voo.latInicial, voo.latFinal, ease);
+      _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+        voo.lonInicial + voo.deltaLonCurto * ease,
+      );
+      final recuoMeioVoo = math.sin(math.pi * ease) * voo.recuoArco;
+      _lod = (_lerp(voo.lodInicial, voo.lodFinal, ease) - recuoMeioVoo)
+          .clamp(lodMinimo, lodMaximo);
+      if (!_modo3D) {
+        _latitudeCentral =
+            _limitarLatitude2D(_latitudeCentral, _ultimoTamanhoTela);
+      }
+
+      if (voo.progresso >= 1.0) {
+        _latitudeCentral = voo.latFinal;
+        _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+          voo.lonInicial + voo.deltaLonCurto,
+        );
+        _lod = voo.lodFinal;
+        _vooAtivo = null;
+      }
+      notifyListeners();
+      return temAnimacaoAtiva;
+    }
+
+    if (!_interagindoManual &&
+        (_velLon.abs() > 0.0002 || _velLat.abs() > 0.0002)) {
+      _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+        _longitudeCentral + _velLon * passoNormalizado,
+      );
+      final proxLat = _latitudeCentral + _velLat * passoNormalizado;
+      _latitudeCentral = _modo3D
+          ? proxLat.clamp(-68.0, 68.0)
+          : _limitarLatitude2D(proxLat, _ultimoTamanhoTela);
+      final amortecimento = math.pow(0.90, passoNormalizado).toDouble();
+      _velLon *= amortecimento;
+      _velLat *= amortecimento;
+      if (_velLon.abs() <= 0.0002 && _velLat.abs() <= 0.0002) {
+        _velLon = 0.0;
+        _velLat = 0.0;
+      }
+      notifyListeners();
+      return temAnimacaoAtiva;
+    }
+
+    return false;
+  }
+
+  /// Centro vertical óptico em pixels compensado pela altura instantânea da gaveta deslizante.
+  double calcularCentroVerticalOptico(Size tamanhoTela) {
+    final alturaUtil =
+        tamanhoTela.height - math.min(340.0, _alturaGavetaPx * 0.74);
+    final baseCy = math.max(150.0, alturaUtil * 0.52 + 16.0);
+    final compensacaoInclinacao =
+        _modo3D ? smoothstep(1.6, 2.85, _lod) * 42.0 : 0.0;
+    return baseCy + compensacaoInclinacao;
+  }
+
+  double _escalaMinima2D(Size tamanhoTela) {
+    final cy = calcularCentroVerticalOptico(tamanhoTela);
+    final maiorMeiaAltura = math.max(cy, tamanhoTela.height - cy);
+    final minVertical = maiorMeiaAltura / (64.0 * _grausParaRad);
+    final minHorizontal = tamanhoTela.width / (360.0 * _grausParaRad);
+    return math.max(minVertical, minHorizontal);
+  }
+
+  double get _escalaMaxima2D =>
+      142.0 * math.pow(7.6, lodMaximo).toDouble() * 1.04;
+
+  /// Escala em pixels por radiano no modo 2D, estritamente monótona em todo o intervalo `LOD 0..lodMaximo`.
+  double calcularEscala2D(Size tamanhoTela) {
+    _ultimoTamanhoTela = tamanhoTela;
+    final minEsc = _escalaMinima2D(tamanhoTela);
+    final maxEsc = _escalaMaxima2D;
+    final t = (_lod / lodMaximo).clamp(0.0, 1.0);
+    return minEsc * math.pow(maxEsc / minEsc, t).toDouble();
+  }
+
+  double _limitarLatitude2D(
+    double latitudeAlvo,
+    Size tamanhoTela, [
+    double? cyPre,
+    double? escalaPre,
+  ]) {
+    final cy = cyPre ?? calcularCentroVerticalOptico(tamanhoTela);
+    final escala2D = escalaPre ?? calcularEscala2D(tamanhoTela);
+    final limiteSuperior = 85.0 - (cy / escala2D) / _grausParaRad;
+    final limiteInferior =
+        -85.0 + ((tamanhoTela.height - cy) / escala2D) / _grausParaRad;
+    return latitudeAlvo.clamp(limiteInferior, limiteSuperior);
+  }
+
