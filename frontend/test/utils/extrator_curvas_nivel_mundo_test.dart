@@ -14,13 +14,13 @@ void main() {
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(3.10), equals(1));
       expect(ExtratorCurvasNivelMundo.resolverNivelDetalhe(4.00), equals(2));
 
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(0), closeTo(0.025, 1e-6));
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(1), closeTo(0.008, 1e-6));
-      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(2), closeTo(0.0025, 1e-6));
+      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(0), closeTo(0.028, 1e-6));
+      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(1), closeTo(0.010, 1e-6));
+      expect(ExtratorCurvasNivelMundo.passoGradePorNivel(2), closeTo(0.0035, 1e-6));
 
-      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(0), equals(100.0));
-      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(1), equals(50.0));
-      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(2), equals(25.0));
+      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(0), equals(250.0));
+      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(1), equals(150.0));
+      expect(ExtratorCurvasNivelMundo.intervaloCotaMenorPorNivel(2), equals(100.0));
 
       const pico = PicoRelevoReferencia(
         id: 'cipo',
@@ -34,20 +34,20 @@ void main() {
         final dLat = lat - (-19.32);
         final dLon = lon - (-43.62);
         final r2 = dLat * dLat + dLon * dLon;
-        return 760.0 + 620.0 * math.exp(-r2 / 0.00045);
+        return 760.0 + 620.0 * math.exp(-r2 / 0.00055);
       }
 
       const janelaA = JanelaGeograficaVisivel(
-        minLat: -19.355,
+        minLat: -19.365,
         maxLat: -19.275,
-        minLon: -43.655,
+        minLon: -43.665,
         maxLon: -43.575,
       );
       // Pan suave da câmera dentro do mesmo quarteirão quantizado: o bloco e os vértices do mundo permanecem IDÊNTICOS
       const janelaPanSuave = JanelaGeograficaVisivel(
-        minLat: -19.352,
+        minLat: -19.362,
         maxLat: -19.272,
-        minLon: -43.652,
+        minLon: -43.662,
         maxLon: -43.572,
       );
 
@@ -95,7 +95,7 @@ void main() {
       );
       expect(oceano.curvas, isEmpty);
 
-      // Planície entre 810 m e 890 m sem cruzar múltiplo inteiro de 100 m -> retorna lista vazia
+      // Planície entre 810 m e 890 m sem cruzar múltiplo inteiro de 250 m -> retorna lista vazia
       final planicieEntreCotas = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janela,
         nivelDetalhe: 0,
@@ -112,9 +112,9 @@ void main() {
         versaoDadosElevacao: 2,
         picosReferencia: const [],
         amostrarElevacaoMetros: (lat, lon) {
-          final x = (lon + 44.0) * 120.0;
-          final y = (lat + 20.0) * 120.0;
-          return 900.0 + 180.0 * (x * y) + 45.0 * math.sin(x * 2.3 + y * 1.7);
+          final x = (lon + 44.0) * 85.0;
+          final y = (lat + 20.0) * 85.0;
+          return 900.0 + 260.0 * (x * y) + 120.0 * math.sin(x * 1.4 + y * 1.2);
         },
       );
       expect(sela.curvas, isNotEmpty);
