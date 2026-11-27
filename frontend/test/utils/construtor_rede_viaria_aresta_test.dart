@@ -96,3 +96,104 @@ void main() {
         ),
       ];
 
+      final localidadesComNivel3 = <LocalidadeRegionalMapa>[
+        ...malhaReal.localidadesProximas,
+        const LocalidadeRegionalMapa(
+          nome: 'Serra do Cipó Vila',
+          ehCidade: false,
+          nivel: 3,
+          longitude: -43.6150,
+          latitude: -19.3200,
+        ),
+      ];
+
+      final rede = ConstrutorRedeViariaAresta.construir(
+        rodovias: malhaReal.rodoviasProximas,
+        localidades: localidadesComNivel3,
+        picos: picosAresta,
+      );
+
+      expect(rede.trechosCorredorAresta, isNotEmpty);
+      expect(rede.trechosCorredorAresta.first.tempoInicio, closeTo(0.0, 0.08));
+      expect(
+        rede.trechosCorredorAresta.any((t) => t.tempoFim >= 0.95),
+        isTrue,
+      );
+
+      final bh = rede.cidadesClassificadas.firstWhere(
+        (c) => c.localidade.nome == 'Belo Horizonte',
+      );
+      final lagoaSanta = rede.cidadesClassificadas.firstWhere(
+        (c) => c.localidade.nome == 'Lagoa Santa',
+      );
+      final ouroPreto = rede.cidadesClassificadas.firstWhere(
+        (c) => c.localidade.nome == 'Ouro Preto',
+      );
+      final vilaCipo = rede.cidadesClassificadas.firstWhere(
+        (c) => c.localidade.nome == 'Serra do Cipó Vila',
+      );
+      final saoPaulo = rede.cidadesClassificadas.firstWhere(
+        (c) => c.localidade.nome == 'São Paulo',
+      );
+
+      expect(bh.ehRelevanteAresta, isTrue);
+      expect(bh.tempoAtivacao, equals(0.0));
+      expect(bh.viasUrbanasLonLat.length, greaterThanOrEqualTo(4));
+      expect(lagoaSanta.ehRelevanteAresta, isTrue);
+      expect(ouroPreto.ehRelevanteAresta, isTrue);
+      expect(ouroPreto.tempoAtivacao, greaterThan(bh.tempoAtivacao));
+      expect(vilaCipo.ehRelevanteAresta, isTrue);
+      expect(vilaCipo.viasUrbanasLonLat, isNotEmpty);
+      expect(saoPaulo.ehRelevanteAresta, isFalse);
+      expect(saoPaulo.viasUrbanasLonLat, isEmpty);
+
+      final assinatura1 =
+          ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picosAresta);
+      final assinatura2 =
+          ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picosAresta);
+      final assinaturaDiferente =
+          ConstrutorRedeViariaAresta.calcularAssinaturaPicos(
+            picosAresta.sublist(0, 2),
+          );
+      expect(assinatura1, equals(assinatura2));
+      expect(assinatura1, isNot(equals(assinaturaDiferente)));
+
+      // Malha sintética em losango com atalhos, sigla genérica filtrada ('MG') e ramal curto (<= 2,2 km)
+      final redeLosango = ConstrutorRedeViariaAresta.construir(
+        rodovias: const [
+          RodoviaRegionalMapa(
+            ehPrincipal: true,
+            codigo: 'MG',
+            verticesLonLat: [
+              Offset(-43.9386, -19.9191),
+              Offset(-43.9386, -19.9191),
+              Offset(-43.6500, -19.7000),
+            ],
+          ),
+          RodoviaRegionalMapa(
+            ehPrincipal: true,
+            codigo: 'BR-040',
+            verticesLonLat: [
+              Offset(-43.9386, -19.9191),
+              Offset(-43.8200, -19.8300),
+              Offset(-43.6500, -19.7000),
+            ],
+          ),
+        ],
+        localidades: const [],
+        picos: const [
+          PicoRelevoReferencia(
+            id: 'destino',
+            latitude: -19.6920,
+            longitude: -43.6420,
+            altitudeBaseMetros: 780,
+            altitudePicoMetros: 1180,
+          ),
+        ],
+      );
+      expect(redeLosango.trechosCorredorAresta, isNotEmpty);
+      expect(redeLosango.rodoviasFundo.first.codigo, isEmpty);
+      expect(redeLosango.rodoviasFundo.last.codigo, equals('BR-040'));
+    });
+  });
+}
