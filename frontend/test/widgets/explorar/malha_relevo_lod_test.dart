@@ -96,3 +96,60 @@ void main() {
           ],
         );
 
+        final sulOeste = GeradorRelevoLod.amostrarElevacaoMetros(
+          latitude: -19.518,
+          longitude: -43.518,
+          picosReferencia: const [picoComDem],
+        );
+        final nordeste = GeradorRelevoLod.amostrarElevacaoMetros(
+          latitude: -19.482,
+          longitude: -43.482,
+          picosReferencia: const [picoComDem],
+        );
+
+        expect(nordeste, greaterThan(1180));
+        expect(sulOeste, lessThan(800));
+        expect(nordeste - sulOeste, greaterThan(420));
+      },
+    );
+
+    test(
+      'deve gerar relevo local apenas ao redor dos picos catalogados e retornar 0m no oceano ou regioes sem picos',
+      () {
+        const picos = [
+          PicoRelevoReferencia(
+            id: 'igarape',
+            latitude: -20.07,
+            longitude: -44.32,
+            altitudeBaseMetros: 980,
+            altitudePicoMetros: 1430,
+          ),
+          PicoRelevoReferencia(
+            id: 'urca',
+            latitude: -22.95,
+            longitude: -43.16,
+            altitudeBaseMetros: 12,
+            altitudePicoMetros: 396,
+          ),
+        ];
+
+        final topoIgarape = GeradorRelevoLod.amostrarElevacaoMetros(
+          latitude: -20.07,
+          longitude: -44.32,
+          picosReferencia: picos,
+        );
+        final oceanoAtlantico = GeradorRelevoLod.amostrarElevacaoMetros(
+          latitude: -20.00,
+          longitude: -36.50,
+          picosReferencia: picos,
+        );
+        final costaSulUrca = GeradorRelevoLod.amostrarElevacaoMetros(
+          latitude: -23.00,
+          longitude: -43.16,
+          picosReferencia: picos,
+        );
+
+        expect(topoIgarape, greaterThan(1200));
+        expect(oceanoAtlantico, equals(0.0));
+        expect(costaSulUrca, lessThanOrEqualTo(0.0));
+
