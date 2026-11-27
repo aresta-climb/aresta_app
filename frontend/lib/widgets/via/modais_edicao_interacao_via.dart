@@ -355,3 +355,76 @@ class _FormularioEditarComentarioViaState
                             Navigator.of(context).pop();
                             await widget.aoSalvar(textoLimpo);
                           }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cores.rustIron,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: cores.caveShadow,
+                      disabledForegroundColor: cores.ashGrey,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      context.tr(ChaveTexto.comumSalvarAlteracoes),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Exibe o diálogo declarativo (Dumb UI) de confirmação para exclusão permanente de comentário ou alerta.
+Future<bool?> exibirDialogoConfirmarExclusaoInteracao(
+  BuildContext context, {
+  required bool ehAlerta,
+}) {
+  final cores = context.colors;
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: cores.graniteEdge),
+      ),
+      title: Text(
+        ehAlerta
+            ? dialogCtx.tr(ChaveTexto.alertaExcluirModalTitulo)
+            : dialogCtx.tr(ChaveTexto.viaExcluirComentarioTitulo),
+        style: TextStyle(color: cores.chalkWhite, fontWeight: FontWeight.bold),
+      ),
+      content: Text(
+        ehAlerta
+            ? dialogCtx.tr(ChaveTexto.alertaExcluirModalCorpo)
+            : dialogCtx.tr(ChaveTexto.viaExcluirComentarioCorpo),
+        style: TextStyle(color: cores.ashGrey, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogCtx).pop(false),
+          child: Text(
+            dialogCtx.tr(ChaveTexto.comumCancelar),
+            style: TextStyle(color: cores.ashGrey),
+          ),
+        ),
+        ElevatedButton(
+          key: const Key('btn_confirmar_exclusao_interacao_via'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _corVermelhoAlertaModal,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => Navigator.of(dialogCtx).pop(true),
+          child: Text(dialogCtx.tr(ChaveTexto.comumExcluir)),
+        ),
+      ],
+    ),
+  );
+}
