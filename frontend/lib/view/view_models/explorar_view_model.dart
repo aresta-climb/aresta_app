@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/modelos/modelos_clima_pico.dart';
+import '../../data/modelos/modelos_rede_viaria_aresta.dart';
 import '../../idioma/tradutor_app.dart';
 import '../../services/clima/localizador_gps_usuario.dart';
 import '../../services/clima/servico_clima_altimetria.dart';
@@ -73,6 +74,7 @@ class BrowseViewModel extends ChangeNotifier {
   double? _userLon;
   bool _buscandoLocalizacao = false;
   Map<String, PicoProximo>? _cacheProximidadePorId;
+  List<PicoRelevoReferencia>? _cacheReferenciasRelevoCatalogo;
   Map<String, PerfilGrauPico> _perfisGrauPorPico = const {};
 
   final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
@@ -98,7 +100,7 @@ class BrowseViewModel extends ChangeNotifier {
         .addListener(_aoMudarCatalogo);
     ControladorIdiomaApp.instancia.notificadorIdioma
         .addListener(_notificarSeAtivo);
-    _servicoClima.addListener(_notificarSeAtivo);
+    _servicoClima.addListener(_aoAtualizarClima);
     unawaited(_inicializarDadosAuxiliares());
   }
 
@@ -156,6 +158,7 @@ class BrowseViewModel extends ChangeNotifier {
 
   void _aoAtualizarDataset() {
     _cacheProximidadePorId = null;
+    _cacheReferenciasRelevoCatalogo = null;
     if (_servicoClima.inicializado && !_descartado) {
       unawaited(
         _servicoClima.sincronizarSeNecessario(
@@ -163,6 +166,11 @@ class BrowseViewModel extends ChangeNotifier {
         ),
       );
     }
+    _notificarSeAtivo();
+  }
+
+  void _aoAtualizarClima() {
+    _cacheReferenciasRelevoCatalogo = null;
     _notificarSeAtivo();
   }
 
@@ -185,7 +193,7 @@ class BrowseViewModel extends ChangeNotifier {
         .removeListener(_aoMudarCatalogo);
     ControladorIdiomaApp.instancia.notificadorIdioma
         .removeListener(_notificarSeAtivo);
-    _servicoClima.removeListener(_notificarSeAtivo);
+    _servicoClima.removeListener(_aoAtualizarClima);
     super.dispose();
   }
 
@@ -444,6 +452,29 @@ class BrowseViewModel extends ChangeNotifier {
                   : const EstadoUmidadePico.seco(),
             ),
       ];
+
+  /// Referências topográficas e viárias imutáveis de todo o catálogo ativo (invariantes a busca e filtros).
+  List<PicoRelevoReferencia> get referenciasRelevoCatalogo {
+    final existente = _cacheReferenciasRelevoCatalogo;
+    if (existente != null) return existente;
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return const [];
+    final construidas = List<PicoRelevoReferencia>.unmodifiable([
+      for (final m in dataset.metadadosDisponiveis)
+        if (m.id.isNotEmpty && m.latitude != null && m.longitude != null)
+          construirMarcadorGloboPico(
+            id: m.id,
+            nome: m.nome,
+            caminhoRelativo: m.caminhoRelativo,
+            latitude: m.latitude!,
+            longitude: m.longitude!,
+            cota: obterCotaAltimetricaPico(m.id),
+            umidade: const EstadoUmidadePico.seco(),
+          ).paraReferenciaRelevo(),
+    ]);
+    _cacheReferenciasRelevoCatalogo = construidas;
+    return construidas;
+  }
 
   /// Calcula o destino geográfico e o nível de detalhe alvo para voar até um pico selecionado na gaveta.
   ({

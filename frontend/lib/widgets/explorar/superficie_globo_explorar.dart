@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../data/modelos/modelos_clima_pico.dart';
+import '../../data/modelos/modelos_rede_viaria_aresta.dart';
 import '../../view/view_models/cena_globo_explorar_view_model.dart';
 import 'botao_camada_clima_mapa.dart';
 import 'camada_marcadores_globo_explorar.dart';
@@ -27,6 +28,9 @@ export 'pintor_campo_estrelas_globo.dart';
 class SuperficieGloboExplorar extends StatefulWidget {
   final ControladorCameraGlobo controlador;
   final List<MarcadorPicoGlobo> picos;
+
+  /// Referências topográficas e viárias de todo o catálogo (invariantes a busca/filtros da UI).
+  final List<PicoRelevoReferencia>? referenciasRelevoCatalogo;
   final List<BolhaAtivaRenderizavel> bolhasAtivas;
   final List<BolhaIncendioAtivaRenderizavel> incendiosAtivos;
   final String? picoSelecionadoId;
@@ -44,6 +48,7 @@ class SuperficieGloboExplorar extends StatefulWidget {
     super.key,
     required this.controlador,
     required this.picos,
+    this.referenciasRelevoCatalogo,
     required this.bolhasAtivas,
     this.incendiosAtivos = const [],
     required this.picoSelecionadoId,
@@ -71,6 +76,8 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
   Duration? _ultimoInstante;
   double _escalaAnteriorPinch = 1.0;
   Offset? _posicaoUltimoToqueDuplo;
+  List<MarcadorPicoGlobo>? _ultimosPicosFallback;
+  List<PicoRelevoReferencia> _referenciasFallback = const [];
 
   @override
   void initState() {
@@ -83,7 +90,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
       widget.controlador
           .atualizarAlturaGaveta(widget.alturaGavetaNotificador!.value);
     }
-    _sincronizarCena();
+    _sincronizarCena(agendarRebuild: false);
   }
 
   void _vincularCenaViewModel(CenaGloboExplorarViewModel? externo) {
@@ -110,7 +117,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
     _cena.atualizarPreferenciaAnimacoesAmbiente(
       !(MediaQuery.maybeDisableAnimationsOf(context) ?? false),
     );
-    _sincronizarCena();
+    _sincronizarCena(agendarRebuild: false);
   }
 
   @override
@@ -129,7 +136,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
       if (_cenaPropria) _cena.dispose();
       _vincularCenaViewModel(widget.cenaViewModel);
     }
-    _sincronizarCena();
+    _sincronizarCena(agendarRebuild: false);
   }
 
   @override
@@ -147,10 +154,22 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
     if (h != null) widget.controlador.atualizarAlturaGaveta(h);
   }
 
+  List<PicoRelevoReferencia> _obterReferenciasRelevo() {
+    final catalogo = widget.referenciasRelevoCatalogo;
+    if (catalogo != null) return catalogo;
+    if (!identical(_ultimosPicosFallback, widget.picos)) {
+      _ultimosPicosFallback = widget.picos;
+      _referenciasFallback = widget.picos
+          .map((p) => p.paraReferenciaRelevo())
+          .toList(growable: false);
+    }
+    return _referenciasFallback;
+  }
+
   bool get _temFenomenoAoVivo =>
       widget.bolhasAtivas.isNotEmpty || widget.incendiosAtivos.isNotEmpty;
 
-  void _sincronizarCena() {
+  void _sincronizarCena({bool agendarRebuild = true}) {
     _cena.sincronizarEstadoCena(
       controlador: widget.controlador,
       tickerAtivo: _ticker.isActive,
@@ -165,7 +184,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
     } else if (!precisa && _ticker.isActive) {
       _ticker.stop();
     }
-    if (mounted) setState(() {});
+    if (agendarRebuild && mounted) setState(() {});
   }
 
   void _aoBaterTicker(Duration decorrido) {
@@ -217,9 +236,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
             focado.altitudeBaseMetros.toDouble(),
           );
         }
-        final referenciasRelevo = widget.picos
-            .map((p) => p.paraReferenciaRelevo())
-            .toList(growable: false);
+        final referenciasRelevo = _obterReferenciasRelevo();
         final redeViaria = _cena.obterRedeViaria(referenciasRelevo);
         final curvasMundo = _cena.obterCurvasNivelVisiveis(
           controlador: widget.controlador,
@@ -303,6 +320,8 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
                       child: RepaintBoundary(
                         child: CustomPaint(
                           size: tamanho,
+                          isComplex: true,
+                          willChange: _ticker.isActive,
                           painter: PintorPlanetaGlobo(
                             controlador: widget.controlador,
                             malha: _cena.malha,
@@ -311,7 +330,8 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
                             amostradorElevacaoReal: _cena.amostrarElevacaoReal,
                             texturaNasa: _cena.texturaNasa,
                             picosReferencia: referenciasRelevo,
-                            sonarPico: _cena.sonarPicoId == null
+                            sonarPico: _cena.sonarPicoId == null ||
+                                    _cena.progressoSonar >= 1.0
                                 ? null
                                 : widget.picos
                                     .where((p) => p.id == _cena.sonarPicoId)
