@@ -543,3 +543,79 @@ abstract final class PintorRedeViariaArestaGlobo {
     }
   }
 
+  static bool _adicionarPolilinhaSuaveAoPath({
+    required Path destino,
+    required List<Offset> verticesLonLat,
+    required JanelaGeograficaVisivel janelaVisivel,
+    required double passoSubdivisaoGraus,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required double pesoTerreno,
+    double? Function(double latitude, double longitude)? amostradorElevacaoReal,
+    ValueChanged<Offset>? aoAmostrarPontoCentral,
+  }) {
+    final cadeiasVisiveis = GeometriaClippingMapa.subdividirERecortarPolilinha(
+      verticesLonLat: verticesLonLat,
+      janela: janelaVisivel,
+      passoMaxGraus: passoSubdivisaoGraus,
+    );
+    if (cadeiasVisiveis.isEmpty) return false;
+
+    final margemX = size.width * 0.65;
+    final margemY = size.height * 0.65;
+    var adicionou = false;
+
+    for (final cadeia in cadeiasVisiveis) {
+      final sub = <Offset>[];
+      void descarregar() {
+        if (sub.length < 2) {
+          sub.clear();
+          return;
+        }
+        adicionou = true;
+        if (aoAmostrarPontoCentral != null) {
+          aoAmostrarPontoCentral(sub[sub.length ~/ 2]);
+        }
+        destino.moveTo(sub.first.dx, sub.first.dy);
+        for (var i = 1; i < sub.length; i++) {
+          destino.lineTo(sub[i].dx, sub[i].dy);
+        }
+        sub.clear();
+      }
+
+      for (final v in cadeia) {
+        final elev = pesoTerreno > 0.02
+            ? math.max(
+                  0.0,
+                  GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+                    latitude: v.dy,
+                    longitude: v.dx,
+                    picosReferencia: picosReferencia,
+                    ehTerraConfirmada: true,
+                    amostradorElevacaoReal: amostradorElevacaoReal,
+                  ),
+                ) *
+                pesoTerreno
+            : 0.0;
+        final pt = controlador.projetarCoordenada(
+          latitude: v.dy,
+          longitude: v.dx,
+          elevacaoMetros: elev + 5.0,
+          tamanhoTela: size,
+        );
+        if (!pt.visivel ||
+            pt.x < -margemX ||
+            pt.x > size.width + margemX ||
+            pt.y < -margemY ||
+            pt.y > size.height + margemY) {
+          descarregar();
+          continue;
+        }
+        sub.add(Offset(pt.x, pt.y));
+      }
+      descarregar();
+    }
+    return adicionou;
+  }
+}
