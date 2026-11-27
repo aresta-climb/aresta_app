@@ -3,21 +3,22 @@
 
 import 'package:flutter/material.dart';
 import '../../idioma/tradutor_app.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 
 /// Exibe o modal centralizado no padrão visual do Aresta Climb informando a taxa
-/// empírica de detecção (~86%) antes de habilitar a camada opcional de chuva e fogo no mapa.
+/// empírica de detecção (~85%) e as 6 fontes utilizadas antes de habilitar a camada de clima e fogo.
 Future<bool> exibirDialogoAvisoPrecisaoClima(BuildContext context) async {
   final confirmado = await showDialog<bool>(
     context: context,
     barrierColor: Colors.black87,
-    builder: (ctx) => const DialogoAvisoPrecisaoClima(),
+    builder: (_) => const DialogoAvisoPrecisaoClima(),
   );
   return confirmado ?? false;
 }
 
 /// Modal declarativo (Dumb UI) alinhado à identidade basalto/ferrugem do Aresta Climb,
-/// com cabeçalho centralizado, medidor estatístico (~86%) e botões empilhados de largura total.
+/// exibindo as fontes específicas, medidor estatístico (~85%) e atalho para a página de estatísticas.
 class DialogoAvisoPrecisaoClima extends StatelessWidget {
   const DialogoAvisoPrecisaoClima({super.key});
 
@@ -29,12 +30,12 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 356),
         child: Container(
           key: const Key('dialogo_aviso_precisao_clima'),
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
           decoration: BoxDecoration(
             color: cores.deepBasalt,
             borderRadius: BorderRadius.circular(24),
@@ -53,8 +54,8 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: cores.rustIron.withValues(alpha: 0.15),
@@ -66,28 +67,28 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   ),
                   child: Icon(
                     Icons.radar_rounded,
-                    size: 24,
+                    size: 22,
                     color: cores.rustIron,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(
                   tr(ChaveTexto.explorarAvisoClimaTitulo).toUpperCase(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Montserrat',
                     color: cores.chalkWhite,
-                    fontSize: 14.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.1,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 9,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     color: cores.caveShadow,
@@ -104,7 +105,7 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                       ),
                       const SizedBox(width: 7),
                       Text(
-                        '~86%',
+                        '~85%',
                         style: TextStyle(
                           fontFamily: 'Montserrat',
                           color: cores.chalkWhite,
@@ -122,7 +123,7 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                             color: cores.graniteEdge,
                             alignment: Alignment.centerLeft,
                             child: FractionallySizedBox(
-                              widthFactor: 0.86,
+                              widthFactor: 0.85,
                               child: Container(color: cores.rustIron),
                             ),
                           ),
@@ -131,17 +132,17 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Text(
                   tr(ChaveTexto.explorarAvisoClimaCorpo),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: cores.ashGrey,
-                    fontSize: 13,
-                    height: 1.42,
+                    fontSize: 12,
+                    height: 1.36,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -165,7 +166,40 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                       backgroundColor: cores.rustIron,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('botao_ver_estatisticas_clima'),
+                    onPressed: () {
+                      final navegador = Navigator.of(context);
+                      navegador.pop(false);
+                      AppNav.toEstatisticasClima(navegador.context);
+                    },
+                    icon: Icon(
+                      Icons.query_stats_rounded,
+                      color: cores.chalkWhite,
+                      size: 17,
+                    ),
+                    label: Text(
+                      tr(ChaveTexto.explorarBotaoVerEstatisticasClima),
+                      style: TextStyle(
+                        color: cores.chalkWhite,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: cores.caveShadow,
+                      side: BorderSide(color: cores.graniteEdge),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -180,7 +214,7 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                     onPressed: () => Navigator.of(context).pop(false),
                     style: TextButton.styleFrom(
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

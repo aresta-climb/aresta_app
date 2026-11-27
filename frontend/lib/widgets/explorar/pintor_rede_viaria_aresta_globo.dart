@@ -578,8 +578,19 @@ abstract final class PintorRedeViariaArestaGlobo {
           aoAmostrarPontoCentral(sub[sub.length ~/ 2]);
         }
         destino.moveTo(sub.first.dx, sub.first.dy);
-        for (var i = 1; i < sub.length; i++) {
-          destino.lineTo(sub[i].dx, sub[i].dy);
+        if (sub.length == 2) {
+          destino.lineTo(sub.last.dx, sub.last.dy);
+        } else {
+          for (var i = 1; i < sub.length - 1; i++) {
+            final ctrl = sub[i];
+            final prox = sub[i + 1];
+            final meio = Offset(
+              (ctrl.dx + prox.dx) * 0.5,
+              (ctrl.dy + prox.dy) * 0.5,
+            );
+            destino.quadraticBezierTo(ctrl.dx, ctrl.dy, meio.dx, meio.dy);
+          }
+          destino.lineTo(sub.last.dx, sub.last.dy);
         }
         sub.clear();
       }
