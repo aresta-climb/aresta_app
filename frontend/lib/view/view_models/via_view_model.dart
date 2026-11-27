@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/compartilhamento/servico_compartilhamento.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
-import '../../services/controlador_interacoes_usuario.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../utils/consulta_dataset.dart';
@@ -40,9 +40,6 @@ class ViaViewModel extends ChangeNotifier {
   /// Repositório reativo de interações comunitárias e alertas de segurança.
   final RepositorioInteracoesVia repositorioInteracoes;
 
-  /// Controlador de visibilidade dos recursos de perfil/comunidade.
-  final ControladorInteracoesUsuario controladorInteracoes;
-
   /// Duração da janela de desfazer antes de efetivar a resolução de um alerta de segurança.
   final Duration duracaoJanelaDesfazer;
 
@@ -57,7 +54,6 @@ class ViaViewModel extends ChangeNotifier {
   ViaViewModel({
     required this.escalada,
     RepositorioInteracoesVia? repositorioInteracoes,
-    ControladorInteracoesUsuario? controladorInteracoes,
     ServicoCompartilhamento? servicoCompartilhamento,
     TelemetryService? telemetria,
     Future<void> Function(String texto)? copiadorAreaTransferencia,
@@ -65,8 +61,6 @@ class ViaViewModel extends ChangeNotifier {
     this.duracaoJanelaDesfazer = const Duration(seconds: 4),
   }) : repositorioInteracoes =
            repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
-       controladorInteracoes =
-           controladorInteracoes ?? ControladorInteracoesUsuario.instancia,
        _servicoCompartilhamento = servicoCompartilhamento,
        _telemetria = telemetria,
        _copiadorAreaTransferencia =
@@ -76,19 +70,12 @@ class ViaViewModel extends ChangeNotifier {
            lancadorUrlExterna ??
            ((uri) => launchUrl(uri, mode: LaunchMode.externalApplication)) {
     this.repositorioInteracoes.alteracoesListenable.addListener(_notificar);
-    this.controladorInteracoes.interacoesAtivasNotifier.addListener(
-      _aoMudarVisibilidadeInteracoes,
-    );
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(_notificar);
     _sincronizarInteracoesSeAtivo();
-  }
-
-  void _aoMudarVisibilidadeInteracoes() {
-    _sincronizarInteracoesSeAtivo();
-    _notificar();
   }
 
   void _sincronizarInteracoesSeAtivo() {
-    if (!exibirAlertasSeguranca) return;
+    if (!possuiUid) return;
     unawaited(
       repositorioInteracoes
           .sincronizarEscalada(
@@ -118,10 +105,8 @@ class ViaViewModel extends ChangeNotifier {
       _timersResolucaoPendente.remove(alertaUid)?.cancel();
       unawaited(confirmarAlerta(alertaUid, aindaEstaLa: false));
     }
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(_notificar);
     repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
-    controladorInteracoes.interacoesAtivasNotifier.removeListener(
-      _aoMudarVisibilidadeInteracoes,
-    );
     super.dispose();
   }
 
@@ -140,16 +125,8 @@ class ViaViewModel extends ChangeNotifier {
   /// Código numérico Protobuf do grau oficial da escalada, quando definido.
   int? get codigoGrauOficial => obterCodigoGrauOficial(escalada);
 
-  /// Indica se os alertas públicos de segurança na rocha estão ativos para todos os escaladores.
-  bool get exibirAlertasSeguranca =>
-      controladorInteracoes.recursoHabilitadoNoAmbiente && possuiUid;
-
-  /// Indica se os recursos opcionais de perfil, consenso e caderneta estão ativos.
-  bool get exibirRecursosComunidade =>
-      controladorInteracoes.exibirElementosInterativos;
-
   /// Indica se o botão de reportar alerta deve aparecer na barra superior da página.
-  bool get podeReportarAlerta => exibirAlertasSeguranca;
+  bool get podeReportarAlerta => possuiUid;
 
   /// Indica se o escalador atual possui sessão autenticada para criar ou confirmar alertas.
   bool get usuarioEstaAutenticado => repositorioInteracoes.usuarioEstaAutenticado;
@@ -171,8 +148,8 @@ class ViaViewModel extends ChangeNotifier {
   /// Rótulo do bloco de grau oficial do conquistador.
   String get rotuloGrauOficial =>
       escalada.whichTipo() == Escalada_Tipo.viaMultiplasEnfiadas
-      ? 'GRAU MÁXIMO'
-      : 'GRAU OFICIAL';
+      ? tr(ChaveTexto.viaGrauMaximo)
+      : tr(ChaveTexto.viaGrauOficial);
 
   /// Grau oficial formatado (ou `'Projeto'`), retornando `null` quando indefinido ou em highline.
   String? get grauOficialExibicao =>
@@ -184,12 +161,11 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Indica se o cartão comparativo de grau deve ser exibido na tela.
   bool get exibirCartaoGrau =>
-      !ehHighline &&
-      (grauOficialExibicao != null || (exibirRecursosComunidade && possuiUid));
+      !ehHighline && (grauOficialExibicao != null || possuiUid);
 
-  /// Consenso democrático de grau da comunidade (exposto apenas quando [exibirRecursosComunidade] está ativo).
+  /// Consenso democrático de grau da comunidade.
   ConsensoGrauVia? get consensoGrau {
-    if (!exibirRecursosComunidade || ehHighline || !possuiUid) {
+    if (ehHighline || !possuiUid) {
       return null;
     }
     return repositorioInteracoes.obterDadosEscalada(escalada.uid).consensoGrau;
@@ -209,7 +185,7 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Lista de alertas de segurança ativos (filtrando alertas em janela temporária de desfazer).
   List<AlertaSegurancaVia> get alertasAtivos {
-    if (!exibirAlertasSeguranca) {
+    if (!possuiUid) {
       return const [];
     }
     final todos = repositorioInteracoes
@@ -223,7 +199,7 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Lista de comentários e betas públicos da comunidade.
   List<ComentarioComunidadeVia> get comentariosComunidade {
-    if (!exibirRecursosComunidade || !possuiUid) {
+    if (!possuiUid) {
       return const [];
     }
     return repositorioInteracoes.obterDadosEscalada(escalada.uid).comentarios;
@@ -231,7 +207,12 @@ class ViaViewModel extends ChangeNotifier {
 
   /// Betas públicos pré-formatados com autor, data e estilo prontos para a Dumb UI.
   List<NotaComunidadeApresentacao> get notasComunidadeApresentacao =>
-      ExtratorDetalhesTecnicosVia.formatarNotasComunidade(comentariosComunidade);
+      ExtratorDetalhesTecnicosVia.formatarNotasComunidade(
+        comentariosComunidade,
+        autorIdUsuarioAutenticado: usuarioEstaAutenticado
+            ? repositorioInteracoes.autorIdPublicoAtual
+            : null,
+      );
 
   /// Tipo de ancoragem/parada da via, quando informado.
   String? get tipoAncoragem =>
@@ -380,6 +361,49 @@ class ViaViewModel extends ChangeNotifier {
       return false;
     }
     return _lancadorUrlExterna(uri);
+  }
+
+  /// Edita o texto de um comentário público criado pelo próprio escalador.
+  Future<bool> editarComentario(String comentarioUid, String novoTexto) async {
+    if (!possuiUid || !repositorioInteracoes.usuarioEstaAutenticado) {
+      return false;
+    }
+    try {
+      await repositorioInteracoes.editarComentario(
+        escaladaUid: escalada.uid,
+        comentarioUid: comentarioUid,
+        novoTexto: novoTexto,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao editar comentário $comentarioUid na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Exclui permanentemente um comentário público criado pelo próprio escalador.
+  Future<bool> excluirComentario(String comentarioUid) async {
+    if (!possuiUid || !repositorioInteracoes.usuarioEstaAutenticado) {
+      return false;
+    }
+    try {
+      await repositorioInteracoes.excluirComentario(
+        escaladaUid: escalada.uid,
+        comentarioUid: comentarioUid,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao excluir comentário $comentarioUid na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// Registra um novo alerta de segurança estilo Waze para a escalada atual.
