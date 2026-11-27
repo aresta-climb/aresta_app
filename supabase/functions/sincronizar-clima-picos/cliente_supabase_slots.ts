@@ -36,6 +36,35 @@ export async function lerAltimetriaExistenteSupabase(
   return {};
 }
 
+/** Lê o `versao_hash` atual da malha viária já salva no Supabase (`atual` ou `copia_seguranca`). */
+export async function lerVersaoMalhaViariaSupabase(
+  supabaseUrl: string,
+  chaveServiceRole: string,
+): Promise<string | null> {
+  for (const slot of ["atual", "copia_seguranca"]) {
+    const resp = await fetch(
+      `${supabaseUrl}/rest/v1/snapshots_malha_viaria_picos?slot=eq.${slot}&select=versao_hash&limit=1`,
+      {
+        headers: {
+          apikey: chaveServiceRole,
+          Authorization: `Bearer ${chaveServiceRole}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!resp.ok) continue;
+    const linhas = await resp.json();
+    if (
+      Array.isArray(linhas) &&
+      linhas.length > 0 &&
+      typeof linhas[0]?.versao_hash === "string"
+    ) {
+      return linhas[0].versao_hash;
+    }
+  }
+  return null;
+}
+
 /** Invoca uma RPC PostgREST transacional no Supabase para rotacionar os slots `atual` -> `copia_seguranca`. */
 export async function chamarRpcSupabase(
   supabaseUrl: string,

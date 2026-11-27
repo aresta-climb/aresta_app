@@ -14,9 +14,14 @@ import { extrairCotasSrtm30m } from "./altimetria_srtm.ts";
 import {
   chamarRpcSupabase,
   lerAltimetriaExistenteSupabase,
+  lerVersaoMalhaViariaSupabase,
 } from "./cliente_supabase_slots.ts";
 import { buscarPicosDoIndiceProtobuf } from "./decodificador_indice_protobuf.ts";
 import { coletarIncendiosFlorestaisContornos } from "./incendios_satelite.ts";
+import {
+  calcularHashCatalogoViario,
+  coletarMalhaViariaHierarquicaOsm,
+} from "./malha_viaria_osm.ts";
 import {
   associarPicosAsTempestadesAtivas,
   coletarHistoricoChuvaPicosOpenMeteo,
@@ -98,6 +103,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
       altimetriaRotacionada = true;
     }
 
+    // 1b. Malha viária hierárquica OSM incremental (só regera quando o conjunto de picos muda)
+    let malhaViariaRotacionada = false;
+    const hashViarioAlvo = calcularHashCatalogoViario(picos);
+    const hashViarioAtual = await lerVersaoMalhaViariaSupabase(
+      supabaseUrl,
+      chaveServiceRole,
+    );
+    if (hashViarioAtual !== hashViarioAlvo) {
+      try {
+        const rodoviasOsm = await coletarMalhaViariaHierarquicaOsm(picos);
+        if (rodoviasOsm.length > 0) {
+          await chamarRpcSupabase(
+            supabaseUrl,
+            chaveServiceRole,
+            "rotacionar_snapshot_malha_viaria_picos",
+            {
+              p_gerado_em: geradoEm,
+              p_versao_hash: hashViarioAlvo,
+              p_rodovias: rodoviasOsm,
+            },
+          );
+          malhaViariaRotacionada = true;
+        }
+      } catch (erroOsm) {
+        console.warn(
+          `[sincronizar-clima-picos] Malha viária mantida no slot anterior: ${erroOsm}`,
+        );
+      }
+    }
+
     // 2. Curva hídrica de 5 dias + tempestades ao vivo + incêndios florestais filtrados contra chuva ativa
     const chaveNasaFirms = (Deno.env.get("NASA_FIRMS_MAP_KEY") ?? "").trim();
     const [chuvaPorPicoBruta, bolhasChuva] = await Promise.all([
@@ -134,6 +169,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       total_picos: picos.length,
       novos_picos_altimetria: picosSemAltimetria.length,
       altimetria_rotacionada: altimetriaRotacionada,
+      malha_viaria_rotacionada: malhaViariaRotacionada,
       bolhas_ativas: bolhasChuva.length,
       bolhas_incendio_ativas: bolhasIncendio.length,
       picos_com_chuva_recente: Object.keys(chuvaPorPico).length,
