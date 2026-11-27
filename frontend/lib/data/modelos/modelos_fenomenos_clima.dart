@@ -369,3 +369,65 @@ class BolhaIncendioRegional {
   final List<PontoContornoGeo> contornoExterno;
   final List<List<PontoContornoGeo>> nucleosIntensos;
 
+  const BolhaIncendioRegional({
+    required this.id,
+    required this.latitude,
+    required this.longitude,
+    required this.potenciaFrpMw,
+    required this.totalFocos,
+    required this.ventoRumoGraus,
+    required this.ventoVelocidadeKmh,
+    this.fonteSatelite = 'INPE_BDQUEIMADAS_NASA_VIIRS_MODIS',
+    required this.contornoExterno,
+    this.nucleosIntensos = const [],
+  });
+
+  /// Determina o nível visual (`1..4`) combinando potência radiativa (`FRP`), contagem de focos e núcleos internos.
+  NivelSeveridadeIncendio get nivelSeveridade {
+    if (potenciaFrpMw >= 75.0 ||
+        totalFocos >= 14 ||
+        (potenciaFrpMw >= 55.0 && nucleosIntensos.isNotEmpty)) {
+      return NivelSeveridadeIncendio.extremo;
+    }
+    if (potenciaFrpMw >= 35.0 || totalFocos >= 8) {
+      return NivelSeveridadeIncendio.alto;
+    }
+    if (potenciaFrpMw >= 15.0 || totalFocos >= 4) {
+      return NivelSeveridadeIncendio.moderado;
+    }
+    return NivelSeveridadeIncendio.baixo;
+  }
+
+  double get minLon => contornoExterno.map((p) => p.longitude).reduce(math.min);
+  double get maxLon => contornoExterno.map((p) => p.longitude).reduce(math.max);
+  double get minLat => contornoExterno.map((p) => p.latitude).reduce(math.min);
+  double get maxLat => contornoExterno.map((p) => p.latitude).reduce(math.max);
+
+  factory BolhaIncendioRegional.deMapa(Map<String, dynamic> mapa) {
+    final id = mapa['id'];
+    final lat = mapa['lat'];
+    final lon = mapa['lon'];
+    final frp = mapa['potencia_frp_mw'];
+    final focos = mapa['total_focos'];
+    final rumo = mapa['vento_rumo_graus'];
+    final velKmh = mapa['vento_kmh'];
+    final fonte = mapa['fonte_satelite'];
+    final contornoBruto = mapa['contorno_externo'];
+    final nucleosBrutos = mapa['nucleos_intensos'];
+
+    if (id is! String ||
+        id.isEmpty ||
+        lat is! num ||
+        lon is! num ||
+        frp is! num ||
+        frp <= 0 ||
+        focos is! num ||
+        focos < 1 ||
+        rumo is! num ||
+        velKmh is! num ||
+        velKmh < 0 ||
+        contornoBruto is! List ||
+        contornoBruto.length < 3) {
+      throw const FormatException('BolhaIncendioRegional inválida.');
+    }
+
