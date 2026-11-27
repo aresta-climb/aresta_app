@@ -86,3 +86,73 @@ class PintorBandeiraIdioma extends CustomPainter {
     canvas.drawRRect(rrect, borda);
   }
 
+  void _pintarBrasil(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFF009B3A),
+    );
+
+    final losango = Path()
+      ..moveTo(w * 0.50, h * 0.13)
+      ..lineTo(w * 0.88, h * 0.50)
+      ..lineTo(w * 0.50, h * 0.87)
+      ..lineTo(w * 0.12, h * 0.50)
+      ..close();
+    canvas.drawPath(losango, Paint()..color = const Color(0xFFFEDF00));
+
+    final centro = Offset(w * 0.50, h * 0.50);
+    final raioGlobo = h * 0.235;
+    canvas.drawCircle(
+      centro,
+      raioGlobo,
+      Paint()..color = const Color(0xFF002776),
+    );
+
+    canvas.save();
+    canvas.clipPath(
+      Path()..addOval(Rect.fromCircle(center: centro, radius: raioGlobo)),
+    );
+    final faixa = Path()
+      ..moveTo(centro.dx - raioGlobo * 1.2, centro.dy - raioGlobo * 0.18)
+      ..quadraticBezierTo(
+        centro.dx,
+        centro.dy - raioGlobo * 0.48,
+        centro.dx + raioGlobo * 1.2,
+        centro.dy + raioGlobo * 0.22,
+      );
+    canvas.drawPath(
+      faixa,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = (h * 0.065).clamp(0.9, 2.2),
+    );
+    canvas.restore();
+  }
+
+  void _pintarEstadosUnidos(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+
+    final tintaVermelha = Paint()..color = const Color(0xFFB22234);
+    const totalListras = 7;
+    final alturaListra = h / totalListras;
+    for (var i = 0; i < totalListras; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, i * alturaListra, w, alturaListra),
+        tintaVermelha,
+      );
+    }
+
+    final cantaoLargura = w * 0.46;
+    final cantaoAltura = alturaListra * 4;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, cantaoLargura, cantaoAltura),
+      Paint()..color = const Color(0xFF3C3B6E),
+    );
+
