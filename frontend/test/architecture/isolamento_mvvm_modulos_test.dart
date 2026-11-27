@@ -147,6 +147,7 @@ void main() {
         'lib/utils/extrator_detalhes_tecnicos_via.dart',
         'lib/services/autenticacao',
         'lib/services/caderneta',
+        'lib/services/clima/servico_malha_viaria_offline.dart',
         'lib/services/clima/servico_tiles_elevacao_terrarium.dart',
         'lib/services/comunidade',
         'lib/idioma/controlador_idioma_app.dart',
