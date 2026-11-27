@@ -366,3 +366,96 @@ void main() {
         expect(ctrl.temAnimacaoAtiva, isFalse);
         expect(ctrl.avancarQuadroFisica(0.016), isFalse);
 
+        final depoisPan = ctrl.projetarCoordenada(
+          latitude: -19.5,
+          longitude: -44.0,
+          elevacaoMetros: 900,
+          tamanhoTela: tela,
+        );
+        expect(depoisPan.x - antesPan.x, closeTo(80.0, 0.05));
+        expect(depoisPan.y - antesPan.y, closeTo(-60.0, 0.05));
+        ctrl.encerrarInteracaoManual(tamanhoTela: tela);
+        expect(ctrl.temAnimacaoAtiva, isFalse);
+
+        // 3. Zero folga (slack) nos limites polares 2D: ao bater no topo norte e inverter 24px para o sul,
+        // o mapa responde imediatamente no primeiro gesto reverso
+        ctrl.definirLod(0.1);
+        ctrl.aplicarArrasto(dxPx: 0, dyPx: 5000, tamanhoTela: tela);
+        final noTopo = ctrl.projetarCoordenada(
+          latitude: 20.0,
+          longitude: -44.0,
+          elevacaoMetros: 0,
+          tamanhoTela: tela,
+        );
+        ctrl.aplicarArrasto(dxPx: 0, dyPx: -24.0, tamanhoTela: tela);
+        final aposReverso = ctrl.projetarCoordenada(
+          latitude: 20.0,
+          longitude: -44.0,
+          elevacaoMetros: 0,
+          tamanhoTela: tela,
+        );
+        expect(aposReverso.y, closeTo(noTopo.y - 24.0, 0.1));
+
+        // 4. Zoom focal 2D em proporcao 1:1 (fatorEscala 2.0 dobra escala2D e ancora coordenada sob o ponto focal)
+        ctrl.definirLod(0.8);
+        const foco = Offset(115.0, 250.0);
+        final coordSobFoco = ctrl.converterTelaParaCoordenada2D(
+          pontoTela: foco,
+          tamanhoTela: tela,
+        );
+        final escAntesZoom = ctrl.calcularEscala2D(tela);
+        ctrl.aplicarZoomFocal(
+          fatorEscala: 2.0,
+          pontoFocalTela: foco,
+          tamanhoTela: tela,
+        );
+        expect(ctrl.calcularEscala2D(tela), closeTo(escAntesZoom * 2.0, 0.5));
+        final projecaoAposZoom = ctrl.projetarCoordenada(
+          latitude: coordSobFoco.latitude,
+          longitude: coordSobFoco.longitude,
+          elevacaoMetros: 0,
+          tamanhoTela: tela,
+        );
+        expect(projecaoAposZoom.x, closeTo(foco.dx, 0.2));
+        expect(projecaoAposZoom.y, closeTo(foco.dy, 0.2));
+
+        // 5. Soltar um flick rapido em 2D inicia inercia suave e voo pelo antimeridiano toma o menor arco
+        ctrl.iniciarInteracaoManual();
+        ctrl.encerrarInteracaoManual(
+          velocidadePixelsPorSegundo: const Offset(-650, 320),
+          tamanhoTela: tela,
+        );
+        expect(ctrl.temAnimacaoAtiva, isTrue);
+        for (var i = 0; i < 90 && ctrl.temAnimacaoAtiva; i++) {
+          ctrl.avancarQuadroFisica(0.025);
+        }
+        expect(ctrl.temAnimacaoAtiva, isFalse);
+
+        // Flick rapido em 3D (com limitador de velocidade maxima) e atualizacao de gaveta em 2D
+        ctrl.atualizarAlturaGaveta(290.0);
+        ctrl.definirModo3D(true);
+        ctrl.iniciarInteracaoManual();
+        ctrl.encerrarInteracaoManual(
+          velocidadePixelsPorSegundo: const Offset(2800, -400),
+          tamanhoTela: tela,
+        );
+        expect(ctrl.temAnimacaoAtiva, isTrue);
+
+        final ctrlPac = ControladorCameraGlobo(
+          latitudeInicial: -10.0,
+          longitudeInicial: 172.0,
+          lodInicial: 1.0,
+          modo3DInicial: false,
+        );
+        addTearDown(ctrlPac.dispose);
+        ctrlPac.iniciarVooParabolico(
+          destinoLat: -12.0,
+          destinoLon: -172.0,
+          destinoLod: 1.2,
+        );
+        ctrlPac.avancarQuadroFisica(0.25);
+        expect(ctrlPac.longitudeCentral.abs(), greaterThan(165.0));
+      },
+    );
+  });
+}
