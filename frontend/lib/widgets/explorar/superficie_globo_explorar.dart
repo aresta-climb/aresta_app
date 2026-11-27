@@ -273,3 +273,59 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
                     contagemPonteiros: detalhes.pointerCount,
                     tamanhoTela: tamanho,
                   );
+                },
+                onScaleEnd: (detalhes) {
+                  widget.controlador.encerrarInteracaoManual(
+                    velocidadePixelsPorSegundo:
+                        detalhes.velocity.pixelsPerSecond,
+                    tamanhoTela: tamanho,
+                  );
+                },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (widget.picoSelecionadoId != null) {
+                          widget.aoSelecionarPicoNoMapa(null);
+                        }
+                      },
+                      onDoubleTapDown: (detalhes) {
+                        _posicaoUltimoToqueDuplo = detalhes.localPosition;
+                      },
+                      onDoubleTap: () => _cena.executarDuploToqueMapa(
+                        tamanhoTela: tamanho,
+                        posicaoToque: _posicaoUltimoToqueDuplo,
+                        picoFocado: focado,
+                        controlador: widget.controlador,
+                      ),
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          size: tamanho,
+                          painter: PintorPlanetaGlobo(
+                            controlador: widget.controlador,
+                            malha: _cena.malha,
+                            redeViaria: redeViaria,
+                            curvasMundo: curvasMundo,
+                            amostradorElevacaoReal: _cena.amostrarElevacaoReal,
+                            texturaNasa: _cena.texturaNasa,
+                            picosReferencia: referenciasRelevo,
+                            sonarPico: _cena.sonarPicoId == null
+                                ? null
+                                : widget.picos
+                                    .where((p) => p.id == _cena.sonarPicoId)
+                                    .firstOrNull,
+                            progressoSonar: _cena.progressoSonar,
+                            progressoLuzViaria: _cena.progressoLuzViaria,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ...CamadaMarcadoresGloboExplorar.construirCamadas(
+                      context: context,
+                      tamanho: tamanho,
+                      controlador: widget.controlador,
+                      redeViaria: redeViaria,
+                      picos: widget.picos,
+                      referenciasRelevo: referenciasRelevo,
