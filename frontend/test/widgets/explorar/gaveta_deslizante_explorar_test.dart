@@ -177,3 +177,89 @@ void main() {
         await tester.pumpAndSettle();
         expect(alturaPx.value, lessThan(40.0));
 
+        // Pico 0 e seco e baixado -> exibe altitude 1180m e globo alinhados no lado DIREITO do card, abre ao tocar e NAO exibe alerta Seco
+        expect(find.byKey(const Key('badge_altitude_pico_0')), findsOneWidget);
+        expect(find.textContaining('1180m'), findsOneWidget);
+        expect(find.byKey(const Key('alerta_umidade_pico_0')), findsNothing);
+        expect(find.text('Seco'), findsNothing);
+
+        // Expande para Dividir para inspecionar geometria dos badges no topo direito do card
+        await tester.tap(find.byKey(const Key('alca_gaveta_explorar')));
+        await tester.pumpAndSettle();
+        final centroTelaX = 200.0;
+        final centroAltitude = tester.getCenter(
+          find.byKey(const Key('badge_altitude_pico_0')),
+        );
+        final centroGlobo = tester.getCenter(
+          find.byKey(const Key('botao_ver_no_globo_pico_0')),
+        );
+        expect(centroAltitude.dx, greaterThan(centroTelaX));
+        expect(centroGlobo.dx, greaterThan(centroAltitude.dx));
+        await tester.tap(find.byKey(const Key('encaixe_gaveta_mapa')));
+        await tester.pumpAndSettle();
+
+        // Selecionar pico_5 no mapa expande automaticamente de Mapa -> Dividir e faz auto-scroll ate pico_5
+        viewModel.selecionarPico('pico_5', origemMapa: true);
+        await tester.pumpAndSettle();
+
+        expect(alturaPx.value, greaterThan(alturaMapa + 100.0));
+        final scrollable = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(GavetaDeslizanteExplorar),
+                matching: find.byType(Scrollable),
+              )
+              .last,
+        );
+        expect(scrollable.position.pixels, greaterThan(600.0));
+
+        // Pico 5 esta muito molhado (chuva dia 24/11) -> alerta contextual visivel!
+        expect(find.byKey(const Key('alerta_umidade_pico_5')), findsOneWidget);
+        expect(find.textContaining('24/11'), findsOneWidget);
+        expect(find.textContaining('1450m'), findsOneWidget);
+
+        // Botao de focar no globo a partir do card dispara callback
+        await tester.tap(find.byKey(const Key('botao_ver_no_globo_pico_5')));
+        await tester.pump();
+        expect(focadoNoGlobo, equals('pico_5'));
+
+        // Toque no card nao baixado abre diretamente a pagina do pico (exploracao online, sem auto-download)
+        await tester.tap(find.text('PICO GAVETA 5'));
+        await tester.pump();
+        expect(abertosIds, contains('pico_5'));
+
+        // Alterna para Lista cobrindo praticamente toda a tela (> 740px em tela de 820px) e testa recolhimento ao tocar ver no globo
+        await tester.tap(find.byKey(const Key('encaixe_gaveta_lista')));
+        await tester.pumpAndSettle();
+        expect(alturaPx.value, greaterThan(740.0));
+
+        await tester.ensureVisible(
+          find.byKey(const Key('botao_ver_no_globo_pico_5')),
+        );
+        await tester.tap(find.byKey(const Key('botao_ver_no_globo_pico_5')));
+        await tester.pumpAndSettle();
+        expect(alturaPx.value, lessThan(500.0));
+
+        await tester.tap(find.byKey(const Key('encaixe_gaveta_lista')));
+        await tester.pumpAndSettle();
+
+        await tester.drag(
+          find.byKey(const Key('alca_gaveta_explorar')),
+          const Offset(0, 360),
+        );
+        await tester.pumpAndSettle();
+        expect(alturaPx.value, lessThan(500.0));
+
+        // Volta ao topo e toca no pico_0 baixado -> tambem aciona aoAbrirPico
+        await tester.drag(
+          find.descendant(
+            of: find.byType(GavetaDeslizanteExplorar),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          const Offset(0, 1500),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('PICO GAVETA 0'));
+        await tester.pump();
+        expect(abertosIds, contains('pico_0'));
+
