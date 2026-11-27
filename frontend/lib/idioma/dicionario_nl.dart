@@ -277,8 +277,61 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.explorarBotaoClimaMapa: 'Regen & Vuur',
   ChaveTexto.explorarAvisoClimaTitulo: 'Gebruikswaarschuwing',
   ChaveTexto.explorarAvisoClimaCorpo:
-      'Aresta gebruikt 3 weer- en radarbronnen EN 3 openbare bronnen van NASA-missies om een slagingskans van ~86% te behalen bij het tonen van deze informatie. Gebruik dit hulpmiddel als referentie in plaats van absolute waarheid.',
+      'Aresta gebruikt 3 weer- en radarbronnen (Open-Meteo, RainViewer, INPE BDQueimadas) EN 3 openbare bronnen van NASA-missies (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble) om een slagingskans van ~85% te behalen bij het tonen van deze informatie. Gebruik dit hulpmiddel als referentie in plaats van absolute waarheid.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, toon op kaart',
+  ChaveTexto.explorarBotaoVerEstatisticasClima: 'Statistieken bekijken',
+  ChaveTexto.estatClimaTituloPagina: 'STATISTIEK (~85%)',
+  ChaveTexto.estatClimaSubtituloHeroi:
+      '180-daagse empirische hindcast (N = 5.133 rotsdagen over 29 gebieden), getoetst met de Standaardnormale Z-tabel.',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. OPBOUW VAN DE ~85%-SCORE',
+  ChaveTexto.estatClimaComposicaoChuvaMapa:
+      'Regionale regenbubbels (≥ 0,2 mm/dag)',
+  ChaveTexto.estatClimaComposicaoUmidade4d:
+      'Conservatief 4-daags vochtvenster op de rots',
+  ChaveTexto.estatClimaComposicaoIncendioNasa:
+      'Actieve natuurbrandzones (NASA VIIRS 375m)',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. CONTINGENTIEMATRIX & FORMULES',
+  ChaveTexto.estatClimaMatrizExplicacao:
+      'Onafhankelijke hindcast (jun–nov 2024) van NOAA GFS-verwachtingen (0,25°) tegenover ECMWF ERA5-heranalyse op alle 29 gebieden:',
+  ChaveTexto.estatClimaSecaoTabelaZTitulo:
+      '3. CONTROLE MET DE Z-TABEL (NULHYPOTHESE)',
+  ChaveTexto.estatClimaTabelaZExplicacao:
+      'Onder de nulhypothese zonder voorspelkracht (H₀: p₀ = 0,50 toeval of klimaatbasis p₀ = 0,5853) geldt Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. Controleer direct in de Z-tabel hieronder de eenzijdige toets H₀: p ≤ 0,83 (Z = +2,57 → Φ = 0,9949, p = 0,0051) en het 95%-BI (Z = 1,96):',
+  ChaveTexto.estatClimaGraficoH0Rotulo: 'Nulverdeling (H₀)',
+  ChaveTexto.estatClimaGraficoCaudaRotulo: 'Rechterstaart (+27,7σ tot +49,0σ)',
+  ChaveTexto.estatClimaColunaZ: 'Z-score',
+  ChaveTexto.estatClimaColunaPhi: 'Φ(Z) Cumul.',
+  ChaveTexto.estatClimaColunaCauda: 'Staart 1−Φ',
+  ChaveTexto.estatClimaColunaNota: 'Z-tabel betekenis',
+  ChaveTexto.estatClimaZNotaMedia: 'Midden van de nulhypothese (50%)',
+  ChaveTexto.estatClimaZNota90: 'Eenzijdige 90%-grens',
+  ChaveTexto.estatClimaZNota95: 'Standaard eenzijdige grens (α = 0,05)',
+  ChaveTexto.estatClimaZNotaIC95: 'Tweezijdig 95%-BI ([83,7%, 87,2%])',
+  ChaveTexto.estatClimaZNota99: 'Eenzijdige 99%-grens (α = 0,01)',
+  ChaveTexto.estatClimaZNotaTeste83:
+      'Aresta-toets p̂ = 85,5% vs H₀ ≤ 83% (p = 0,0051)',
+  ChaveTexto.estatClimaZNota999: '99,9%-grens (α = 0,001)',
+  ChaveTexto.estatClimaZNotaFimTabela:
+      'Einde gedrukte Z-tabel (Aresta: Z = +27,7σ)',
+  ChaveTexto.estatClimaSecaoFontesTitulo: '4. SPECIFIEKE DATABRONNEN',
+  ChaveTexto.estatClimaGrupoFontesMeteo:
+      '3 WEER-, RADAR- & MONITORINGBRONNEN',
+  ChaveTexto.estatClimaGrupoFontesNasa:
+      '3 OPENBARE BRONNEN VAN NASA-MISSIES',
+  ChaveTexto.estatClimaFonteOpenMeteoDesc:
+      'Numerieke modellen NOAA GFS, DWD ICON en ECMWF IFS voor 5-daagse neerslag, buienfronten en 10 m wind.',
+  ChaveTexto.estatClimaFonteRainViewerDesc:
+      'Live wereldwijd Doppler-radarmozaïek voor convectieve buien en zware neerslagkernen.',
+  ChaveTexto.estatClimaFonteInpeDesc:
+      'INPE BDQueimadas-satellietprogramma voor dagelijkse detectie van natuurbranden in Brazilië.',
+  ChaveTexto.estatClimaFonteFirmsDesc:
+      'Orbitale thermische sensoren VIIRS (375 m) en MODIS (1 km) aan boord van Suomi NPP, NOAA-20 en Aqua/Terra.',
+  ChaveTexto.estatClimaFonteSrtmDesc:
+      'Shuttle Radar Topography Mission (30 m via AWS Terrarium) voor echte rotshoogte, reliëf en hoogtelijnen.',
+  ChaveTexto.estatClimaFonteBlueMarbleDesc:
+      'NASA Blue Marble Next Generation satellietbeeld op de wereldbol.',
+  ChaveTexto.estatClimaAvisoFinal:
+      'Microklimaten op de wand, sijpelwater in spleten, zonligging en lokale wind beïnvloeden het drogen van de rots. Beoordeel de condities altijd zelf ter plaatse.',
   ChaveTexto.climaChuvaFraca: 'Lichte regen',
   ChaveTexto.climaChuvaModerada: 'Matige regen',
   ChaveTexto.climaChuvaForte: 'Zware regen',
