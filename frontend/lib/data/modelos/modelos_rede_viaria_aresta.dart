@@ -152,6 +152,42 @@ class SnapshotMalhaViariaOffline {
     required this.versaoHash,
     required this.rodovias,
   });
+
+  /// Constrói [SnapshotMalhaViariaOffline] validando o payload JSON persistido ou remoto.
+  factory SnapshotMalhaViariaOffline.deMapa(Map<String, dynamic> mapa) {
+    final versao = (mapa['versao_hash'] as String?)?.trim() ?? '';
+    final listaBruta = mapa['rodovias'];
+    if (versao.isEmpty || listaBruta is! List) {
+      throw const FormatException('Snapshot de malha viária inválido.');
+    }
+    final geradoTexto = mapa['gerado_em'] as String?;
+    final gerado = (geradoTexto != null ? DateTime.tryParse(geradoTexto) : null)
+            ?.toUtc() ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    final rodoviasLidas = listaBruta
+        .whereType<Map>()
+        .map((item) => RodoviaRegionalMapa.deMapa(Map<String, dynamic>.from(item)))
+        .where((r) => r.verticesLonLat.length >= 2)
+        .toList(growable: false);
+    if (rodoviasLidas.isEmpty) {
+      throw const FormatException('Snapshot de malha viária sem rodovias válidas.');
+    }
+    return SnapshotMalhaViariaOffline(
+      geradoEm: gerado,
+      versaoHash: versao,
+      rodovias: rodoviasLidas,
+    );
+  }
+
+  /// Converte o snapshot para JSON persistível nos slots `atual` e `seguranca`.
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'gerado_em': geradoEm.toUtc().toIso8601String(),
+        'versao_hash': versaoHash,
+        'rodovias': rodovias
+            .take(math.max(1, rodovias.length))
+            .map((r) => r.paraMapa())
+            .toList(growable: false),
+      };
 }
 
 /// Referência geomorfológica e grade DEM de satélite (`NASA SRTM 30m`) de um pico para os `LODs 2–3`.
@@ -229,4 +265,3 @@ class RedeViariaArestaGlobo {
     required this.cidadesClassificadas,
   });
 }
-
