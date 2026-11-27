@@ -168,3 +168,97 @@ abstract final class PintorCurvasNivelGlobo {
           ),
       );
     }
+    if (temMestra) {
+      canvas.drawPath(
+        caminhoMestras,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = lod >= 3.4 ? 1.18 : 0.94
+          ..color = Color.fromRGBO(
+            226,
+            234,
+            245,
+            (0.44 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
+          ),
+      );
+    }
+    if (temEscarpa) {
+      canvas.drawPath(
+        caminhoEscarpasAresta,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = 2.2
+          ..color = _corCobreEscarpasAresta.withValues(
+            alpha: (0.28 * pesoCurvas).clamp(0.0, 1.0),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+      );
+      canvas.drawPath(
+        caminhoEscarpasAresta,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = 1.2
+          ..color = const Color(0xFFFFCBA4).withValues(
+            alpha: (0.66 * pesoCurvas).clamp(0.0, 1.0),
+          ),
+      );
+    }
+
+    if (lod >= 2.85) {
+      _desenharAneisTopograficosMacicos(
+        canvas: canvas,
+        size: size,
+        controlador: controlador,
+        picosReferencia: picosReferencia,
+        opacidadeTerreno: opacidadeTerreno,
+        pesoCurvas: pesoCurvas,
+        amostradorElevacaoReal: amostradorElevacaoReal,
+      );
+    }
+
+    if (rotulosCotas.isNotEmpty) {
+      _desenharEtiquetasCotaMestra(
+        canvas: canvas,
+        rotulos: rotulosCotas,
+        opacidade:
+            (pesoCurvas * ControladorCameraGlobo.smoothstep(2.75, 3.30, lod))
+                .clamp(0.0, 1.0),
+      );
+    }
+  }
+
+  static void _desenharAneisTopograficosMacicos({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required double opacidadeTerreno,
+    required double pesoCurvas,
+    required double? Function(double latitude, double longitude)?
+        amostradorElevacaoReal,
+  }) {
+    final lod = controlador.lod;
+    final alfaAnel =
+        ControladorCameraGlobo.smoothstep(2.85, 3.50, lod) * pesoCurvas;
+    if (alfaAnel <= 0.03) return;
+
+    final raioGraus = lod >= 3.85 ? 0.0042 : (lod >= 3.30 ? 0.0085 : 0.015);
+    final pincelAnel = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.90
+      ..color = _corCobreEscarpasAresta.withValues(
+        alpha: (0.34 * alfaAnel).clamp(0.0, 1.0),
+      );
+    final pincelCardeal = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.05
+      ..color = const Color(0xFFE2E8F0).withValues(
+        alpha: (0.40 * alfaAnel).clamp(0.0, 1.0),
+      );
+
