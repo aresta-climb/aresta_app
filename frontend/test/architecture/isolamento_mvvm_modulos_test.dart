@@ -30,6 +30,7 @@ void main() {
         'lib/pages/configuracoes.dart',
         'lib/pages/hub_perfil_caderneta.dart',
         'lib/pages/explorar.dart',
+        'lib/pages/estatisticas_clima.dart',
         'lib/pages/via.dart',
         'lib/widgets/app_bar_home_aresta.dart',
         'lib/widgets/autenticacao',
@@ -165,6 +166,7 @@ void main() {
         'lib/pages/caderneta.dart',
         'lib/pages/hub_perfil_caderneta.dart',
         'lib/pages/explorar.dart',
+        'lib/pages/estatisticas_clima.dart',
         'lib/pages/via.dart',
       ];
 
