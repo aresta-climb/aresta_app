@@ -258,6 +258,9 @@ abstract final class GeradorRelevoLod {
 
     var somaDem = 0.0;
     var pesoDem = 0.0;
+    var somaDemReal = 0.0;
+    var pesoDemReal = 0.0;
+    var ganhoCumeSintetico = 0.0;
     var somaPlanalto = 0.0;
     var pesoPlanalto = 0.0;
     var menorDist2 = double.infinity;
@@ -282,6 +285,15 @@ abstract final class GeradorRelevoLod {
         if (am.peso > 0.0) {
           somaDem += am.elevacaoMetros * am.peso;
           pesoDem += am.peso;
+          if (p.temGradeDemReal) {
+            somaDemReal += am.elevacaoMetros * am.peso;
+            pesoDemReal += am.peso;
+          }
+        }
+        if (!p.temGradeDemReal && p.altitudePicoMetros > p.altitudeBaseMetros + 20) {
+          final prom = (p.altitudePicoMetros - p.altitudeBaseMetros).toDouble();
+          final domo = prom * math.exp(-d2 / 0.0009);
+          if (domo > ganhoCumeSintetico) ganhoCumeSintetico = domo;
         }
       }
     }
@@ -291,10 +303,13 @@ abstract final class GeradorRelevoLod {
       final baseReal = ehTerraConfirmada == true
           ? math.max(2.0, cotaRealExterna)
           : cotaRealExterna;
-      if (pesoDem <= 0.0) return baseReal;
-      final cotaLocal = somaDem / pesoDem;
-      final mistura = pesoDem.clamp(0.0, 1.0);
-      return baseReal * (1.0 - mistura) + cotaLocal * mistura;
+      if (pesoDemReal > 0.0) {
+        final cotaLocalReal = somaDemReal / pesoDemReal;
+        final mistura = pesoDemReal.clamp(0.0, 1.0);
+        return baseReal * (1.0 - mistura) + cotaLocalReal * mistura;
+      }
+      // Preserva proeminência real de cumes íngremes sem escavar valas circulares no entorno
+      return baseReal + ganhoCumeSintetico;
     }
 
     if (picosReferencia.isEmpty) return 0.0;
@@ -349,33 +364,20 @@ abstract final class GeradorRelevoLod {
     final semente = _sementeDeterministica(pico.id);
     final baseFloor = pico.altitudeBaseMetros.toDouble();
     final prominencia = math.max(
-      180.0,
+      120.0,
       (pico.altitudePicoMetros - pico.altitudeBaseMetros).toDouble(),
     );
 
-    final cumePrincipal = math.exp(-d2 / 0.0014) * prominencia;
+    final cumePrincipal = math.exp(-d2 / 0.0016) * prominencia;
     final sx1 = dx - 0.018 * math.cos(semente);
     final sy1 = dy + 0.014 * math.sin(semente);
     final crista1 =
-        math.exp(-(sx1 * sx1 + sy1 * sy1) / 0.0011) * (prominencia * 0.54);
-
-    final sx2 = dx + 0.020 * math.sin(semente);
-    final sy2 = dy - 0.015 * math.cos(semente);
-    final crista2 =
-        math.exp(-(sx2 * sx2 + sy2 * sy2) / 0.0010) * (prominencia * 0.40);
-
-    final rugosidade =
-        (math.sin(dx * 150.0 + semente) * math.cos(dy * 145.0 - semente)) *
-                28.0 *
-                math.exp(-d2 / 0.003) +
-            (math.sin(dx * 620.0 - dy * 480.0 + semente) * 16.0) *
-                math.exp(-d2 / 0.0018);
+        math.exp(-(sx1 * sx1 + sy1 * sy1) / 0.0014) * (prominencia * 0.42);
 
     final dist = math.sqrt(d2);
     final tBorda = ((dist - 0.045) / (0.080 - 0.045)).clamp(0.0, 1.0);
     final peso = 1.0 - tBorda * tBorda * (3.0 - 2.0 * tBorda);
-    final cotaLocal =
-        (baseFloor + cumePrincipal + crista1 + crista2 + rugosidade) * peso;
+    final cotaLocal = baseFloor + cumePrincipal + crista1;
     return (elevacaoMetros: cotaLocal, peso: peso);
   }
 
