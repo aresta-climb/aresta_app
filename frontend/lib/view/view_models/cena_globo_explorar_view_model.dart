@@ -25,7 +25,7 @@ import '../../widgets/explorar/malha_relevo_lod.dart';
 class CenaGloboExplorarViewModel extends ChangeNotifier {
   static const double duracaoIdaLuzViariaSegundos = 1.60;
   static const double duracaoVoltaLuzViariaSegundos = 1.35;
-  static const int limiteCacheTilesCurvas = 36;
+  static const int limiteCacheTilesCurvas = 32;
 
   final Future<MalhaGeograficaGlobo> Function() _carregarMalha;
   final Future<ui.Image> Function() _carregarTextura;
@@ -185,7 +185,9 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     required List<PicoRelevoReferencia> picosReferencia,
   }) {
     final lod = controlador.lod;
-    if (lod < 1.90 || tamanhoTela.isEmpty) return null;
+    // Curvas topográficas só entram quando a câmera realmente aproxima da serra/maciço (LOD >= 2.70),
+    // mantendo a visão rodoviária regional limpa e evitando extração pesada durante a animação viária!
+    if (lod < 2.70 || tamanhoTela.isEmpty) return null;
 
     final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
       modo3D: controlador.modo3D,
@@ -218,7 +220,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
       janela: janela,
       camadaFina: false,
     );
-    final incluirFinos = lod >= 3.18;
+    final incluirFinos = lod >= 3.50;
     final tilesFinos = incluirFinos
         ? ExtratorCurvasNivelMundo.listarTilesVisiveis(
             janela: janela,
@@ -239,20 +241,15 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
       return existente;
     }
 
-    final malhaAtual = _malha;
-    double amostrarTerrenoFixo(double lat, double lon) {
-      final ehTerra = malhaAtual?.contemPontoTerrestre(
-        latitude: lat,
-        longitude: lon,
-      );
-      return GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-        latitude: lat,
-        longitude: lon,
-        picosReferencia: picosReferencia,
-        ehTerraConfirmada: ehTerra,
-        amostradorElevacaoReal: amostrarElevacaoReal,
-      );
-    }
+    // Cotas de curvas são >= 100 m (acima do nível do mar), dispensando raycasting poligonal por amostra!
+    double amostrarTerrenoFixo(double lat, double lon) =>
+        GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat,
+          longitude: lon,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: null,
+          amostradorElevacaoReal: amostrarElevacaoReal,
+        );
 
     List<CurvaNivelMundo> obterTileCacheado(int tx, int ty, bool fina) {
       final k = ExtratorCurvasNivelMundo.calcularChaveTileMundo(
