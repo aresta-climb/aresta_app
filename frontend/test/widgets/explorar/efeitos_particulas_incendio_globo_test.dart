@@ -87,3 +87,86 @@ void main() {
           severidade: NivelSeveridadeIncendio.baixo,
           paleta: p,
         );
+      });
+      final ondasExtremo = await _capturarQuadro((canvas) {
+        final p = EfeitosParticulasIncendioGlobo.paletaPorSeveridade(
+          NivelSeveridadeIncendio.extremo,
+          1.0,
+        );
+        EfeitosParticulasIncendioGlobo.desenharOndaCalorRadiante(
+          canvas: canvas,
+          centro: centro,
+          menorLadoPx: 60.0,
+          faseSegundos: 0.4,
+          severidade: NivelSeveridadeIncendio.extremo,
+          paleta: p,
+        );
+      });
+      expect(ondasBaixo.every((b) => b == 0), isTrue);
+      expect(ondasExtremo.any((b) => b > 0), isTrue);
+
+      final quadrosPorSeveridade = <NivelSeveridadeIncendio, Uint8List>{};
+      for (final sev in NivelSeveridadeIncendio.values) {
+        final paleta =
+            EfeitosParticulasIncendioGlobo.paletaPorSeveridade(sev, 1.0);
+        quadrosPorSeveridade[sev] = await _capturarQuadro((canvas) {
+          EfeitosParticulasIncendioGlobo.desenharColunaFumacaExterna(
+            canvas: canvas,
+            origemFogo: centro,
+            menorLadoPx: 54.0,
+            dirVentoTela: const ui.Offset(0.8, -0.6),
+            fatorVel: 1.2,
+            faseSegundos: 0.7,
+            severidade: sev,
+            paleta: paleta,
+          );
+          EfeitosParticulasIncendioGlobo.desenharOndaCalorRadiante(
+            canvas: canvas,
+            centro: centro,
+            menorLadoPx: sev == NivelSeveridadeIncendio.alto ? 48.0 : 12.0,
+            faseSegundos: 0.7,
+            severidade: sev,
+            paleta: paleta,
+          );
+          EfeitosParticulasIncendioGlobo.desenharChamasEFagulhasAscendentes(
+            canvas: canvas,
+            incendio: incendioTeste,
+            pxPorGrau: 240.0,
+            menorLadoMundoPx: sev == NivelSeveridadeIncendio.baixo ? 18.0 : 54.0,
+            dirVentoTela: const ui.Offset(0.8, -0.6),
+            faseSegundos: 0.7,
+            fatorVel: 1.2,
+            tamanhoTela: const ui.Size(140, 140),
+            controlador: ctrl,
+            picosReferencia: const [],
+            sobreRelevo: sev.peso >= 3,
+            severidade: sev,
+            paleta: paleta,
+          );
+          EfeitosParticulasIncendioGlobo.desenharEmblemaChamaViva(
+            canvas: canvas,
+            centro: centro,
+            escalaPx: 11.0,
+            faseSegundos: 0.7,
+            inclinacaoVentoX: 0.15,
+            severidade: sev,
+            opacidade: 1.0,
+          );
+        });
+      }
+
+      expect(
+        quadrosPorSeveridade[NivelSeveridadeIncendio.baixo],
+        isNot(equals(quadrosPorSeveridade[NivelSeveridadeIncendio.moderado])),
+      );
+      expect(
+        quadrosPorSeveridade[NivelSeveridadeIncendio.moderado],
+        isNot(equals(quadrosPorSeveridade[NivelSeveridadeIncendio.alto])),
+      );
+      expect(
+        quadrosPorSeveridade[NivelSeveridadeIncendio.alto],
+        isNot(equals(quadrosPorSeveridade[NivelSeveridadeIncendio.extremo])),
+      );
+    });
+  });
+}
