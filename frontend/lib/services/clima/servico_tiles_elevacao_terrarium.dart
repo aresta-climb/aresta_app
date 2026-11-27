@@ -87,3 +87,95 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
   final Set<int> _emVoo = <int>{};
   final Set<int> _falhasRecentes = <int>{};
 
+  GradeElevacaoRegionalOffline? _gradeRegionalOffline;
+  bool _inicializado = false;
+  bool _descartado = false;
+  int _versaoDados = 0;
+
+  ServicoTilesElevacaoTerrarium({
+    FonteTilesElevacaoMapa? fonteRemota,
+    AssetBundle? assetBundle,
+    Future<Uint8List> Function(Uint8List pngBytes)? decodificadorRgba,
+  })  : _fonteRemota = fonteRemota ?? ClienteTilesTerrariumAws(),
+        _assetBundle = assetBundle ?? rootBundle,
+        _decodificadorRgba = decodificadorRgba ?? decodificarPngParaRgba256;
+
+  bool get inicializado => _inicializado;
+  int get versaoDados => _versaoDados;
+  int get totalTilesEmCache => _cacheLru.length;
+  GradeElevacaoRegionalOffline? get gradeRegionalOffline =>
+      _gradeRegionalOffline;
+
+  /// Hidrata a grade regional SRTM offline embarcada em `altimetria_picos_inicial.json`.
+  Future<void> inicializar() async {
+    if (_inicializado || _descartado) return;
+    try {
+      final texto = await _assetBundle.loadString(
+        caminhoAssetAltimetria,
+        cache: false,
+      );
+      if (_descartado) return;
+      final raiz = jsonDecode(texto) as Map<String, dynamic>;
+      final brutoGrade = raiz['grade_regional_offline'];
+      if (brutoGrade is Map) {
+        _gradeRegionalOffline = GradeElevacaoRegionalOffline.deMapa(
+          Map<String, dynamic>.from(brutoGrade),
+        );
+        _versaoDados++;
+      }
+    } catch (e, st) {
+      AppLogger.instance.logError(
+        '[ServicoTilesElevacaoTerrarium] Falha ao carregar grade regional offline',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    _inicializado = true;
+    if (!_descartado) notifyListeners();
+  }
+
+  /// Seleciona o zoom Terrarium ideal (`8`, `10` ou `12`) para o `LOD` atual da câmera.
+  static int escolherZoomTerrarium(double lod) {
+    if (lod >= 3.55) return 12;
+    if (lod >= 2.72) return 10;
+    return 8;
+  }
+
+  /// Dispara em background (sem bloquear a UI) o download dos tiles Terrarium visíveis na janela.
+  void solicitarTilesVisiveis({
+    required double minLat,
+    required double maxLat,
+    required double minLon,
+    required double maxLon,
+    required double lod,
+  }) {
+    if (_descartado || lod < 1.85) return;
+    final zoom = escolherZoomTerrarium(lod);
+    final cantoNoroeste = TileElevacaoTerrarium.projetarWebMercator(
+      latitude: maxLat,
+      longitude: minLon,
+      zoom: zoom,
+    );
+    final cantoSudeste = TileElevacaoTerrarium.projetarWebMercator(
+      latitude: minLat,
+      longitude: maxLon,
+      zoom: zoom,
+    );
+
+    var solicitados = 0;
+    for (var ty = cantoNoroeste.tileY; ty <= cantoSudeste.tileY; ty++) {
+      for (var tx = cantoNoroeste.tileX; tx <= cantoSudeste.tileX; tx++) {
+        if (solicitados >= 9) return;
+        solicitados++;
+        final chave = TileElevacaoTerrarium.calcularChave(zoom, tx, ty);
+        if (_cacheLru.containsKey(chave) ||
+            _emVoo.contains(chave) ||
+            _falhasRecentes.contains(chave)) {
+          continue;
+        }
+        _emVoo.add(chave);
+        unawaited(_buscarEDecodificarTile(zoom: zoom, x: tx, y: ty, chave: chave));
+      }
+    }
+  }
+
