@@ -300,6 +300,81 @@ void main() {
       PerfilEscalador(
         autorIdPublico: 'd4Ml0Q2y5Wx9No',
         autorNomePublico: 'Pedro',
+        userId: 'uuid-pedro',
+        accessToken: 'jwt-pedro',
+      ),
+    );
+    await expectLater(
+      () => repo.editarComentario(
+        escaladaUid: 'x8siJek3FiG3aB',
+        comentarioUid: comentarioUid,
+        novoTexto: 'Invasão',
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      () => repo.excluirComentario(
+        escaladaUid: 'x8siJek3FiG3aB',
+        comentarioUid: comentarioUid,
+      ),
+      throwsStateError,
+    );
+
+    // Autora exclui comentário com sucesso
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        fotoUrl: 'https://cdn.aresta.cc/avatars/mariana.webp',
+        userId: 'uuid-mariana',
+        accessToken: 'jwt-mariana',
+      ),
+    );
+    await repo.excluirComentario(
+      escaladaUid: 'x8siJek3FiG3aB',
+      comentarioUid: comentarioUid,
+    );
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').comentarios, isEmpty);
+    expect(clienteFake.itensInseridos.any((i) => i.id == comentarioUid), isFalse);
+
+    // Alerta criado pela autora -> reabre a frio sem sincronizar a ViaPage (direto da Caderneta!)
+    final alerta = await repo.reportarAlerta(
+      escaladaUid: 'z9tjKfl4GjH4bC',
+      categoria: CategoriaAlertaSeguranca.fauna,
+      detalhe: 'Vespas no diedro',
+    );
+    final repoFrio = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      clienteFila: clienteFake,
+      preferencias: prefs,
+    );
+    final alertaEditado = await repoFrio.editarAlerta(
+      escaladaUid: 'z9tjKfl4GjH4bC',
+      alertaUid: alerta.uid,
+      novaCategoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+      detalhe: 'Grampo 4 solto',
+    );
+    expect(alertaEditado.categoria, CategoriaAlertaSeguranca.protecaoPrecaria);
+    expect(
+      repoFrio.obterMeusAlertasContribuidos().single.alerta.detalhe,
+      'Grampo 4 solto',
+    );
+
+    // Reabre a frio novamente e exclui o alerta direto pela Caderneta
+    final repoFrioExclusao = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      clienteFila: clienteFake,
+      preferencias: prefs,
+    );
+    await repoFrioExclusao.excluirAlerta(
+      escaladaUid: 'z9tjKfl4GjH4bC',
+      alertaUid: alerta.uid,
+    );
+    expect(repoFrioExclusao.obterMeusAlertasContribuidos(), isEmpty);
+    expect(
+      clienteFake.itensInseridos.any((i) => i.alertaAlvoUid == alerta.uid),
+      isFalse,
+    );
   });
 
   test('sincroniza com ClienteFilaInteracoes, enfileira offline sem sinal e reenvia quando online', () async {
@@ -310,6 +385,7 @@ void main() {
       PerfilEscalador(
         autorIdPublico: 'c3Lk9P1x4Vw8Mn',
         autorNomePublico: 'Mariana Silva',
+        fotoUrl: 'https://cdn.aresta.cc/avatars/mariana.webp',
         userId: 'uuid-auth-mariana',
         accessToken: 'jwt-mariana',
       ),
@@ -371,6 +447,10 @@ void main() {
     expect(dadosOffline.consensoGrau.totalVotos, 2);
     expect(dadosOffline.comentarios, hasLength(1));
     expect(dadosOffline.comentarios.single.rotuloEstilo, 'FLASH ★');
+    expect(
+      dadosOffline.comentarios.single.autorAvatarUrl,
+      'https://cdn.aresta.cc/avatars/mariana.webp',
+    );
     expect(
       dadosOffline.alertasAtivos
           .firstWhere((a) => a.uid == 'alertaPedro001')
