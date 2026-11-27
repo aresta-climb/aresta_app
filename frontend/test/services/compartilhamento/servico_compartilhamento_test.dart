@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../mocks/mock_telemetria.dart';
 
 void main() {
@@ -333,6 +335,62 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
+    });
+
+    test('formata mensagens de compartilhamento de pico, grupo, setor e escalada em outros idiomas sem prefixos gramaticais do português', () async {
+      SharedPreferences.setMockInitialValues({});
+      addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+
+      await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.ingles);
+
+      await ServicoCompartilhamento.instancia.compartilharPico(
+        idCroqui: 'br_mg_cipo',
+        uid: 'uidPico1234567',
+        nomePico: 'Serra do Cipó',
+        localizacao: 'MG',
+      );
+      expect(
+        textosCompartilhados.single,
+        'Check out the topo for Serra do Cipó (MG) on Aresta:\nhttps://aresta.cc/s/uidPico1234567',
+      );
+
+      textosCompartilhados.clear();
+      await ServicoCompartilhamento.instancia.compartilharGrupo(
+        idCroqui: 'br_mg_cipo',
+        uid: 'uidGrupo123456',
+        nomeGrupo: 'Grupo Grande',
+        nomePico: 'Serra do Cipó',
+      );
+      expect(
+        textosCompartilhados.single,
+        'Check out Grupo Grande at Serra do Cipó on Aresta:\nhttps://aresta.cc/s/uidGrupo123456',
+      );
+
+      textosCompartilhados.clear();
+      await ServicoCompartilhamento.instancia.compartilharSetor(
+        idCroqui: 'br_mg_cipo',
+        uid: 'uidSetor123456',
+        nomeSetor: 'Fenda',
+        nomePico: 'Serra do Cipó',
+      );
+      expect(
+        textosCompartilhados.single,
+        'Check out Fenda at Serra do Cipó on Aresta:\nhttps://aresta.cc/s/uidSetor123456',
+      );
+
+      textosCompartilhados.clear();
+      await ServicoCompartilhamento.instancia.compartilharEscalada(
+        idCroqui: 'br_mg_cipo',
+        uid: 'uidVia12345678',
+        nomeEscalada: 'Diedro',
+        grau: '7a',
+        nomeSetor: 'Fenda',
+        nomePico: 'Serra do Cipó',
+      );
+      expect(
+        textosCompartilhados.single,
+        'Check out Diedro (7a) (Fenda) at Serra do Cipó on Aresta:\nhttps://aresta.cc/s/uidVia12345678',
+      );
     });
   });
 }
