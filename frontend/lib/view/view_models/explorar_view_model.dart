@@ -428,16 +428,52 @@ class BrowseViewModel extends ChangeNotifier {
     );
   }
 
-  /// Lista dos picos filtrados mapeados diretamente para [CardCroquiViewModel] (Dumb UI).
+  /// Projeta os picos filtrados em marcadores visuais imutáveis para renderização na superfície do globo.
+  List<MarcadorPicoGlobo> get marcadoresGlobo => [
+        for (final m in picosFiltrados)
+          if (m.latitude != null && m.longitude != null)
+            construirMarcadorGloboPico(
+              id: m.id,
+              nome: m.nome,
+              caminhoRelativo: m.caminhoRelativo,
+              latitude: m.latitude!,
+              longitude: m.longitude!,
+              cota: obterCotaAltimetricaPico(m.id),
+              umidade: _radarClimaMapaAtivo
+                  ? obterUmidadePico(m.id)
+                  : const EstadoUmidadePico.seco(),
+            ),
+      ];
+
+  /// Calcula o destino geográfico e o nível de detalhe alvo para voar até um pico selecionado na gaveta.
+  ({
+    double latitude,
+    double longitude,
+    double? altitudeBaseMetros,
+    double destinoLod,
+  })? calcularDestinoVooPico(String picoId, {required double lodAtual}) {
+    for (final m in picosFiltrados) {
+      if (m.id != picoId) continue;
+      if (m.latitude == null || m.longitude == null) return null;
+      return (
+        latitude: m.latitude!,
+        longitude: m.longitude!,
+        altitudeBaseMetros:
+            obterCotaAltimetricaPico(picoId)?.altitudeBaseMetros.toDouble(),
+        destinoLod: lodAtual >= 2.25 ? 3.65 : math.max(2.35, lodAtual),
+      );
+    }
+    return null;
+  }
+
+  /// Cartões de apresentação prontos para exibição na gaveta deslizante com badges de distância/viagem.
   List<CardCroquiViewModel> get picosCards {
     final dataset = datasetRepo.activeDataset.value;
     final filtrados = picosFiltrados;
-    final Map<String, PicoProximo> proximidadePorId = (_userLat != null &&
-            _userLon != null &&
-            dataset != null &&
-            filtrados.isNotEmpty)
-        ? _obterProximidadePorId(dataset.metadadosDisponiveis)
-        : const <String, PicoProximo>{};
+    final proximidadePorId =
+        (localizacaoUsuarioAtiva != null && dataset != null && filtrados.isNotEmpty)
+            ? _obterProximidadePorId(dataset.metadadosDisponiveis)
+            : const <String, PicoProximo>{};
 
     return filtrados.map((m) {
       final prox = proximidadePorId[m.id];
@@ -464,21 +500,19 @@ class BrowseViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  /// Atualiza o termo de busca, aciona a reconstrução da UI e agenda telemetria debounced.
   void alterarTermoBusca(String novoTermo) {
     _termoBusca = novoTermo;
     notifyListeners();
 
     _timerDebounce?.cancel();
     _timerDebounce = Timer(const Duration(milliseconds: 500), () {
-      if (_termoBusca.isNotEmpty) {
+      if (_termoBusca.isNotEmpty && !_descartado) {
         final t = telemetria ?? TelemetryService.instance;
         t.logBuscaCroquis(_termoBusca, picosFiltrados.length);
       }
     });
   }
 
-  /// Altera o critério de ordenação da lista e registra evento analítico.
   void alterarOrdem(OrdemOrdenacaoPico novaOrdem) {
     if (_ordem == novaOrdem) return;
     _ordem = novaOrdem;
@@ -487,50 +521,49 @@ class BrowseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Aciona o download dos dados binários de um pico em segundo plano.
+  /// Normaliza um alvo de download (`CardCroquiViewModel`, `Map` ou `String`) em par `(id, nome)`.
+  ({String id, String nome}) resolverAlvoDownload(Object? crag) =>
+      resolverAlvoDownloadExplorar(crag);
+
   Future<bool> baixarPico(MetadadosIndice pico) async {
     final indice = datasetRepo.indiceData.value;
     if (indice == null) return false;
-
-    final resumos = indice.croquis.where((r) => r.id == pico.id).toList();
+    final resumos = indice.croquis.where((r) => r.id == pico.id);
     final resumo = resumos.isNotEmpty
         ? resumos.first
         : (pico.caminhoRelativo.isNotEmpty ? pico : null);
     if (resumo == null) return false;
-
-    final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
-    return await servicoDownload.executarDownload(resumo);
+    return ServicoDownloadSegundoPlano(syncService: syncService)
+        .executarDownload(resumo);
   }
 
-  /// Aciona o download dos dados de um pico pelo seu identificador único.
   Future<bool> baixarPicoPorId(String picoId) async {
     final indice = datasetRepo.indiceData.value;
     if (indice == null) return false;
-
-    final resumos = indice.croquis.where((r) => r.id == picoId).toList();
+    final resumos = indice.croquis.where((r) => r.id == picoId);
     if (resumos.isEmpty) return false;
-
-    final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
-    return await servicoDownload.executarDownload(resumos.first);
+    return ServicoDownloadSegundoPlano(syncService: syncService)
+        .executarDownload(resumos.first);
   }
 
-  /// Abre a página de detalhes de um pico selecionado.
   Future<void> abrirPico(BuildContext context, String picoId) async {
     if (datasetRepo.activeDataset.value == null) return;
     await handlePicoSelection(context, datasetRepo, picoId, source: 'explorar');
   }
 
-  /// Exibe diálogo para troca do servidor ativo (modo editor/experimental).
   void trocarServing(BuildContext context) {
     mostrarDialogConexao(
       context,
       datasetRepo,
-      titulo: 'Trocar serving',
+      titulo: tr(ChaveTexto.explorarTrocarServing),
     );
   }
 
-  /// Dispara a sincronização manual do serving ativo.
   Future<void> sincronizarServing(BuildContext context) async {
     await handleSyncServing(context, datasetRepo, syncService);
+    await _servicoClima.sincronizarSeNecessario(
+      forcar: true,
+      idsPicosCatalogo: _idsPicosComCoordenada,
+    );
   }
 }
