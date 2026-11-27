@@ -560,3 +560,93 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.alertaResolvidoStatus: 'Opgelost',
   ChaveTexto.alertaMarcarResolvido: 'Markeer als opgelost',
 
+  // Autenticação, Perfil, Caderneta, Comunidade, Configurações, Feedback e Compartilhamento
+  ChaveTexto.authEntrarTitulo: 'Inloggen op je account',
+  ChaveTexto.authEntrarSubtitulo:
+      'Log wachtwoordloos in met je sociale account of een 6-cijferige e-mailcode om je klimlogboek te synchroniseren.',
+  ChaveTexto.authContinuarGoogle: 'Doorgaan met Google',
+  ChaveTexto.authContinuarApple: 'Doorgaan met Apple',
+  ChaveTexto.authOuCodigoEmail: 'of ontvang een code per e-mail',
+  ChaveTexto.authEmailLabel: 'E-mailadres',
+  ChaveTexto.authAguardeSegundos: 'Wacht {s}s',
+  ChaveTexto.authReceberCodigoEmail: 'Code per e-mail sturen',
+  ChaveTexto.authCodigo6DigitosLabel: '6-cijferige code',
+  ChaveTexto.authConfirmarCodigo: 'Code bevestigen',
+  ChaveTexto.authReenviarComSegundos: 'Opnieuw sturen ({s}s)',
+  ChaveTexto.authReenviarCodigo: 'Code opnieuw sturen',
+  ChaveTexto.authUsarOutroEmail: 'Ander e-mailadres gebruiken',
+  ChaveTexto.authAbrirConfigApp: 'App-instellingen openen',
+  ChaveTexto.authLimiteTemporario:
+      'Tijdelijke limiet bereikt. Wacht {s}s voordat je een nieuwe code aanvraagt.',
+  ChaveTexto.authCodigoEnviadoPara:
+      'We hebben een 6-cijferige code gestuurd naar {email}. Controleer je inbox en spam.',
+  ChaveTexto.authErroEnviarCodigo:
+      'Kan toegangscode niet verzenden. Probeer het opnieuw.',
+  ChaveTexto.authErroValidarCodigo:
+      'Kan toegangscode niet verifiëren. Probeer het opnieuw.',
+  ChaveTexto.authErroGoogle:
+      'Inloggen met Google mislukt. Probeer het opnieuw.',
+  ChaveTexto.authErroApple: 'Inloggen met Apple mislukt. Probeer het opnieuw.',
+  ChaveTexto.authSemConexao:
+      'Geen internetverbinding. Controleer je bereik en probeer opnieuw.',
+  ChaveTexto.authSrvChaveInvalida:
+      'Ongeldige serversleutel. Probeer het opnieuw.',
+  ChaveTexto.authSrvCodigoExpirado:
+      'De toegangscode is verlopen of ongeldig.',
+  ChaveTexto.authSrvEmailInvalido: 'Voer een geldig e-mailadres in.',
+  ChaveTexto.authSrvProvedorDesabilitado:
+      'Inlogprovider is niet ingeschakeld op de server.',
+  ChaveTexto.authSrvCredencialInvalida:
+      'Kan inloggegevens niet valideren op de server.',
+  ChaveTexto.authSrvLimiteEnvio:
+      'Verzendlimiet bereikt. Wacht even en probeer het opnieuw.',
+  ChaveTexto.authSrvSessaoExpirada:
+      'Je sessie is verlopen. Log opnieuw in.',
+  ChaveTexto.authSrvCancelado: 'Inloggen geannuleerd.',
+  ChaveTexto.authSrvCooldownAposUm:
+      'Om veiligheidsredenen kun je na 1 seconde een nieuwe code aanvragen.',
+  ChaveTexto.authSrvCooldownAposVarios:
+      'Om veiligheidsredenen kun je na {s} seconden een nieuwe code aanvragen.',
+  ChaveTexto.authSrvCooldownCadaUm:
+      'Om veiligheidsredenen kun je elke 1 seconde een nieuwe code aanvragen.',
+  ChaveTexto.authSrvCooldownCadaVarios:
+      'Om veiligheidsredenen kun je elke {s} seconden een nieuwe code aanvragen.',
+  ChaveTexto.perfilEscaladorPadrao: 'Klimmer',
+  ChaveTexto.perfilEscaladorAresta: 'Aresta-klimmer',
+  ChaveTexto.perfilEditarBtn: 'Profiel bewerken',
+  ChaveTexto.perfilMetricaCadenas: 'TOPS',
+  ChaveTexto.perfilMetricaTentativas: 'POGINGEN',
+  ChaveTexto.perfilMetricaPicos: 'GEBIEDEN',
+  ChaveTexto.perfilMetricaVias: 'ROUTES',
+  ChaveTexto.perfilEntrarConta: 'Inloggen',
+  ChaveTexto.perfilMinhaCaderneta: 'Mijn logboek',
+  ChaveTexto.perfilDadosPrivacidade: 'Gegevens & privacy',
+  ChaveTexto.perfilSair: 'Uitloggen',
+  ChaveTexto.perfilExcluirConta: 'Account verwijderen',
+  ChaveTexto.perfilIdCopiadoToast: 'Openbare ID gekopieerd!',
+  ChaveTexto.perfilSemConexaoExcluir:
+      'Geen internetverbinding. Maak verbinding om je account te verwijderen.',
+  ChaveTexto.perfilErroExcluirConta:
+      'Account kan momenteel niet worden verwijderd.',
+  ChaveTexto.perfilDialogEditarTitulo: 'Profiel bewerken',
+  ChaveTexto.perfilAlterarFoto: 'Profielfoto wijzigen',
+  ChaveTexto.perfilNomeAtletaLabel: 'Naam van de klimmer',
+  ChaveTexto.perfilPrivacidadeTitulo: 'Gegevens & Privacy',
+  ChaveTexto.perfilPrivacidadeCorpo:
+      'Aresta Climb respecteert jouw privacy. Je logboek is strikt privé. Openbare graadstemmen en waarschuwingen gebruiken enkel je anonieme Auteurs-ID zonder persoonlijke gegevens te delen.',
+  ChaveTexto.perfilIdPublicoLabel: 'OPENBARE AUTEURS-ID (NANOID)',
+  ChaveTexto.perfilCopiarIdTooltip: 'Openbare ID kopiëren',
+  ChaveTexto.perfilSairPergunta: 'Weet je zeker dat je wilt uitloggen?',
+  ChaveTexto.perfilSairCorpo:
+      'Je persoonlijke logboek blijft veilig bewaard op dit toestel.',
+  ChaveTexto.perfilExcluirPergunta: 'Account definitief verwijderen?',
+  ChaveTexto.perfilExcluirCorpo:
+      'Dit kan niet ongedaan worden gemaakt. Je account, profielfoto en gesynchroniseerde beklimmingen worden definitief gewist.',
+  ChaveTexto.cadTituloPagina: 'MIJN LOGBOEK',
+  ChaveTexto.cadAscensaoAtualizadaToast: 'Beklimming bijgewerkt in je logboek!',
+  ChaveTexto.cadViaIndisponivelOffline:
+      'Route is momenteel offline niet beschikbaar.',
+  ChaveTexto.cadTotalCadenas: 'Totaal getopt',
+  ChaveTexto.cadTaxaAVistaFlash: 'Onsight/Flash-ratio',
+  ChaveTexto.cadMaiorGrauVias: 'Hoogste graad (Routes)',
+  ChaveTexto.cadMaiorGrauBoulders: 'Hoogste graad (Boulders)',
