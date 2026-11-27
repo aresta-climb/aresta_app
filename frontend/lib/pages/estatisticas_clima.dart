@@ -365,63 +365,22 @@ class PaginaEstatisticasClima extends StatelessWidget {
       Text(
         texto,
         textAlign: alinhamento,
-                              fontFamily: 'monospace',
-                              color: linha.destacar ? cores.rustIron : cores.chalkWhite,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 68,
-                          child: Text(
-                            linha.probabilidadeAcumuladaPhi.toStringAsFixed(4),
-                            style: TextStyle(fontFamily: 'monospace', color: cores.chalkWhite, fontSize: 11.5),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 68,
-                          child: Text(
-                            linha.caudaDireitaP.toStringAsFixed(4),
-                            style: TextStyle(fontFamily: 'monospace', color: cores.ashGrey, fontSize: 11.5),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            context.tr(linha.chaveInterpretacao),
-                            style: TextStyle(
-                              color: linha.destacar ? cores.chalkWhite : cores.ashGrey,
-                              fontSize: 11,
-                              height: 1.25,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _celulaCabecalhoTabelaZ(String texto, double largura, AppColors cores) =>
-      SizedBox(width: largura, child: _textoCabecalhoTabelaZ(texto, cores));
-
-  Widget _textoCabecalhoTabelaZ(String texto, AppColors cores) => Text(
-    texto,
-    style: TextStyle(color: cores.chalkWhite, fontSize: 11, fontWeight: FontWeight.w800),
-  );
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: cores.chalkWhite,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      );
 
   Widget _construirSecaoFontesEspecificas(
     BuildContext context,
     AppColors cores,
   ) {
-    return _CartaoSecaoEstatistica(
+    return CartaoSecaoEstatisticaClima(
+      icone: Icons.satellite_alt_rounded,
       titulo: context.tr(ChaveTexto.estatClimaSecaoFontesTitulo),
-      cores: cores,
       filho: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -437,7 +396,7 @@ class PaginaEstatisticasClima extends StatelessWidget {
           const SizedBox(height: 8),
           for (final fonte
               in EstudoEstatisticoClimaAresta.fontesMeteorologicas) ...[
-            _CartaoFonteDados(fonte: fonte, cores: cores),
+            CartaoFonteDadosClima(fonte: fonte),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 8),
@@ -453,7 +412,7 @@ class PaginaEstatisticasClima extends StatelessWidget {
           const SizedBox(height: 8),
           for (final fonte
               in EstudoEstatisticoClimaAresta.fontesMissoesNasa) ...[
-            _CartaoFonteDados(fonte: fonte, cores: cores),
+            CartaoFonteDadosClima(fonte: fonte),
             const SizedBox(height: 8),
           ],
         ],
