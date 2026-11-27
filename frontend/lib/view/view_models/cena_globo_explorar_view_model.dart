@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 
 import '../../data/modelos/modelos_relevo_topografico.dart';
+import '../../services/clima/servico_malha_viaria_offline.dart';
 import '../../services/clima/servico_tiles_elevacao_terrarium.dart';
 import '../../utils/construtor_rede_viaria_aresta.dart';
 import '../../utils/extrator_curvas_nivel_mundo.dart';
@@ -27,6 +28,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   final Future<MalhaGeograficaGlobo> Function() _carregarMalha;
   final Future<ui.Image> Function() _carregarTextura;
   final ServicoTilesElevacaoTerrarium _servicoElevacao;
+  final ServicoMalhaViariaOffline _servicoMalhaViaria;
 
   MalhaGeograficaGlobo? _malha;
   ui.Image? _texturaNasa;
@@ -55,12 +57,15 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     Future<MalhaGeograficaGlobo> Function()? carregarMalha,
     Future<ui.Image> Function()? carregarTextura,
     ServicoTilesElevacaoTerrarium? servicoElevacao,
+    ServicoMalhaViariaOffline? servicoMalhaViaria,
   })  : _carregarMalha =
             carregarMalha ?? MalhaGeograficaGlobo.carregarDoAssetBundle,
         _carregarTextura =
             carregarTextura ?? TexturaGloboNasa.carregarDoAssetBundle,
         _servicoElevacao =
-            servicoElevacao ?? ServicoTilesElevacaoTerrarium.instancia {
+            servicoElevacao ?? ServicoTilesElevacaoTerrarium.instancia,
+        _servicoMalhaViaria =
+            servicoMalhaViaria ?? ServicoMalhaViariaOffline.instancia {
     if (lodInicialCamera >= ControladorCameraGlobo.limiarAtivacaoLuzViaria) {
       _alvoLuzViaria = 1.0;
       _progressoLuzViaria = 1.0;
@@ -68,11 +73,30 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     _malha = carregarMalha == null ? MalhaGeograficaGlobo.cacheMemoria : null;
     _texturaNasa =
         carregarTextura == null ? TexturaGloboNasa.cacheMemoria : null;
+    _aplicarSnapshotViarioSeDisponivel(notificar: false);
     _servicoElevacao.addListener(_aoAtualizarTilesElevacao);
+    _servicoMalhaViaria.addListener(_aoAtualizarMalhaViaria);
   }
 
   void _aoAtualizarTilesElevacao() {
     if (!_descartado && !_hidratandoAssets) notifyListeners();
+  }
+
+  void _aoAtualizarMalhaViaria() {
+    if (_descartado) return;
+    _aplicarSnapshotViarioSeDisponivel(notificar: !_hidratandoAssets);
+  }
+
+  void _aplicarSnapshotViarioSeDisponivel({required bool notificar}) {
+    final malhaBase = _malha;
+    final snap = _servicoMalhaViaria.snapshotAtivo;
+    if (malhaBase == null || snap == null || snap.rodovias.isEmpty) return;
+    if (malhaBase.versaoMalhaViaria == snap.versaoHash) return;
+    _malha = malhaBase.comRodoviasAtualizadas(
+      snap.rodovias,
+      versaoMalhaViaria: snap.versaoHash,
+    );
+    if (notificar) notifyListeners();
   }
 
   MalhaGeograficaGlobo? get malha => _malha;
@@ -85,10 +109,15 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   double get progressoLuzViaria => _progressoLuzViaria;
   bool get animacoesAmbienteAtivas => _animacoesAmbienteAtivas;
 
-  /// Hidrata assincronamente a malha vetorial, a textura NASA e a grade regional SRTM offline.
+  /// Hidrata assincronamente a malha vetorial, a textura NASA, a grade regional SRTM offline
+  /// e a cópia offline da malha viária OSM (disparando sincronização em segundo plano se online).
   Future<void> inicializarAssetsSeNecessario() async {
     final precisaMalhaOuTextura = _malha == null || _texturaNasa == null;
-    if (!precisaMalhaOuTextura && _servicoElevacao.inicializado) return;
+    if (!precisaMalhaOuTextura &&
+        _servicoElevacao.inicializado &&
+        _servicoMalhaViaria.inicializado) {
+      return;
+    }
 
     _hidratandoAssets = true;
     try {
@@ -96,6 +125,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
         if (precisaMalhaOuTextura) _carregarMalha(),
         if (precisaMalhaOuTextura) _carregarTextura(),
         if (!_servicoElevacao.inicializado) _servicoElevacao.inicializar(),
+        if (!_servicoMalhaViaria.inicializado) _servicoMalhaViaria.inicializar(),
       ];
       final resultados = await Future.wait<Object?>(futuros);
       if (_descartado) return;
@@ -103,17 +133,28 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
         _malha = resultados[0] as MalhaGeograficaGlobo;
         _texturaNasa = resultados[1] as ui.Image;
       }
+      _aplicarSnapshotViarioSeDisponivel(notificar: false);
     } finally {
       _hidratandoAssets = false;
     }
+    unawaited(
+      _servicoMalhaViaria.sincronizarSeDisponivel(
+        versaoSementeEmbarcada: _malha?.versaoMalhaViaria,
+      ),
+    );
     notifyListeners();
   }
 
-  /// Amostra sincronamente em `O(1)` a altitude SRTM real (tile Terrarium ou grade regional offline).
-  double? amostrarElevacaoReal(double latitude, double longitude) =>
+  /// Amostra sincronamente em `O(1)` a altitude SRTM real interpolada suavemente entre níveis Terrarium.
+  double? amostrarElevacaoReal(
+    double latitude,
+    double longitude, {
+    double? lod,
+  }) =>
       _servicoElevacao.amostrarElevacaoReal(
         latitude: latitude,
         longitude: longitude,
+        lod: lod,
       );
 
   /// Obtém em `O(1)` a [RedeViariaArestaGlobo] memoizada nesta instância para a malha e picos atuais.
@@ -203,7 +244,8 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
           longitude: lon,
           picosReferencia: picosReferencia,
           ehTerraConfirmada: ehTerra,
-          amostradorElevacaoReal: amostrarElevacaoReal,
+          amostradorElevacaoReal: (la, lo) =>
+              amostrarElevacaoReal(la, lo, lod: lod),
         );
       },
     );
@@ -401,6 +443,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   void dispose() {
     _descartado = true;
     _servicoElevacao.removeListener(_aoAtualizarTilesElevacao);
+    _servicoMalhaViaria.removeListener(_aoAtualizarMalhaViaria);
     _timerEstrelasAmbiente?.cancel();
     faseEstrelasSegundos.dispose();
     super.dispose();

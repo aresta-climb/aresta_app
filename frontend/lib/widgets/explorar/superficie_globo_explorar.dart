@@ -308,7 +308,12 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
                             malha: _cena.malha,
                             redeViaria: redeViaria,
                             curvasMundo: curvasMundo,
-                            amostradorElevacaoReal: _cena.amostrarElevacaoReal,
+                            amostradorElevacaoReal: (lat, lon) =>
+                                _cena.amostrarElevacaoReal(
+                                  lat,
+                                  lon,
+                                  lod: widget.controlador.lod,
+                                ),
                             texturaNasa: _cena.texturaNasa,
                             picosReferencia: referenciasRelevo,
                             sonarPico: _cena.sonarPicoId == null
