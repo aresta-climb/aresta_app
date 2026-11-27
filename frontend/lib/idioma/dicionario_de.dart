@@ -98,3 +98,99 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.comumBuscarPicosHint: 'Klettergebiete suchen...',
   ChaveTexto.comumMapaGeral: 'Übersichtskarte',
 
+  // Sistema, prévia experimental, versão e migração
+  ChaveTexto.sistemaModoExperimentalAtivo: 'EXPERIMENTELLER MODUS AKTIV',
+  ChaveTexto.sistemaSair: 'BEENDEN',
+  ChaveTexto.sistemaSessaoPreviaEncerradaTitulo: 'Vorschau-Sitzung beendet',
+  ChaveTexto.sistemaSessaoPreviaEncerradaCorpo:
+      'Die Verbindung zum Desktop-Editor wurde getrennt. Wir haben automatisch den offiziellen Aresta-Climb-Katalog wiederhergestellt.',
+  ChaveTexto.sistemaFaseBetaTitulo: 'Offene Beta-Phase',
+  ChaveTexto.sistemaFaseBetaIntro:
+      'Aresta Climb ist eine unabhängige Initiative und wird aktiv gemeinsam mit der Kletter-Community entwickelt.',
+  ChaveTexto.sistemaFaseBetaItem1Titulo: 'Laufend neue Sektoren & Topos',
+  ChaveTexto.sistemaFaseBetaItem1Corpo:
+      'Unsere Datenbank mit Routen, Bouldern, Topos und Karten wächst ständig.',
+  ChaveTexto.sistemaFaseBetaItem2Titulo: 'Stetige Weiterentwicklung',
+  ChaveTexto.sistemaFaseBetaItem2Corpo:
+      'Erweiterte Filter, 3D-Navigation und Performance-Verbesserungen folgen laufend.',
+  ChaveTexto.sistemaFaseBetaItem3Titulo: 'Gemeinsam mit Kletterern gebaut',
+  ChaveTexto.sistemaFaseBetaItem3Corpo:
+      'Dein Feedback direkt vom Fels hilft uns, das Wichtigste zuerst umzusetzen.',
+  ChaveTexto.sistemaInstagramOficial: 'Offizielles Instagram',
+  ChaveTexto.sistemaComunidadeWhatsapp: 'WhatsApp-Community',
+  ChaveTexto.sistemaEnviarSugestao: 'Vorschlag senden',
+  ChaveTexto.sistemaRodapeVersaoBeta: 'Aresta Climb v{versao} (Open Beta)',
+  ChaveTexto.sistemaAtualizeParaBaixar:
+      'Aktualisiere Aresta, um wieder Topos herunterzuladen und zu synchronisieren.',
+  ChaveTexto.sistemaAtualizacaoRecomendada:
+      'Update empfohlen: Eine neue Version ist verfügbar.',
+  ChaveTexto.sistemaAtualizar: 'AKTUALISIEREN',
+  ChaveTexto.sistemaAtualizacaoNecessaria: 'UPDATE\nERFORDERLICH',
+  ChaveTexto.sistemaVersaoAntigaCorpo:
+      'Deine Aresta-Version ist veraltet und wird nicht mehr unterstützt. Bitte aktualisiere die App im Store.',
+  ChaveTexto.sistemaAtualizarAgora: 'JETZT AKTUALISIEREN',
+  ChaveTexto.sistemaPreviaFalhaConectar:
+      'Verbindung zur Vorschau-Sitzung „{codigo}“ fehlgeschlagen.',
+  ChaveTexto.sistemaDeepLinkNaoEncontrado:
+      'Route oder Sektor für Code „{uid}“ nicht gefunden. Prüfe deine Verbindung oder lade das Gebiet zuerst herunter.',
+  ChaveTexto.sistemaMigracaoVerificando: 'Prüfe Internetverbindung...',
+  ChaveTexto.sistemaMigracaoBaixando: 'Lade neuen Topo-Katalog herunter...',
+  ChaveTexto.sistemaMigracaoErro:
+      'Datenbank konnte nicht aktualisiert werden. Bitte prüfe deine Internetverbindung.',
+  ChaveTexto.sistemaMigracaoTitulo: 'DATENBANK-UPDATE',
+  ChaveTexto.sistemaMigracaoCorpo:
+      'Diese neue Version enthält strukturelle Verbesserungen am Topo-Katalog und muss einmalig online synchronisiert werden.',
+
+  // Página Inicial (Home) e Busca Global
+  ChaveTexto.homeMeuPerfilTooltip: 'Mein Profil',
+  ChaveTexto.homeConfiguracoesTooltip: 'Einstellungen',
+  ChaveTexto.homeSincronizarTooltip: 'Katalog und Topos synchronisieren',
+  ChaveTexto.homeBoasVindas: 'WILLKOMMEN!',
+  ChaveTexto.homeBoraPraPedra: 'AB AN DEN FELS?',
+  ChaveTexto.homeDescricaoHeroi:
+      'Der digitale Kletterführer für draußen. Entdecke lokale Sektoren, Routen und Boulder und speichere Topos komplett offline.',
+  ChaveTexto.homeBuscaHint: 'Gebiete, Sektoren oder Routen suchen...',
+  ChaveTexto.homeErroAbrirSalvo:
+      'Fehler beim Öffnen des gespeicherten Topos. Bitte erneut synchronisieren.',
+  ChaveTexto.homeCroquiNaoSalvoOffline:
+      'Dieses Topo ist noch nicht offline gespeichert. Verbinde dich mit dem Internet, um es zu öffnen.',
+  ChaveTexto.homeMaisProximosTitulo: 'IN DEINER NÄHE',
+  ChaveTexto.homePermitaLocalizacao:
+      'Erlaube den Standortzugriff, um die nächstgelegenen Klettergebiete zu sehen.',
+  ChaveTexto.homePermitirLocalizacaoBtn: 'Standort freigeben',
+  ChaveTexto.homeAguardandoGps: 'Warte auf GPS-Signal...',
+  ChaveTexto.homeNenhumPicoLocalizado: 'Keine Gebiete mit Koordinaten gefunden.',
+  ChaveTexto.homeVerMais: 'MEHR ANZEIGEN ->',
+  ChaveTexto.homeComoFunciona: 'SO FUNKTIONIERT ES',
+  ChaveTexto.homeGuiaRapidoTitulo: 'ARESTA-SCHNELLSTART',
+  ChaveTexto.homeGuiaRapidoSubtitulo:
+      'Alles, was du brauchst – direkt von der App an die Wand.',
+  ChaveTexto.homePasso1Titulo: 'GEBIET FINDEN',
+  ChaveTexto.homePasso1Desc:
+      'Sieh dir die Fahrzeit an oder erkunde das 3D/2D-Geoid mit Relief, Live-GPS, Regenradar, Waldbränden und Felsfeuchte.',
+  ChaveTexto.homePasso2Titulo: 'OFFLINE SPEICHERN',
+  ChaveTexto.homePasso2Desc:
+      'Öffne jedes Gebiet sofort online oder lade den kompletten Führer herunter – für 100 % Offline-Nutzung am Wandfuß.',
+  ChaveTexto.homePasso3Titulo: 'INTERAKTIVES TOPO',
+  ChaveTexto.homePasso3Desc:
+      'Tippe auf Routenlinien im Wandfoto für Grade und Haken und prüfe oder melde Gefahrenhinweise am Fels (🐝, 🪨, 🔩, ⚠️).',
+  ChaveTexto.homePasso4Titulo: 'TOURENBUCH & COMMUNITY',
+  ChaveTexto.homePasso4Desc:
+      'Logge Begehungen, stimme über Grade ab und klappe Beta-Videos & Kommentare nur bei Bedarf auf (standardmäßig spoilerfrei).',
+  ChaveTexto.homePasso5Titulo: 'DIREKT ZUM START',
+  ChaveTexto.homePasso5Desc:
+      'Tippe auf Zurück (←) für eine Ebene höher oder halte Zurück gedrückt, um direkt zur Startseite zu springen.',
+  ChaveTexto.homePasso6Titulo: 'TEILEN',
+  ChaveTexto.homePasso6Desc:
+      'Teile Direktlinks zu Routen, Sektoren und Gebieten mit deiner Seilschaft.',
+  ChaveTexto.homeConservacaoTitulo: 'NATURSCHUTZ & ZUGANG',
+  ChaveTexto.homeConservacaoCorpo:
+      'Der Zugang zu den Felsen hängt von Rücksicht, Ethik und Respekt gegenüber Anwohnern und Natur ab. Verantwortungsvolles Klettern hält unsere Gebiete offen.',
+  ChaveTexto.buscaTodos: 'Alle',
+  ChaveTexto.buscaPicos: 'Gebiete',
+  ChaveTexto.buscaSetores: 'Sektoren',
+  ChaveTexto.buscaDica:
+      'Tipp: Suche nach Gebieten, Sektoren, Routen oder Graden (z. B. 7a, V4)',
+  ChaveTexto.buscaNenhumResultado: 'Keine Ergebnisse gefunden.',
+  ChaveTexto.buscaFiltroPrefixo: 'Filter: {filtro}',
+
