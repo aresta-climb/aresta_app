@@ -77,6 +77,7 @@ void main() {
     () {
       const escoposPuros = <String>[
         'lib/data/modelos',
+        'lib/utils/codificador_malha_binaria.dart',
         'lib/utils/construtor_rede_viaria_aresta.dart',
         'lib/utils/extrator_curvas_nivel_mundo.dart',
         'lib/utils/geometria_clipping_mapa.dart',
@@ -140,6 +141,7 @@ void main() {
     () {
       const escopos = <String>[
         'lib/data/modelos',
+        'lib/utils/codificador_malha_binaria.dart',
         'lib/utils/construtor_rede_viaria_aresta.dart',
         'lib/utils/extrator_curvas_nivel_mundo.dart',
         'lib/utils/geometria_clipping_mapa.dart',
