@@ -253,6 +253,103 @@ class DespachanteFilaInteracoes {
       ..clear()
       ..addAll(restantes);
     await _armazenamentoFila.salvarItensPendentes(_filaPendente);
+    return perfilAtual;
+  }
+
+  Future<void> _drenarMutacoes(
+    ClienteFilaInteracoes cliente,
+    PerfilEscalador perfilInicial,
+  ) async {
+    var perfilAtual = perfilInicial;
+    final restantes = <MutacaoFilaInteracao>[];
+    for (var i = 0; i < _mutacoesPendentes.length; i++) {
+      var mut = _mutacoesPendentes[i];
+      if (perfilAtual.estaAutenticado && validarUid(perfilAtual.autorIdPublico)) {
+        mut = mut.comAutor(perfilAtual.autorIdPublico);
+      }
+
+      try {
+        await _executarMutacaoRemota(cliente, mut, perfilAtual.accessToken);
+      } catch (erroInicial, stackInicial) {
+        if (_ehConflitoDuplicado(erroInicial)) continue;
+        if (perfilAtual.estaAutenticado && _ehFalhaSessaoOuRls(erroInicial)) {
+          try {
+            final eh401 =
+                (erroInicial as ExcecaoComStatusHttp).codigoStatusHttp == 401;
+            perfilAtual = await _servicoAutenticacao
+                .garantirSessaoEPerfilSincronizados(
+                  forcarRenovacaoToken: eh401,
+                );
+            mut = mut.comAutor(perfilAtual.autorIdPublico);
+            await _executarMutacaoRemota(cliente, mut, perfilAtual.accessToken);
+            continue;
+          } catch (erroRetentativa, stackRetentativa) {
+            if (_ehConflitoDuplicado(erroRetentativa)) continue;
+            registrarFalhaRede(
+              'Mutação retida após reconciliar sessão (${mut.tipo.codigo})',
+              erroRetentativa,
+              stackRetentativa,
+            );
+            restantes.add(mut);
+            if (AppLogger.isFalhaConexaoOuTimeout(erroRetentativa)) {
+              restantes.addAll(_mutacoesPendentes.sublist(i + 1));
+              break;
+            }
+            continue;
+          }
+        }
+
+        registrarFalhaRede(
+          'Mutação retida na fila offline (${mut.tipo.codigo})',
+          erroInicial,
+          stackInicial,
+        );
+        if (AppLogger.isFalhaConexaoOuTimeout(erroInicial)) {
+          restantes
+            ..add(mut)
+            ..addAll(_mutacoesPendentes.sublist(i + 1));
+          break;
+        }
+        restantes.add(mut);
+      }
+    }
+
+    _mutacoesPendentes
+      ..clear()
+      ..addAll(restantes);
+    await _armazenamentoFila.salvarMutacoesPendentes(_mutacoesPendentes);
+  }
+
+  Future<void> _executarMutacaoRemota(
+    ClienteFilaInteracoes cliente,
+    MutacaoFilaInteracao mutacao,
+    String? accessToken,
+  ) {
+    return switch (mutacao.tipo) {
+      TipoMutacaoFilaInteracao.editarComentario => cliente.atualizarComentario(
+        comentarioId: mutacao.alvoUid,
+        autorIdPublico: mutacao.autorIdPublico,
+        novoTexto: mutacao.novoTexto!,
+        accessToken: accessToken,
+      ),
+      TipoMutacaoFilaInteracao.excluirComentario => cliente.excluirComentario(
+        comentarioId: mutacao.alvoUid,
+        autorIdPublico: mutacao.autorIdPublico,
+        accessToken: accessToken,
+      ),
+      TipoMutacaoFilaInteracao.editarAlerta => cliente.atualizarAlerta(
+        alertaAlvoUid: mutacao.alvoUid,
+        autorIdPublico: mutacao.autorIdPublico,
+        categoria: mutacao.novaCategoria!,
+        detalhe: mutacao.novoTexto,
+        accessToken: accessToken,
+      ),
+      TipoMutacaoFilaInteracao.excluirAlerta => cliente.excluirAlerta(
+        alertaAlvoUid: mutacao.alvoUid,
+        autorIdPublico: mutacao.autorIdPublico,
+        accessToken: accessToken,
+      ),
+    };
   }
 
   /// Registra falhas transitórias de conectividade como aviso e demais falhas como erro.
