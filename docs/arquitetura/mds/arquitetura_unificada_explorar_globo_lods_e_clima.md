@@ -262,3 +262,69 @@ A secagem da rocha segue uma progressão encadeada onde cada estágio decai para
   Total até Seco: 5 dias   Total até Seco: 3 dias  Total até Seco: 1 dia
 ```
 
+Para um evento de chuva de volume $m$ ocorrido há $d$ dias inteiros ($d = \text{dataAtual} - \text{dataChuva} \ge 0$):
+* **Se $m \ge 15{,}0\text{ mm}$**:
+  * $d \in \{0, 1\} \Rightarrow$ `Muito molhado` (faltam $5 - d$ dias para secar)
+  * $d \in \{2, 3\} \Rightarrow$ `Molhado` (faltam $5 - d$ dias para secar)
+  * $d = 4 \Rightarrow$ `Levemente molhado` (falta $1$ dia para secar)
+  * $d \ge 5 \Rightarrow$ `Seco`
+* **Se $5{,}0 \le m < 15{,}0\text{ mm}$**:
+  * $d \in \{0, 1\} \Rightarrow$ `Molhado` (faltam $3 - d$ dias para secar)
+  * $d = 2 \Rightarrow$ `Levemente molhado` (falta $1$ dia para secar)
+  * $d \ge 3 \Rightarrow$ `Seco`
+* **Se $1{,}0 \le m < 5{,}0\text{ mm}$**:
+  * $d = 0 \Rightarrow$ `Levemente molhado` (falta $1$ dia para secar)
+  * $d \ge 1 \Rightarrow$ `Seco`
+* **Se $m < 1{,}0\text{ mm}$**: `Seco`.
+
+Quando há mais de um dia chuvoso nos últimos 5 dias para o mesmo pico, avalia-se cada registro e prevalece aquele com maior nível vigente na data atual (desempatando pelo maior número de dias restantes de secagem).
+
+### 7.2. Comportamento Passivo na UI
+* **Proibição de Abas de Umidade**: Não existem abas `Secos` ou `Úmidos` na navegação.
+* **Silêncio Visual em Rocha Seca**: Quando o resultado é `Seco`, o card do pico e seu marcador no mapa exibem zero ícones ou textos climáticos.
+* **Aviso Contextual sob Impacto**: Apenas quando o pico está em `Muito molhado`, `Molhado` ou `Levemente molhado`, o card exibe a faixa compacta com nível, data (`Chuva 24/11`) e estimativa (`~3d p/ secar`), e o pino recebe o anel colorido correspondente dentro da bolha regional.
+
+---
+
+## 8. Filtragem Nacional Offline por Grau e Modalidade (`catalogo.db`)
+
+Todo dispositivo já possui localmente o banco SQLite `catalogo.db` contendo a tabela `catalogo_aresta` (`uid`, `tipo`, `croqui_uid`, `nome`, `escalada_grau`, `escalada_tipo`) sincronizada por deltas.
+
+1. **Agregação de Perfis de Grau em Memória (`RepositorioCatalogo.carregarPerfisGrauPorCroqui`)**:
+   * Executa uma leitura sequencial indexada das linhas `tipo = 'escalada'`, convertendo `escalada_grau` para os pesos numéricos canônicos de `filtro_grau_escalada.dart` (`OpcoesGrau.grausVia` de `1º` a `12a` e `OpcoesGrau.grausBoulder` de `V0` a `V15`).
+   * Constrói em `< 3 ms` um mapa imutável `Map<String, PerfilGrauPico>` indexado por `id_slug`/`croqui_uid` contendo máscaras de bits das faixas de grau presentes em cada pico.
+   * O cache em memória é invalidado automaticamente sempre que `RepositorioCatalogo.versaoNotificador` incrementa.
+2. **Modalidades e Terminologia**:
+   * As tags rápidas da gaveta e do modal de filtros usam: `Esportiva`, `Boulder`, `Móvel / Trad`, **`Paredão`** (mapeado sobre `totalMultiplasEnfiadas` / `multienfiada`) e `Highline`.
+
+---
+
+## 9. Estrutura de Módulos e Plano de Execução (TDD 1:1)
+
+### 9.1. Mapa de Novos Arquivos e Espelhamento de Testes
+
+| Arquivo de Produção (`frontend/lib/...`) | Arquivo de Teste Espelhado (`frontend/test/...`) |
+|---|---|
+| `services/clima/modelos_clima_pico.dart` | `services/clima/modelos_clima_pico_test.dart` |
+| `services/clima/calculadora_umidade_pico.dart` | `services/clima/calculadora_umidade_pico_test.dart` |
+| `services/clima/armazenamento_clima_local.dart` | `services/clima/armazenamento_clima_local_test.dart` |
+| `services/clima/servico_clima_altimetria.dart` | `services/clima/servico_clima_altimetria_test.dart` |
+| *(test-only)* `test/fakes/cliente_clima_altimetria_fake.dart` | `test/fakes/cliente_clima_altimetria_fake_test.dart` |
+| `widgets/explorar/controlador_camera_globo.dart` | `widgets/explorar/controlador_camera_globo_test.dart` |
+| `widgets/explorar/malha_relevo_lod.dart` | `widgets/explorar/malha_relevo_lod_test.dart` |
+| `widgets/explorar/superficie_globo_explorar.dart` | `widgets/explorar/superficie_globo_explorar_test.dart` |
+| `widgets/explorar/barra_busca_filtros_explorar.dart` | `widgets/explorar/barra_busca_filtros_explorar_test.dart` |
+| `widgets/explorar/gaveta_deslizante_explorar.dart` | `widgets/explorar/gaveta_deslizante_explorar_test.dart` |
+
+### 9.2. Arquivos Legados Removidos (Corte Limpo)
+* `frontend/lib/pages/mapa_global.dart` e `frontend/test/pages/mapa_global_test.dart`
+* `frontend/lib/view/view_models/mapa_global_view_model.dart` e respectivo teste
+* `MapaGlobalNode` em `frontend/lib/navigation/arvore/nos_globais.dart` e `AppNav.toMapaGlobal` em `funcoes_navegacao.dart`
+
+### 9.3. Sequência de Fases de Implementação
+1. **Fase 1 — Infraestrutura SQL e Assets com Cópia de Segurança**: Criar `docs/arquitetura/sql/supabase_clima_e_altimetria_picos.sql` (com funções de rotação de 2 slots) e `frontend/tool/gerar_malha_geografica_offline.dart` gerando os assets de malha IBGE e altimetria inicial NASA 30m + respectivas cópias `.seguranca.json`.
+2. **Fase 2 — Domínio de Clima, Altimetria e Rotação Local**: Implementar `CalculadoraUmidadePico`, `ArmazenamentoClimaLocal` (com rotação `.tmp -> copia_seguranca -> atual`), `ClienteClimaAltimetriaFake` e `ServicoClimaAltimetria`.
+3. **Fase 3 — Perfis de Grau no `RepositorioCatalogo` e `BrowseViewModel`**: Adicionar agregação de graus de `catalogo_aresta` e expandir `BrowseViewModel` com filtros de grau, tag `Paredão`, altitude, umidade contextual e estado de seleção mapa-lista.
+4. **Fase 4 — Motor Vetorial de 4 LODs (`SuperficieGloboExplorar`)**: Implementar câmera contínua `3D/2D`, `Fly-To` parabólico, clusters de estado, bolhas de chuva, curvas de nível, relevo `LOD 3`, trilha animada e onda sonar.
+5. **Fase 5 — Barra de Busca/Grau, Gaveta Sincronizada e Integração em `BrowsePage`**: Conectar auto-scroll animado, destaque de card, popover `Grau` e modal completo de filtros.
+6. **Fase 6 — Remoção de `MapaGlobalPage`, Documentação e Auditoria 100% LCOV**: Remover rotas legadas, atualizar `README.md`s e validar `flutter analyze` + `100%` de cobertura em `lcov.info`.
