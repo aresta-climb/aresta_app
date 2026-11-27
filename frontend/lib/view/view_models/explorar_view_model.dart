@@ -285,7 +285,58 @@ class BrowseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Atualiza a coordenada geográfica do usuário para cálculo de distâncias e ordenação.
+  void definirApenasSalvosOffline(bool valor) {
+    _apenasSalvosOffline = valor;
+    notifyListeners();
+  }
+
+  /// Limpa todas as modalidades, faixas de grau, raio e recorte offline, restaurando a ordenação padrão.
+  void limparTodosFiltros() {
+    _limparFiltrosInterno();
+    _ordem = OrdemOrdenacaoPico.proximidade;
+    notifyListeners();
+  }
+
+  void _limparFiltrosInterno() {
+    _modalidadesAtivas.clear();
+    _minGrauVia = null;
+    _maxGrauVia = null;
+    _minGrauBoulder = null;
+    _maxGrauBoulder = null;
+    _raioMaximoKm = null;
+    _apenasSalvosOffline = false;
+  }
+
+  /// Altitude máxima do maciço em metros obtida externamente (NASA SRTM/NASADEM 30m).
+  int? obterAltitudePico(String picoId) =>
+      _servicoClima.obterAltitudePico(picoId);
+
+  /// Cota altimétrica completa (`base` e `pico`) para escalonamento 3D no terreno detalhado.
+  CotaAltimetricaPico? obterCotaAltimetricaPico(String picoId) =>
+      _servicoClima.obterCotaAltimetrica(picoId);
+
+  /// Estado vigente de umidade superficial na janela conservadora de 4 dias (`Seco` quando sem chuva próxima).
+  EstadoUmidadePico obterUmidadePico(String picoId) =>
+      _servicoClima.obterUmidadePico(picoId);
+
+  /// Indica se o botão opcional de bolhas de chuva/fogo na seção `Mapa` está ligado (inicia sempre desligado).
+  bool get radarClimaMapaAtivo => _radarClimaMapaAtivo;
+
+  /// Liga ou desliga a visualização opcional das bolhas de chuva e incêndio sobre o mapa.
+  void definirRadarClimaMapaAtivo(bool ativo) {
+    if (_radarClimaMapaAtivo == ativo) return;
+    _radarClimaMapaAtivo = ativo;
+    notifyListeners();
+  }
+
+  /// Bolhas regionais de chuva visíveis no mapa (exibidas somente quando [radarClimaMapaAtivo] está ativo).
+  List<BolhaAtivaRenderizavel> get bolhasChuvaAtivas =>
+      _radarClimaMapaAtivo ? _servicoClima.bolhasAtivas : const [];
+
+  /// Zonas regionais de incêndio florestal visíveis no mapa (exibidas somente quando [radarClimaMapaAtivo] está ativo).
+  List<BolhaIncendioAtivaRenderizavel> get bolhasIncendioAtivas =>
+      _radarClimaMapaAtivo ? _servicoClima.bolhasIncendioAtivas : const [];
+
   void atualizarLocalizacaoUsuario(double lat, double lon) {
     _userLat = lat;
     _userLon = lon;
@@ -293,11 +344,11 @@ class BrowseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, PicoProximo> _obterProximidadePorId(List<MetadadosIndice> todosPicos) {
+  Map<String, PicoProximo> _obterProximidadePorId(
+    List<MetadadosIndice> todosPicos,
+  ) {
     final existente = _cacheProximidadePorId;
-    if (existente != null) {
-      return existente;
-    }
+    if (existente != null) return existente;
     final calculados = calcularPicosMaisProximos(
       userLat: _userLat!,
       userLon: _userLon!,
@@ -312,38 +363,38 @@ class BrowseViewModel extends ChangeNotifier {
     return mapa;
   }
 
-  /// Limpa filtros de busca, define ordenação por proximidade e solicita rolagem até o 7º pico.
+  /// Limpa busca e filtros, define ordenação por proximidade e solicita rolagem até o 7º pico.
   void focarSetimoPicoProximo() {
     _timerDebounce?.cancel();
     _termoBusca = '';
+    _limparFiltrosInterno();
     _ordem = OrdemOrdenacaoPico.proximidade;
     notifyListeners();
     _solicitacaoScrollSetimoPico.value++;
   }
 
-  /// Indica se o catálogo ainda está carregando ou se o repositório é nulo.
   bool get carregando => datasetRepo.activeDataset.value == null;
 
-  /// Indica se ferramentas ou opções do editor/experimental estão habilitadas.
   bool get modoEditorAtivo {
     final config = datasetRepo.editorDeCroqui;
     return config.editorUrl.value != null || config.isExperimentalMode.value;
   }
 
-  /// Verifica se um pico específico já foi baixado para uso offline.
   bool estaBaixado(String picoId) {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return false;
     return dataset.croquisBaixados.any((c) => c.id == picoId);
   }
 
-  /// Lista de picos filtrados pelo termo de busca e ordenados pelo critério ativo.
+  /// Lista de picos filtrados por busca, modalidade, faixa de grau, alcance e offline, ordenados pelo critério ativo.
   List<MetadadosIndice> get picosFiltrados {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return [];
 
     final todosPicos = dataset.metadadosDisponiveis;
-    List<MetadadosIndice> resultado;
+    final proximidadePorId = localizacaoUsuarioAtiva != null
+        ? _obterProximidadePorId(todosPicos)
+        : const <String, PicoProximo>{};
 
     if (_termoBusca.isEmpty) {
       resultado = todosPicos.toList();
