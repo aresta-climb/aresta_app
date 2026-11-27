@@ -40,7 +40,8 @@ abstract final class ExtratorCurvasNivelMundo {
         _ => 100.0, // Secundárias a cada 100 m, mestras a cada 400 m
       };
 
-  /// Calcula o bloco quantizado do mundo que cobre [janela], permitindo memoização `O(1)` durante o pan.
+  /// Calcula o bloco quantizado do mundo que cobre integralmente [janela] (incluindo o sul próximo
+  /// à câmera inclinada em 3D, como a Serra do Curral em BH), mantendo memoização `O(1)` durante o pan.
   static ({
     int chaveBloco,
     int iMin,
@@ -52,32 +53,37 @@ abstract final class ExtratorCurvasNivelMundo {
     required JanelaGeograficaVisivel janela,
     required int nivelDetalhe,
   }) {
-    final passo = passoGradePorNivel(nivelDetalhe);
-    const maxCelulasEixo = 52;
-    const meioBloco = maxCelulasEixo ~/ 2;
-    const quarteiraoQuantizado = 8;
+    final passoBase = passoGradePorNivel(nivelDetalhe);
+    const maxCelulasEixo = 68;
+    const quarteiraoQuantizado = 6;
 
-    final latCentro = (janela.minLat + janela.maxLat) * 0.5;
-    final lonCentro = (janela.minLon + janela.maxLon) * 0.5;
+    final spanLat = (janela.maxLat - janela.minLat).clamp(0.01, 16.0);
+    final spanLon = (janela.maxLon - janela.minLon).clamp(0.01, 20.0);
+    final multPasso = math.max(
+      1,
+      (math.max(spanLat, spanLon) / (passoBase * (maxCelulasEixo - 12))).ceil(),
+    );
+    final passo = passoBase * multPasso;
 
-    final jCentro = ((latCentro / passo) / quarteiraoQuantizado).round() *
-        quarteiraoQuantizado;
-    final iCentro = ((lonCentro / passo) / quarteiraoQuantizado).round() *
-        quarteiraoQuantizado;
+    final jMinBruto = (janela.minLat / passo).floor() - 2;
+    final jMaxBruto = (janela.maxLat / passo).ceil() + 2;
+    final iMinBruto = (janela.minLon / passo).floor() - 2;
+    final iMaxBruto = (janela.maxLon / passo).ceil() + 2;
 
-    final spanJ = (((janela.maxLat - janela.minLat) * 0.58) / passo)
-        .ceil()
-        .clamp(10, meioBloco);
-    final spanI = (((janela.maxLon - janela.minLon) * 0.58) / passo)
-        .ceil()
-        .clamp(10, meioBloco);
+    final jMin =
+        (jMinBruto / quarteiraoQuantizado).floor() * quarteiraoQuantizado;
+    final jMax = math.min(
+      jMin + maxCelulasEixo,
+      (jMaxBruto / quarteiraoQuantizado).ceil() * quarteiraoQuantizado,
+    );
+    final iMin =
+        (iMinBruto / quarteiraoQuantizado).floor() * quarteiraoQuantizado;
+    final iMax = math.min(
+      iMin + maxCelulasEixo,
+      (iMaxBruto / quarteiraoQuantizado).ceil() * quarteiraoQuantizado,
+    );
 
-    final jMin = jCentro - spanJ;
-    final jMax = jCentro + spanJ;
-    final iMin = iCentro - spanI;
-    final iMax = iCentro + spanI;
-
-    final chave = Object.hash(nivelDetalhe, iMin, iMax, jMin, jMax);
+    final chave = Object.hash(nivelDetalhe, multPasso, iMin, iMax, jMin, jMax);
     return (
       chaveBloco: chave,
       iMin: iMin,

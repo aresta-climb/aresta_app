@@ -40,10 +40,10 @@ abstract final class ConstrutorRedeViariaAresta {
     final pontasPolilinhas = <int>{};
 
     int obterOuCriarNo(Offset pt) {
-      // Quantização fina (~85 m) para costurar intersecções reais do OSRM/OpenStreetMap
-      final qLon = (pt.dx * 1250.0).round() + 500000;
-      final qLat = (pt.dy * 1250.0).round() + 500000;
-      final chave = qLon * 1000003 + qLat;
+      // Quantização fina (~34 m) preservando geometria real das curvas rodoviárias OSRM
+      final qLon = (pt.dx * 3200.0).round() + 1000000;
+      final qLat = (pt.dy * 3200.0).round() + 1000000;
+      final chave = qLon * 2000003 + qLat;
       final existente = indicePorChave[chave];
       if (existente != null) return existente;
       final novo = nos.length;
@@ -84,17 +84,17 @@ abstract final class ConstrutorRedeViariaAresta {
       );
     }
 
-    // Ponte curta (<= 2,2 km) apenas entre pontas de segmentos rodoviários adjacentes (trevos/viadutos)
+    // Ponte virtual estritamente curta (<= 0,45 km) para conectar alças de trevos sem nunca desenhar retas aéreas
     for (final u in pontasPolilinhas) {
       final pu = nos[u];
       for (var v = 0; v < nos.length; v++) {
         if (u == v) continue;
         final pv = nos[v];
-        if ((pu.dx - pv.dx).abs() > 0.022 || (pu.dy - pv.dy).abs() > 0.022) {
+        if ((pu.dx - pv.dx).abs() > 0.0045 || (pu.dy - pv.dy).abs() > 0.0045) {
           continue;
         }
         final d = _distanciaKm(pu, pv);
-        if (d <= 2.2) {
+        if (d <= 0.45) {
           adj[u].add((vizinho: v, pesoKm: d * 1.15, virtual: true));
           adj[v].add((vizinho: u, pesoKm: d * 1.15, virtual: true));
         }
@@ -142,18 +142,6 @@ abstract final class ConstrutorRedeViariaAresta {
         <({Offset de, Offset para, double dIni, double dFim})>[];
     var maiorDistTotalKm = 18.0;
 
-    // Destaca também as vias arteriais reais dentro da mancha central de BH (<= 11 km)
-    for (var u = 0; u < totalNos; u++) {
-      if (!distKm[u].isFinite || distKm[u] > 11.0) continue;
-      final p = pai[u];
-      if (p >= 0 && !arestaPaiVirtual[u]) {
-        arestasAtivas[p * totalNos + u] = (u: p, v: u);
-        nosCorredor
-          ..add(p)
-          ..add(u);
-      }
-    }
-
     for (final pico in picos) {
       final alvo = Offset(pico.longitude, pico.latitude);
       var melhorNo = origemBh;
@@ -171,8 +159,8 @@ abstract final class ConstrutorRedeViariaAresta {
       if (distChegadaPico > maiorDistTotalKm) {
         maiorDistTotalKm = distChegadaPico;
       }
-      // Apenas trilha curta de estacionamento -> base da pedra (<= 2,2 km), sem retas longas irreais!
-      if (menorGapKm > 0.12 && menorGapKm <= 2.2) {
+      // Apenas trilha curtíssima de estacionamento -> base da pedra (<= 1,4 km)
+      if (menorGapKm > 0.12 && menorGapKm <= 1.4) {
         ramaisCurtoAcesso.add((
           de: nos[melhorNo],
           para: alvo,
@@ -186,8 +174,7 @@ abstract final class ConstrutorRedeViariaAresta {
         nosCorredor.add(cursor);
         final p = pai[cursor];
         if (p < 0) break;
-        if (!arestaPaiVirtual[cursor] ||
-            _distanciaKm(nos[p], nos[cursor]) <= 2.2) {
+        if (!arestaPaiVirtual[cursor]) {
           arestasAtivas[p * totalNos + cursor] = (u: p, v: cursor);
         }
         cursor = p;
