@@ -189,11 +189,29 @@ class _PintorBolhaChatVermelha extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(caminho, preenchimento);
 
+    canvas.save();
+    canvas.clipPath(caminho);
+    final retBrilho = Rect.fromLTWH(0, 0, size.width, alturaCorpo * 0.52);
+    canvas.drawRect(
+      retBrilho,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.26),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(retBrilho),
+    );
+    canvas.restore();
+
     final borda = Paint()
-      ..color = Colors.white.withValues(alpha: 0.92)
+      ..color = Colors.white.withValues(alpha: 0.95)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeWidth = 1.8
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
     canvas.drawPath(caminho, borda);
   }
 
@@ -201,16 +219,16 @@ class _PintorBolhaChatVermelha extends CustomPainter {
   bool shouldRepaint(covariant _PintorBolhaChatVermelha oldDelegate) => false;
 }
 
-/// Abre o modal estilo Waze perguntando *"Ainda está lá?"* quando o escalador toca na bolha vermelha.
-///
-/// Respeita [estadoUsuario] para exigir login antes de interações mutáveis e impedir mais de
-/// uma confirmação positiva (`+1`) pelo mesmo perfil.
+/// Abre o modal estilo Waze perguntando *"Ainda está lá?"* quando o escalador toca na bolha vermelha,
+/// oferecendo também ações de editar e excluir quando o alerta foi criado pelo próprio usuário.
 Future<void> exibirModalConfirmacaoAlertaVia(
   BuildContext context, {
   required AlertaSegurancaVia alerta,
   EstadoInteracaoAlertaUsuario estadoUsuario =
       EstadoInteracaoAlertaUsuario.podeConfirmar,
   required Future<void> Function(bool aindaEstaLa) aoResponder,
+  VoidCallback? aoSolicitarEdicao,
+  VoidCallback? aoSolicitarExclusao,
 }) {
   final cores = context.colors;
   final subtitulo = FormularioAlertaViaViewModel.formatarSubtituloConfirmacao(
@@ -317,7 +335,7 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Entre na sua conta na aba Perfil para confirmar ou atualizar este alerta.',
+                          modalCtx.tr(ChaveTexto.alertaEntreParaConfirmar),
                           style: TextStyle(
                             color: cores.ashGrey,
                             fontSize: 12,
@@ -330,7 +348,7 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                 )
               else ...[
                 Text(
-                  'Ainda está lá?',
+                  modalCtx.tr(ChaveTexto.alertaAindaEstaLa),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: cores.chalkWhite,
@@ -356,10 +374,10 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Não, já resolveu',
+                        child: Text(
+                          modalCtx.tr(ChaveTexto.alertaNaoJaResolveu),
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -391,10 +409,14 @@ Future<void> exibirModalConfirmacaoAlertaVia(
                         child: Text(
                           switch (estadoUsuario) {
                             EstadoInteracaoAlertaUsuario.criadoPorMim =>
-                              '✓ Reportado por você',
+                              modalCtx.tr(
+                                ChaveTexto.alertaReportadoPorVoceCheck,
+                              ),
                             EstadoInteracaoAlertaUsuario.jaConfirmadoPorMim =>
-                              '✓ Confirmado por você',
-                            _ => 'Sim, ainda está lá',
+                              modalCtx.tr(
+                                ChaveTexto.alertaConfirmadoPorVoceCheck,
+                              ),
+                            _ => modalCtx.tr(ChaveTexto.alertaSimAindaEstaLa),
                           },
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontWeight: FontWeight.bold),
