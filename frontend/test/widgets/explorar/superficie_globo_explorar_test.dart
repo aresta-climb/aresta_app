@@ -550,3 +550,97 @@ void main() {
         expect(deslocamento8s, greaterThan(0.4));
         expect(deslocamento8s, lessThan(10.0));
 
+        // Quando o globo preenche a tela (raio >= 750 px), estrelas desaparecem
+        expect(
+          PintorCampoEstrelasGlobo.calcularEstrelasVisiveis(
+            tamanho: tamanho,
+            centroGlobo: centro,
+            raioGloboPx: 750.0,
+            tempoSegundos: 2.0,
+          ),
+          isEmpty,
+        );
+
+        // 2. Comportamento real renderizado em tela (pixels da camada de estrelas mudam suavemente com o tempo)
+        final ctrl = ControladorCameraGlobo(lodInicial: 0.22);
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: const [],
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const Key('camada_estrelas_globo')),
+        );
+        final bytesAntes = await tester.runAsync(() async {
+          final img = await boundary.toImage(pixelRatio: 1.0);
+          final data = await img.toByteData();
+          img.dispose();
+          return data!.buffer.asUint8List();
+        });
+
+        await tester.pump(const Duration(seconds: 6));
+
+        final bytesDepois = await tester.runAsync(() async {
+          final img = await boundary.toImage(pixelRatio: 1.0);
+          final data = await img.toByteData();
+          img.dispose();
+          return data!.buffer.asUint8List();
+        });
+        expect(bytesDepois, isNot(equals(bytesAntes)));
+
+        // Alternar para 2D pausa o timer ambiente sem travar pumpAndSettle
+        await tester.tap(find.byKey(const Key('botao_alternar_3d_2d')));
+        await tester.pumpAndSettle();
+        expect(ctrl.modo3D, isFalse);
+
+        // Respeita acessibilidade (disableAnimations: true mantem quadro estatico)
+        ctrl.definirModo3D(true);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(disableAnimations: true),
+              child: Scaffold(
+                body: SuperficieGloboExplorar(
+                  controlador: ctrl,
+                  picos: picosTeste,
+                  bolhasAtivas: const [],
+                  picoSelecionadoId: null,
+                  aoSelecionarPicoNoMapa: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final boundarySemAnim = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const Key('camada_estrelas_globo')),
+        );
+        final estaticoT0 = await tester.runAsync(() async {
+          final img = await boundarySemAnim.toImage(pixelRatio: 1.0);
+          final data = await img.toByteData();
+          img.dispose();
+          return data!.buffer.asUint8List();
+        });
+        await tester.pump(const Duration(seconds: 6));
+        final estaticoT6 = await tester.runAsync(() async {
+          final img = await boundarySemAnim.toImage(pixelRatio: 1.0);
+          final data = await img.toByteData();
+          img.dispose();
+          return data!.buffer.asUint8List();
+        });
+        expect(estaticoT6, equals(estaticoT0));
+      },
+    );
+
