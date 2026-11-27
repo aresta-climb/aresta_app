@@ -258,3 +258,78 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        await tester.tap(find.byIcon(Icons.tune_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Filtros e Ordenação'), findsOneWidget);
+        expect(find.text('Paredão'), findsOneWidget);
+
+        // Seleciona modalidade Paredao, ordenacao Alfabetico, Ate 150 km e Salvos Offline
+        await tester.tap(find.text('Paredão'));
+        await tester.pump();
+        expect(
+          viewModel.modalidadesAtivas,
+          contains(ModalidadeExploracaoPico.paredao),
+        );
+
+        await tester.tap(find.text('Alfabético (A-Z)'));
+        await tester.pump();
+        expect(viewModel.ordem, equals(OrdemOrdenacaoPico.alfabetico));
+
+        await tester.ensureVisible(find.byKey(const Key('filtro_raio_150km')));
+        await tester.tap(find.byKey(const Key('filtro_raio_150km')));
+        await tester.pump();
+        expect(viewModel.raioMaximoKm, equals(150.0));
+
+        await tester.tap(find.byKey(const Key('filtro_salvos_offline')));
+        await tester.pump();
+        expect(viewModel.apenasSalvosOffline, isTrue);
+
+        // Aplica e fecha modal
+        await tester.tap(find.byKey(const Key('botao_aplicar_filtros_explorar')));
+        await tester.pumpAndSettle();
+
+        // Verifica badge de contagem e chips ativos removiveis abaixo da busca
+        expect(viewModel.totalFiltrosAtivos, greaterThanOrEqualTo(3));
+        expect(find.byKey(const Key('chip_ativo_modalidade_paredao')), findsOneWidget);
+        expect(find.byKey(const Key('chip_ativo_raio')), findsOneWidget);
+        expect(find.byKey(const Key('chip_ativo_offline')), findsOneWidget);
+
+        // Remove chips individualmente
+        await tester.tap(find.byKey(const Key('chip_ativo_modalidade_paredao')));
+        await tester.pump();
+        expect(viewModel.modalidadesAtivas, isEmpty);
+
+        await tester.tap(find.byKey(const Key('chip_ativo_raio')));
+        await tester.pump();
+        expect(viewModel.raioMaximoKm, isNull);
+
+        await tester.tap(find.byKey(const Key('chip_ativo_offline')));
+        await tester.pump();
+        expect(viewModel.apenasSalvosOffline, isFalse);
+
+        // Chips de grau de via e boulder removiveis e limpeza total pelo modal
+        viewModel.definirFaixaGrauVia(700, 910);
+        viewModel.definirFaixaGrauBoulder(200, 600);
+        await tester.pump();
+        expect(find.byKey(const Key('chip_ativo_grau_via')), findsOneWidget);
+        expect(find.byKey(const Key('chip_ativo_grau_boulder')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('chip_ativo_grau_via')));
+        await tester.pump();
+        expect(viewModel.temFiltroGrauVia, isFalse);
+
+        await tester.tap(find.byKey(const Key('chip_ativo_grau_boulder')));
+        await tester.pump();
+        expect(viewModel.temFiltroGrauBoulder, isFalse);
+
+        await tester.tap(find.byIcon(Icons.tune_rounded));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('botao_limpar_todos_filtros')));
+        await tester.pump();
+        expect(viewModel.ordem, equals(OrdemOrdenacaoPico.proximidade));
+        expect(viewModel.totalFiltrosAtivos, equals(0));
+      },
+    );
+  });
+}
