@@ -282,3 +282,96 @@ abstract final class CamadaMarcadoresGloboExplorar {
                     offset: Offset(0, 2),
                   ),
                 ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const IconeMarcaAresta(
+                    largura: 12.0,
+                    cor: Color(0xFFE27D60),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${cluster.uf} ${cluster.quantidade}',
+                    style: const TextStyle(
+                      color: Color(0xFFF4F3ED),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  static List<Widget> _construirRotulosLocalidadesProximas({
+    required Size tamanho,
+    required ControladorCameraGlobo controlador,
+    required RedeViariaArestaGlobo? redeViaria,
+    required List<MarcadorPicoGlobo> picos,
+    required List<PicoRelevoReferencia> referencias,
+    required String? picoSelecionadoId,
+    required double recuoSuperiorControles,
+    required double progressoLuzViaria,
+  }) {
+    if (controlador.lod < 1.68 ||
+        redeViaria == null ||
+        redeViaria.cidadesClassificadas.isEmpty) {
+      return const [];
+    }
+
+    final rede = redeViaria;
+    final limiteInferior = tamanho.height - controlador.alturaGavetaPx - 12.0;
+    final limiteSuperior = recuoSuperiorControles + 22.0;
+    final nivelMaximoVisivel = controlador.lod >= 3.25
+        ? 3
+        : (controlador.lod >= 2.35 ? 2 : 1);
+    final pesoTerreno =
+        ControladorCameraGlobo.smoothstep(1.35, 2.05, controlador.lod);
+
+    final candidatos = <({
+      String id,
+      CidadeClassificadaMapa cidade,
+      Offset pos,
+    })>[];
+
+    for (var i = 0; i < rede.cidadesClassificadas.length; i++) {
+      final cidade = rede.cidadesClassificadas[i];
+      final loc = cidade.localidade;
+      if (loc.nivel > nivelMaximoVisivel) continue;
+      if ((loc.latitude - controlador.latitudeCentral).abs() > 2.5 ||
+          (loc.longitude - controlador.longitudeCentral).abs() > 2.9) {
+        continue;
+      }
+
+      final elev = math.max(
+            0.0,
+            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              picosReferencia: referencias,
+              ehTerraConfirmada: true,
+            ),
+          ) *
+          pesoTerreno;
+      final pt = controlador.projetarCoordenada(
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanho,
+      );
+      if (!pt.visivel ||
+          pt.x < 40 ||
+          pt.x > tamanho.width - 40 ||
+          pt.y < limiteSuperior ||
+          pt.y > limiteInferior) {
+        continue;
+      }
+      candidatos.add((id: 'loc_$i', cidade: cidade, pos: Offset(pt.x, pt.y)));
+    }
+
