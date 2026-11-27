@@ -13,13 +13,16 @@ import '../navigation/funcoes_navegacao.dart';
 import '../navigation/arvore_navegacao.dart';
 import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 
 // New imports for sub-pages
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
+import '../widgets/idioma/botao_bolha_idioma.dart';
 import '../widgets/pico_menu_card.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
+import '../widgets/clima/selo_umidade_pico.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
 import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
@@ -196,7 +199,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text('Baixando ${widget.pico.nome}...')));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(ChaveTexto.comumBaixando, {'nome': widget.pico.nome}),
+          ),
+        ),
+      );
 
     final success = await _viewModel.baixarPico(syncService: syncService);
 
@@ -216,8 +225,11 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         SnackBar(
           content: Text(
             success
-                ? '${widget.pico.nome} salvo offline!'
-                : 'Falha ao baixar ${widget.pico.nome}',
+                ? tr(
+                    ChaveTexto.comumSalvoOfflineToast,
+                    {'nome': widget.pico.nome},
+                  )
+                : tr(ChaveTexto.comumFalhaBaixar, {'nome': widget.pico.nome}),
           ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
@@ -228,7 +240,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: Listenable.merge([
+        _viewModel,
+        ControladorIdiomaApp.instancia.notificadorIdioma,
+      ]),
       builder: (_, _) {
         return Scaffold(
         backgroundColor: context.colors.deepBasalt,
@@ -257,6 +272,17 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       ),
                     ),
                   ),
+                  actions: const [
+                    Padding(
+                      padding: EdgeInsets.only(right: 10.0),
+                      child: Center(
+                        child: BotaoBolhaIdioma(
+                          key: Key('bolha_idioma_pico'),
+                          sobreFundoFotografico: true,
+                        ),
+                      ),
+                    ),
+                  ],
                   flexibleSpace: LayoutBuilder(
                     builder: (BuildContext context, BoxConstraints constraints) {
                       final top = constraints.biggest.height;
@@ -314,7 +340,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       ),
                       Positioned(
                         left: 20 + (52 * (1 - t)),
-                        right: 20,
+                        right: 20 + (68 * (1 - t)),
                         bottom: 20,
                         child: Text(
                           widget.pico.nome.toUpperCase(),
@@ -347,6 +373,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                         fontSize: 13,
                       ),
                     ),
+                    if (_viewModel.exibirStatusUmidade) ...[
+                      const SizedBox(height: 12),
+                      CartaoCondicaoHidricaPico(
+                        key: Key('tarja_umidade_pico_${widget.cragId}'),
+                        umidade: _viewModel.umidadePico,
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // Banner de Modo Online / Salvar Offline
@@ -389,7 +422,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                               Icons.share_outlined,
                               color: context.colors.chalkWhite,
                             ),
-                            tooltip: 'Compartilhar pico',
+                            tooltip: tr(ChaveTexto.picoCompartilharTooltip),
                             onPressed: () {
                               ServicoCompartilhamento.instancia.compartilharPico(
                                 idCroqui: widget.cragId,
@@ -467,7 +500,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           Icons.delete_outline,
                           color: context.colors.chalkWhite,
                         ),
-                        tooltip: 'Excluir guia',
+                        tooltip: tr(ChaveTexto.picoExcluirGuiaTooltip),
                         onPressed: () async {
                           TelemetryService.instance.logAcaoCroqui(
                             widget.cragId,
@@ -477,27 +510,30 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               backgroundColor: context.colors.caveShadow,
-                              title: const Text(
-                                'Excluir?',
-                                style: TextStyle(color: Colors.white),
+                              title: Text(
+                                tr(ChaveTexto.meusCroquisExcluirTitulo),
+                                style: const TextStyle(color: Colors.white),
                               ),
                               content: Text(
-                                'Deseja excluir o guia de ${widget.pico.nome}?',
+                                tr(
+                                  ChaveTexto.meusCroquisExcluirPergunta,
+                                  {'nome': widget.pico.nome},
+                                ),
                                 style: TextStyle(color: context.colors.ashGrey),
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, false),
                                   child: Text(
-                                    'CANCELAR',
+                                    tr(ChaveTexto.comumCancelarCaixaAlta),
                                     style: TextStyle(color: context.colors.ashGrey),
                                   ),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text(
-                                    'EXCLUIR',
-                                    style: TextStyle(color: Colors.red),
+                                  child: Text(
+                                    tr(ChaveTexto.comumExcluirCaixaAlta),
+                                    style: const TextStyle(color: Colors.red),
                                   ),
                                 ),
                               ],
@@ -511,8 +547,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                 SnackBar(
                                   content: Text(
                                     success
-                                        ? 'Guia removido do armazenamento offline.'
-                                        : 'Erro ao excluir guia.',
+                                        ? tr(ChaveTexto.meusCroquisGuiaRemovidoToast)
+                                        : tr(ChaveTexto.meusCroquisErroExcluirToast),
                                   ),
                                   backgroundColor: success
                                       ? context.colors.dryMoss
@@ -529,9 +565,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
                   // Card Hero Unificado: Setores & Escaladas
                   PicoMenuCard(
-                    title: 'Setores & Escaladas',
-                    subtitle:
-                        'Explore setores, vias e boulders com filtros e mapas integrados',
+                    title: tr(ChaveTexto.picoCardSetoresTitulo),
+                    subtitle: tr(ChaveTexto.picoCardSetoresSubtitulo),
                     icon: Icons.landscape,
                     iconColor: context.colors.rustIron,
                     backgroundColor: context.colors.caveShadow,
@@ -558,9 +593,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
                   if (_viewModel.temExplorarLocal)
                     PicoMenuCard(
-                      title: 'Explorar Local',
-                      subtitle:
-                          'Como chegar, mapas gerais do croqui, clima e informações úteis.',
+                      title: tr(ChaveTexto.picoCardExplorarTitulo),
+                      subtitle: tr(ChaveTexto.picoCardExplorarSubtitulo),
                       icon: Icons.explore,
                       iconColor: context.colors.beastHide,
                       backgroundColor: context.colors.caveShadow,
@@ -585,9 +619,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     ),
 
                   PicoMenuCard(
-                    title: 'Regras e recomendações',
-                    subtitle:
-                        'Normas de conduta ecológica, segurança básica, ética e boa convivência.',
+                    title: tr(ChaveTexto.picoCardRegrasTitulo),
+                    subtitle: tr(ChaveTexto.picoCardRegrasSubtitulo),
                     icon: Icons.warning_amber_rounded,
                     iconColor: context.colors.dryMoss,
                     backgroundColor: context.colors.caveShadow,
@@ -608,9 +641,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
                   if (_viewModel.temComunidade)
                     PicoMenuCard(
-                      title: 'Comunidade',
-                      subtitle:
-                          'Redes sociais, canal de Whatsapp, patrocinadores e comércio local.',
+                      title: tr(ChaveTexto.picoCardComunidadeTitulo),
+                      subtitle: tr(ChaveTexto.picoCardComunidadeSubtitulo),
                       icon: Icons.people_outline,
                       iconColor: context.colors.rustIron,
                       backgroundColor: context.colors.caveShadow,
@@ -663,8 +695,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     ..._viewModel.creditos.map(
                       (b) => PicoMenuCard(
                         title: b.texto,
-                        subtitle:
-                            'Conheça os autores, colaboradores e agradecimentos.',
+                        subtitle: tr(ChaveTexto.picoCardCreditosSubtitulo),
                         icon: Icons.workspace_premium,
                         iconColor: context.colors.ashGrey,
                         backgroundColor: context.colors.caveShadow,
@@ -742,7 +773,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
               backgroundColor: context.colors.rustIron,
               icon: Icon(Icons.map, color: context.colors.chalkWhite),
               label: Text(
-                'Voltar para o Mapa do Setor',
+                tr(ChaveTexto.picoVoltarMapaSetor),
                 style: TextStyle(
                   color: context.colors.chalkWhite,
                   fontWeight: FontWeight.bold,
