@@ -13,10 +13,12 @@ lib/data/
     ├── estatisticas_caderneta.dart  - Agregado de métricas e pirâmides de grau da caderneta
     ├── interacao_via.dart           - Modelos de alertas de segurança, consenso de grau e comentários
     ├── item_fila_interacao.dart     - Item da tabela `public.fila_interacoes` e funções de consolidação
-    ├── metadados_feedback.dart      - Metadados de dispositivo, navegação e hashes para feedback
-    ├── modelos_clima_pico.dart      - Eventos de chuva, cotas altimétricas DEM 30m, estado de umidade e snapshot consolidado
-    ├── modelos_fenomenos_clima.dart - Isoietas de tempestades (4 níveis), rastros passados e perímetros orbitais de incêndios florestais (4 níveis)
-    ├── modelos_rede_viaria_aresta.dart - Polígonos geográficos, localidades IBGE, rodovias, referências DEM e modelo imutável da rede viária Aresta
+    ├── metadados_feedback.dart          - Metadados de dispositivo, navegação e hashes para feedback
+    ├── modelos_clima_pico.dart          - Eventos de chuva, cotas altimétricas DEM 30m, estado de umidade e snapshot consolidado
+    ├── modelos_estatisticas_clima.dart  - Estudo estatístico de ~85% (hindcast ERA5 vs GFS, matriz 2x2, Tabela Z padrão Φ(Z) e 6 fontes)
+    ├── modelos_fenomenos_clima.dart     - Isoietas de tempestades (4 níveis), rastros passados e perímetros orbitais de incêndios florestais (4 níveis)
+    ├── modelos_rede_viaria_aresta.dart  - Polígonos geográficos, localidades IBGE, rodovias OSRM contínuas e modelo imutável da rede viária Aresta
+    ├── modelos_relevo_topografico.dart  - Grade offline DEM com interpolação bicúbica Catmull-Rom (C¹), tiles SRTM Terrarium e isolinhas do mundo
     ├── perfil_escalador.dart        - Dados do perfil, identificador público e tokens de sessão
     ├── tipo_ascensao.dart           - Enum de estilos (À Vista, Flash, Trabalhado, Tentativa)
     └── tipo_escalada.dart           - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
