@@ -551,3 +551,93 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.alertaResolvidoStatus: 'Resolved',
   ChaveTexto.alertaMarcarResolvido: 'Mark resolved',
 
+  // Autenticação, Perfil, Caderneta, Comunidade, Configurações, Feedback e Compartilhamento
+  ChaveTexto.authEntrarTitulo: 'Sign in to your account',
+  ChaveTexto.authEntrarSubtitulo:
+      'Sign in password-free using your social account or a 6-digit email code to sync your climbing logbook.',
+  ChaveTexto.authContinuarGoogle: 'Continue with Google',
+  ChaveTexto.authContinuarApple: 'Continue with Apple',
+  ChaveTexto.authOuCodigoEmail: 'or get a code by email',
+  ChaveTexto.authEmailLabel: 'Email',
+  ChaveTexto.authAguardeSegundos: 'Wait {s}s',
+  ChaveTexto.authReceberCodigoEmail: 'Send email code',
+  ChaveTexto.authCodigo6DigitosLabel: '6-digit code',
+  ChaveTexto.authConfirmarCodigo: 'Verify code',
+  ChaveTexto.authReenviarComSegundos: 'Resend code ({s}s)',
+  ChaveTexto.authReenviarCodigo: 'Resend code',
+  ChaveTexto.authUsarOutroEmail: 'Use a different email',
+  ChaveTexto.authAbrirConfigApp: 'Open app settings',
+  ChaveTexto.authLimiteTemporario:
+      'Temporary rate limit reached. Wait {s}s before requesting another code.',
+  ChaveTexto.authCodigoEnviadoPara:
+      'We sent a 6-digit code to {email}. Check your inbox and spam folder.',
+  ChaveTexto.authErroEnviarCodigo:
+      'Could not send the login code. Please try again.',
+  ChaveTexto.authErroValidarCodigo:
+      'Could not verify the login code. Please try again.',
+  ChaveTexto.authErroGoogle: 'Could not sign in with Google. Please try again.',
+  ChaveTexto.authErroApple: 'Could not sign in with Apple. Please try again.',
+  ChaveTexto.authSemConexao:
+      'No internet connection. Check your signal and try again.',
+  ChaveTexto.authSrvChaveInvalida: 'Invalid server API key. Please try again.',
+  ChaveTexto.authSrvCodigoExpirado: 'The access code has expired or is invalid.',
+  ChaveTexto.authSrvEmailInvalido: 'Please enter a valid email address.',
+  ChaveTexto.authSrvProvedorDesabilitado:
+      'Authentication provider is not enabled on the server.',
+  ChaveTexto.authSrvCredencialInvalida:
+      'Could not validate native credentials on the server.',
+  ChaveTexto.authSrvLimiteEnvio:
+      'Code send limit reached. Please wait a moment and try again.',
+  ChaveTexto.authSrvSessaoExpirada:
+      'Your session has expired. Please sign in again.',
+  ChaveTexto.authSrvCancelado: 'Sign-in cancelled by climber.',
+  ChaveTexto.authSrvCooldownAposUm:
+      'For security purposes, you can request a new code after 1 second.',
+  ChaveTexto.authSrvCooldownAposVarios:
+      'For security purposes, you can request a new code after {s} seconds.',
+  ChaveTexto.authSrvCooldownCadaUm:
+      'For security purposes, you can request a new code once every 1 second.',
+  ChaveTexto.authSrvCooldownCadaVarios:
+      'For security purposes, you can request a new code once every {s} seconds.',
+  ChaveTexto.perfilEscaladorPadrao: 'Climber',
+  ChaveTexto.perfilEscaladorAresta: 'Aresta Climber',
+  ChaveTexto.perfilEditarBtn: 'Edit profile',
+  ChaveTexto.perfilMetricaCadenas: 'SENDS',
+  ChaveTexto.perfilMetricaTentativas: 'ATTEMPTS',
+  ChaveTexto.perfilMetricaPicos: 'CRAGS',
+  ChaveTexto.perfilMetricaVias: 'ROUTES',
+  ChaveTexto.perfilEntrarConta: 'Sign in',
+  ChaveTexto.perfilMinhaCaderneta: 'My logbook',
+  ChaveTexto.perfilDadosPrivacidade: 'Data & privacy',
+  ChaveTexto.perfilSair: 'Sign out',
+  ChaveTexto.perfilExcluirConta: 'Delete account',
+  ChaveTexto.perfilIdCopiadoToast: 'Public ID copied!',
+  ChaveTexto.perfilSemConexaoExcluir:
+      'No internet connection. Connect online to delete your account.',
+  ChaveTexto.perfilErroExcluirConta: 'Could not delete account right now.',
+  ChaveTexto.perfilDialogEditarTitulo: 'Edit Profile',
+  ChaveTexto.perfilAlterarFoto: 'Change profile photo',
+  ChaveTexto.perfilNomeAtletaLabel: 'Climber name',
+  ChaveTexto.perfilPrivacidadeTitulo: 'Data & Privacy',
+  ChaveTexto.perfilPrivacidadeCorpo:
+      'Aresta Climb respects your data sovereignty and privacy. Your logbook is strictly private. Public grade votes and safety hazards use only your public Author ID without exposing personal data.',
+  ChaveTexto.perfilIdPublicoLabel: 'PUBLIC AUTHOR ID (NANOID)',
+  ChaveTexto.perfilCopiarIdTooltip: 'Copy public ID',
+  ChaveTexto.perfilSairPergunta: 'Sign out of your account?',
+  ChaveTexto.perfilSairCorpo:
+      'Your personal logbook and ascent history remain safely stored on this device.',
+  ChaveTexto.perfilExcluirPergunta: 'Permanently delete account?',
+  ChaveTexto.perfilExcluirCorpo:
+      'This action cannot be undone. Your account, profile photo, and synced sends will be permanently erased from the cloud and this device.',
+  ChaveTexto.cadTituloPagina: 'MY LOGBOOK',
+  ChaveTexto.cadAscensaoAtualizadaToast: 'Ascent updated in your logbook!',
+  ChaveTexto.cadViaIndisponivelOffline:
+      'Climb is not available offline right now.',
+  ChaveTexto.cadTotalCadenas: 'Total Sends',
+  ChaveTexto.cadTaxaAVistaFlash: 'Onsight/Flash Rate',
+  ChaveTexto.cadMaiorGrauVias: 'Hardest Route',
+  ChaveTexto.cadMaiorGrauBoulders: 'Hardest Boulder',
+  ChaveTexto.cadPiramideTitulo: 'Grade Pyramid',
+  ChaveTexto.cadNenhumaAscensaoModalidade:
+      'No ascents logged in this discipline yet.',
+  ChaveTexto.cadHistoricoContagem: 'Ascent History ({n})',
