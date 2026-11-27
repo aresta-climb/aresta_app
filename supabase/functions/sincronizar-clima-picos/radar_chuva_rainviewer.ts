@@ -89,3 +89,93 @@ export async function carregarMosaicoRadarRegiao(
     }),
   );
 
+  if (cacheCompartilhado.size === 0) return null;
+  return { zoom: z, tilesMmHora: cacheCompartilhado };
+}
+
+/**
+ * Amostra a intensidade representativa de chuva (`mm/h`) dentro de uma célula geográfica,
+ * preservando pequenos bolsões convectivos locais (`5–25 km`) via max-pooling ponderado `3x3`.
+ */
+export function amostrarCelulaRadarMmHora(
+  mosaico: MosaicoRadarRegiao,
+  latCentro: number,
+  lonCentro: number,
+  meioPassoLat: number,
+  meioPassoLon: number,
+): number {
+  let pico = 0;
+  let somaAtivos = 0;
+  let qtdAtivos = 0;
+
+  for (let sy = -1; sy <= 1; sy++) {
+    const lat = Math.max(-85, Math.min(85, latCentro + sy * meioPassoLat * 0.68));
+    for (let sx = -1; sx <= 1; sx++) {
+      const lon = lonCentro + sx * meioPassoLon * 0.68;
+      const val = lerPixelRadarMmHora(mosaico, lat, lon);
+      if (val > pico) pico = val;
+      if (val >= 0.12) {
+        somaAtivos += val;
+        qtdAtivos++;
+      }
+    }
+  }
+
+  if (qtdAtivos === 0) return 0;
+  const mediaAtivos = somaAtivos / qtdAtivos;
+  return pico * 0.65 + mediaAtivos * 0.35;
+}
+
+function lerPixelRadarMmHora(
+  mosaico: MosaicoRadarRegiao,
+  lat: number,
+  lon: number,
+): number {
+  const escalaMundo = 256 * (1 << mosaico.zoom);
+  const pxGlobal = ((lon + 180) / 360) * escalaMundo;
+  const latRad = (lat * Math.PI) / 180;
+  const pyGlobal =
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) * 0.5) *
+    escalaMundo;
+
+  const maxTile = (1 << mosaico.zoom) - 1;
+  const tx = Math.max(0, Math.min(maxTile, Math.floor(pxGlobal / 256)));
+  const ty = Math.max(0, Math.min(maxTile, Math.floor(pyGlobal / 256)));
+  const tile = mosaico.tilesMmHora.get(`${mosaico.zoom}/${tx}/${ty}`);
+  if (!tile) return 0;
+
+  const lx = Math.max(0, Math.min(255, Math.floor(pxGlobal - tx * 256)));
+  const ly = Math.max(0, Math.min(255, Math.floor(pyGlobal - ty * 256)));
+  return tile[ly * 256 + lx];
+}
+
+function lonParaTileX(lon: number, zoom: number): number {
+  return Math.floor(((lon + 180) / 360) * (1 << zoom));
+}
+
+function latParaTileY(lat: number, zoom: number): number {
+  const rad = (Math.max(-85, Math.min(85, lat)) * Math.PI) / 180;
+  return Math.floor(
+    ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) * 0.5) *
+      (1 << zoom),
+  );
+}
+
+/**
+ * Decodifica PNG `256x256` (RGBA `6`, RGB `2` ou paleta indexada `3` com `PLTE`/`tRNS`)
+ * convertendo a escala cromática Universal Blue (`color=2`) em `mm/h`.
+ */
+export async function decodificarPngRadarParaMmHora(
+  bytesPng: Uint8Array,
+): Promise<Float32Array> {
+  const resultadoVazio = new Float32Array(256 * 256);
+  if (
+    bytesPng.length < 33 ||
+    bytesPng[0] !== 0x89 ||
+    bytesPng[1] !== 0x50 ||
+    bytesPng[2] !== 0x4e ||
+    bytesPng[3] !== 0x47
+  ) {
+    return resultadoVazio;
+  }
+
