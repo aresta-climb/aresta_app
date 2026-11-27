@@ -75,3 +75,63 @@ export function decodificarIndiceBinaryPb(buf: Uint8Array): PicoCoordenada[] {
             } else {
               pos = pularCampoProtobuf(buf, pos, locWire);
             }
+          }
+        } else {
+          pos = pularCampoProtobuf(buf, pos, subWire);
+        }
+      }
+
+      if (id.length > 0 && temLoc && (lat !== 0 || lon !== 0)) {
+        picos.push({ id, latitude: lat, longitude: lon });
+      }
+    } else {
+      pos = pularCampoProtobuf(buf, pos, wire);
+    }
+  }
+
+  return picos;
+}
+
+function lerVarint(
+  buf: Uint8Array,
+  pos: number,
+): { valor: bigint; proximo: number } {
+  let resultado = 0n;
+  let deslocamento = 0n;
+  let cursor = pos;
+  while (cursor < buf.length) {
+    const b = buf[cursor++];
+    resultado |= BigInt(b & 0x7f) << deslocamento;
+    if ((b & 0x80) === 0) {
+      return { valor: resultado, proximo: cursor };
+    }
+    deslocamento += 7n;
+  }
+  throw new Error("Varint truncado em indice.binarypb.");
+}
+
+function decodificarZigZag32(n: bigint): number {
+  const u = Number(n & 0xffffffffn) >>> 0;
+  return (u >>> 1) ^ -(u & 1);
+}
+
+function pularCampoProtobuf(
+  buf: Uint8Array,
+  pos: number,
+  wireType: number,
+): number {
+  switch (wireType) {
+    case 0:
+      return lerVarint(buf, pos).proximo;
+    case 1:
+      return pos + 8;
+    case 2: {
+      const tam = lerVarint(buf, pos);
+      return tam.proximo + Number(tam.valor);
+    }
+    case 5:
+      return pos + 4;
+    default:
+      throw new Error(`Wire type Protobuf desconhecido: ${wireType}`);
+  }
+}
