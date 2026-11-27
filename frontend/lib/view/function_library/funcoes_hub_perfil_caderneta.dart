@@ -339,31 +339,33 @@ Widget buildMenuOpcoesHub({
             onTap: onAbrirConfiguracoes,
           ),
           const SizedBox(height: 10),
-      buildItemMenuHub(
-        key: const Key('item_menu_dados_privacidade'),
-        icone: Icons.lock_outline_rounded,
-        titulo: 'Dados e privacidade',
-        onTap: onAbrirDadosPrivacidade,
-      ),
-      const SizedBox(height: 10),
-      buildItemMenuHub(
-        key: const Key('item_menu_sair'),
-        icone: Icons.logout_rounded,
-        titulo: 'Sair',
-        onTap: onConfirmarSaida,
-        isPerigo: true,
-      ),
-      if (onConfirmarExclusaoConta != null) ...[
-        const SizedBox(height: 10),
-        buildItemMenuHub(
-          key: const Key('item_menu_excluir_conta'),
-          icone: Icons.delete_forever_outlined,
-          titulo: 'Excluir conta',
-          onTap: onConfirmarExclusaoConta,
-          isPerigo: true,
-        ),
-      ],
-    ],
+          buildItemMenuHub(
+            key: const Key('item_menu_dados_privacidade'),
+            icone: Icons.lock_outline_rounded,
+            titulo: context.tr(ChaveTexto.perfilDadosPrivacidade),
+            onTap: onAbrirDadosPrivacidade,
+          ),
+          const SizedBox(height: 10),
+          buildItemMenuHub(
+            key: const Key('item_menu_sair'),
+            icone: Icons.logout_rounded,
+            titulo: context.tr(ChaveTexto.perfilSair),
+            onTap: onConfirmarSaida,
+            isPerigo: true,
+          ),
+          if (onConfirmarExclusaoConta != null) ...[
+            const SizedBox(height: 10),
+            buildItemMenuHub(
+              key: const Key('item_menu_excluir_conta'),
+              icone: Icons.delete_forever_outlined,
+              titulo: context.tr(ChaveTexto.perfilExcluirConta),
+              onTap: onConfirmarExclusaoConta,
+              isPerigo: true,
+            ),
+          ],
+        ],
+      );
+    },
   );
 }
 
