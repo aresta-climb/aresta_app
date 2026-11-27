@@ -7,12 +7,14 @@ import 'dart:ui';
 import '../data/modelos/modelos_rede_viaria_aresta.dart';
 
 /// Construtor funcional puro e sem estado (stateless) da árvore de caminhos mínimos rodoviários reais
-/// entre o centro de Belo Horizonte e cada nó de pico Aresta, classificando cidades relevantes vs referência.
+/// (`OpenStreetMap`) entre o centro de Belo Horizonte e cada nó de pico Aresta, operando em `O(N log N)`
+/// via grade espacial `O(1)` e preservando fielmente as curvas asfálticas sem cordas sintéticas.
 abstract final class ConstrutorRedeViariaAresta {
   static const double _grausParaRad = math.pi / 180.0;
+  static const double _passoCelulaEspacial = 0.005;
 
   /// Constrói deterministicamente [RedeViariaArestaGlobo] a partir de [rodovias], [localidades] e [picos],
-  /// utilizando exclusivamente geometrias viárias reais (sem anéis poligonais sintéticos ou retas irreais).
+  /// priorizando rodovias arteriais (`BR`/`MG` nível 1 -> nível 2 -> acesso pavimentado nível 3).
   static RedeViariaArestaGlobo construir({
     required List<RodoviaRegionalMapa> rodovias,
     required List<LocalidadeRegionalMapa> localidades,
@@ -20,8 +22,9 @@ abstract final class ConstrutorRedeViariaAresta {
   }) {
     final rodoviasNormalizadas = rodovias
         .map(
-          (r) => RodoviaRegionalMapa(
+          (r) => RodoviaRegionalMapa.comLimites(
             ehPrincipal: r.ehPrincipal,
+            nivelViario: r.nivelViario,
             codigo: _limparCodigoEscudoRodovia(r.codigo),
             verticesLonLat: r.verticesLonLat,
           ),
@@ -37,31 +40,43 @@ abstract final class ConstrutorRedeViariaAresta {
 
     final nos = <Offset>[];
     final indicePorChave = <int, int>{};
+    final gradeEspacial = <int, List<int>>{};
     final pontasPolilinhas = <int>{};
 
+    int chaveCelula(int cx, int cy) => (cx + 500000) * 1000003 + (cy + 500000);
+
     int obterOuCriarNo(Offset pt) {
-      // Quantização fina (~34 m) preservando geometria real das curvas rodoviárias OSRM
-      final qLon = (pt.dx * 3200.0).round() + 1000000;
-      final qLat = (pt.dy * 3200.0).round() + 1000000;
-      final chave = qLon * 2000003 + qLat;
+      // Identificação topológica fina (~11 m) preservando a coordenada exata de cada vértice OSM
+      final qLon = (pt.dx * 10000.0).round() + 2000000;
+      final qLat = (pt.dy * 10000.0).round() + 2000000;
+      final chave = qLon * 4000037 + qLat;
       final existente = indicePorChave[chave];
       if (existente != null) return existente;
       final novo = nos.length;
       nos.add(pt);
       indicePorChave[chave] = novo;
+      final cx = (pt.dx / _passoCelulaEspacial).floor();
+      final cy = (pt.dy / _passoCelulaEspacial).floor();
+      (gradeEspacial[chaveCelula(cx, cy)] ??= <int>[]).add(novo);
       return novo;
     }
 
-    final adj = <List<({int vizinho, double pesoKm, bool virtual})>>[];
+    final adj =
+        <List<({int vizinho, double custoPondKm, double distRealKm, bool virtual})>>[];
     void garantirAdj(int n) {
       while (adj.length <= n) {
-        adj.add(<({int vizinho, double pesoKm, bool virtual})>[]);
+        adj.add(
+          <({int vizinho, double custoPondKm, double distRealKm, bool virtual})>[],
+        );
       }
     }
 
     for (final via in rodoviasNormalizadas) {
       final verts = via.verticesLonLat;
       if (verts.length < 2) continue;
+      final penalidadeNivel = via.nivelViario == 1
+          ? 1.00
+          : (via.nivelViario == 2 ? 1.12 : 1.35);
       final ids = verts.map(obterOuCriarNo).toList(growable: false);
       garantirAdj(nos.length - 1);
       pontasPolilinhas
@@ -71,9 +86,14 @@ abstract final class ConstrutorRedeViariaAresta {
         final u = ids[i];
         final v = ids[i + 1];
         if (u == v) continue;
-        final w = math.max(0.02, _distanciaKm(nos[u], nos[v]));
-        adj[u].add((vizinho: v, pesoKm: w, virtual: false));
-        adj[v].add((vizinho: u, pesoKm: w, virtual: false));
+        final dKm = math.max(0.015, _distanciaKm(nos[u], nos[v]));
+        final custo = dKm * penalidadeNivel;
+        adj[u].add(
+          (vizinho: v, custoPondKm: custo, distRealKm: dKm, virtual: false),
+        );
+        adj[v].add(
+          (vizinho: u, custoPondKm: custo, distRealKm: dKm, virtual: false),
+        );
       }
     }
 
@@ -84,19 +104,40 @@ abstract final class ConstrutorRedeViariaAresta {
       );
     }
 
-    // Ponte virtual estritamente curta (<= 0,45 km) para conectar alças de trevos sem nunca desenhar retas aéreas
+    // Ponte virtual O(1) via vizinhança espacial 3x3 (<= 0,45 km) para conectar alças de trevos
+    // e pistas duplas sem jamais desenhar retas aéreas fora do leito asfáltico
     for (final u in pontasPolilinhas) {
       final pu = nos[u];
-      for (var v = 0; v < nos.length; v++) {
-        if (u == v) continue;
-        final pv = nos[v];
-        if ((pu.dx - pv.dx).abs() > 0.0045 || (pu.dy - pv.dy).abs() > 0.0045) {
-          continue;
-        }
-        final d = _distanciaKm(pu, pv);
-        if (d <= 0.45) {
-          adj[u].add((vizinho: v, pesoKm: d * 1.15, virtual: true));
-          adj[v].add((vizinho: u, pesoKm: d * 1.15, virtual: true));
+      final cx0 = (pu.dx / _passoCelulaEspacial).floor();
+      final cy0 = (pu.dy / _passoCelulaEspacial).floor();
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          final candidatos = gradeEspacial[chaveCelula(cx0 + dx, cy0 + dy)];
+          if (candidatos == null) continue;
+          for (final v in candidatos) {
+            if (u == v) continue;
+            final pv = nos[v];
+            if ((pu.dx - pv.dx).abs() > 0.0045 ||
+                (pu.dy - pv.dy).abs() > 0.0045) {
+              continue;
+            }
+            final d = _distanciaKm(pu, pv);
+            if (d <= 0.45) {
+              final custoVirtual = d * 1.25;
+              adj[u].add((
+                vizinho: v,
+                custoPondKm: custoVirtual,
+                distRealKm: d,
+                virtual: true,
+              ));
+              adj[v].add((
+                vizinho: u,
+                custoPondKm: custoVirtual,
+                distRealKm: d,
+                virtual: true,
+              ));
+            }
+          }
         }
       }
     }
@@ -105,26 +146,32 @@ abstract final class ConstrutorRedeViariaAresta {
       RedeViariaArestaGlobo.longitudeCentroBeloHorizonte,
       RedeViariaArestaGlobo.latitudeCentroBeloHorizonte,
     );
+    final cosBh = math.cos(centroBh.dy * _grausParaRad);
     var origemBh = 0;
-    var menorDistBh = double.infinity;
+    var menorDist2Bh = double.infinity;
     for (var i = 0; i < nos.length; i++) {
-      final d = _distanciaKm(nos[i], centroBh);
-      if (d < menorDistBh) {
-        menorDistBh = d;
+      final dx = (nos[i].dx - centroBh.dx) * cosBh;
+      final dy = nos[i].dy - centroBh.dy;
+      final d2 = dx * dx + dy * dy;
+      if (d2 < menorDist2Bh) {
+        menorDist2Bh = d2;
         origemBh = i;
       }
     }
 
     final totalNos = nos.length;
+    final custoMin = List<double>.filled(totalNos, double.infinity);
     final distKm = List<double>.filled(totalNos, double.infinity);
     final pai = List<int>.filled(totalNos, -1);
     final arestaPaiVirtual = List<bool>.filled(totalNos, false);
+    custoMin[origemBh] = 0.0;
     distKm[origemBh] = 0.0;
 
     final fila = _FilaPrioridadeMinima()..inserir(origemBh, 0.0);
     while (!fila.estaVazia) {
       final atual = fila.removerMinimo();
-      if (atual.custo > distKm[atual.no] + 1e-6) continue;
+      if (atual.custo > custoMin[atual.no] + 1e-6) continue;
+      final distBase = distKm[atual.no];
       for (final ar in adj[atual.no]) {
         final novoCusto = atual.custo + ar.pesoKm;
         if (novoCusto + 1e-6 < distKm[ar.vizinho]) {
