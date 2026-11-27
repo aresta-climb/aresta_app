@@ -241,63 +241,19 @@ class ExplorarLocalPage extends StatelessWidget {
                       backgroundColor: context.colors.caveShadow,
                       titleColor: context.colors.chalkWhite,
                       subtitleColor: context.colors.fishBone,
-                      title: b.texto,
-                      content: b.destino.secaoTextual.conteudo,
-                      icon: Icons.near_me,
-                    )).toList();
-                    final treeNav = TreeNavigationWrapper.currentTreeController;
-                    if (treeNav != null) {
-                      treeNav.navigateTo(
-                        TextCarouselNode(
-                          cragId: cragId,
-                          texts: carouselData,
-                          parent: treeNav.currentNode,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-
-            if (urlMaps != null)
-              PicoMenuCard(
-                title: 'Abrir no Google Maps',
-                subtitle: 'Ver localização e traçar rota até o pico.',
-                icon: Icons.map_outlined,
-                iconColor: context.colors.rustIron,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.fishBone,
-                onTap: () async {
-                  if (aoAbrirLinkExterno != null) {
-                    await aoAbrirLinkExterno!(urlMaps, 'Google Maps');
-                  } else {
-                    await abrirLinkExterno(urlMaps, 'Google Maps');
-                  }
-                },
-              ),
-
-            if (categories.outros.isNotEmpty)
-              ...categories.outros.map(
-                (b) => PicoMenuCard(
-                  title: b.texto,
-                  subtitle: 'Informações extras sobre o local.',
-                  icon: Icons.info_outline,
-                  iconColor: context.colors.ashGrey,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.fishBone,
-                  onTap: () => _pushTextNode(
-                    context,
-                    b.texto,
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.info_outline,
+                      onTap: () => _pushTextNode(
+                        context,
+                        b.texto,
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.info_outline,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
-        ),
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
