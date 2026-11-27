@@ -368,54 +368,44 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                                 activeColor: AppColors.brandColor,
                                 checkColor: Colors.white,
                               ),
-                            ),
-                            value: _isChecked,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _isChecked = value ?? false;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: EdgeInsets.zero,
-                            activeColor: AppColors.brandColor,
-                            checkColor: Colors.white,
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: FilledButton(
-                              onPressed: _isChecked
-                                  ? () {
-                                      TelemetryService.instance
-                                          .logAcaoConfiguracoes(
-                                            'aceitar_termos_uso',
-                                          );
-                                      widget.onAccepted();
-                                    }
-                                  : null,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brandColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: FilledButton(
+                                  onPressed: _isChecked
+                                      ? () {
+                                          TelemetryService.instance
+                                              .logAcaoConfiguracoes(
+                                                'aceitar_termos_uso',
+                                              );
+                                          widget.onAccepted();
+                                        }
+                                      : null,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.brandColor,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    context.tr(ChaveTexto.legalAceitarContinuar),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                'Aceitar Termos e Continuar',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-      ),
+                      ],
+                    ),
+                  ),
+          ),
+        );
+      },
     );
   }
 }
