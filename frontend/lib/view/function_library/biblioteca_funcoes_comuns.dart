@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -36,13 +37,13 @@ Color get weatheredIron => _currentColors.weatheredIron;
 Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   return IconButton(
     icon: Icon(Icons.warning_amber_rounded, color: color ?? Colors.black),
-    tooltip: 'Enviar Feedback/Bug',
+    tooltip: context.tr(ChaveTexto.comumEnviarFeedbackTooltip),
     onPressed: () {
       if (!FeedbackOrchestrator.isConfigured) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+            content: Text(
+              tr(ChaveTexto.comumFeedbackIndisponivelDev),
             ),
             backgroundColor: Colors.red.shade800,
           ),
@@ -280,7 +281,9 @@ Widget buildSearchBar({
                   style: TextStyle(color: context.colors.chalkWhite),
                   cursorColor: const Color(0xFFC04F34),
                   decoration: InputDecoration(
-                    hintText: hintText,
+                    hintText: hintText == 'Buscar picos para escalar...'
+                        ? context.tr(ChaveTexto.comumBuscarPicosHint)
+                        : hintText,
                     hintStyle: TextStyle(
                       color: context.colors.ashGrey,
                       fontSize: 14,
@@ -326,7 +329,7 @@ Widget buildSearchBar({
                     Icons.sync,
                     color: context.colors.ashGrey,
                   ),
-                  tooltip: 'Sincronizar com serving',
+                  tooltip: context.tr(ChaveTexto.comumSincronizarServingTooltip),
                   onPressed: onSyncPressed,
                 ),
               ),
@@ -389,18 +392,28 @@ String formatTimeAgo(String? rawDate) {
 
   if (difference.inDays >= 365) {
     final years = (difference.inDays / 365).floor();
-    return 'atualizado há $years ${years == 1 ? 'ano' : 'anos'}';
+    return years == 1
+        ? tr(ChaveTexto.comumAtualizadoHaAno)
+        : tr(ChaveTexto.comumAtualizadoHaAnos, {'n': years});
   } else if (difference.inDays >= 30) {
     final months = (difference.inDays / 30).floor();
-    return 'atualizado há $months ${months == 1 ? 'mês' : 'meses'}';
+    return months == 1
+        ? tr(ChaveTexto.comumAtualizadoHaMes)
+        : tr(ChaveTexto.comumAtualizadoHaMeses, {'n': months});
   } else if (difference.inDays >= 1) {
-    return 'atualizado há ${difference.inDays} ${difference.inDays == 1 ? 'dia' : 'dias'}';
+    return difference.inDays == 1
+        ? tr(ChaveTexto.comumAtualizadoHaDia)
+        : tr(ChaveTexto.comumAtualizadoHaDias, {'n': difference.inDays});
   } else if (difference.inHours >= 1) {
-    return 'atualizado há ${difference.inHours} ${difference.inHours == 1 ? 'hora' : 'horas'}';
+    return difference.inHours == 1
+        ? tr(ChaveTexto.comumAtualizadoHaHora)
+        : tr(ChaveTexto.comumAtualizadoHaHoras, {'n': difference.inHours});
   } else if (difference.inMinutes >= 1) {
-    return 'atualizado há ${difference.inMinutes} ${difference.inMinutes == 1 ? 'minuto' : 'minutos'}';
+    return difference.inMinutes == 1
+        ? tr(ChaveTexto.comumAtualizadoHaMinuto)
+        : tr(ChaveTexto.comumAtualizadoHaMinutos, {'n': difference.inMinutes});
   } else {
-    return 'atualizado agora';
+    return tr(ChaveTexto.comumAtualizadoAgora);
   }
 }
 
@@ -427,26 +440,26 @@ Widget buildPrimaryBottomNav(
   return Theme(
     data: Theme.of(context).copyWith(canvasColor: context.colors.deepBasalt),
     child: BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
+      items: <BottomNavigationBarItem>[
         BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home_rounded),
-          label: 'INÍCIO',
+          icon: const Icon(Icons.home_outlined),
+          activeIcon: const Icon(Icons.home_rounded),
+          label: context.tr(ChaveTexto.navInicio),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.explore_outlined),
-          activeIcon: Icon(Icons.explore_rounded),
-          label: 'EXPLORAR',
+          icon: const Icon(Icons.explore_outlined),
+          activeIcon: const Icon(Icons.explore_rounded),
+          label: context.tr(ChaveTexto.navExplorar),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark_outline),
-          activeIcon: Icon(Icons.bookmark_rounded),
-          label: 'MEUS CROQUIS',
+          icon: const Icon(Icons.bookmark_outline),
+          activeIcon: const Icon(Icons.bookmark_rounded),
+          label: context.tr(ChaveTexto.navMeusCroquis),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          activeIcon: Icon(Icons.people_alt_rounded),
-          label: 'COMUNIDADE',
+          icon: const Icon(Icons.people_outline),
+          activeIcon: const Icon(Icons.people_alt_rounded),
+          label: context.tr(ChaveTexto.navComunidade),
         ),
       ],
       currentIndex: selectedIndex,
@@ -499,7 +512,7 @@ Widget buildSecondaryBottomNav(BuildContext context) {
                       Icon(Icons.home_rounded, color: beastHide),
                       const SizedBox(height: 2),
                       Text(
-                        'Início',
+                        context.tr(ChaveTexto.navInicioCurto),
                         style: TextStyle(
                           color: fishBone,
                           fontSize: 12,
@@ -523,7 +536,7 @@ Widget buildSecondaryBottomNav(BuildContext context) {
                       Icon(Icons.location_on_rounded, color: beastHide),
                       const SizedBox(height: 2),
                       Text(
-                        'GPS',
+                        context.tr(ChaveTexto.navGps),
                         style: TextStyle(
                           color: fishBone,
                           fontSize: 12,
@@ -592,7 +605,7 @@ Future<void> handleManualSync(
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-        const SnackBar(content: Text('Verificando atualizações...')),
+        SnackBar(content: Text(tr(ChaveTexto.comumVerificandoAtualizacoes))),
       );
   }
 
@@ -619,28 +632,31 @@ Future<void> handleManualSync(
     Color bgColor = context.colors.dryMoss;
 
     if (status == SyncStatus.offline) {
-      message = 'Sem conexão com a internet.';
+      message = tr(ChaveTexto.comumSemConexao);
       bgColor = Theme.of(context).colorScheme.error;
     } else if (status == SyncStatus.error) {
-      message = 'Erro ao verificar atualizações. Tente novamente mais tarde.';
+      message = tr(ChaveTexto.comumErroVerificarAtualizacoes);
       bgColor = Theme.of(context).colorScheme.error;
     } else if (failed.isNotEmpty) {
-      message = 'Concluído com falhas: ${failed.join(', ')}';
+      message = tr(
+        ChaveTexto.comumConcluidoComFalhas,
+        {'falhas': failed.join(', ')},
+      );
       bgColor = Theme.of(context).colorScheme.error;
     } else if (!hasDownloaded) {
       if (status == SyncStatus.justUpdated) {
-        message = 'Catálogo atualizado com sucesso!';
+        message = tr(ChaveTexto.comumCatalogoAtualizadoSucesso);
         bgColor = context.colors.dryMoss;
       } else {
-        message = 'Catálogo já está atualizado.';
+        message = tr(ChaveTexto.comumCatalogoJaAtualizado);
         bgColor = context.colors.ashGrey;
       }
     } else if (status == SyncStatus.noNewUpdates ||
         status == SyncStatus.updated) {
-      message = 'Nenhum croqui precisava ser atualizado.';
+      message = tr(ChaveTexto.comumNenhumCroquiPrecisavaAtualizar);
       bgColor = context.colors.ashGrey;
     } else {
-      message = 'Croquis foram atualizados!';
+      message = tr(ChaveTexto.comumCroquisAtualizados);
       bgColor = context.colors.dryMoss;
     }
 
@@ -670,7 +686,7 @@ Future<void> handleSyncServing(
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-        const SnackBar(content: Text('Sincronizando com o serving...')),
+        SnackBar(content: Text(tr(ChaveTexto.comumSincronizandoServing))),
       );
   }
 
@@ -698,20 +714,23 @@ Future<void> handleSyncServing(
     Color bgColor = context.colors.dryMoss;
 
     if (status == SyncStatus.offline) {
-      message = 'Sem conexão com o serving.';
+      message = tr(ChaveTexto.comumSemConexaoServing);
       bgColor = Theme.of(context).colorScheme.error;
     } else if (status == SyncStatus.error) {
-      message = 'Erro ao sincronizar com o serving. Tente novamente mais tarde.';
+      message = tr(ChaveTexto.comumErroSincronizarServing);
       bgColor = Theme.of(context).colorScheme.error;
     } else if (failed.isNotEmpty) {
-      message = 'Sincronizado com falhas em: ${failed.join(', ')}';
+      message = tr(
+        ChaveTexto.comumSincronizadoComFalhas,
+        {'falhas': failed.join(', ')},
+      );
       bgColor = Theme.of(context).colorScheme.error;
     } else if (status == SyncStatus.justUpdated ||
         status == SyncStatus.updated) {
-      message = 'Catálogo atualizado com o serving!';
+      message = tr(ChaveTexto.comumCatalogoAtualizadoServing);
       bgColor = context.colors.dryMoss;
     } else {
-      message = 'Catálogo já está na versão mais recente do serving.';
+      message = tr(ChaveTexto.comumCatalogoJaRecenteServing);
       bgColor = context.colors.ashGrey;
     }
 
@@ -725,9 +744,9 @@ Future<void> handleSyncServing(
 
 void showDeprecatedAppVersionSnackBar(BuildContext context) {
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
+    SnackBar(
       content: Text(
-        'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+        tr(ChaveTexto.comumVersaoDesatualizadaToast),
       ),
       backgroundColor: Colors.red,
       duration: Duration(seconds: 4),
