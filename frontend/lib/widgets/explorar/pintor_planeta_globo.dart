@@ -80,3 +80,94 @@ class PintorPlanetaGlobo extends CustomPainter {
     canvas.restore();
   }
 
+  void _desenharOceanoBase(
+    Canvas canvas,
+    Size size,
+    Offset centroGlobo,
+    double rPx,
+    double cy,
+    bool recortarGeoide,
+  ) {
+    final mViario = controlador.fatorModoViario;
+    if (controlador.modo3D) {
+      final oceanoRect = recortarGeoide
+          ? Rect.fromCircle(center: centroGlobo, radius: rPx * 1.04)
+          : Rect.fromLTWH(
+              0,
+              math.max(0.0, cy - rPx * 0.42),
+              size.width,
+              size.height,
+            );
+      final oceanoPaint = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.32, -0.34),
+          radius: 1.08,
+          colors: [
+            Color.lerp(
+              const Color(0xFF1A436E),
+              const Color(0xFF122C4C),
+              mViario,
+            )!,
+            Color.lerp(
+              const Color(0xFF0E2948),
+              const Color(0xFF0B1E36),
+              mViario,
+            )!,
+            Color.lerp(
+              const Color(0xFF071528),
+              const Color(0xFF061120),
+              mViario,
+            )!,
+          ],
+        ).createShader(oceanoRect);
+      canvas.drawRect(oceanoRect, oceanoPaint);
+    } else {
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()
+          ..color = Color.lerp(
+            const Color(0xFF0E2640),
+            const Color(0xFF0A1C32),
+            mViario,
+          )!,
+      );
+    }
+  }
+
+  void _desenharSuperficiePlanetaria(Canvas canvas, Size size, double lod) {
+    final dadosMalha = malha;
+    final imgNasa = texturaNasa;
+    final mViario = controlador.fatorModoViario;
+    final alfaTerrenoDetalhado =
+        ControladorCameraGlobo.smoothstep(1.30, 1.95, lod);
+    final opacidadeNasa =
+        (1.0 - math.max(alfaTerrenoDetalhado * 0.92, mViario * 0.86))
+            .clamp(0.08, 1.0);
+
+    if (imgNasa != null) {
+      _desenharEsferaTexturizadaNasa(
+        canvas,
+        size,
+        imgNasa,
+        opacidadeNasa,
+        mViario,
+      );
+    }
+
+    // Ao transicionar para o modo viário P&B no nível regional, preenche continentes e Brasil;
+    // em zoom aproximado (alfaTerrenoDetalhado -> 1.0) o terreno contínuo assume 100%, evitando cordas costeiras
+    final alfaPoligonoContinental = imgNasa == null
+        ? 1.0
+        : (mViario * 0.94 * (1.0 - alfaTerrenoDetalhado * 0.96));
+    if (dadosMalha != null && alfaPoligonoContinental > 0.02) {
+      final corContinente = Color.lerp(
+        const Color(0xFF2B4235),
+        const Color(0xFF12151B),
+        mViario,
+      )!.withValues(alpha: alfaPoligonoContinental.clamp(0.0, 1.0));
+      final corBrasil = Color.lerp(
+        const Color(0xFF375540),
+        const Color(0xFF171B22),
+        mViario,
+      )!.withValues(alpha: alfaPoligonoContinental.clamp(0.0, 1.0));
+
