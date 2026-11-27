@@ -412,3 +412,51 @@ abstract final class EfeitosParticulasIncendioGlobo {
           : Color.fromRGBO(254, 230, 110, (0.94 * op).clamp(0.0, 1.0)),
     );
 
+    if (severidade == NivelSeveridadeIncendio.extremo) {
+      final pincelCoroa = Paint()
+        ..color = Color.fromRGBO(254, 240, 138, (0.92 * op).clamp(0.0, 1.0));
+      for (var s = -1; s <= 1; s++) {
+        final flutuacao =
+            ((faseSegundos * 2.4 + (s + 1) * 0.33) % 1.0) * escalaPx * 0.36;
+        canvas.drawCircle(
+          Offset(
+            centro.dx + balanco + s * w * 0.42,
+            centro.dy - h * 1.05 - flutuacao,
+          ),
+          1.25,
+          pincelCoroa,
+        );
+      }
+    }
+  }
+
+  static void _desenharLinguaChama({
+    required Canvas canvas,
+    required Offset base,
+    required double altura,
+    required double largura,
+    required double inclinacaoTopo,
+    required Color cor,
+  }) {
+    final caminho = Path()
+      ..moveTo(base.dx + inclinacaoTopo, base.dy - altura)
+      ..cubicTo(
+        base.dx + largura * 0.95,
+        base.dy - altura * 0.35,
+        base.dx + largura * 0.90,
+        base.dy + altura * 0.55,
+        base.dx,
+        base.dy + altura * 0.72,
+      )
+      ..cubicTo(
+        base.dx - largura * 0.90,
+        base.dy + altura * 0.55,
+        base.dx - largura * 0.95,
+        base.dy - altura * 0.35,
+        base.dx + inclinacaoTopo,
+        base.dy - altura,
+      )
+      ..close();
+    canvas.drawPath(caminho, Paint()..color = cor);
+  }
+}
