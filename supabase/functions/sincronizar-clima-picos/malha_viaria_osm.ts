@@ -40,7 +40,7 @@ export function calcularHashCatalogoViario(picos: PicoCoordenada[]): string {
     h ^= ordenado.charCodeAt(i);
     h = Math.imul(h, 16777619) >>> 0;
   }
-  return `osm-v2-art-${picos.length}-${h.toString(16)}`;
+  return `osm-v3-essencial-${picos.length}-${h.toString(16)}`;
 }
 
 function normalizarCodigoRodovia(bruto: string): string {
@@ -120,10 +120,10 @@ export async function coletarMalhaViariaHierarquicaOsm(
   }
 
   const caixasSecundariasRurais = picos
-    .filter((p) => !dentroMetropole(p.latitude, p.longitude, 0.75))
+    .filter((p) => !dentroMetropole(p.latitude, p.longitude, 1.15))
     .map(
       (p) =>
-        `way["highway"~"^(secondary|tertiary)$"]["surface"!~"^(unpaved|dirt|gravel|ground|sand|earth)$"](${(p.latitude - 0.12).toFixed(4)},${(p.longitude - 0.12).toFixed(4)},${(p.latitude + 0.12).toFixed(4)},${(p.longitude + 0.12).toFixed(4)});`,
+        `way["highway"~"^(secondary|tertiary)$"]["surface"!~"^(unpaved|dirt|gravel|ground|sand|earth)$"](${(p.latitude - 0.085).toFixed(4)},${(p.longitude - 0.085).toFixed(4)},${(p.latitude + 0.085).toFixed(4)},${(p.longitude + 0.085).toFixed(4)});`,
     )
     .join("\n");
 
@@ -160,7 +160,8 @@ export async function coletarMalhaViariaHierarquicaOsm(
     if (nivel === 3 && dentroMetropole(meioLat, meioLon, 1.05) && !codigo) {
       continue;
     }
-    if (nivel === 2 && dentroMetropole(meioLat, meioLon, 0.85) && !codigo) {
+    if (nivel === 2 && !codigo) continue;
+    if (nivel === 1 && dentroMetropole(meioLat, meioLon, 1.0) && !codigo) {
       const nome = (tags.name ?? "").toLowerCase();
       const arteriasPrincipais = [
         "cristiano machado",
@@ -168,21 +169,15 @@ export async function coletarMalhaViariaHierarquicaOsm(
         "antonio carlos",
         "amazonas",
         "via expressa",
-        "raja gabaglia",
-        "andradas",
+        "anel rodovi",
         "contorno",
-        "afonso pena",
-        "dom pedro i",
-        "carlos luz",
-        "teresa cristina",
-        "nossa senhora do carmo",
       ];
       if (!arteriasPrincipais.some((chave) => nome.includes(chave))) {
         continue;
       }
     }
 
-    const eps = nivel === 1 ? 0.00042 : nivel === 2 ? 0.00038 : 0.00032;
+    const eps = nivel === 1 ? 0.00085 : nivel === 2 ? 0.00070 : 0.00055;
     const simp = simplificarRdp(bruto, eps);
     if (simp.length >= 2) {
       saida.push({
