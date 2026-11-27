@@ -68,5 +68,70 @@ void main() {
       () => fake.inserirInteracao(voto),
       throwsStateError,
     );
+
+    fake.erroSimulado = null;
+    final comentario = ItemFilaInteracao.comentario(
+      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      autorNomePublico: 'Mariana',
+      escaladaUid: 'x8siJek3FiG3aB',
+      textoComentario: 'Original',
+    );
+    await fake.inserirInteracao(comentario, accessToken: 'jwt-com');
+    await fake.atualizarComentario(
+      comentarioId: comentario.id,
+      autorIdPublico: 'outroAutor0001',
+      novoTexto: 'Tentativa indevida',
+    );
+    expect(
+      fake.itensInseridos
+          .firstWhere((i) => i.id == comentario.id)
+          .textoComentario,
+      'Original',
+    );
+    await fake.atualizarComentario(
+      comentarioId: comentario.id,
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      novoTexto: 'Atualizado pela autora',
+      accessToken: 'jwt-edit-com',
+    );
+    expect(fake.ultimoAccessTokenInsercao, 'jwt-edit-com');
+    expect(
+      fake.itensInseridos
+          .firstWhere((i) => i.id == comentario.id)
+          .textoComentario,
+      'Atualizado pela autora',
+    );
+
+    await fake.atualizarAlerta(
+      alertaAlvoUid: 'alertaAbelha01',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+      detalhe: 'Chapeleta solta',
+      accessToken: 'jwt-edit-alerta',
+    );
+    expect(fake.ultimoAccessTokenInsercao, 'jwt-edit-alerta');
+    final alertaEditado = fake.itensInseridos.firstWhere(
+      (i) => i.alertaAlvoUid == 'alertaAbelha01',
+    );
+    expect(alertaEditado.categoriaAlerta, CategoriaAlertaSeguranca.protecaoPrecaria);
+    expect(alertaEditado.textoComentario, 'Chapeleta solta');
+
+    await fake.excluirComentario(
+      comentarioId: comentario.id,
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      accessToken: 'jwt-del-com',
+    );
+    expect(fake.itensInseridos.any((i) => i.id == comentario.id), isFalse);
+
+    await fake.excluirAlerta(
+      alertaAlvoUid: 'alertaAbelha01',
+      autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+      accessToken: 'jwt-del-alerta',
+    );
+    expect(
+      fake.itensInseridos.any((i) => i.alertaAlvoUid == 'alertaAbelha01'),
+      isFalse,
+    );
   });
 }
