@@ -356,3 +356,83 @@ class PintorPlanetaGlobo extends CustomPainter {
     final lat0 = controlador.latitudeCentral;
     final lon0 = controlador.longitudeCentral;
 
+    final double latMin;
+    final double latMax;
+    final double lonMin;
+    final double lonMax;
+
+    if (controlador.modo3D) {
+      final multiplicadorHorizonte = 1.18 +
+          3.60 * ControladorCameraGlobo.smoothstep(1.30, 2.75, controlador.lod);
+      final diagRad =
+          (math.max(size.width, size.height) * multiplicadorHorizonte / rPx)
+              .clamp(0.002, 1.62);
+      final spanLat = (diagRad / _grausParaRad).clamp(0.12, 92.0);
+      latMin = (lat0 - spanLat).clamp(-89.92, 89.92);
+      latMax = (lat0 + spanLat).clamp(-89.92, 89.92);
+      final cobrePoloOuGlobo =
+          latMax > 72.0 || latMin < -72.0 || rPx < 520.0;
+      final spanLon = cobrePoloOuGlobo
+          ? 180.0
+          : (spanLat / math.max(0.28, math.cos(lat0 * _grausParaRad)))
+              .clamp(0.07, 180.0);
+      lonMin = lon0 - spanLon;
+      lonMax = lon0 + spanLon;
+    } else {
+      final escala2D = controlador.calcularEscala2D(size);
+      final spanLon2D =
+          ((size.width * 0.56 / escala2D) / _grausParaRad).clamp(0.06, 220.0);
+      final spanLat2D =
+          ((size.height * 0.62 / escala2D) / _grausParaRad).clamp(0.06, 92.0);
+      latMin =
+          spanLat2D >= 80.0 ? -89.92 : (lat0 - spanLat2D).clamp(-89.92, 89.92);
+      latMax =
+          spanLat2D >= 80.0 ? 89.92 : (lat0 + spanLat2D).clamp(-89.92, 89.92);
+      lonMin = lon0 - spanLon2D;
+      lonMax = lon0 + spanLon2D;
+    }
+
+    final imgW = imagem.width.toDouble();
+    final imgH = imagem.height.toDouble();
+    final cosPhi0 = math.cos(lat0 * _grausParaRad);
+    final sinPhi0 = math.sin(lat0 * _grausParaRad);
+    final fatorSombraEsfera = controlador.modo3D
+        ? (1.0 - ControladorCameraGlobo.smoothstep(1.05, 1.85, controlador.lod))
+        : 0.0;
+
+    const totalVertices = (rows + 1) * (cols + 1);
+    final posicoes = List<Offset>.filled(totalVertices, Offset.zero);
+    final uvs = List<Offset>.filled(totalVertices, Offset.zero);
+    final cores = List<Color>.filled(totalVertices, Colors.white);
+    final visiveis = List<bool>.filled(totalVertices, false);
+
+    for (var j = 0; j <= rows; j++) {
+      final lat = latMin + (latMax - latMin) * (j / rows);
+      final phi = lat * _grausParaRad;
+      final cosPhi = math.cos(phi);
+      final sinPhi = math.sin(phi);
+      final vPx = (((90.0 - lat) / 180.0) * imgH).clamp(0.5, imgH - 0.5);
+
+      for (var i = 0; i <= cols; i++) {
+        final idx = j * (cols + 1) + i;
+        final lonCont = lonMin + (lonMax - lonMin) * (i / cols);
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lonCont,
+          elevacaoMetros: 0.0,
+          tamanhoTela: size,
+          estenderBordaHorizonte: true,
+        );
+        if (!pt.visivel) continue;
+
+        visiveis[idx] = true;
+        posicoes[idx] = Offset(pt.x, pt.y);
+        uvs[idx] = Offset(((lonCont + 180.0) / 360.0) * imgW, vPx);
+
+        double rLuz = 1.0, gLuz = 1.0, bLuz = 1.0;
+        if (fatorSombraEsfera > 0.01) {
+          final dLam = (lonCont - lon0) * _grausParaRad;
+          final x0 = cosPhi * math.sin(dLam);
+          final y0 = cosPhi0 * sinPhi - sinPhi0 * cosPhi * math.cos(dLam);
+          final z0 = sinPhi0 * sinPhi + cosPhi0 * cosPhi * math.cos(dLam);
+
