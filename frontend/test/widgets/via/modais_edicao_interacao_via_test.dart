@@ -90,3 +90,90 @@ void main() {
         autorNomePublico: 'Mariana',
       );
 
+      await tester.pumpWidget(
+        envolver(
+          (ctx) => ElevatedButton(
+            onPressed: () => exibirModalFormularioAlertaVia(
+              ctx,
+              alertaInicial: alertaExistente,
+              aoSubmeter: (cat, det) async {
+                catSalva = cat;
+                detSalvo = det;
+              },
+            ),
+            child: const Text('Editar Alerta'),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Editar Alerta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Editar Alerta na Via'), findsOneWidget);
+      expect(find.text('Bloco oco'), findsOneWidget);
+      expect(find.text('Salvar Alterações'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('opcao_alerta_PROTECAO_PRECARIA')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('campo_detalhe_alerta_via')),
+        'Chapeleta 2 frouxa',
+      );
+      await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+      await tester.pumpAndSettle();
+
+      expect(catSalva, CategoriaAlertaSeguranca.protecaoPrecaria);
+      expect(detSalvo, 'Chapeleta 2 frouxa');
+    },
+  );
+
+  testWidgets(
+    'exibirDialogoConfirmarExclusaoInteracao retorna false ao cancelar e true ao confirmar para comentario e alerta',
+    (tester) async {
+      bool? resultado;
+
+      await tester.pumpWidget(
+        envolver(
+          (ctx) => Row(
+            children: [
+              ElevatedButton(
+                onPressed: () async {
+                  resultado = await exibirDialogoConfirmarExclusaoInteracao(
+                    ctx,
+                    ehAlerta: false,
+                  );
+                },
+                child: const Text('Excluir Comentario'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  resultado = await exibirDialogoConfirmarExclusaoInteracao(
+                    ctx,
+                    ehAlerta: true,
+                  );
+                },
+                child: const Text('Excluir Alerta'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Excluir Comentario'));
+      await tester.pumpAndSettle();
+      expect(find.text('Excluir Comentário?'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(resultado, isFalse);
+
+      await tester.tap(find.text('Excluir Alerta'));
+      await tester.pumpAndSettle();
+      expect(find.text('Excluir Alerta?'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('btn_confirmar_exclusao_interacao_via')),
+      );
+      await tester.pumpAndSettle();
+      expect(resultado, isTrue);
+    },
+  );
+}
