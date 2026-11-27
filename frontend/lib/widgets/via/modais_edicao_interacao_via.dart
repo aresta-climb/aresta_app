@@ -175,3 +175,95 @@ class _FormularioAlertaViaSheetState extends State<_FormularioAlertaViaSheet> {
                     labelText: context.tr(ChaveTexto.alertaDetalheLabel),
                     labelStyle: TextStyle(color: cores.ashGrey),
                     hintText: context.tr(ChaveTexto.alertaDetalheHint),
+                    hintStyle: TextStyle(
+                      color: cores.ashGrey.withValues(alpha: 0.6),
+                    ),
+                    filled: true,
+                    fillColor: cores.caveShadow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cores.graniteEdge),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  key: const Key('btn_enviar_alerta_via'),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _viewModel.submeter(widget.aoSubmeter);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _corVermelhoAlertaModal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    modoEdicao
+                        ? context.tr(ChaveTexto.comumSalvarAlteracoes)
+                        : context.tr(ChaveTexto.alertaEnviarBtn),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Abre o modal inferior (Dumb UI) para o autor editar um comentário público (`1..280` caracteres).
+Future<void> exibirModalEditarComentarioVia(
+  BuildContext context, {
+  required String textoInicial,
+  required Future<void> Function(String novoTexto) aoSalvar,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: context.colors.deepBasalt,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (modalCtx) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+        ),
+        child: _FormularioEditarComentarioVia(
+          textoInicial: textoInicial,
+          aoSalvar: aoSalvar,
+        ),
+      );
+    },
+  );
+}
+
+class _FormularioEditarComentarioVia extends StatefulWidget {
+  final String textoInicial;
+  final Future<void> Function(String novoTexto) aoSalvar;
+
+  const _FormularioEditarComentarioVia({
+    required this.textoInicial,
+    required this.aoSalvar,
+  });
+
+  @override
+  State<_FormularioEditarComentarioVia> createState() =>
+      _FormularioEditarComentarioViaState();
+}
+
+class _FormularioEditarComentarioViaState
+    extends State<_FormularioEditarComentarioVia> {
+  late final TextEditingController _controller;
+  late bool _valido;
+
