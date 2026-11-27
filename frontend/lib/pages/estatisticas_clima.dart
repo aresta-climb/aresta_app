@@ -193,34 +193,31 @@ class PaginaEstatisticasClima extends StatelessWidget {
     final accPct = (matriz.acuraciaGlobal * 100).toStringAsFixed(2);
     final csiPct = (matriz.indiceSucessoCriticoCsi * 100).toStringAsFixed(2);
 
-    return _CartaoSecaoEstatistica(
+    return CartaoSecaoEstatisticaClima(
+      icone: Icons.grid_view_rounded,
       titulo: context.tr(ChaveTexto.estatClimaSecaoMatrizTitulo),
-      cores: cores,
       filho: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             context.tr(ChaveTexto.estatClimaMatrizExplicacao),
-            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.42),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.44),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
-                child: _CelulaMatriz(
+                child: CelulaMatrizClima(
                   sigla: 'TP = ${matriz.verdadeirosPositivos}',
-                  detalhe: 'Hit (Chuva real)',
+                  detalhe: 'ERA5 + GFS (Hit)',
                   destaque: true,
-                  cores: cores,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _CelulaMatriz(
+                child: CelulaMatrizClima(
                   sigla: 'FP = ${matriz.falsosPositivos}',
-                  detalhe: 'Alarme falso',
-                  destaque: false,
-                  cores: cores,
+                  detalhe: 'GFS > ERA5',
                 ),
               ),
             ],
@@ -229,38 +226,79 @@ class PaginaEstatisticasClima extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _CelulaMatriz(
+                child: CelulaMatrizClima(
                   sigla: 'FN = ${matriz.falsosNegativos}',
-                  detalhe: 'Omissão',
-                  destaque: false,
-                  cores: cores,
+                  detalhe: 'ERA5 > GFS',
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _CelulaMatriz(
+                child: CelulaMatrizClima(
                   sigla: 'TN = ${matriz.verdadeirosNegativos}',
-                  detalhe: 'Seco confirmado',
+                  detalhe: 'Seco (0 mm)',
                   destaque: true,
-                  cores: cores,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: cores.deepBasalt,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: cores.graniteEdge),
             ),
-            child: SelectableText(
-              'p̂ (POD) = TP / (TP + FN) = 1306 / 1528 = $pHat%\n'
-              'SE = √[p̂(1 − p̂) / 1528] = $sePct%\n'
-              'IC 95% (Z = 1.96) = $pHat% ± 1.96 × $sePct% = [$infPct%, $supPct%]\n'
-              'Acurácia Global = (TP + TN) / 5133 = $accPct%  |  CSI = $csiPct%\n'
-              'Z (vs H₀ = 50%) = +${zContra50.toStringAsFixed(2)}σ  |  Z (Heidke) = +${zHeidke.toStringAsFixed(2)}σ\n'
+            child: Column(
+              children: [
+                LinhaFormulaEstatisticaClima(
+                  titulo: 'POD (p̂)',
+                  equacao: 'TP / (TP + FN) = 1.306 / 1.528',
+                  resultado: '$pHat%',
+                  destaque: true,
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: 'SE & 95% Z-CI',
+                  equacao: 'SE = $sePct%  •  p̂ ± 1.96 × SE',
+                  resultado: '[$infPct%, $supPct%]',
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: 'ACC & CSI',
+                  equacao: '(TP + TN) / 5.133  •  CSI = $csiPct%',
+                  resultado: '$accPct%',
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: 'Z (H₀ = 0.50)',
+                  equacao: 'Heidke global = +${zHeidke.toStringAsFixed(2)}σ',
+                  resultado: '+${zContra50.toStringAsFixed(2)}σ',
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: 'Z (H₀ ≤ 0.83)',
+                  equacao: 'Φ(+2.57) = 0.9949  (p = 0.0051)',
+                  resultado: '+${zContra83.toStringAsFixed(2)}σ',
+                  destaque: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirSecaoTabelaZ(BuildContext context, AppColors cores) {
+    return CartaoSecaoEstatisticaClima(
+      icone: Icons.functions_rounded,
+      titulo: context.tr(ChaveTexto.estatClimaSecaoTabelaZTitulo),
+      filho: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.tr(ChaveTexto.estatClimaTabelaZExplicacao),
               'Z (vs H₀ ≤ 83%) = +${zContra83.toStringAsFixed(2)}σ → Φ(+2.57) = 0.9949 (p = 0.0051)',
               style: TextStyle(
                 fontFamily: 'monospace',
