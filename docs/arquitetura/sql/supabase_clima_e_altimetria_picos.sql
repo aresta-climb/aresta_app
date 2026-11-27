@@ -42,12 +42,25 @@ CREATE TABLE IF NOT EXISTS public.snapshots_altimetria_picos (
         CHECK (jsonb_typeof(altimetria_por_pico) = 'object')
 );
 
+CREATE TABLE IF NOT EXISTS public.snapshots_malha_viaria_picos (
+    slot TEXT PRIMARY KEY,
+    gerado_em TIMESTAMPTZ NOT NULL,
+    versao_hash TEXT NOT NULL,
+    rodovias JSONB NOT NULL DEFAULT '[]'::jsonb,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_malha_viaria_slot_valido
+        CHECK (slot IN ('atual', 'copia_seguranca')),
+    CONSTRAINT chk_malha_viaria_rodovias_array
+        CHECK (jsonb_typeof(rodovias) = 'array')
+);
+
 -- ============================================================================
 -- 2. SEGURANÇA DE LINHA (RLS) — LEITURA PÚBLICA, ESCRITA RESTRITA AO SERVIDOR
 -- ============================================================================
 
 ALTER TABLE public.estado_clima_picos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.snapshots_altimetria_picos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.snapshots_malha_viaria_picos ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS leitura_publica_estado_clima_picos ON public.estado_clima_picos;
 CREATE POLICY leitura_publica_estado_clima_picos
@@ -63,10 +76,19 @@ CREATE POLICY leitura_publica_snapshots_altimetria_picos
     TO anon, authenticated
     USING (true);
 
+DROP POLICY IF EXISTS leitura_publica_snapshots_malha_viaria_picos ON public.snapshots_malha_viaria_picos;
+CREATE POLICY leitura_publica_snapshots_malha_viaria_picos
+    ON public.snapshots_malha_viaria_picos
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
 REVOKE INSERT, UPDATE, DELETE ON public.estado_clima_picos FROM anon, authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.snapshots_altimetria_picos FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.snapshots_malha_viaria_picos FROM anon, authenticated;
 GRANT SELECT ON public.estado_clima_picos TO anon, authenticated;
 GRANT SELECT ON public.snapshots_altimetria_picos TO anon, authenticated;
+GRANT SELECT ON public.snapshots_malha_viaria_picos TO anon, authenticated;
 
 -- ============================================================================
 -- 3. FUNÇÕES TRANSACIONAIS DE ROTAÇÃO ATÔMICA (ATUAL -> COPIA_SEGURANCA)
@@ -235,10 +257,91 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.rotacionar_snapshot_malha_viaria_picos(
+    p_gerado_em TIMESTAMPTZ,
+    p_versao_hash TEXT,
+    p_rodovias JSONB
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF p_versao_hash IS NULL OR length(trim(p_versao_hash)) = 0 THEN
+        RAISE EXCEPTION 'versao_hash inválido: rotação abortada para preservar cópia de segurança';
+    END IF;
+
+    IF p_rodovias IS NULL
+       OR jsonb_typeof(p_rodovias) <> 'array'
+       OR jsonb_array_length(p_rodovias) = 0 THEN
+        RAISE EXCEPTION 'rodovias inválido ou vazio: rotação abortada para preservar cópia de segurança';
+    END IF;
+
+    INSERT INTO public.snapshots_malha_viaria_picos (
+        slot,
+        gerado_em,
+        versao_hash,
+        rodovias,
+        atualizado_em
+    )
+    SELECT
+        'copia_seguranca',
+        gerado_em,
+        versao_hash,
+        rodovias,
+        now()
+    FROM public.snapshots_malha_viaria_picos
+    WHERE slot = 'atual'
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        versao_hash = EXCLUDED.versao_hash,
+        rodovias = EXCLUDED.rodovias,
+        atualizado_em = now();
+
+    INSERT INTO public.snapshots_malha_viaria_picos (
+        slot,
+        gerado_em,
+        versao_hash,
+        rodovias,
+        atualizado_em
+    )
+    VALUES (
+        'atual',
+        p_gerado_em,
+        p_versao_hash,
+        p_rodovias,
+        now()
+    )
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        versao_hash = EXCLUDED.versao_hash,
+        rodovias = EXCLUDED.rodovias,
+        atualizado_em = now();
+
+    INSERT INTO public.snapshots_malha_viaria_picos (
+        slot,
+        gerado_em,
+        versao_hash,
+        rodovias,
+        atualizado_em
+    )
+    VALUES (
+        'copia_seguranca',
+        p_gerado_em,
+        p_versao_hash,
+        p_rodovias,
+        now()
+    )
+    ON CONFLICT (slot) DO NOTHING;
+END;
+$$;
+
 REVOKE ALL ON FUNCTION public.rotacionar_estado_clima_picos(TIMESTAMPTZ, JSONB, JSONB, JSONB) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.rotacionar_snapshot_altimetria_picos(TIMESTAMPTZ, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.rotacionar_snapshot_malha_viaria_picos(TIMESTAMPTZ, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.rotacionar_estado_clima_picos(TIMESTAMPTZ, JSONB, JSONB, JSONB) TO service_role;
 GRANT EXECUTE ON FUNCTION public.rotacionar_snapshot_altimetria_picos(TIMESTAMPTZ, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.rotacionar_snapshot_malha_viaria_picos(TIMESTAMPTZ, TEXT, JSONB) TO service_role;
 
 -- ============================================================================
 -- 4. REFERÊNCIA DE AGENDAMENTO PG_CRON (A CADA 3 HORAS) PARA A EDGE FUNCTION
