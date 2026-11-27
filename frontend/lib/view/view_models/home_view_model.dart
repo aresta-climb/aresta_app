@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'pico_proximo_view_model.dart';
-import '../../services/controlador_interacoes_usuario.dart';
 import '../../services/repositorio_dataset.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
@@ -25,8 +24,6 @@ class HomeViewModel extends ChangeNotifier {
   /// Serviço de sincronização e download de arquivos binários.
   final SyncService syncService;
 
-  final ControladorInteracoesUsuario _controladorInteracoes;
-
   /// Callback opcional invocado sempre que a coordenada geográfica do usuário é atualizada.
   final void Function(double lat, double lon)? aoAtualizarLocalizacao;
 
@@ -40,11 +37,9 @@ class HomeViewModel extends ChangeNotifier {
   HomeViewModel({
     required this.datasetRepo,
     required this.syncService,
-    ControladorInteracoesUsuario? controladorInteracoes,
     this.aoAtualizarLocalizacao,
     this.aoVerMaisProximos,
-  }) : _controladorInteracoes =
-           controladorInteracoes ?? ControladorInteracoesUsuario.instancia {
+  }) {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
     datasetRepo.homeResetTrigger.addListener(_aoAtualizarDataset);
     datasetRepo.calculadoraDistanciaEstrada.addListener(_aoAtualizarDataset);
@@ -75,14 +70,6 @@ class HomeViewModel extends ChangeNotifier {
   /// Monitoramento reativo do progresso percentual dos picos atualmente em download.
   ValueListenable<Map<String, double>> get downloadingCrags =>
       syncService.downloadingCrags;
-
-  /// Notificador reativo que sinaliza mudanças na visibilidade de elementos de perfil/caderneta.
-  ValueListenable<bool> get interacoesUsuarioAtivasListenable =>
-      _controladorInteracoes.interacoesAtivasNotifier;
-
-  /// Indica se o atalho para o Perfil do Escalador deve ser exibido na barra superior da Home.
-  bool get exibirBotaoPerfil =>
-      _controladorInteracoes.exibirElementosInterativos;
 
   /// Atualiza a coordenada geográfica do usuário para cálculo de distâncias.
   void atualizarLocalizacaoUsuario(double lat, double lon) {

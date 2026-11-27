@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../data/modelos/tipo_ascensao.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/autenticacao/servico_autenticacao.dart';
 import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
@@ -28,8 +29,12 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Seletor nativo de foto de perfil.
   final SeletorFotoPerfil _seletorFotoPerfil;
 
-  /// Rótulo esportivo do escalador (ex.: "Escalador" ou "Escaladora").
-  final String funcaoAtleta;
+  /// Rótulo esportivo customizado do escalador, quando explicitamente fornecido.
+  final String? _funcaoAtletaFixa;
+
+  /// Rótulo esportivo localizado do escalador (ex.: "Escalador", "Climber", "Kletterer", "Klimmer").
+  String get funcaoAtleta =>
+      _funcaoAtletaFixa ?? tr(ChaveTexto.perfilEscaladorPadrao);
 
   /// Função customizada opcional para apuração do total de picos.
   final int Function()? _obterTotalPicos;
@@ -53,7 +58,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     required this.repositorio,
     ServicoAutenticacao? servicoAutenticacao,
     SeletorFotoPerfil? seletorFotoPerfil,
-    this.funcaoAtleta = 'Escalador',
+    String? funcaoAtleta,
     int Function()? obterTotalPicos,
     int Function()? obterTotalVias,
     Listenable? escutaMetadados,
@@ -63,6 +68,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
            ServicoAutenticacaoLocal(repositorio: repositorio),
        _seletorFotoPerfil =
            seletorFotoPerfil ?? SeletorFotoPerfilNativo.instancia,
+       _funcaoAtletaFixa = funcaoAtleta,
        _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
        _escutaMetadados = escutaMetadados,
@@ -70,6 +76,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.addListener(_notificarMudanca);
     repositorio.perfilNotifier.addListener(_notificarMudanca);
     _escutaMetadados?.addListener(_notificarMudanca);
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      _notificarMudanca,
+    );
   }
 
   /// Cria o ViewModel conectado automaticamente ao catálogo local ([CatalogoViasCaderneta]),
@@ -79,7 +88,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     ServicoAutenticacao? servicoAutenticacao,
     SeletorFotoPerfil? seletorFotoPerfil,
     DatasetRepository? datasetRepo,
-    String funcaoAtleta = 'Escalador',
+    String? funcaoAtleta,
   }) {
     final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
     final catalogoVias = CatalogoViasCaderneta(
@@ -106,6 +115,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.removeListener(_notificarMudanca);
     repositorio.perfilNotifier.removeListener(_notificarMudanca);
     _escutaMetadados?.removeListener(_notificarMudanca);
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _notificarMudanca,
+    );
     _catalogoViasProprio?.dispose();
     super.dispose();
   }
@@ -116,8 +128,11 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Indica se o perfil atual está vinculado a uma conta autenticada.
   bool get estaAutenticado => perfil.estaAutenticado;
 
-  /// Nome público esportivo do atleta.
-  String get nomeAtleta => perfil.autorNomePublico;
+  /// Nome público esportivo do atleta (localizando o apelido padrão quando ainda não personalizado).
+  String get nomeAtleta =>
+      perfil.autorNomePublico == PerfilEscalador.apelidoPadrao
+      ? tr(ChaveTexto.perfilEscaladorAresta)
+      : perfil.autorNomePublico;
 
   /// URL ou Data URI da foto de perfil do escalador.
   String? get fotoUrl => perfil.fotoUrl;
@@ -215,16 +230,14 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
         AppLogger.instance.logAviso(
           'Exclusão de conta adiada por ausência de conexão: $e',
         );
-        _mensagemErroExclusao =
-            'Sem conexão com a internet. Conecte-se para excluir sua conta.';
+        _mensagemErroExclusao = tr(ChaveTexto.perfilSemConexaoExcluir);
       } else {
         AppLogger.instance.logError(
           'Falha inesperada ao excluir conta do escalador',
           error: e,
           stackTrace: stackTrace,
         );
-        _mensagemErroExclusao =
-            'Não foi possível excluir a conta neste momento.';
+        _mensagemErroExclusao = tr(ChaveTexto.perfilErroExcluirConta);
       }
       notifyListeners();
       return false;

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/autenticacao/servico_autenticacao.dart';
 import '../../services/firebase/app_logger.dart';
 
@@ -48,7 +49,11 @@ class LoginViewModel extends ChangeNotifier {
     DateTime Function()? obterAgora,
   }) : servicoAutenticacao =
            servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
-       _obterAgora = obterAgora ?? DateTime.now;
+       _obterAgora = obterAgora ?? DateTime.now {
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      _notificarOuvintes,
+    );
+  }
 
   /// Endereço de e-mail informado pelo escalador.
   String get email => _email;
@@ -69,11 +74,10 @@ class LoginViewModel extends ChangeNotifier {
   String? get mensagemInfoOtp => _mensagemInfoOtp;
 
   /// Título principal exibido no cabeçalho da tela de login.
-  String get tituloCabecalho => 'Entrar na sua conta';
+  String get tituloCabecalho => tr(ChaveTexto.authEntrarTitulo);
 
   /// Subtítulo explicativo exibido abaixo do título principal.
-  String get subtituloCabecalho =>
-      'Entre sem senha usando sua conta social ou um código de 6 dígitos enviado por e-mail para sincronizar sua caderneta.';
+  String get subtituloCabecalho => tr(ChaveTexto.authEntrarSubtitulo);
 
   /// Segundos restantes até liberar um novo envio de código OTP quando o limite de
   /// [limiteEnviosPorJanela] em [duracaoJanelaOtp] foi atingido (`0` quando liberado).
@@ -158,8 +162,7 @@ class LoginViewModel extends ChangeNotifier {
   Future<bool> solicitarCodigoEmail() async {
     final espera = segundosRestantesReenvio;
     if (espera > 0) {
-      _mensagemErro =
-          'Limite temporário atingido. Aguarde ${espera}s para solicitar outro código.';
+      _mensagemErro = tr(ChaveTexto.authLimiteTemporario, {'s': '$espera'});
       _notificarOuvintes();
       return false;
     }
@@ -171,14 +174,14 @@ class LoginViewModel extends ChangeNotifier {
         _iniciarMonitoramentoContagemSeNecessario();
         _aguardandoCodigoOtp = true;
         _codigoOtp = '';
-        _mensagemInfoOtp =
-            'Enviamos um código de 6 dígitos para ${_email.trim()}. Verifique sua caixa de entrada e spam.';
+        _mensagemInfoOtp = tr(ChaveTexto.authCodigoEnviadoPara, {
+          'email': _email.trim(),
+        });
         return true;
       },
       notificarAutenticacaoConcluida: false,
       contextoLogErro: 'Erro inesperado ao solicitar código OTP por e-mail',
-      mensagemErroGenerico:
-          'Não foi possível enviar o código de acesso. Tente novamente.',
+      mensagemErroGenerico: tr(ChaveTexto.authErroEnviarCodigo),
     );
   }
 
@@ -200,8 +203,7 @@ class LoginViewModel extends ChangeNotifier {
       },
       notificarAutenticacaoConcluida: true,
       contextoLogErro: 'Erro inesperado ao verificar código OTP por e-mail',
-      mensagemErroGenerico:
-          'Não foi possível validar o código de acesso. Tente novamente.',
+      mensagemErroGenerico: tr(ChaveTexto.authErroValidarCodigo),
     );
   }
 
@@ -214,8 +216,7 @@ class LoginViewModel extends ChangeNotifier {
       },
       notificarAutenticacaoConcluida: true,
       contextoLogErro: 'Erro inesperado no login com Google',
-      mensagemErroGenerico:
-          'Não foi possível entrar com o Google. Tente novamente.',
+      mensagemErroGenerico: tr(ChaveTexto.authErroGoogle),
     );
   }
 
@@ -228,8 +229,7 @@ class LoginViewModel extends ChangeNotifier {
       },
       notificarAutenticacaoConcluida: true,
       contextoLogErro: 'Erro inesperado no login com Apple',
-      mensagemErroGenerico:
-          'Não foi possível entrar com a Apple. Tente novamente.',
+      mensagemErroGenerico: tr(ChaveTexto.authErroApple),
     );
   }
 
@@ -275,8 +275,7 @@ class LoginViewModel extends ChangeNotifier {
       _carregando = false;
       if (AppLogger.isFalhaConexaoOuTimeout(e)) {
         AppLogger.instance.logAviso('$contextoLogErro ($e)');
-        _mensagemErro =
-            'Sem conexão com a internet. Verifique o sinal e tente novamente.';
+        _mensagemErro = tr(ChaveTexto.authSemConexao);
       } else {
         AppLogger.instance.logError(
           contextoLogErro,
@@ -299,6 +298,9 @@ class LoginViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _descartado = true;
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _notificarOuvintes,
+    );
     _timerContagemRegressiva?.cancel();
     _timerContagemRegressiva = null;
     super.dispose();

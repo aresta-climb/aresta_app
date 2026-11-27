@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 
 /// ViewModel (MVVM) que encapsula o estado e a normalização do formulário rápido de alerta
 /// de segurança estilo Waze na `ViaPage`, além da formatação textual de alertas ativos para Dumb UI.
@@ -14,7 +15,11 @@ class FormularioAlertaViaViewModel extends ChangeNotifier {
   FormularioAlertaViaViewModel({
     CategoriaAlertaSeguranca categoriaInicial =
         CategoriaAlertaSeguranca.fauna,
-  }) : _categoriaSelecionada = categoriaInicial;
+    String detalheInicial = '',
+  }) : _categoriaSelecionada = categoriaInicial,
+       _detalhe = detalheInicial.length > AlertaSegurancaVia.limiteCaracteresDetalhe
+           ? detalheInicial.substring(0, AlertaSegurancaVia.limiteCaracteresDetalhe)
+           : detalheInicial;
 
   /// Lista imutável de categorias disponíveis para seleção visual.
   List<CategoriaAlertaSeguranca> get opcoesCategorias =>
@@ -63,8 +68,14 @@ class FormularioAlertaViaViewModel extends ChangeNotifier {
   static String formatarSubtituloConfirmacao(AlertaSegurancaVia alerta) {
     final dia = alerta.criadoEm.day.toString().padLeft(2, '0');
     final mes = alerta.criadoEm.month.toString().padLeft(2, '0');
-    return 'Reportado por ${alerta.autorNomePublico} em $dia/$mes • '
-        '${alerta.confirmacoesAtivas}x confirmado';
+    return tr(
+      ChaveTexto.alertaReportadoPorEm,
+      {
+        'autor': alerta.autorNomePublico,
+        'data': '$dia/$mes',
+        'n': alerta.confirmacoesAtivas,
+      },
+    );
   }
 
   /// Formata o detalhe opcional do alerta entre aspas tipográficas, ou `null` quando ausente.
