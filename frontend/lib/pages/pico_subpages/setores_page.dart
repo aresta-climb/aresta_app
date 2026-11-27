@@ -3,9 +3,11 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../theme/cores_app.dart';
+import '../../utils/extrator_detalhes_tecnicos_via.dart';
 import '../../utils/filtro_grau_escalada.dart';
 import '../../utils/indexador_escaladas.dart';
 import '../../view/function_library/pico_functions.dart';
@@ -200,10 +202,13 @@ class _SetoresPageState extends State<SetoresPage>
         widget.pico.setoresOuGrupos,
         _todasEscaladas,
       );
-      return 'Setores $contador';
+      return '${tr(ChaveTexto.buscaSetores)} $contador';
     }
 
-    final nomePlural = _obterNomePluralModalidade(aba);
+    final nomePlural = ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+      aba,
+      plural: true,
+    );
     final contador = _estadoFiltros.obterContadorModalidade(aba, _todasEscaladas);
     return '$nomePlural $contador';
   }
@@ -334,6 +339,13 @@ class _SetoresPageState extends State<SetoresPage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirConteudo(context),
+    );
+  }
+
+  Widget _construirConteudo(BuildContext context) {
     final colors = context.colors;
     final hasMap = widget.pico.hasMapasGerais() &&
         widget.pico.mapasGerais.hasConteudo() &&
@@ -346,7 +358,7 @@ class _SetoresPageState extends State<SetoresPage>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(
         context,
-        'SETORES & ESCALADAS',
+        context.tr(ChaveTexto.setorTituloPagina),
         subtitle: widget.pico.nome,
       ),
       body: CustomScrollView(
@@ -461,8 +473,8 @@ class _SetoresPageState extends State<SetoresPage>
                 const SizedBox(height: 12),
                 Text(
                   picoSemSetores
-                      ? 'Nenhum setor ou escalada cadastrado para este local no momento.'
-                      : 'Nenhum setor encontrado com os filtros selecionados.',
+                      ? context.tr(ChaveTexto.setorNenhumSetorCadastrado)
+                      : context.tr(ChaveTexto.setorNenhumSetorFiltrado),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: colors.ashGrey, fontSize: 14),
                 ),
@@ -535,7 +547,7 @@ class _SetoresPageState extends State<SetoresPage>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Nenhuma escalada encontrada com os filtros selecionados.',
+                  context.tr(ChaveTexto.setorNenhumaEscaladaFiltrada),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: colors.ashGrey, fontSize: 14),
                 ),
