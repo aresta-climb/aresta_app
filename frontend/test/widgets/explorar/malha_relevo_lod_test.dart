@@ -153,3 +153,58 @@ void main() {
         expect(oceanoAtlantico, equals(0.0));
         expect(costaSulUrca, lessThanOrEqualTo(0.0));
 
+        // Terreno regional continuo interpola suavemente vales e planaltos entre picos vizinhos sem degrau 0m
+        const picosVizinhosMg = [
+          PicoRelevoReferencia(
+            id: 'igarape',
+            latitude: -20.07,
+            longitude: -44.32,
+            altitudeBaseMetros: 960,
+            altitudePicoMetros: 1430,
+          ),
+          PicoRelevoReferencia(
+            id: 'ouro_preto',
+            latitude: -20.35,
+            longitude: -43.50,
+            altitudeBaseMetros: 1100,
+            altitudePicoMetros: 1580,
+          ),
+        ];
+        final valeEntrePicos = GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: -20.20,
+          longitude: -43.92,
+          picosReferencia: picosVizinhosMg,
+        );
+        expect(valeEntrePicos, greaterThan(650.0));
+        expect(
+          GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+            latitude: -20.0,
+            longitude: -32.0,
+            picosReferencia: picosVizinhosMg,
+          ),
+          equals(0.0),
+        );
+        expect(
+          GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+            latitude: -18.9186,
+            longitude: -48.2772,
+            picosReferencia: picosVizinhosMg,
+            ehTerraConfirmada: true,
+            amostradorElevacaoReal: (_, _) => 865.0,
+          ),
+          closeTo(865.0, 1e-6),
+        );
+        expect(
+          GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+            latitude: -20.07,
+            longitude: -44.32,
+            picosReferencia: picosVizinhosMg,
+            ehTerraConfirmada: true,
+            amostradorElevacaoReal: (_, _) => 950.0,
+          ),
+          greaterThan(1100.0),
+        );
+      },
+    );
+  });
+}
