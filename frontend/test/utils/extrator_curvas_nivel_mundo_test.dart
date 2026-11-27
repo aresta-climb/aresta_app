@@ -38,17 +38,17 @@ void main() {
       }
 
       const janelaA = JanelaGeograficaVisivel(
-        minLat: -19.360,
-        maxLat: -19.280,
-        minLon: -43.660,
-        maxLon: -43.580,
+        minLat: -19.355,
+        maxLat: -19.275,
+        minLon: -43.655,
+        maxLon: -43.575,
       );
-      // Pan suave da câmera (< meio quarteirão quantizado): o bloco e os vértices do mundo permanecem IDÊNTICOS
+      // Pan suave da câmera dentro do mesmo quarteirão quantizado: o bloco e os vértices do mundo permanecem IDÊNTICOS
       const janelaPanSuave = JanelaGeograficaVisivel(
-        minLat: -19.357,
-        maxLat: -19.277,
-        minLon: -43.657,
-        maxLon: -43.577,
+        minLat: -19.352,
+        maxLat: -19.272,
+        minLon: -43.652,
+        maxLon: -43.572,
       );
 
       final resA = ExtratorCurvasNivelMundo.extrairCurvasBloco(

@@ -260,7 +260,7 @@ void main() {
     expect(find.byKey(const Key('alerta_umidade_br_mg_igarape')), findsOneWidget);
     expect(find.byKey(const Key('alerta_umidade_br_rj_urca')), findsNothing);
 
-    // Botão opcional de Clima e Fogo no Mapa inicia desligado e exige confirmação de ~75% de precisão
+    // Botão opcional de Clima e Fogo no Mapa inicia desligado e exige confirmação de ~85% de precisão
     expect(vm.radarClimaMapaAtivo, isFalse);
     expect(find.byKey(const Key('camada_atmosfera_clima_globo')), findsNothing);
     await tester.tap(find.byKey(const Key('botao_camada_clima_mapa')));
