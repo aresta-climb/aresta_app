@@ -88,3 +88,90 @@ abstract final class ExtratorCurvasNivelMundo {
     );
   }
 
+  /// Extrai polilinhas topográficas suaves em coordenadas fixas do mundo usando [amostrarElevacaoMetros].
+  static ConjuntoCurvasNivelMundo extrairCurvasBloco({
+    required JanelaGeograficaVisivel janela,
+    required int nivelDetalhe,
+    required int versaoDadosElevacao,
+    required double Function(double latitude, double longitude)
+        amostrarElevacaoMetros,
+    required List<PicoRelevoReferencia> picosReferencia,
+  }) {
+    final bloco = calcularGradeBlocoMundo(
+      janela: janela,
+      nivelDetalhe: nivelDetalhe,
+    );
+    final cols = bloco.iMax - bloco.iMin;
+    final rows = bloco.jMax - bloco.jMin;
+    final passo = bloco.passoGraus;
+    final cotaPasso = intervaloCotaMenorPorNivel(nivelDetalhe);
+    const multiploMestra = 4;
+
+    final nVertsX = cols + 1;
+    final elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
+    var zGlobalMin = double.infinity;
+    var zGlobalMax = double.negativeInfinity;
+
+    for (var r = 0; r <= rows; r++) {
+      final lat = (bloco.jMin + r) * passo;
+      for (var c = 0; c <= cols; c++) {
+        final lon = (bloco.iMin + c) * passo;
+        final z = amostrarElevacaoMetros(lat, lon);
+        elevs[r * nVertsX + c] = z;
+        if (z < zGlobalMin) zGlobalMin = z;
+        if (z > zGlobalMax) zGlobalMax = z;
+      }
+    }
+
+    if (!zGlobalMax.isFinite || zGlobalMax < 25.0 || (zGlobalMax - zGlobalMin) < cotaPasso * 0.5) {
+      return ConjuntoCurvasNivelMundo(
+        chaveBloco: bloco.chaveBloco,
+        nivelDetalhe: nivelDetalhe,
+        versaoDadosElevacao: versaoDadosElevacao,
+        curvas: const [],
+      );
+    }
+
+    final kIni = math.max(1, (zGlobalMin / cotaPasso).ceil());
+    final kFim = (zGlobalMax / cotaPasso).floor();
+    if (kFim < kIni) {
+      return ConjuntoCurvasNivelMundo(
+        chaveBloco: bloco.chaveBloco,
+        nivelDetalhe: nivelDetalhe,
+        versaoDadosElevacao: versaoDadosElevacao,
+        curvas: const [],
+      );
+    }
+
+    final saltoNiveis = math.max(1, ((kFim - kIni + 1) / 22).ceil());
+    final raioPicoGraus = nivelDetalhe == 2 ? 0.028 : (nivelDetalhe == 1 ? 0.045 : 0.085);
+    final raioPicoGraus2 = raioPicoGraus * raioPicoGraus;
+    final curvas = <CurvaNivelMundo>[];
+
+    for (var k = kIni; k <= kFim; k++) {
+      final ehMestra = k % multiploMestra == 0;
+      if (!ehMestra && (k - kIni) % saltoNiveis != 0) continue;
+      final cota = k * cotaPasso;
+      final cotaInt = cota.round();
+      final segmentos = <(Offset, Offset)>[];
+
+      for (var r = 0; r < rows; r++) {
+        final lat0 = (bloco.jMin + r) * passo;
+        final lat1 = lat0 + passo;
+        for (var c = 0; c < cols; c++) {
+          final i00 = r * nVertsX + c;
+          final z00 = elevs[i00];
+          final z10 = elevs[i00 + 1];
+          final z11 = elevs[i00 + nVertsX + 1];
+          final z01 = elevs[i00 + nVertsX];
+
+          var mascara = 0;
+          if (z00 >= cota) mascara |= 1;
+          if (z10 >= cota) mascara |= 2;
+          if (z11 >= cota) mascara |= 4;
+          if (z01 >= cota) mascara |= 8;
+          if (mascara == 0 || mascara == 15) continue;
+
+          final lon0 = (bloco.iMin + c) * passo;
+          final lon1 = lon0 + passo;
+
