@@ -2251,4 +2251,103 @@ void main() {
         }
 
         await montarPico('pico_muito_molhado', 'Sinuosa');
+        expect(
+          find.text(
+            'Possivelmente úmido (3 dias) - chuva próxima há 1 dia (24/11)',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('3d / 4d'), findsOneWidget);
+        expect(
+          find.byKey(const Key('barra_janela_secagem_pico')),
+          findsOneWidget,
+        );
+
+        await montarPico('pico_molhado', 'Sitio do Rod');
+        expect(
+          find.text(
+            'Possivelmente úmido (3 dias) - chuva próxima há 1 dia (24/11)',
+          ),
+          findsOneWidget,
+        );
+
+        await montarPico('pico_levemente_molhado', 'Pedra Rachada');
+        expect(
+          find.text(
+            'Possivelmente úmido (4 dias) - chuva próxima hoje (25/11)',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('4d / 4d'), findsOneWidget);
+
+        await montarPico('pico_seco', 'Serra Seca');
+        expect(
+          find.text('Provavelmente seco · Sem chuva próxima (4 dias)'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'exibe bolha de idioma na página inicial do pico e traduz abas e selo climático ao alternar idioma',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+        final repo = _FakeDatasetRepository();
+        final vm = PicoViewModel(
+          pico: Pico()
+            ..nome = 'Serra do Cipó'
+            ..estado = 'MG',
+          croqui: Croqui(),
+          cragId: 'pico_molhado',
+          datasetRepo: repo,
+          servicoClima: servicoClima,
+        );
+
+        await tester.pumpWidget(
+          EscopoIdiomaApp(
+            notificador: ControladorIdiomaApp.instancia.notificadorIdioma,
+            child: MaterialApp(
+              theme: construirTemaEscuro(),
+              home: PicoDetailsPage(viewModel: vm),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final bolhaPico = find.byKey(const Key('bolha_idioma_pico'));
+        expect(bolhaPico, findsOneWidget);
+        expect(
+          find.text(
+            'Possivelmente úmido (3 dias) - chuva próxima há 1 dia (24/11)',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(bolhaPico);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('opcao_bolha_idioma_nl')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Mogelijk vochtig (3 dagen) - regen dichtbij 1 dag geleden (24/11)',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(bolhaPico);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('opcao_bolha_idioma_de')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Eventuell feucht (3 Tage) - Regen in der Nähe vor 1 Tag (24/11)',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
 }
