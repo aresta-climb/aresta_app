@@ -352,3 +352,104 @@ abstract final class ConstrutorRedeViariaAresta {
         continue;
       }
 
+      final tAtivacao = ehBh
+          ? 0.0
+          : normalizarTempo(distViariaChegada).clamp(0.02, 0.96);
+      resultado.add(
+        CidadeClassificadaMapa(
+          localidade: loc,
+          ehRelevanteAresta: true,
+          tempoAtivacao: tAtivacao,
+          viasUrbanasLonLat: _extrairViasUrbanasReaisDaCidade(
+            loc: loc,
+            ehBh: ehBh,
+            rodovias: rodovias,
+          ),
+        ),
+      );
+    }
+
+    return resultado;
+  }
+
+  /// Extrai exclusivamente os trechos de rodovias e avenidas arteriais REAIS que cruzam o perímetro
+  /// urbano de [loc], sem jamais fabricar polígonos artificiais ao redor da cidade.
+  static List<List<Offset>> _extrairViasUrbanasReaisDaCidade({
+    required LocalidadeRegionalMapa loc,
+    required bool ehBh,
+    required List<RodoviaRegionalMapa> rodovias,
+  }) {
+    final raioGraus = ehBh
+        ? 0.115
+        : (loc.nivel == 1 ? 0.048 : (loc.nivel == 2 ? 0.032 : 0.022));
+    final cosLat = math.max(0.35, math.cos(loc.latitude * _grausParaRad));
+    final r2 = raioGraus * raioGraus;
+    final vias = <List<Offset>>[];
+
+    for (final via in rodovias) {
+      var sub = <Offset>[];
+      for (final v in via.verticesLonLat) {
+        final dx = (v.dx - loc.longitude) * cosLat;
+        final dy = v.dy - loc.latitude;
+        if (dx * dx + dy * dy <= r2) {
+          sub.add(v);
+        } else {
+          if (sub.length >= 2) vias.add(sub);
+          sub = <Offset>[];
+        }
+      }
+      if (sub.length >= 2) vias.add(sub);
+    }
+
+    return List<List<Offset>>.unmodifiable(vias);
+  }
+
+  static double _distanciaKm(Offset a, Offset b) {
+    final cosLat = math.cos(((a.dy + b.dy) * 0.5) * _grausParaRad);
+    final dxKm = (a.dx - b.dx) * cosLat * 111.32;
+    final dyKm = (a.dy - b.dy) * 111.32;
+    return math.sqrt(dxKm * dxKm + dyKm * dyKm);
+  }
+}
+
+class _FilaPrioridadeMinima {
+  final List<({int no, double custo})> _heap = <({int no, double custo})>[];
+
+  bool get estaVazia => _heap.isEmpty;
+
+  void inserir(int no, double custo) {
+    _heap.add((no: no, custo: custo));
+    var idx = _heap.length - 1;
+    while (idx > 0) {
+      final pai = (idx - 1) >> 1;
+      if (_heap[pai].custo <= _heap[idx].custo) break;
+      final tmp = _heap[pai];
+      _heap[pai] = _heap[idx];
+      _heap[idx] = tmp;
+      idx = pai;
+    }
+  }
+
+  ({int no, double custo}) removerMinimo() {
+    final topo = _heap.first;
+    final ultimo = _heap.removeLast();
+    if (_heap.isNotEmpty) {
+      _heap[0] = ultimo;
+      var idx = 0;
+      final n = _heap.length;
+      while (true) {
+        final esq = (idx << 1) + 1;
+        final dir = esq + 1;
+        var menor = idx;
+        if (esq < n && _heap[esq].custo < _heap[menor].custo) menor = esq;
+        if (dir < n && _heap[dir].custo < _heap[menor].custo) menor = dir;
+        if (menor == idx) break;
+        final tmp = _heap[idx];
+        _heap[idx] = _heap[menor];
+        _heap[menor] = tmp;
+        idx = menor;
+      }
+    }
+    return topo;
+  }
+}
