@@ -171,8 +171,14 @@ void main() {
         trechosCorredorAresta: [trecho],
         cidadesClassificadas: [cidade],
       );
-      expect(RedeViariaArestaGlobo.latitudeCentroBeloHorizonte, closeTo(-19.9191, 1e-4));
-      expect(RedeViariaArestaGlobo.longitudeCentroBeloHorizonte, closeTo(-43.9386, 1e-4));
+      expect(
+        RedeViariaArestaGlobo.latitudeCentroBeloHorizonte,
+        closeTo(-19.9191, 1e-4),
+      );
+      expect(
+        RedeViariaArestaGlobo.longitudeCentroBeloHorizonte,
+        closeTo(-43.9386, 1e-4),
+      );
       expect(rede.rodoviasFundo, hasLength(1));
       expect(rede.trechosCorredorAresta, hasLength(1));
       expect(rede.cidadesClassificadas, hasLength(1));
