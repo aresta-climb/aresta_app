@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 /// Polígono vetorial nomeado em coordenadas geográficas `(longitude, latitude)`.
@@ -31,14 +32,21 @@ class LocalidadeRegionalMapa {
   });
 }
 
-/// Trecho de rodovia federal ou estadual real exibido sobre o terreno contínuo detalhado.
+/// Trecho de rodovia pavimentada real (`OpenStreetMap`) hierarquizada em 3 níveis:
+/// `1` (`motorway/trunk`), `2` (`primary`) e `3` (`secondary/tertiary` de acesso aos picos).
 class RodoviaRegionalMapa {
   final bool ehPrincipal;
+  final int nivelViario;
   final String codigo;
   final List<Offset> verticesLonLat;
+  final double minLon;
+  final double maxLon;
+  final double minLat;
+  final double maxLat;
 
   const RodoviaRegionalMapa({
     required this.ehPrincipal,
+    int? nivelViario,
     required this.codigo,
     required this.verticesLonLat,
   });
