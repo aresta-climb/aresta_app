@@ -1,5 +1,7 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
+
+import '../idioma/tradutor_app.dart';
 
 /// Utilitário para validação e formatação de créditos/autores de croquis.
 class FormatadorCreditos {
@@ -43,6 +45,6 @@ class FormatadorCreditos {
       return joined;
     }
 
-    return 'Croqui por $joined';
+    return tr(ChaveTexto.picoCroquiPor, {'autores': joined});
   }
 }

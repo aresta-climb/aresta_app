@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 
 /// Extrai o nome legível de uma [Escalada] Protobuf de acordo com a modalidade ativa.
 ///
@@ -21,7 +22,7 @@ String obterNomeEscalada(Escalada escalada, {String padrao = 'Sem Nome'}) {
     case Escalada_Tipo.highline:
       return escalada.highline.nome;
     case Escalada_Tipo.notSet:
-      return padrao;
+      return padrao == 'Sem Nome' ? tr(ChaveTexto.comumSemNome) : padrao;
   }
 }
 

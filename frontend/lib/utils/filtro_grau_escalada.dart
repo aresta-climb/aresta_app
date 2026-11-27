@@ -3,6 +3,7 @@
 
 import 'indexador_escaladas.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 
@@ -424,7 +425,7 @@ String formatarFaixaGrausSetor(Iterable<Escalada> escaladas) {
   if (menor.isEmpty) return maior;
   if (maior.isEmpty) return menor;
   if (menor == maior) return menor;
-  return '$menor a $maior';
+  return '$menor ${tr(ChaveTexto.filtroConectorA)} $maior';
 }
 
 /// Modos de ordenação para a página de exploração unificada de setores e escaladas.
