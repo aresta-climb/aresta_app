@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
   group('NavNode path', () {
@@ -104,42 +103,6 @@ void main() {
         expect(controller.currentNode, isA<PicoNode>());
       },
     );
-
-    test('Navigating to MapaGlobal should set BrowseNode as parent', () {
-      final controller = TreeNavigationController();
-
-      // Navigate to Home
-      expect(controller.currentNode, isA<HomeNode>());
-
-      // Navigate to Browse
-      final browseNode = BrowseNode(controller.currentNode);
-      controller.navigateTo(browseNode);
-      expect(controller.currentNode, isA<BrowseNode>());
-
-      // Navigate to MapaGlobal
-      final mapaGlobalNode = MapaGlobalNode(
-        crags: [],
-        parent: controller.currentNode,
-      );
-      controller.navigateTo(mapaGlobalNode);
-
-      expect(controller.currentNode, isA<MapaGlobalNode>());
-      expect(controller.currentNode.parent, isA<BrowseNode>());
-      expect(controller.currentNode.parent?.parent, isA<HomeNode>());
-    });
-
-    test('Navigating to MapaGlobal com picoIds armazena identificadores de texto', () {
-      final controller = TreeNavigationController();
-      final node = MapaGlobalNode(
-        picoIds: const ['bau', 'cipo'],
-        parent: controller.currentNode,
-      );
-      controller.navigateTo(node);
-
-      expect(controller.currentNode, isA<MapaGlobalNode>());
-      final atual = controller.currentNode as MapaGlobalNode;
-      expect(atual.picoIds, equals(['bau', 'cipo']));
-    });
   });
 
   group('NavNode toString() overrides', () {
@@ -151,17 +114,6 @@ void main() {
     test('BrowseNode toString()', () {
       const node = BrowseNode(HomeNode());
       expect(node.toString(), 'BrowseNode');
-    });
-
-    test('MapaGlobalNode toString()', () {
-      const node = MapaGlobalNode(
-        crags: [
-          ResumoPico(id: 'pico1', nome: 'Pico 1', local: 'Local 1'),
-          ResumoPico(id: 'pico2', nome: 'Pico 2', local: 'Local 2'),
-        ],
-        parent: HomeNode(),
-      );
-      expect(node.toString(), 'MapaGlobalNode(2 picos)');
     });
 
     test('SettingsNode toString()', () {

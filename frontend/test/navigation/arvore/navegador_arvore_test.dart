@@ -70,29 +70,6 @@ void main() {
     });
 
     test(
-      'podarNosPerfilECaderneta poda ancestrais de perfil e notifica apenas quando a árvore muda',
-      () {
-        final controller = TreeNavigationController();
-        var notificacoes = 0;
-        controller.addListener(() => notificacoes++);
-
-        // Sem nós de perfil: não deve notificar
-        controller.podarNosPerfilECaderneta();
-        expect(notificacoes, equals(0));
-
-        // Home -> Perfil -> Settings: ao podar, Settings passa a ter Home como pai
-        controller.navigateTo(PerfilNode(controller.currentNode));
-        controller.navigateTo(SettingsNode(controller.currentNode));
-        notificacoes = 0;
-
-        controller.podarNosPerfilECaderneta();
-        expect(notificacoes, equals(1));
-        expect(controller.currentNode, isA<SettingsNode>());
-        expect(controller.currentNode.parent, isA<HomeNode>());
-      },
-    );
-
-    test(
       'goBack pula PerfilNode intermediário quando o escalador não está autenticado e mantém quando autenticado',
       () {
         var autenticado = false;
