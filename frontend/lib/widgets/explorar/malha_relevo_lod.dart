@@ -359,3 +359,68 @@ abstract final class GeradorRelevoLod {
     final crista1 =
         math.exp(-(sx1 * sx1 + sy1 * sy1) / 0.0011) * (prominencia * 0.54);
 
+    final sx2 = dx + 0.020 * math.sin(semente);
+    final sy2 = dy - 0.015 * math.cos(semente);
+    final crista2 =
+        math.exp(-(sx2 * sx2 + sy2 * sy2) / 0.0010) * (prominencia * 0.40);
+
+    final rugosidade =
+        (math.sin(dx * 150.0 + semente) * math.cos(dy * 145.0 - semente)) *
+                28.0 *
+                math.exp(-d2 / 0.003) +
+            (math.sin(dx * 620.0 - dy * 480.0 + semente) * 16.0) *
+                math.exp(-d2 / 0.0018);
+
+    final dist = math.sqrt(d2);
+    final tBorda = ((dist - 0.045) / (0.080 - 0.045)).clamp(0.0, 1.0);
+    final peso = 1.0 - tBorda * tBorda * (3.0 - 2.0 * tBorda);
+    final cotaLocal =
+        (baseFloor + cumePrincipal + crista1 + crista2 + rugosidade) * peso;
+    return (elevacaoMetros: cotaLocal, peso: peso);
+  }
+
+  static double _interpolarBilinearDem(
+    PicoRelevoReferencia p,
+    double uNorm,
+    double vNorm,
+  ) {
+    final n = p.dimensaoGradeDem;
+    final gx = (((uNorm.clamp(-1.0, 1.0) + 1.0) * 0.5) * (n - 1))
+        .clamp(0.0, (n - 1).toDouble());
+    final gy = (((vNorm.clamp(-1.0, 1.0) + 1.0) * 0.5) * (n - 1))
+        .clamp(0.0, (n - 1).toDouble());
+
+    final i0 = gx.floor().clamp(0, n - 1);
+    final j0 = gy.floor().clamp(0, n - 1);
+    final i1 = math.min(n - 1, i0 + 1);
+    final j1 = math.min(n - 1, j0 + 1);
+    final fx = gx - i0;
+    final fy = gy - j0;
+
+    final g = p.gradeDemMetros;
+    final z00 = g[j0 * n + i0].toDouble();
+    final z10 = g[j0 * n + i1].toDouble();
+    final z01 = g[j1 * n + i0].toDouble();
+    final z11 = g[j1 * n + i1].toDouble();
+
+    final sul = z00 + (z10 - z00) * fx;
+    final norte = z01 + (z11 - z01) * fx;
+    final baseBilinear = sul + (norte - sul) * fy;
+
+    // Preserva agulhas/paredões sub-grade medidos em 30m no centro do setor
+    final centroIdx = (n ~/ 2) * n + (n ~/ 2);
+    final zCentroGrade = g[centroIdx].toDouble();
+    final ganhoAgulha = (p.altitudePicoMetros - zCentroGrade).clamp(0.0, 180.0);
+    final r2 = uNorm * uNorm + vNorm * vNorm;
+    return baseBilinear + ganhoAgulha * math.exp(-r2 / 0.055);
+  }
+
+  static double _sementeDeterministica(String id) {
+    var hash = 2166136261;
+    for (var i = 0; i < id.length; i++) {
+      hash ^= id.codeUnitAt(i);
+      hash = (hash * 16777619) & 0x7fffffff;
+    }
+    return (hash % 628) / 100.0;
+  }
+}
