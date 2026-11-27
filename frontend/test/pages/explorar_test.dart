@@ -142,9 +142,43 @@ void main() {
     await servicoClima.sincronizarSeNecessario();
   });
 
-  testWidgets('BrowsePage shows success SnackBar when download succeeds', (
+  tearDown(() async {
+    servicoClima.dispose();
+    await catalogo.fechar();
+    if (await dirTemp.exists()) {
+      try {
+        await dirTemp.delete(recursive: true);
+      } catch (_) {}
+    }
+  });
+
+  BrowseViewModel criarVm() => BrowseViewModel(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        telemetria: mockTelemetry,
+        servicoClima: servicoClima,
+      );
+
+  Future<BrowseViewModel> criarVmAssincrono(WidgetTester tester) async {
+    late BrowseViewModel vm;
+    await tester.runAsync(() async {
+      vm = criarVm();
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+    });
+    addTearDown(vm.dispose);
+    return vm;
+  }
+
+  testWidgets('BrowsePage exibe estado carregando quando dataset e nulo e SnackBars de download (Map, Card e String)', (
     WidgetTester tester,
   ) async {
+    await tester.runAsync(() => MalhaGeograficaGlobo.carregarDoAssetBundle());
+    mockRepo.activeDataset.value = null;
+    final vm = await criarVmAssincrono(tester);
+
+    await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vm)));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
     mockRepo.activeDataset.value = TopoDataset(
       availablePicos: [
         {'id': 'pico_1', 'nome': 'Pico Teste', 'url': 'fake.url'},
@@ -157,30 +191,66 @@ void main() {
           ..id = 'pico_1'
           ..nome = 'Pico Teste',
       );
+    await tester.pumpAndSettle();
 
+    expect(find.byType(SuperficieGloboExplorar), findsOneWidget);
+    expect(find.byType(GavetaDeslizanteExplorar), findsOneWidget);
+    expect(find.byType(BarraBuscaFiltrosExplorar), findsOneWidget);
+
+    final browse = tester.widget<BrowsePage>(find.byType(BrowsePage));
+    final element = tester.element(find.byType(BrowsePage));
+
+    // Sucesso via Map
     mockSync.mockResult = true;
+    await browse.handleDownload(element, {'id': 'pico_1', 'nome': 'Pico Teste'});
+    await tester.pumpAndSettle();
+    expect(find.text('Pico Teste baixado'), findsOneWidget);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
-        ),
+    // Falha via CardCroquiViewModel e via String
+    mockSync.mockResult = false;
+    await browse.handleDownload(
+      element,
+      const CardCroquiViewModel.deValores(
+        id: 'pico_1',
+        titulo: '',
+        textoEstatisticas: '',
+        caminhoMiniatura: '',
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Falha ao baixar Pico'), findsOneWidget);
 
-    // Aciona download do pico
-    final browse = tester.widget<BrowsePage>(find.byType(BrowsePage));
-    final element = tester.element(find.byType(BrowsePage));
-    browse.handleDownload(element, {'id': 'pico_1', 'nome': 'Pico Teste'});
+    await browse.handleDownload(element, 'pico_1');
+    await tester.pumpAndSettle();
+    expect(find.text('Falha ao baixar Pico'), findsOneWidget);
+  });
 
-    // Wait for the async function to finish and SnackBar to appear
+  testWidgets('BrowsePage filtra por busca, abre croqui baixado e voa no globo ao focar pico na lista ou tocar no mapa', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 820));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.runAsync(() => MalhaGeograficaGlobo.carregarDoAssetBundle());
+
+    mockRepo.activeDataset.value = ConjuntoDadosCroqui(
+      metadadosDisponiveis: [
+        ResumoCroqui(
+          id: 'br_mg_igarape',
+          nome: 'Pedra Grande',
+          localizacao: Coordenada(latitude: -200700000, longitude: -443200000),
+        ),
+        ResumoCroqui(
+          id: 'br_rj_urca',
+          nome: 'Pão de Açúcar',
+          localizacao: Coordenada(latitude: -229500000, longitude: -431600000),
+        ),
+      ],
+      croquisBaixados: [Croqui(id: 'br_mg_igarape', nome: 'Pedra Grande')],
+    );
+
+    final vm = await criarVmAssincrono(tester);
+
+    await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vm)));
     await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);
