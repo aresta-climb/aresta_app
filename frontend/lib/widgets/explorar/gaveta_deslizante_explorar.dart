@@ -179,3 +179,102 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
       _animarParaEncaixe(PosicaoEncaixeGaveta.dividir);
     }
 
+    _timerPulsoDestaque?.cancel();
+    setState(() => _picoComPulsoDestaque = idSelecionado);
+    _timerPulsoDestaque = Timer(const Duration(milliseconds: 1100), () {
+      if (mounted) {
+        setState(() => _picoComPulsoDestaque = null);
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final chave = _chavesCardsPorId[idSelecionado];
+      final ctx = chave?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 340),
+          curve: Curves.easeOutCubic,
+          alignment: 0.06,
+        );
+      }
+    });
+  }
+
+  void _aoSolicitarScrollSetimoPico() {
+    if (_encaixeAtual == PosicaoEncaixeGaveta.mapa) {
+      _animarParaEncaixe(PosicaoEncaixeGaveta.dividir);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ctx = _chaveSetimoEfetiva.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0,
+        );
+      }
+    });
+  }
+
+  GlobalKey _obterChaveCard(String id, int indice) {
+    if (indice == 6) {
+      final chave7 = _chaveSetimoEfetiva;
+      _chavesCardsPorId[id] = chave7;
+      return chave7;
+    }
+    final existente = _chavesCardsPorId[id];
+    if (existente != null && existente != _chaveSetimoEfetiva) {
+      return existente;
+    }
+    final nova = GlobalKey();
+    _chavesCardsPorId[id] = nova;
+    return nova;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.viewModel;
+    final colors = context.colors;
+
+    return LayoutBuilder(
+      builder: (context, restricoes) {
+        _alturaTotalDisponivel = restricoes.maxHeight;
+        final alturaPx = (_alturaTotalDisponivel * _fracaoAtual).clamp(
+          28.0,
+          _alturaTotalDisponivel,
+        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _publicarAlturaEmPixels();
+        });
+
+        final raioTopo = ((1.0 - _fracaoAtual) * 260.0).clamp(0.0, 24.0);
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            height: alturaPx,
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              color: const Color(0xF514181E),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(raioTopo),
+              ),
+              border: const Border(top: BorderSide(color: Colors.white12)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 18,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: ListenableBuilder(
+              listenable: vm,
+              builder: (context, _) {
+                final cards = vm.picosCards;
+                final mostraCabecalho = alturaPx >= 52.0;
+
