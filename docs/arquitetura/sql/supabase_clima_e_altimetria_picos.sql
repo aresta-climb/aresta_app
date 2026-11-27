@@ -91,3 +91,96 @@ BEGIN
         RAISE EXCEPTION 'bolhas_chuva inválido: esperado array JSONB';
     END IF;
 
+    IF p_bolhas_incendio IS NULL OR jsonb_typeof(p_bolhas_incendio) <> 'array' THEN
+        RAISE EXCEPTION 'bolhas_incendio inválido: esperado array JSONB';
+    END IF;
+
+    IF p_chuva_por_pico IS NULL OR jsonb_typeof(p_chuva_por_pico) <> 'object' THEN
+        RAISE EXCEPTION 'chuva_por_pico inválido: esperado objeto JSONB';
+    END IF;
+
+    -- 1. Atualiza a cópia única de segurança com o 'atual' vigente (descartando a cópia antiga)
+    INSERT INTO public.estado_clima_picos (
+        slot,
+        gerado_em,
+        bolhas_chuva,
+        bolhas_incendio,
+        chuva_por_pico,
+        atualizado_em
+    )
+    SELECT
+        'copia_seguranca',
+        gerado_em,
+        bolhas_chuva,
+        bolhas_incendio,
+        chuva_por_pico,
+        now()
+    FROM public.estado_clima_picos
+    WHERE slot = 'atual'
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        bolhas_chuva = EXCLUDED.bolhas_chuva,
+        bolhas_incendio = EXCLUDED.bolhas_incendio,
+        chuva_por_pico = EXCLUDED.chuva_por_pico,
+        atualizado_em = now();
+
+    -- 2. Grava os dados recém-validados em 'atual'
+    INSERT INTO public.estado_clima_picos (
+        slot,
+        gerado_em,
+        bolhas_chuva,
+        bolhas_incendio,
+        chuva_por_pico,
+        atualizado_em
+    )
+    VALUES (
+        'atual',
+        p_gerado_em,
+        p_bolhas_chuva,
+        p_bolhas_incendio,
+        p_chuva_por_pico,
+        now()
+    )
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        bolhas_chuva = EXCLUDED.bolhas_chuva,
+        bolhas_incendio = EXCLUDED.bolhas_incendio,
+        chuva_por_pico = EXCLUDED.chuva_por_pico,
+        atualizado_em = now();
+
+    -- Se ainda não existia 'copia_seguranca' (primeira execução histórica), espelha 'atual'
+    INSERT INTO public.estado_clima_picos (
+        slot,
+        gerado_em,
+        bolhas_chuva,
+        bolhas_incendio,
+        chuva_por_pico,
+        atualizado_em
+    )
+    VALUES (
+        'copia_seguranca',
+        p_gerado_em,
+        p_bolhas_chuva,
+        p_bolhas_incendio,
+        p_chuva_por_pico,
+        now()
+    )
+    ON CONFLICT (slot) DO NOTHING;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.rotacionar_snapshot_altimetria_picos(
+    p_gerado_em TIMESTAMPTZ,
+    p_altimetria_por_pico JSONB
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF p_altimetria_por_pico IS NULL
+       OR jsonb_typeof(p_altimetria_por_pico) <> 'object'
+       OR p_altimetria_por_pico = '{}'::jsonb THEN
+        RAISE EXCEPTION 'altimetria_por_pico inválido ou vazio: rotação abortada para preservar cópia de segurança';
+    END IF;
+
