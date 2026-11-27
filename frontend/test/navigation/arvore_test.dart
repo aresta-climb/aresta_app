@@ -11,7 +11,10 @@ void main() {
       final perfil = PerfilNode(home);
       final caderneta = CadernetaNode(perfil);
       final arvore = ArvoreNavegacao(noAtual: caderneta);
-      final controlador = TreeNavigationController(estadoInicial: arvore);
+      final controlador = TreeNavigationController(
+        estadoInicial: arvore,
+        verificarUsuarioAutenticado: () => true,
+      );
 
       expect(controlador.currentNode, isA<CadernetaNode>());
       expect(controlador.currentNode.parent, isA<PerfilNode>());

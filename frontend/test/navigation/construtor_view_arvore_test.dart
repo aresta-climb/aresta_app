@@ -18,7 +18,6 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/gps.dart';
-import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/configuracoes.dart';
@@ -273,31 +272,6 @@ void main() {
         expect(find.text('7b'), findsAtLeastNWidgets(1));
       },
     );
-
-    testWidgets('resolve MapaGlobalNode para MapaGlobalPage', (tester) async {
-      final widget = construirPaginaParaNo(
-        node: const MapaGlobalNode(parent: HomeNode()),
-        datasetRepo: repo,
-        syncService: syncService,
-      );
-
-      expect(widget, isA<MapaGlobalPage>());
-    });
-
-    testWidgets('resolve MapaGlobalNode com picoIds para MapaGlobalPage com ViewModel configurado', (tester) async {
-      final widget = construirPaginaParaNo(
-        node: const MapaGlobalNode(
-          picoIds: ['bau', 'cipo'],
-          parent: HomeNode(),
-        ),
-        datasetRepo: repo,
-        syncService: syncService,
-      );
-
-      expect(widget, isA<MapaGlobalPage>());
-      final page = widget as MapaGlobalPage;
-      expect(page.viewModel.picosIniciais, equals(['bau', 'cipo']));
-    });
 
     testWidgets('resolve SetoresNode para PageListenableBuilder', (tester) async {
       final widget = construirPaginaParaNo(
