@@ -170,3 +170,103 @@ class LinhaTabelaZResponsivaClima extends StatelessWidget {
               Expanded(
                 child: Text(
                   linha.probabilidadeAcumuladaPhi.toStringAsFixed(4),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: cores.chalkWhite,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  linha.caudaDireitaP.toStringAsFixed(4),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: cores.ashGrey,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            context.tr(linha.chaveInterpretacao),
+            style: TextStyle(
+              color: linha.destacar ? cores.chalkWhite : cores.ashGrey,
+              fontSize: 11.5,
+              height: 1.32,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Barra horizontal de taxa empírica (`0% .. 100%`) exibida na decomposição do índice climático.
+class LinhaBarraMetricaClima extends StatelessWidget {
+  final String rotulo;
+  final String valorFormatado;
+  final double fator;
+
+  const LinhaBarraMetricaClima({
+    super.key,
+    required this.rotulo,
+    required this.valorFormatado,
+    required this.fator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                rotulo,
+                style: TextStyle(
+                  color: cores.chalkWhite,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              valorFormatado,
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: cores.rustIron,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            height: 6,
+            color: cores.graniteEdge,
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: fator.clamp(0.0, 1.0),
+              child: Container(color: cores.rustIron),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
