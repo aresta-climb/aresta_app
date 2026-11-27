@@ -1154,8 +1154,14 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       if (e.apenasClassicas) {
         chips.add(
           Chip(
-            label: const Text('Clássicas (★)',
-                style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
+            label: Text(
+              tr(ChaveTexto.filtroClassicas),
+              style: const TextStyle(
+                color: Colors.amber,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             backgroundColor: Colors.amber.withValues(alpha: 0.15),
             side: const BorderSide(color: Colors.amber),
             deleteIcon: const Icon(Icons.close, size: 16, color: Colors.amber),
@@ -1259,24 +1265,32 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     final bool cobreTudo = startIdx == 0 && endIdx == maxIndex;
     final String textoRotulo;
     if (!categoriaAtiva) {
-      textoRotulo = 'Modalidade inativa';
+      textoRotulo = tr(ChaveTexto.filtroModalidadeInativa);
     } else if (cobreTudo) {
       textoRotulo = faixaDisponivel != null
-          ? 'Todos os graus (${opcoes.first.rotulo} a ${opcoes.last.rotulo})'
-          : 'Todos os graus';
+          ? tr(ChaveTexto.filtroTodosGrausFaixa, {
+              'min': opcoes.first.rotulo,
+              'max': opcoes.last.rotulo,
+            })
+          : tr(ChaveTexto.filtroTodosGraus);
     } else if (startIdx == endIdx) {
-      textoRotulo = 'Grau: ${opcoes[startIdx].rotulo}';
+      textoRotulo = tr(ChaveTexto.filtroGrauUnico, {
+        'grau': opcoes[startIdx].rotulo,
+      });
     } else {
-      textoRotulo = 'Grau: ${opcoes[startIdx].rotulo} a ${opcoes[endIdx].rotulo}';
+      textoRotulo = tr(ChaveTexto.filtroGrauFaixa, {
+        'min': opcoes[startIdx].rotulo,
+        'max': opcoes[endIdx].rotulo,
+      });
     }
 
     final String tituloSecao;
     if (_isModoSetores && temAmbasCategorias) {
       tituloSecao = categoria == 'Via'
-          ? 'Faixa de Grau (Vias)'
-          : 'Faixa de Grau (Boulders)';
+          ? tr(ChaveTexto.filtroFaixaGrauVias)
+          : tr(ChaveTexto.filtroFaixaGrauBoulders);
     } else {
-      tituloSecao = 'Faixa de Grau';
+      tituloSecao = tr(ChaveTexto.filtroFaixaGrau);
     }
 
     final bool destacarAtivo = categoriaAtiva && !cobreTudo;
@@ -1458,21 +1472,22 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     final String hintTexto;
     if (totalDisponivel > 0) {
       if (widget.gruposDisponiveis.isNotEmpty) {
-        hintTexto = 'Adicionar setor ou grupo...';
+        hintTexto = tr(ChaveTexto.filtroAddSetorOuGrupo);
       } else {
-        hintTexto = 'Adicionar setor...';
+        hintTexto = tr(ChaveTexto.filtroAddSetor);
       }
     } else if (totalAtivos > 0) {
       hintTexto = widget.gruposDisponiveis.isNotEmpty
-          ? 'Todos os setores ou grupos adicionados'
-          : 'Todos os setores adicionados';
+          ? tr(ChaveTexto.filtroTodosSetoresGruposAdd)
+          : tr(ChaveTexto.filtroTodosSetoresAdd);
     } else {
       hintTexto = widget.gruposDisponiveis.isNotEmpty
-          ? 'Nenhum local nos filtros atuais'
-          : 'Nenhum setor nos filtros atuais';
+          ? tr(ChaveTexto.filtroNenhumLocalAtual)
+          : tr(ChaveTexto.filtroNenhumSetorAtual);
     }
 
     final bool habilitado = totalDisponivel > 0;
+    final rotuloGrupo = tr(ChaveTexto.comumGrupo);
 
     final List<DropdownMenuItem<String>> itens = [];
 
@@ -1482,7 +1497,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         DropdownMenuItem<String>(
           value: 'grupo:$g',
           child: Text(
-            '$g (Grupo)',
+            '$g ($rotuloGrupo)',
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: colors.chalkWhite, fontSize: 13),
           ),
@@ -1575,7 +1590,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             children: [
               ...gruposAtivos.map((g) {
                 return Chip(
-                  label: Text('$g (Grupo)', style: TextStyle(color: colors.chalkWhite, fontSize: 12)),
+                  label: Text(
+                    '$g ($rotuloGrupo)',
+                    style: TextStyle(color: colors.chalkWhite, fontSize: 12),
+                  ),
                   backgroundColor: colors.rustIron.withValues(alpha: 0.3),
                   side: BorderSide(color: colors.rustIron),
                   deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
@@ -1620,11 +1638,11 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
     final String hintTexto;
     if (disponiveis.isNotEmpty) {
-      hintTexto = 'Adicionar conquistador...';
+      hintTexto = tr(ChaveTexto.filtroAddConquistador);
     } else if (conquistadoresAtivos.isNotEmpty) {
-      hintTexto = 'Todos os conquistadores adicionados';
+      hintTexto = tr(ChaveTexto.filtroTodosConquistadoresAdd);
     } else {
-      hintTexto = 'Nenhum conquistador nos filtros atuais';
+      hintTexto = tr(ChaveTexto.filtroNenhumConquistadorAtual);
     }
 
     final bool habilitado = disponiveis.isNotEmpty;
