@@ -98,7 +98,13 @@ MarcadorPicoGlobo construirMarcadorGloboPico({
       nome: crag.titulo.isEmpty ? padraoPico : crag.titulo,
     );
   }
-  return const [];
+  if (crag is Map) {
+    return (
+      id: crag['id']?.toString() ?? '',
+      nome: crag['nome']?.toString() ?? padraoPico,
+    );
+  }
+  return (id: crag?.toString() ?? '', nome: padraoPico);
 }
 
 Widget _buildCragList(
