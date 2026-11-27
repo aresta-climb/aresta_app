@@ -93,3 +93,98 @@ export async function coletarIncendiosFlorestaisContornos(
       }
     }
 
+    if (grupo.length >= 2 || somaFrpGrupo >= 10.0) {
+      clustersValidos.push(grupo);
+    }
+  }
+
+  if (clustersValidos.length === 0) return [];
+
+  const candidatos: Array<{
+    contornoSuave: ParLonLat[];
+    nucleosInternos: ParLonLat[][];
+    latCentro: number;
+    lonCentro: number;
+    potenciaTotalMw: number;
+    totalFocosInternos: number;
+  }> = [];
+
+  const margemGraus = 0.075;
+  const passoLocal = 0.02;
+  const sigma2 = 0.022 * 0.022;
+
+  for (const grupo of clustersValidos) {
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    for (const f of grupo) {
+      if (f.lat < minLat) minLat = f.lat;
+      if (f.lat > maxLat) maxLat = f.lat;
+      if (f.lon < minLon) minLon = f.lon;
+      if (f.lon > maxLon) maxLon = f.lon;
+    }
+    minLat -= margemGraus;
+    maxLat += margemGraus;
+    minLon -= margemGraus;
+    maxLon += margemGraus;
+
+    const rowsInt = Math.max(
+      10,
+      Math.min(42, Math.ceil((maxLat - minLat) / passoLocal) + 1),
+    );
+    const colsInt = Math.max(
+      10,
+      Math.min(42, Math.ceil((maxLon - minLon) / passoLocal) + 1),
+    );
+    const pLat = (maxLat - minLat) / (rowsInt - 1);
+    const pLon = (maxLon - minLon) / (colsInt - 1);
+
+    const R = rowsInt + 2;
+    const C = colsInt + 2;
+    const latsGrade: number[] = [];
+    const lonsGrade: number[] = [];
+    for (let r = 0; r < R; r++) latsGrade.push(minLat + (r - 1) * pLat);
+    for (let c = 0; c < C; c++) lonsGrade.push(minLon + (c - 1) * pLon);
+
+    const campoFrp: number[][] = Array.from({ length: R }, () =>
+      new Array<number>(C).fill(0),
+    );
+
+    for (const foco of grupo) {
+      for (let r = 1; r <= rowsInt; r++) {
+        const dLat2 = (latsGrade[r] - foco.lat) ** 2;
+        if (dLat2 > sigma2 * 6.0) continue;
+        for (let c = 1; c <= colsInt; c++) {
+          if (pontoSobChuvaAtiva(lonsGrade[c], latsGrade[r], bolhasChuvaAtivas)) {
+            continue;
+          }
+          const dLon2 = (lonsGrade[c] - foco.lon) ** 2;
+          const expo = (dLat2 + dLon2) / (2 * sigma2);
+          if (expo > 4.5) continue;
+          campoFrp[r][c] += foco.frpMw * Math.exp(-expo);
+        }
+      }
+    }
+
+    const contornosExternos = extrairContornosMarchingSquares(
+      campoFrp,
+      latsGrade,
+      lonsGrade,
+      LIMIAR_PERIMETRO_INCENDIO_FRP,
+    );
+    const contornosNucleos = [
+      ...extrairContornosMarchingSquares(
+        campoFrp,
+        latsGrade,
+        lonsGrade,
+        LIMIAR_NUCLEO_INTENSO_INCENDIO_FRP,
+      ),
+      ...extrairContornosMarchingSquares(
+        campoFrp,
+        latsGrade,
+        lonsGrade,
+        LIMIAR_NUCLEO_EXTREMO_INCENDIO_FRP,
+      ),
+    ];
+
