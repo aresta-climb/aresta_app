@@ -1,6 +1,7 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import '../../idioma/tradutor_app.dart';
 import '../../services/firebase/remote_config.dart';
 import '../function_library/comunidade_functions.dart';
 
@@ -62,36 +63,32 @@ class ComunidadeViewModel {
     final config = servico ?? RemoteConfigService.instance;
     return ComunidadeViewModel(
       whatsapp: ItemCanalComunidade(
-        titulo: 'GRUPO DO WHATSAPP',
-        subtitulo:
-            'Participe para tirar dúvidas, dar ideias e receber avisos do Aresta.',
+        titulo: tr(ChaveTexto.comunidadeWhatsappTitulo),
+        subtitulo: tr(ChaveTexto.comunidadeWhatsappSub),
         url: config.whatsappCommunityUrl,
         rotulo: 'WhatsApp',
       ),
-      instagram: const ItemCanalComunidade(
-        titulo: 'INSTAGRAM OFICIAL',
-        subtitulo:
-            'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
+      instagram: ItemCanalComunidade(
+        titulo: tr(ChaveTexto.comunidadeInstagramTitulo),
+        subtitulo: tr(ChaveTexto.comunidadeInstagramSub),
         url: 'https://www.instagram.com/arestaclimb/',
         rotulo: 'Instagram',
       ),
-      linkedin: const ItemCanalComunidade(
-        titulo: 'LINKEDIN DO PROJETO',
-        subtitulo:
-            'Acompanhe novidades, nosso crescimento e o lado corporativo do Aresta.',
+      linkedin: ItemCanalComunidade(
+        titulo: tr(ChaveTexto.comunidadeLinkedinTitulo),
+        subtitulo: tr(ChaveTexto.comunidadeLinkedinSub),
         url: 'https://www.linkedin.com/company/arestaclimb/',
         rotulo: 'LinkedIn',
       ),
       discord: ItemCanalComunidade(
-        titulo: 'DISCORD DOS DESENVOLVEDORES',
-        subtitulo:
-            'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
+        titulo: tr(ChaveTexto.comunidadeDiscordTitulo),
+        subtitulo: tr(ChaveTexto.comunidadeDiscordSub),
         url: config.discordCommunityUrl,
         rotulo: 'Discord',
       ),
-      github: const ItemCanalComunidade(
-        titulo: 'GITHUB DO ARESTA',
-        subtitulo: 'Acesse o perfil com os repositórios do github.',
+      github: ItemCanalComunidade(
+        titulo: tr(ChaveTexto.comunidadeGithubTitulo),
+        subtitulo: tr(ChaveTexto.comunidadeGithubSub),
         url: 'https://github.com/aresta-climb',
         rotulo: 'GitHub',
       ),
