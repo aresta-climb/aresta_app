@@ -6,7 +6,7 @@ import 'package:frontend/data/modelos/modelos_rede_viaria_aresta.dart';
 
 void main() {
   group('Modelos de domínio da rede viária Aresta', () {
-    test('valida contratos imutáveis de polígonos, localidades, rodovias, DEM de picos e rede viária', () {
+    test('valida contratos imutáveis de polígonos, localidades, rodovias em 3 níveis, DEM de picos e rede viária', () {
       const poligono = PoligonoGeografico(
         id: 'mg',
         verticesLonLat: [Offset(-44.0, -20.0), Offset(-43.5, -19.5)],
@@ -23,7 +23,7 @@ void main() {
       expect(localidade.nivel, equals(1));
       expect(localidade.ehCidade, isTrue);
 
-      const rodovia = RodoviaRegionalMapa(
+      const rodoviaConst = RodoviaRegionalMapa(
         ehPrincipal: true,
         codigo: 'BR-040',
         verticesLonLat: [Offset(-43.9386, -19.9191), Offset(-43.80, -20.10)],
