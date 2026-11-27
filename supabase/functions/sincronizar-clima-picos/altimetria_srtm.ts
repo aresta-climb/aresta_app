@@ -91,3 +91,77 @@ export async function extrairCotasSrtm30m(
       }
     }
 
+    const cotaPino = Math.round(await amostrarElevacao(p.latitude, p.longitude));
+    if (cotaPino > maxMacico) maxMacico = cotaPino;
+    if (cotaPino < minBase) minBase = cotaPino;
+
+    resultado[p.id] = {
+      altitude_ponto_m: cotaPino,
+      altitude_base_m: minBase,
+      altitude_pico_m: Math.max(minBase, maxMacico),
+      dimensao_grade: DIMENSAO_GRADE_DEM,
+      raio_grade_graus: RAIO_GRADE_DEM_GRAUS,
+      grade_dem_m: grade,
+    };
+  }
+
+  return resultado;
+}
+
+/** Decodifica um tile PNG Terrarium `256x256` nativo via `DecompressionStream("deflate")` em cotas métricas. */
+export async function decodificarPngTerrarium256(
+  bytesPng: Uint8Array,
+): Promise<Float64Array> {
+  if (
+    bytesPng.length < 33 ||
+    bytesPng[0] !== 0x89 ||
+    bytesPng[1] !== 0x50 ||
+    bytesPng[2] !== 0x4e ||
+    bytesPng[3] !== 0x47
+  ) {
+    throw new Error("Assinatura PNG inválida em tile Terrarium.");
+  }
+
+  const view = new DataView(
+    bytesPng.buffer,
+    bytesPng.byteOffset,
+    bytesPng.byteLength,
+  );
+  let offset = 8;
+  let largura = 0;
+  let altura = 0;
+  let tipoCor = 0;
+  const pedacosIdat: Uint8Array[] = [];
+  let totalIdat = 0;
+
+  while (offset + 8 <= bytesPng.length) {
+    const tam = view.getUint32(offset, false);
+    const tipo = String.fromCharCode(
+      bytesPng[offset + 4],
+      bytesPng[offset + 5],
+      bytesPng[offset + 6],
+      bytesPng[offset + 7],
+    );
+    const dadosIni = offset + 8;
+    if (dadosIni + tam + 4 > bytesPng.length) break;
+
+    if (tipo === "IHDR") {
+      largura = view.getUint32(dadosIni, false);
+      altura = view.getUint32(dadosIni + 4, false);
+      const bits = bytesPng[dadosIni + 8];
+      tipoCor = bytesPng[dadosIni + 9];
+      if (bits !== 8 || (tipoCor !== 2 && tipoCor !== 6)) {
+        throw new Error(
+          `PNG Terrarium não suportado (bits=${bits}, cor=${tipoCor})`,
+        );
+      }
+    } else if (tipo === "IDAT") {
+      const fatia = bytesPng.subarray(dadosIni, dadosIni + tam);
+      pedacosIdat.push(fatia);
+      totalIdat += fatia.length;
+    } else if (tipo === "IEND") {
+      break;
+    }
+    offset = dadosIni + tam + 4;
+  }
+
