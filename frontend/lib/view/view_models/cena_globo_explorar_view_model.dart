@@ -264,3 +264,77 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     controlador.avancarQuadroFisica(dtSegundos);
     _atualizarGatilhoLuzViaria(controlador.lod);
 
+    if (_animacoesAmbienteAtivas &&
+        controlador.modo3D &&
+        controlador.raioAparentePx < 760.0) {
+      faseEstrelasSegundos.value =
+          (faseEstrelasSegundos.value + dtSegundos) % 36000.0;
+    }
+    if (temFenomenoAoVivo) {
+      _faseTempestadeSegundos = (_faseTempestadeSegundos + dtSegundos) % 3600.0;
+    }
+    if (_progressoSonar < 1.0) {
+      _progressoSonar = (_progressoSonar + dtSegundos * 2.2).clamp(0.0, 1.0);
+    }
+    if (_progressoLuzViaria < _alvoLuzViaria) {
+      _progressoLuzViaria =
+          (_progressoLuzViaria + dtSegundos / duracaoIdaLuzViariaSegundos)
+              .clamp(0.0, _alvoLuzViaria);
+    } else if (_progressoLuzViaria > _alvoLuzViaria) {
+      _progressoLuzViaria =
+          (_progressoLuzViaria - dtSegundos / duracaoVoltaLuzViariaSegundos)
+              .clamp(_alvoLuzViaria, 1.0);
+    }
+  }
+
+  void _atualizarGatilhoLuzViaria(double lodAtual) {
+    if (_alvoLuzViaria < 0.5 &&
+        lodAtual >= ControladorCameraGlobo.limiarAtivacaoLuzViaria) {
+      _alvoLuzViaria = 1.0;
+      if (!_animacoesAmbienteAtivas) _progressoLuzViaria = 1.0;
+    } else if (_alvoLuzViaria > 0.5 &&
+        lodAtual < ControladorCameraGlobo.limiarDesativacaoLuzViaria) {
+      _alvoLuzViaria = 0.0;
+      if (!_animacoesAmbienteAtivas) _progressoLuzViaria = 0.0;
+    }
+  }
+
+  /// Resolve o pico atualmente em foco (selecionado ou mais próximo do centro óptico).
+  MarcadorPicoGlobo? resolverPicoFocado({
+    required List<MarcadorPicoGlobo> picos,
+    required String? picoSelecionadoId,
+    required ControladorCameraGlobo controlador,
+  }) {
+    if (picos.isEmpty) return null;
+    if (picoSelecionadoId != null) {
+      for (final p in picos) {
+        if (p.id == picoSelecionadoId) return p;
+      }
+    }
+    final latC = controlador.latitudeCentral;
+    final lonC = controlador.longitudeCentral;
+    MarcadorPicoGlobo? maisProximo;
+    var menorDistGraus2 = 0.72;
+    for (final p in picos) {
+      final dLat = p.latitude - latC;
+      final dLon = ((p.longitude - lonC + 540.0) % 360.0) - 180.0;
+      final d2 = dLat * dLat + dLon * dLon;
+      if (d2 < menorDistGraus2) {
+        menorDistGraus2 = d2;
+        maisProximo = p;
+      }
+    }
+    return maisProximo;
+  }
+
+  /// Dispara onda sonar e voo parabólico escalonado ao tocar em um marcador de pico no mapa.
+  void selecionarPicoNoMapa({
+    required MarcadorPicoGlobo pico,
+    required String? picoSelecionadoAtualId,
+    required ControladorCameraGlobo controlador,
+    double? lodExplicito,
+  }) {
+    _sonarPicoId = pico.id;
+    _sonarBolhaId = pico.umidade.bolhaIdAssociada;
+    _progressoSonar = 0.0;
+
