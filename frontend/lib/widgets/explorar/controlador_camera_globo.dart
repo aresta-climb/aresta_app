@@ -584,3 +584,58 @@ class ControladorCameraGlobo extends ChangeNotifier {
     _ultimoTamanhoTela = tamanhoTela;
     final cy = calcularCentroVerticalOptico(tamanhoTela);
 
+    if (!_modo3D) {
+      final escala2D = calcularEscala2D(tamanhoTela);
+      _latitudeCentral =
+          _limitarLatitude2D(_latitudeCentral, tamanhoTela, cy, escala2D);
+      var dLon = longitude - _longitudeCentral;
+      if (!estenderBordaHorizonte) {
+        dLon = ((dLon + 540.0) % 360.0) - 180.0;
+      }
+      final dLat = latitude - _latitudeCentral;
+      return PontoProjetadoTela(
+        x: tamanhoTela.width * 0.5 + (dLon * _grausParaRad) * escala2D,
+        y: cy - (dLat * _grausParaRad) * escala2D,
+        profundidade: -elevacaoMetros,
+        visivel: true,
+      );
+    }
+
+    return GeometriaGeoideGlobo.projetarCoordenada3D(
+      latitude: latitude,
+      longitude: longitude,
+      elevacaoMetros: elevacaoMetros,
+      latitudeCentral: _latitudeCentral,
+      longitudeCentral: _longitudeCentral,
+      lod: _lod,
+      raioAparentePx: raioAparentePx,
+      centroVerticalOpticoPx: cy,
+      elevacaoReferenciaCameraMetros: _elevacaoReferenciaCameraMetros,
+      tamanhoTela: tamanhoTela,
+      estenderBordaHorizonte: estenderBordaHorizonte,
+    );
+  }
+
+  /// Agrupa picos por sigla de estado (`UF`) para exibição sem poluição no `LOD 0`.
+  static List<ClusterEstadoGlobo> agruparPorEstado(
+    Iterable<({String id, String uf, double lat, double lon})> picos,
+  ) =>
+      GeometriaGeoideGlobo.agruparPorEstado(picos);
+
+  /// Seleciona os identificadores cujos rótulos textuais não se sobrepõem.
+  static Set<String> selecionarIdsSemColisaoRotulos(
+    List<({String id, String nome, Offset posicao, bool prioritario})>
+    candidatos, {
+    double alturaCaixa = 26.0,
+  }) =>
+      GeometriaGeoideGlobo.selecionarIdsSemColisaoRotulos(
+        candidatos,
+        alturaCaixa: alturaCaixa,
+      );
+
+  /// Interpolação Hermite cúbica suave `smoothstep(e0, e1, x)`.
+  static double smoothstep(double borda0, double borda1, double x) =>
+      GeometriaGeoideGlobo.smoothstep(borda0, borda1, x);
+
+  static double _lerp(double a, double b, double t) => a + (b - a) * t;
+}
