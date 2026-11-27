@@ -436,3 +436,100 @@ class PintorPlanetaGlobo extends CustomPainter {
           final y0 = cosPhi0 * sinPhi - sinPhi0 * cosPhi * math.cos(dLam);
           final z0 = sinPhi0 * sinPhi + cosPhi0 * cosPhi * math.cos(dLam);
 
+          final rLeste = ControladorCameraGlobo.raioNormalizadoGeoide(
+            latitude: lat,
+            longitude: lonCont + 2.5,
+          );
+          final rOeste = ControladorCameraGlobo.raioNormalizadoGeoide(
+            latitude: lat,
+            longitude: lonCont - 2.5,
+          );
+          final rNorte = ControladorCameraGlobo.raioNormalizadoGeoide(
+            latitude: (lat + 2.5).clamp(-89.5, 89.5),
+            longitude: lonCont,
+          );
+          final rSul = ControladorCameraGlobo.raioNormalizadoGeoide(
+            latitude: (lat - 2.5).clamp(-89.5, 89.5),
+            longitude: lonCont,
+          );
+          final nx = x0 - (rLeste - rOeste) * 4.2;
+          final ny = y0 - (rNorte - rSul) * 4.2;
+          final invN =
+              1.0 / math.max(1e-4, math.sqrt(nx * nx + ny * ny + z0 * z0));
+
+          final ndotl =
+              ((-0.36 * nx + 0.38 * ny + 0.85 * z0) * invN).clamp(0.0, 1.0);
+          final difusa = 0.30 + 0.76 * math.pow(ndotl, 0.76).toDouble();
+          rLuz = (1.0 - fatorSombraEsfera * (1.0 - difusa * 0.98))
+              .clamp(0.20, 1.0);
+          gLuz = (1.0 - fatorSombraEsfera * (1.0 - difusa * 1.00))
+              .clamp(0.23, 1.0);
+          bLuz = (1.0 - fatorSombraEsfera * (1.0 - difusa * 1.06))
+              .clamp(0.30, 1.0);
+        }
+
+        cores[idx] = Color.fromRGBO(
+          (rLuz * 255).round().clamp(0, 255),
+          (gLuz * 255).round().clamp(0, 255),
+          (bLuz * 255).round().clamp(0, 255),
+          opacidade.clamp(0.0, 1.0),
+        );
+      }
+    }
+
+    final indices = <int>[];
+    for (var j = 0; j < rows; j++) {
+      for (var i = 0; i < cols; i++) {
+        final i00 = j * (cols + 1) + i;
+        final i10 = i00 + 1;
+        final i01 = i00 + (cols + 1);
+        final i11 = i01 + 1;
+        if (visiveis[i00] && visiveis[i10] && visiveis[i01] && visiveis[i11]) {
+          indices
+            ..add(i00)
+            ..add(i10)
+            ..add(i11)
+            ..add(i00)
+            ..add(i11)
+            ..add(i01);
+        }
+      }
+    }
+
+    if (indices.isEmpty) return;
+
+    final shader = ImageShader(
+      imagem,
+      TileMode.repeated,
+      TileMode.clamp,
+      _matrizIdentidade,
+    );
+    final pincelTextura = Paint()
+      ..shader = shader
+      ..filterQuality = FilterQuality.high;
+    if (fatorMonocromatico > 0.01) {
+      final s = (1.0 - fatorMonocromatico).clamp(0.0, 1.0);
+      final k = fatorMonocromatico.clamp(0.0, 1.0);
+      pincelTextura.colorFilter = ColorFilter.matrix(<double>[
+        0.2126 * k + s, 0.7152 * k, 0.0722 * k, 0, 0,
+        0.2126 * k, 0.7152 * k + s, 0.0722 * k, 0, 0,
+        0.1800 * k, 0.6200 * k, 0.2400 * k + s, 0, 6.0 * k,
+        0, 0, 0, 1, 0,
+      ]);
+    }
+    canvas.drawVertices(
+      ui.Vertices(
+        ui.VertexMode.triangles,
+        posicoes,
+        textureCoordinates: uvs,
+        colors: cores,
+        indices: indices,
+      ),
+      BlendMode.modulate,
+      pincelTextura,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant PintorPlanetaGlobo oldDelegate) => true;
+}
