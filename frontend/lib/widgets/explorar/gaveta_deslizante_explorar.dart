@@ -85,6 +85,7 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
   double _fracaoInicioAnim = PosicaoEncaixeGaveta.dividir.fracaoAltura;
   double _fracaoAlvoAnim = PosicaoEncaixeGaveta.dividir.fracaoAltura;
   double _alturaTotalDisponivel = 760.0;
+  double _ultimaAlturaLayoutPublicada = -1.0;
 
   String? _picoComPulsoDestaque;
   Timer? _timerPulsoDestaque;
@@ -106,13 +107,18 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
     _animadorAltura = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 240),
-    )..addListener(() {
+    )
+      ..addListener(() {
         final t = Curves.easeOutCubic.transform(_animadorAltura.value);
         setState(() {
           _fracaoAtual =
               _fracaoInicioAnim + (_fracaoAlvoAnim - _fracaoInicioAnim) * t;
         });
-        _publicarAlturaEmPixels();
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _publicarAlturaEmPixels();
+        }
       });
 
     _registrarOuvintes(widget.viewModel);
@@ -247,15 +253,20 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
           28.0,
           _alturaTotalDisponivel,
         );
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _publicarAlturaEmPixels();
-        });
+        if ((_ultimaAlturaLayoutPublicada - _alturaTotalDisponivel).abs() >
+            0.5) {
+          _ultimaAlturaLayoutPublicada = _alturaTotalDisponivel;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _publicarAlturaEmPixels();
+          });
+        }
 
         final raioTopo = ((1.0 - _fracaoAtual) * 260.0).clamp(0.0, 24.0);
 
         return Align(
           alignment: Alignment.bottomCenter,
-          child: Container(
+          child: RepaintBoundary(
+            child: Container(
             height: alturaPx,
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
@@ -363,6 +374,7 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
                 );
               },
             ),
+            ),
           ),
         );
       },
@@ -388,7 +400,6 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
               (_fracaoAtual - detalhes.delta.dy / _alturaTotalDisponivel)
                   .clamp(0.034, 1.0);
         });
-        _publicarAlturaEmPixels();
       },
       onVerticalDragEnd: (_) {
         var maisProximo = PosicaoEncaixeGaveta.dividir;

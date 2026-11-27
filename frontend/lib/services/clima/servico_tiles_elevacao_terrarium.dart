@@ -3,12 +3,12 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/modelos/modelos_relevo_topografico.dart';
+import '../../utils/codificador_malha_binaria.dart';
 import '../firebase/app_logger.dart';
 import '../http/cliente_http_aresta.dart';
 
@@ -63,7 +63,7 @@ class ClienteTilesTerrariumAws implements FonteTilesElevacaoMapa {
 /// 100% invariante ao nível de zoom (`LOD`) para impedir qualquer deformação de curvas de nível.
 class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
   static const String caminhoAssetAltimetria =
-      'assets/dados/altimetria_picos_inicial.json';
+      'assets/dados/altimetria_picos_inicial.bin';
   static const int limiteCacheTiles = 64;
   static const int zoomCanonicoTerrarium = 9;
 
@@ -108,21 +108,17 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
   GradeElevacaoRegionalOffline? get gradeRegionalOffline =>
       _gradeRegionalOffline;
 
-  /// Hidrata a grade regional SRTM offline embarcada em `altimetria_picos_inicial.json`.
+  /// Hidrata a grade regional SRTM offline embarcada em `altimetria_picos_inicial.bin`.
   Future<void> inicializar() async {
     if (_inicializado || _descartado) return;
     try {
-      final texto = await _assetBundle.loadString(
-        caminhoAssetAltimetria,
-        cache: false,
-      );
+      final bd = await _assetBundle.load(caminhoAssetAltimetria);
       if (_descartado) return;
-      final raiz = jsonDecode(texto) as Map<String, dynamic>;
-      final brutoGrade = raiz['grade_regional_offline'];
-      if (brutoGrade is Map) {
-        _gradeRegionalOffline = GradeElevacaoRegionalOffline.deMapa(
-          Map<String, dynamic>.from(brutoGrade),
-        );
+      final bytes = bd.buffer.asUint8List(bd.offsetInBytes, bd.lengthInBytes);
+      final decodificado =
+          CodificadorMalhaBinaria.decodificarAltimetriaInicial(bytes);
+      if (decodificado.gradeRegional != null) {
+        _gradeRegionalOffline = decodificado.gradeRegional;
         _versaoDados++;
       }
     } catch (e, st) {

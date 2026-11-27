@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../constants/constantes_rede.dart';
+import '../../utils/codificador_malha_binaria.dart';
 import '../firebase/app_logger.dart';
 import '../http/cliente_http_aresta.dart';
 import 'armazenamento_clima_local.dart';
@@ -110,7 +111,7 @@ class ClienteClimaAltimetriaSupabase implements FonteRemotaClimaAltimetria {
 class ServicoClimaAltimetria extends ChangeNotifier {
   static const Duration ttlSincronizacao = Duration(minutes: 30);
   static const String caminhoAssetSementeAltimetria =
-      'assets/dados/altimetria_picos_inicial.json';
+      'assets/dados/altimetria_picos_inicial.bin';
 
   static ServicoClimaAltimetria? _instanciaCompartilhada;
 
@@ -182,17 +183,11 @@ class ServicoClimaAltimetria extends ChangeNotifier {
 
   Future<void> _carregarSementeAltimetriaAsset() async {
     try {
-      final texto = await _assetBundle.loadString(
-        caminhoAssetSementeAltimetria,
-        cache: false,
-      );
-      final mapa = jsonDecode(texto) as Map<String, dynamic>;
-      final picos = mapa['picos'] as Map<String, dynamic>? ?? const {};
-      for (final entry in picos.entries) {
-        _altimetriaPorPico[entry.key] = CotaAltimetricaPico.deMapa(
-          Map<String, dynamic>.from(entry.value as Map),
-        );
-      }
+      final bd = await _assetBundle.load(caminhoAssetSementeAltimetria);
+      final bytes = bd.buffer.asUint8List(bd.offsetInBytes, bd.lengthInBytes);
+      final decodificado =
+          CodificadorMalhaBinaria.decodificarAltimetriaInicial(bytes);
+      _altimetriaPorPico.addAll(decodificado.cotasPorPico);
     } catch (e, st) {
       AppLogger.instance.logError(
         '[ServicoClimaAltimetria] Falha ao carregar semente inicial de altimetria',

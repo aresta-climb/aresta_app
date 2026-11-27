@@ -10,15 +10,16 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../constants/constantes_rede.dart';
 import '../../data/modelos/modelos_rede_viaria_aresta.dart';
+import '../../utils/codificador_malha_binaria.dart';
 import '../firebase/app_logger.dart';
 import '../http/cliente_http_aresta.dart';
 
-/// Persistência local offline-first da malha viária (`OpenStreetMap`) com rotação atômica
+/// Persistência local binária offline-first da malha viária (`OpenStreetMap`) com rotação atômica
 /// de dois slots (`atual` + `seguranca`), espelhando a estratégia dos recursos da NASA.
 class ArmazenamentoMalhaViariaLocal {
-  static const String nomeArquivoAtual = 'malha_viaria_picos_atual.json';
+  static const String nomeArquivoAtual = 'malha_viaria_picos_atual.bin';
   static const String nomeArquivoSeguranca =
-      'malha_viaria_picos_seguranca.json';
+      'malha_viaria_picos_seguranca.bin';
 
   final Future<String?> Function() _provedorDiretorioBase;
 
@@ -50,10 +51,11 @@ class ArmazenamentoMalhaViariaLocal {
     final caminhoSeguranca = '$dirBase/$nomeArquivoSeguranca';
     final caminhoTmp = '$caminhoAtual.tmp';
 
-    final mapa = snapshot.paraMapa();
-    final jsonTexto = await Isolate.run(() => jsonEncode(mapa));
+    final bytesBinarios = await Isolate.run(
+      () => CodificadorMalhaBinaria.codificarSnapshotViario(snapshot),
+    );
     final arquivoTmp = File(caminhoTmp);
-    await arquivoTmp.writeAsString(jsonTexto, flush: true);
+    await arquivoTmp.writeAsBytes(bytesBinarios, flush: true);
 
     final arquivoAtual = File(caminhoAtual);
     final atualValido = await _tentarLerArquivo(arquivoAtual);
@@ -104,12 +106,10 @@ class ArmazenamentoMalhaViariaLocal {
   ) async {
     if (!arquivo.existsSync()) return null;
     try {
-      final bruto = await arquivo.readAsString();
-      return await Isolate.run(() {
-        final decodificado = jsonDecode(bruto);
-        if (decodificado is! Map<String, dynamic>) return null;
-        return SnapshotMalhaViariaOffline.deMapa(decodificado);
-      });
+      final bruto = await arquivo.readAsBytes();
+      return await Isolate.run(
+        () => CodificadorMalhaBinaria.decodificarSnapshotViario(bruto),
+      );
     } catch (_) {
       return null;
     }

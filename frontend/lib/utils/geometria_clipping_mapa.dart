@@ -225,8 +225,14 @@ abstract final class GeometriaClippingMapa {
       final bc = c - b;
       final dAb = ab.distance;
       final dBc = bc.distance;
-      final recuoAb = dAb > 1e-6 ? math.min(0.22, 0.0018 / dAb) : 0.0;
-      final recuoBc = dBc > 1e-6 ? math.min(0.22, 0.0018 / dBc) : 0.0;
+      if (dAb <= 1e-6 || dBc <= 1e-6) continue;
+      final cosAng = (ab.dx * bc.dx + ab.dy * bc.dy) / (dAb * dBc);
+      if (cosAng > 0.95) {
+        out.add(b);
+        continue;
+      }
+      final recuoAb = math.min(0.22, 0.0018 / dAb);
+      final recuoBc = math.min(0.22, 0.0018 / dBc);
       out
         ..add(Offset(b.dx - ab.dx * recuoAb, b.dy - ab.dy * recuoAb))
         ..add(Offset(b.dx + bc.dx * recuoBc, b.dy + bc.dy * recuoBc));
