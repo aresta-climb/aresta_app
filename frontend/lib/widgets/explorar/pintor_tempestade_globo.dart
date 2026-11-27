@@ -457,3 +457,85 @@ abstract final class PintorTempestadeGlobo {
     return Offset(dx * invComp, dy * invComp);
   }
 
+  static void _desenharRastroPassadoTempestade({
+    required Canvas canvas,
+    required BolhaChuvaRegional bolha,
+    required Offset centroAtualTela,
+    required bool centroAtualVisivel,
+    required double menorLadoMundoPx,
+    required Offset dirTela,
+    required double faseSegundos,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required PaletaTempestadeGlobo paleta,
+  }) {
+    final pegadas = bolha.obterPegadasTrajetoria();
+    final centrosTrilha = <Offset>[];
+
+    for (var idx = 0; idx < pegadas.length; idx++) {
+      final pegada = pegadas[idx];
+      final proj = _projetarAnelContorno(
+        anel: pegada.contorno,
+        tamanhoTela: tamanhoTela,
+        controlador: controlador,
+        picosReferencia: picosReferencia,
+        sobreRelevo: sobreRelevo,
+        faseSegundos: 0.0,
+        uLon: 0.0,
+        uLat: 0.0,
+        fatorVel: 1.0,
+        amplitudeOndulacaoGraus: 0.0,
+      );
+      if (!proj.visivel) continue;
+
+      final pesoRecencia = (idx + 1) / (pegadas.length + 1);
+      final alfaPreenchimento =
+          (paleta.preenchimento.a * (0.24 + 0.26 * pesoRecencia))
+              .clamp(0.03, 0.22);
+      final alfaBorda =
+          (paleta.borda.a * (0.30 + 0.30 * pesoRecencia)).clamp(0.08, 0.45);
+
+      canvas.drawPath(
+        proj.caminho,
+        Paint()
+          ..color = paleta.preenchimento.withValues(alpha: alfaPreenchimento),
+      );
+      _desenharCaminhoTracejado(
+        canvas: canvas,
+        caminho: proj.caminho,
+        cor: paleta.borda.withValues(alpha: alfaBorda),
+        espessura: 0.95,
+        tracoPx: 5.0,
+        espacoPx: 4.5,
+      );
+      centrosTrilha.add(proj.limites.center);
+    }
+
+    centrosTrilha.add(centroAtualTela);
+    if (centrosTrilha.length >= 2) {
+      final pincelSeta = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round
+        ..color = paleta.borda.withValues(
+          alpha: (paleta.borda.a * 0.68).clamp(0.16, 0.68),
+        );
+      for (var i = 0; i < centrosTrilha.length - 1; i++) {
+        final a = centrosTrilha[i];
+        final b = centrosTrilha[i + 1];
+        final delta = b - a;
+        final dist = delta.distance;
+        if (dist < 14.0) continue;
+        final dir = delta / dist;
+        _desenharChevronDirecional(
+          canvas: canvas,
+          ponta: a + delta * 0.56,
+          direcao: dir,
+          tamanhoPx: 5.8,
+          pincel: pincelSeta,
+        );
+      }
+    }
+
