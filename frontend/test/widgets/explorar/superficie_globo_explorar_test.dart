@@ -279,3 +279,87 @@ void main() {
         expect(bMar, greaterThan(gMar + 15));
         expect(bMar, greaterThan(rMar + 20));
 
+        // Muda altura da gaveta e valida notificacao ao controlador
+        alturaGaveta.value = 320;
+        await tester.pump();
+        expect(ctrl.alturaGavetaPx, equals(320));
+
+        // Gesto de pinch com 2 ponteiros e duplo toque na superficie
+        final centro = tester.getCenter(find.byType(SuperficieGloboExplorar));
+        final g1 = await tester.startGesture(centro + const Offset(-30, 0));
+        final g2 = await tester.startGesture(centro + const Offset(30, 0));
+        await g1.moveBy(const Offset(-25, 0));
+        await g2.moveBy(const Offset(25, 0));
+        await tester.pump();
+        await g1.up();
+        await g2.up();
+        await tester.pump();
+
+        // Volta para LOD 1 e testa duplo-toque + arrasto 1 dedo
+        ctrl.definirLod(1.0);
+        await tester.pump();
+        await tester.tapAt(centro);
+        await tester.pump(const Duration(milliseconds: 60));
+        await tester.tapAt(centro);
+        for (var i = 0; i < 15; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+
+        // Toque em um pino compacto nao-selecionado no LOD 1
+        ctrl.definirLod(1.02);
+        await tester.pump();
+        final ptOuroPreto = ctrl.projetarCoordenada(
+          latitude: -20.35,
+          longitude: -43.50,
+          elevacaoMetros: 0,
+          tamanhoTela: const Size(420, 800),
+        );
+        await tester.tapAt(Offset(ptOuroPreto.x, ptOuroPreto.y));
+        await tester.pump(const Duration(milliseconds: 80));
+        expect(selecionadoNoMapa, equals('ouro_preto'));
+
+        // Exercita faixa costeira/oceanica (<0m e <650m) na regiao da Urca (RJ)
+        ctrl.iniciarVooParabolico(
+          destinoLat: -22.98,
+          destinoLon: -43.16,
+          destinoLod: 1.85,
+        );
+        for (var i = 0; i < 18; i++) {
+          await tester.pump(const Duration(milliseconds: 45));
+        }
+
+        // Alterna para 2D, renderiza relevo plano, arrasta ate os cantos/antimeridiano e verifica ausencia de falha
+        ctrl.definirLod(1.9);
+        await tester.tap(find.byKey(const Key('botao_alternar_3d_2d')));
+        await tester.pump();
+        expect(ctrl.modo3D, isFalse);
+        expect(find.text('2D'), findsOneWidget);
+
+        // Exercita canto extremo 2D no antimeridiano (zoom 0) e visao polar 3D (Polo Norte)
+        ctrl.definirLod(0.0);
+        ctrl.aplicarArrasto(dxPx: -900, dyPx: 900);
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('botao_alternar_3d_2d')));
+        await tester.pump();
+        expect(ctrl.modo3D, isTrue);
+        ctrl.aplicarArrasto(dxPx: 400, dyPx: 500);
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('botao_resetar_globo')));
+        for (var i = 0; i < 18; i++) {
+          await tester.pump(const Duration(milliseconds: 45));
+        }
+
+        // Arrasto manual e troca de controlador/notificador em didUpdateWidget
+        await tester.drag(
+          find.byType(SuperficieGloboExplorar),
+          const Offset(36, -18),
+        );
+        await tester.pump(const Duration(milliseconds: 80));
+
+        final ctrl2 = ControladorCameraGlobo(lodInicial: 2.95);
+        addTearDown(ctrl2.dispose);
+        final alturaGaveta2 = ValueNotifier<double>(210);
+        addTearDown(alturaGaveta2.dispose);
+
