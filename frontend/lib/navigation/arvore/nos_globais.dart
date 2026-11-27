@@ -189,8 +189,5 @@ class EstatisticasClimaNode extends NavNode {
   String get rotuloAmigavel => 'Estatísticas do Clima';
 
   @override
-  String obterCaminhoCurto() => 'Início -> Explorar -> Estatísticas do Clima';
-
-  @override
   String toString() => 'EstatisticasClimaNode';
 }

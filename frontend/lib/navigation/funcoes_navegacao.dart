@@ -10,7 +10,6 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/formatador_escalada.dart';
 import '../services/autenticacao/servico_autenticacao.dart';
 import '../services/repositorio_dataset.dart';
-import '../pages/estatisticas_clima.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -370,19 +369,12 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para a página dedicada à lógica matemática e Tabela Z do índice climático (~85%).
+  /// Navega para a página dedicada à lógica matemática e Tabela Z do índice climático (~85%)
+  /// estritamente através da árvore de nós ([EstatisticasClimaNode]).
   static void toEstatisticasClima(BuildContext context) {
     final ctrl = _ctrl(context);
-    if (ctrl != null) {
-      if (ctrl.currentNode is EstatisticasClimaNode) return;
-      ctrl.navigateTo(EstatisticasClimaNode(ctrl.currentNode));
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const PaginaEstatisticasClima(),
-      ),
-    );
+    if (ctrl == null || ctrl.currentNode is EstatisticasClimaNode) return;
+    ctrl.navigateTo(EstatisticasClimaNode(ctrl.currentNode));
   }
 
   /// Volta um nível na árvore de navegação ou desempilha rotas imperativas sobrepostas do Navigator.
