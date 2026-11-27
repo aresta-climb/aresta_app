@@ -175,3 +175,101 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
         ? 0.0166
         : ((decorrido - anterior).inMicroseconds / 1e6).clamp(0.004, 0.05);
 
+    _cena.avancarQuadro(
+      dtSegundos: dt,
+      controlador: widget.controlador,
+      temFenomenoAoVivo: _temFenomenoAoVivo,
+    );
+
+    final continua = _cena.precisaAnimarQuadro(
+      controlador: widget.controlador,
+      temFenomenoAoVivo: _temFenomenoAoVivo,
+    );
+    if (!continua && _ticker.isActive) {
+      _ticker.stop();
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _aoSelecionarPico(MarcadorPicoGlobo pico, {double? lodExplicito}) {
+    _cena.selecionarPicoNoMapa(
+      pico: pico,
+      picoSelecionadoAtualId: widget.picoSelecionadoId,
+      controlador: widget.controlador,
+      lodExplicito: lodExplicito,
+    );
+    widget.aoSelecionarPicoNoMapa(pico.id);
+    _sincronizarCena();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, restricoes) {
+        final tamanho = Size(restricoes.maxWidth, restricoes.maxHeight);
+        final focado = _cena.resolverPicoFocado(
+          picos: widget.picos,
+          picoSelecionadoId: widget.picoSelecionadoId,
+          controlador: widget.controlador,
+        );
+        if (focado != null) {
+          widget.controlador.definirElevacaoReferenciaCamera(
+            focado.altitudeBaseMetros.toDouble(),
+          );
+        }
+        final referenciasRelevo = widget.picos
+            .map((p) => p.paraReferenciaRelevo())
+            .toList(growable: false);
+        final redeViaria = _cena.obterRedeViaria(referenciasRelevo);
+        final curvasMundo = _cena.obterCurvasNivelVisiveis(
+          controlador: widget.controlador,
+          tamanhoTela: tamanho,
+          picosReferencia: referenciasRelevo,
+        );
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: RepaintBoundary(
+                  key: const Key('camada_estrelas_globo'),
+                  child: CustomPaint(
+                    size: tamanho,
+                    painter: PintorCampoEstrelasGlobo(
+                      controlador: widget.controlador,
+                      tempoSegundosListenable: _cena.faseEstrelasSegundos,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerSignal: (evento) {
+                if (evento is PointerScrollEvent) {
+                  widget.controlador.aplicarZoomFocal(
+                    fatorEscala: math.exp(-evento.scrollDelta.dy * 0.0038),
+                    pontoFocalTela: evento.localPosition,
+                    tamanhoTela: tamanho,
+                  );
+                }
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onScaleStart: (_) {
+                  _escalaAnteriorPinch = 1.0;
+                  widget.controlador.iniciarInteracaoManual();
+                },
+                onScaleUpdate: (detalhes) {
+                  final fatorIncremental =
+                      detalhes.scale / _escalaAnteriorPinch;
+                  _escalaAnteriorPinch = detalhes.scale;
+                  widget.controlador.aplicarGestoContinuo(
+                    dxPx: detalhes.focalPointDelta.dx,
+                    dyPx: detalhes.focalPointDelta.dy,
+                    fatorEscala: fatorIncremental,
+                    pontoFocalTela: detalhes.localFocalPoint,
+                    contagemPonteiros: detalhes.pointerCount,
+                    tamanhoTela: tamanho,
+                  );
