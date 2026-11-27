@@ -149,10 +149,10 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
       ..close();
     canvas.drawPath(
       pathCauda,
-      Paint()..color = corCauda.withValues(alpha: 0.34),
+      Paint()..color = corCauda.withValues(alpha: 0.32),
     );
 
-    // 2. Curva em sino completa sob H0
+    // 2. Curva Gaussiana N(0, 1) sob H0
     final pathSino = Path();
     for (var s = 0; s <= 90; s++) {
       final z = zMin + (zMax - zMin) * (s / 90.0);
@@ -167,11 +167,11 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
       pathSino,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.8
-        ..color = corCurva.withValues(alpha: 0.86),
+        ..strokeWidth = 2.0
+        ..color = corCurva.withValues(alpha: 0.88),
     );
 
-    // 3. Linha de base e marcadores verticais canônicos (0, +1.96, +2.57)
+    // 3. Eixo horizontal de base
     canvas.drawLine(
       Offset(6.0, baseY),
       Offset(size.width - 6.0, baseY),
@@ -180,35 +180,44 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
         ..color = corGrade,
     );
 
-    final marcadores = <({double z, String texto, Color cor})>[
-      (z: 0.0, texto: '0σ', cor: corEixoTexto),
-      (z: 1.96, texto: '+1.96σ', cor: corCauda),
-      (z: 2.57, texto: '+2.57σ', cor: corCauda),
-    ];
+    // 4. Rótulos escalonados (acima da curva para +1.96σ, abaixo da base para 0σ e +2.57σ)
+    // eliminando 100% qualquer colisão horizontal em telas compactas.
+    _desenharMarcadorBase(canvas, size, x: xDeZ(-2.0), yTopo: yDeZ(-2.0), baseY: baseY, texto: '-2σ', cor: corEixoTexto);
+    _desenharMarcadorBase(canvas, size, x: xDeZ(0.0), yTopo: yDeZ(0.0), baseY: baseY, texto: '0σ', cor: corEixoTexto);
+    _desenharMarcadorTopoPilula(canvas, size, x: xDeZ(1.96), yCurva: yDeZ(1.96), baseY: baseY, texto: '+1.96σ', cor: corCauda);
+    _desenharMarcadorBase(canvas, size, x: xDeZ(2.57), yTopo: yDeZ(2.57), baseY: baseY, texto: '+2.57σ', cor: corCauda);
+    _desenharSetaExtremaDireita(canvas, size, baseY: baseY);
+  }
 
-    for (final m in marcadores) {
-      final x = xDeZ(m.z);
-      canvas.drawLine(
-        Offset(x, yDeZ(m.z)),
-        Offset(x, baseY),
-        Paint()
-          ..strokeWidth = 1.1
-          ..color = m.cor.withValues(alpha: 0.65),
-      );
-      final tp = TextPainter(
-        text: TextSpan(
-          text: m.texto,
-          style: TextStyle(
-            color: m.cor,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(x - tp.width * 0.5, baseY + 4.0));
-      tp.dispose();
-    }
+  void _desenharMarcadorBase(
+    Canvas canvas,
+    Size size, {
+    required double x,
+    required double yTopo,
+    required double baseY,
+    required String texto,
+    required Color cor,
+  }) {
+    canvas.drawLine(
+      Offset(x, yTopo),
+      Offset(x, baseY),
+      Paint()
+        ..strokeWidth = 1.1
+        ..color = cor.withValues(alpha: 0.65),
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: texto,
+        style: TextStyle(color: cor, fontSize: 10, fontWeight: FontWeight.w700),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final dx = (x - tp.width * 0.5)
+        .clamp(4.0, math.max(4.0, size.width - tp.width - 4.0))
+        .toDouble();
+    tp.paint(canvas, Offset(dx, baseY + 5.0));
+    tp.dispose();
+  }
 
     // Indicador de projeção fora de escala na extrema direita (+27.7σ)
     final setaX = size.width - 10.0;
