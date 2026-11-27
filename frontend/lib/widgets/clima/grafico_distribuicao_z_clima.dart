@@ -91,3 +91,60 @@ class _PintorCurvaNormalPadrao extends CustomPainter {
     required this.corEixoTexto,
   });
 
+  static double _pdf(double z) =>
+      math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const zMin = -3.4;
+    const zMax = 3.9;
+    final baseY = size.height - 20.0;
+    final alturaUtil = math.max(24.0, baseY - 8.0);
+    final pdfPico = _pdf(0.0);
+
+    double xDeZ(double z) =>
+        ((z - zMin) / (zMax - zMin)) * (size.width - 16.0) + 8.0;
+    double yDeZ(double z) => baseY - (_pdf(z) / pdfPico) * alturaUtil;
+
+    // 1. Área sombreada da cauda direita (Z >= 1.96)
+    final pathCauda = Path()..moveTo(xDeZ(1.96), baseY);
+    for (var s = 0; s <= 36; s++) {
+      final z = 1.96 + (zMax - 1.96) * (s / 36.0);
+      pathCauda.lineTo(xDeZ(z), yDeZ(z));
+    }
+    pathCauda
+      ..lineTo(xDeZ(zMax), baseY)
+      ..close();
+    canvas.drawPath(
+      pathCauda,
+      Paint()..color = corCauda.withValues(alpha: 0.34),
+    );
+
+    // 2. Curva em sino completa sob H0
+    final pathSino = Path();
+    for (var s = 0; s <= 90; s++) {
+      final z = zMin + (zMax - zMin) * (s / 90.0);
+      final pt = Offset(xDeZ(z), yDeZ(z));
+      if (s == 0) {
+        pathSino.moveTo(pt.dx, pt.dy);
+      } else {
+        pathSino.lineTo(pt.dx, pt.dy);
+      }
+    }
+    canvas.drawPath(
+      pathSino,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8
+        ..color = corCurva.withValues(alpha: 0.86),
+    );
+
+    // 3. Linha de base e marcadores verticais canônicos (0, +1.96, +2.57)
+    canvas.drawLine(
+      Offset(6.0, baseY),
+      Offset(size.width - 6.0, baseY),
+      Paint()
+        ..strokeWidth = 1.0
+        ..color = corGrade,
+    );
+
