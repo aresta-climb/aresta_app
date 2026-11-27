@@ -539,3 +539,70 @@ abstract final class PintorTempestadeGlobo {
       }
     }
 
+    // Chevron frontal pulsante ancorado ao centro geográfico da tempestade
+    if (centroAtualVisivel && menorLadoMundoPx >= 22.0) {
+      final avancoPulso = ((faseSegundos * 0.55) % 1.0);
+      final alfaFrente =
+          (1.0 - (avancoPulso - 0.5).abs() * 1.4).clamp(0.25, 0.85);
+      final pincelFrente = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.55
+        ..strokeCap = StrokeCap.round
+        ..color = paleta.tracoChuva.withValues(
+          alpha: (paleta.tracoChuva.a * alfaFrente).clamp(0.18, 0.78),
+        );
+      final distanciaFrente =
+          (menorLadoMundoPx * (0.30 + 0.14 * avancoPulso)).clamp(8.0, 140.0);
+      _desenharChevronDirecional(
+        canvas: canvas,
+        ponta: centroAtualTela + dirTela * distanciaFrente,
+        direcao: dirTela,
+        tamanhoPx: (menorLadoMundoPx * 0.08).clamp(4.8, 7.2),
+        pincel: pincelFrente,
+      );
+    }
+  }
+
+  static void _desenharChevronDirecional({
+    required Canvas canvas,
+    required Offset ponta,
+    required Offset direcao,
+    required double tamanhoPx,
+    required Paint pincel,
+  }) {
+    final perp = Offset(-direcao.dy, direcao.dx);
+    canvas.drawLine(
+      ponta,
+      ponta - direcao * tamanhoPx + perp * (tamanhoPx * 0.70),
+      pincel,
+    );
+    canvas.drawLine(
+      ponta,
+      ponta - direcao * tamanhoPx - perp * (tamanhoPx * 0.70),
+      pincel,
+    );
+  }
+
+  static void _desenharCaminhoTracejado({
+    required Canvas canvas,
+    required Path caminho,
+    required Color cor,
+    required double espessura,
+    required double tracoPx,
+    required double espacoPx,
+  }) {
+    final pincel = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessura
+      ..strokeCap = StrokeCap.round
+      ..color = cor;
+    for (final metrica in caminho.computeMetrics()) {
+      var d = 0.0;
+      while (d < metrica.length) {
+        final fim = math.min(d + tracoPx, metrica.length);
+        canvas.drawPath(metrica.extractPath(d, fim), pincel);
+        d += tracoPx + espacoPx;
+      }
+    }
+  }
+}
