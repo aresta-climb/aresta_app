@@ -85,3 +85,90 @@ abstract final class GeradorMalhaGeograficaOffline {
     );
   }
 
+  /// Executa a geração e rotação atômica do arquivo inicial de altimetria (`atual` + `seguranca`).
+  static Future<ResultadoGeracaoComSeguranca> executarGeracaoAltimetria({
+    required String caminhoSaida,
+    required String caminhoSeguranca,
+    required Future<Map<String, dynamic>> Function() provedorAltimetriaExterna,
+  }) {
+    return _rotacionarJsonComCopiaSeguranca(
+      caminhoSaida: caminhoSaida,
+      caminhoSeguranca: caminhoSeguranca,
+      buscarDados: provedorAltimetriaExterna,
+      validarDados: validarEstruturaAltimetria,
+      nomeRecurso: 'altimetria real SRTM/Copernicus DEM',
+    );
+  }
+
+  /// Executa a rotação atômica de um artefato binário (ex.: textura NASA Blue Marble) com 1 cópia de segurança.
+  static Future<ResultadoGeracaoComSeguranca> executarGeracaoBinaria({
+    required String caminhoSaida,
+    required String caminhoSeguranca,
+    required Future<List<int>> Function() provedorBytesExternos,
+    int tamanhoMinimoBytes = 10240,
+    String nomeRecurso = 'textura esférica NASA Blue Marble',
+  }) async {
+    final arquivoAtual = File(caminhoSaida);
+    final arquivoSeguranca = File(caminhoSeguranca);
+    arquivoAtual.parent.createSync(recursive: true);
+    arquivoSeguranca.parent.createSync(recursive: true);
+
+    bool validarBytes(File f) =>
+        f.existsSync() && f.lengthSync() >= tamanhoMinimoBytes;
+
+    try {
+      final bytes = await provedorBytesExternos();
+      if (bytes.length < tamanhoMinimoBytes) {
+        throw FormatException(
+          'Payload binário menor que $tamanhoMinimoBytes bytes para $nomeRecurso.',
+        );
+      }
+
+      final arquivoTmp = File('$caminhoSaida.tmp');
+      arquivoTmp.writeAsBytesSync(bytes, flush: true);
+
+      if (validarBytes(arquivoAtual)) {
+        arquivoAtual.copySync(caminhoSeguranca);
+      } else {
+        arquivoTmp.copySync(caminhoSeguranca);
+      }
+
+      if (arquivoAtual.existsSync()) {
+        arquivoAtual.deleteSync();
+      }
+      arquivoTmp.renameSync(caminhoSaida);
+
+      return ResultadoGeracaoComSeguranca(
+        usouCopiaSeguranca: false,
+        mensagem:
+            'Atualizado $nomeRecurso (${bytes.length} bytes) e rotacionada cópia única de segurança.',
+      );
+    } catch (erro) {
+      final arquivoTmp = File('$caminhoSaida.tmp');
+      if (arquivoTmp.existsSync()) {
+        arquivoTmp.deleteSync();
+      }
+      if (validarBytes(arquivoAtual)) {
+        if (!validarBytes(arquivoSeguranca)) {
+          arquivoAtual.copySync(caminhoSeguranca);
+        }
+        return ResultadoGeracaoComSeguranca(
+          usouCopiaSeguranca: true,
+          mensagem:
+              'Falha ao baixar $nomeRecurso ($erro). Mantida versão local íntegra.',
+        );
+      }
+      if (validarBytes(arquivoSeguranca)) {
+        arquivoSeguranca.copySync(caminhoSaida);
+        return ResultadoGeracaoComSeguranca(
+          usouCopiaSeguranca: true,
+          mensagem:
+              'Falha ao baixar $nomeRecurso ($erro). Restaurado da cópia de segurança.',
+        );
+      }
+      throw StateError(
+        'Não foi possível obter $nomeRecurso ($erro) e não há cópia de segurança íntegra.',
+      );
+    }
+  }
+
