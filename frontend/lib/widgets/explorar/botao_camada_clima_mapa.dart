@@ -230,3 +230,65 @@ class BotaoCamadaClimaMapa extends StatelessWidget {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    context.idiomaApp;
+    final cores = context.colors;
+    final corBorda = ativo
+        ? cores.rustIron.withValues(alpha: 0.85)
+        : Colors.white12;
+    final corFundo = ativo
+        ? const Color(0xEB221614)
+        : const Color(0xCC10141A);
+    final corIcone = ativo ? cores.rustIron : const Color(0xFF9CA3AF);
+    final corTexto = ativo ? cores.chalkWhite : const Color(0xFFD1D5DB);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const Key('botao_camada_clima_mapa'),
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _aoTocar(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: corFundo,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: corBorda, width: ativo ? 1.25 : 1.0),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                ativo
+                    ? Icons.thunderstorm_rounded
+                    : Icons.thunderstorm_outlined,
+                size: 14,
+                color: corIcone,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                tr(ChaveTexto.explorarBotaoClimaMapa),
+                style: TextStyle(
+                  color: corTexto,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: ativo ? cores.rustIron : const Color(0xFF6B7280),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
