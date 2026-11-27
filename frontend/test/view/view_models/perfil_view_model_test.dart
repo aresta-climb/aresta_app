@@ -377,6 +377,46 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 70));
           expect(repoAlertas.obterDadosEscalada('viaFaraoUid001').alertasAtivos, isEmpty);
 
+          // Edição e exclusão direta em Meus Alertas na Caderneta (com sucesso e com falha)
+          final alerta3 = await repoAlertas.reportarAlerta(
+            escaladaUid: 'viaSolarUid003',
+            categoria: CategoriaAlertaSeguranca.fauna,
+            detalhe: 'Marimbondos',
+          );
+          expect(
+            await vm.editarMeuAlerta(
+              alerta3,
+              CategoriaAlertaSeguranca.protecaoPrecaria,
+              detalhe: 'Grampo 2 girando',
+            ),
+            isTrue,
+          );
+          expect(
+            vm.meusAlertas
+                .firstWhere((m) => m.alerta.uid == alerta3.uid)
+                .alerta
+                .detalhe,
+            'Grampo 2 girando',
+          );
+
+          repoAlertas.erroSimulado = StateError('Erro ao editar/excluir');
+          expect(
+            await vm.editarMeuAlerta(
+              alerta3,
+              CategoriaAlertaSeguranca.fauna,
+            ),
+            isFalse,
+          );
+          expect(await vm.excluirMeuAlerta(alerta3), isFalse);
+          repoAlertas.erroSimulado = null;
+
+          vm.iniciarResolucaoMeuAlertaComDesfazer(alerta3);
+          expect(await vm.excluirMeuAlerta(alerta3), isTrue);
+          expect(
+            vm.meusAlertas.any((m) => m.alerta.uid == alerta3.uid),
+            isFalse,
+          );
+
           // Resolução pendente no dispose também efetiva confirmação
           vm.iniciarResolucaoMeuAlertaComDesfazer(alerta2);
           vm.dispose();

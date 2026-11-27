@@ -6,9 +6,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,21 +15,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RepositorioCadernetaLocal repositorio;
-  late ControladorInteracoesUsuario controladorInteracoes;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
     final prefs = await SharedPreferences.getInstance();
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
     await repositorio.inicializar();
-    controladorInteracoes = ControladorInteracoesUsuario(preferencias: prefs);
-    await controladorInteracoes.inicializar();
   });
 
   tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
+    ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria();
   });
 
   group('SecaoCadernetaViaViewModel', () {
@@ -38,13 +32,11 @@ void main() {
       'expõe estado inicial sem ascensão e utiliza instâncias padrão quando dependências são omitidas',
       () {
         RepositorioCadernetaLocal.instancia = repositorio;
-        ControladorInteracoesUsuario.instancia = controladorInteracoes;
 
         final escaladaSemUid = Escalada()
           ..viaEsportiva = (ViaEsportiva()..nome = 'Via Sem UID');
         final vm = SecaoCadernetaViaViewModel(escalada: escaladaSemUid);
 
-        expect(vm.visivel, isTrue);
         expect(vm.possuiAscensao, isFalse);
         expect(vm.isCadena, isFalse);
         expect(vm.resumoAscensao, isNull);
@@ -56,26 +48,27 @@ void main() {
     );
 
     test(
-      'reage à alternância de visibilidade no ControladorInteracoesUsuario e remove listeners no dispose',
-      () async {
+      'reage à troca de idioma e remove ouvintes ao descartar',
+      () {
         final escalada = Escalada()
-          ..uid = 'via_visibilidade'
+          ..uid = 'via_idioma'
           ..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
         final vm = SecaoCadernetaViaViewModel(
           escalada: escalada,
           repositorio: repositorio,
-          controladorInteracoes: controladorInteracoes,
         );
 
         var notificacoes = 0;
         vm.addListener(() => notificacoes++);
 
-        await controladorInteracoes.definirInteracoesAtivas(false);
-        expect(vm.visivel, isFalse);
+        ControladorIdiomaApp.instancia.notificadorIdioma.value =
+            IdiomaApp.ingles;
         expect(notificacoes, equals(1));
+        expect(vm.rotuloBotao, isNot(equals('Registrar Cadena / Tentativa')));
 
         vm.dispose();
-        await controladorInteracoes.definirInteracoesAtivas(true);
+        ControladorIdiomaApp.instancia.notificadorIdioma.value =
+            IdiomaApp.portugues;
         expect(notificacoes, equals(1));
       },
     );
@@ -89,7 +82,6 @@ void main() {
         final vm = SecaoCadernetaViaViewModel(
           escalada: escalada,
           repositorio: repositorio,
-          controladorInteracoes: controladorInteracoes,
         );
 
         await repositorio.salvarCadena(
@@ -134,7 +126,6 @@ void main() {
         final vmVia = SecaoCadernetaViaViewModel(
           escalada: via,
           repositorio: repositorio,
-          controladorInteracoes: controladorInteracoes,
         );
         final registroVia = vmVia.criarViewModelRegistro();
         expect(registroVia.escaladaUid, equals('via_7a_uid'));
@@ -153,7 +144,6 @@ void main() {
         final vmBoulder = SecaoCadernetaViaViewModel(
           escalada: boulder,
           repositorio: repositorio,
-          controladorInteracoes: controladorInteracoes,
         );
         final registroBoulder = vmBoulder.criarViewModelRegistro();
         expect(registroBoulder.tipoEscalada, equals(TipoEscalada.boulder));

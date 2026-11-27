@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/services/clima/servico_clima_altimetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
@@ -132,10 +133,18 @@ void main() {
     SyncService.baseUrlOverride = null;
     SyncService.catalogoUrlOverride = null;
     GerenciadorNotificacaoDownload.instancia = null;
+    ServicoClimaAltimetria.redefinirParaTestes();
     await SyncService.instance?.tarefaMidiasEmSegundoPlano;
     await repositorio.repositorioCatalogo.fechar();
     if (await tempDir.exists()) {
-      await tempDir.delete(recursive: true);
+      try {
+        await tempDir.delete(recursive: true);
+      } on FileSystemException {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
     }
   });
 
