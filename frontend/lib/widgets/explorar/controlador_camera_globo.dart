@@ -431,33 +431,19 @@ class ControladorCameraGlobo extends ChangeNotifier {
 
     final voo = _vooAtivo;
     if (voo != null) {
-      voo.progresso =
-          (voo.progresso + 0.036 * passoNormalizado).clamp(0.0, 1.0);
-      final t = voo.progresso;
-      final ease = t < 0.5
-          ? 4.0 * t * t * t
-          : 1.0 - math.pow(-2.0 * t + 2.0, 3) / 2.0;
-
-      _latitudeCentral = _lerp(voo.latInicial, voo.latFinal, ease);
-      _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
-        voo.lonInicial + voo.deltaLonCurto * ease,
+      final pose = voo.avancarPasso(
+        passoNormalizado: passoNormalizado,
+        lodMinimo: lodMinimo,
+        lodMaximo: lodMaximo,
       );
-      final recuoMeioVoo = math.sin(math.pi * ease) * voo.recuoArco;
-      _lod = (_lerp(voo.lodInicial, voo.lodFinal, ease) - recuoMeioVoo)
-          .clamp(lodMinimo, lodMaximo);
-      if (!_modo3D) {
-        _latitudeCentral =
-            _limitarLatitude2D(_latitudeCentral, _ultimoTamanhoTela);
-      }
-
-      if (voo.progresso >= 1.0) {
-        _latitudeCentral = voo.latFinal;
-        _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
-          voo.lonInicial + voo.deltaLonCurto,
-        );
-        _lod = voo.lodFinal;
-        _vooAtivo = null;
-      }
+      _latitudeCentral = _modo3D && !pose.concluido
+          ? pose.lat
+          : (pose.concluido
+              ? pose.lat
+              : _limitarLatitude2D(pose.lat, _ultimoTamanhoTela));
+      _longitudeCentral = pose.lon;
+      _lod = pose.lod;
+      if (pose.concluido) _vooAtivo = null;
       notifyListeners();
       return temAnimacaoAtiva;
     }
