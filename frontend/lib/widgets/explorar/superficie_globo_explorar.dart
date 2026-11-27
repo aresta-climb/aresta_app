@@ -329,3 +329,60 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
                       redeViaria: redeViaria,
                       picos: widget.picos,
                       referenciasRelevo: referenciasRelevo,
+                      picoSelecionadoId: widget.picoSelecionadoId,
+                      localizacaoUsuario: widget.localizacaoUsuario,
+                      recuoSuperiorControles: widget.recuoSuperiorControles,
+                      progressoLuzViaria: _cena.progressoLuzViaria,
+                      aoSelecionarPico: _aoSelecionarPico,
+                    ),
+                    if (_temFenomenoAoVivo)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          key: const Key('camada_atmosfera_clima_globo'),
+                          child: CustomPaint(
+                            size: tamanho,
+                            painter: PintorFenomenosAtmosfericosGlobo(
+                              controlador: widget.controlador,
+                              picosReferencia: referenciasRelevo,
+                              bolhasAtivas: widget.bolhasAtivas,
+                              incendiosAtivos: widget.incendiosAtivos,
+                              sonarBolhaId: _cena.progressoSonar < 1.0
+                                  ? _cena.sonarBolhaId
+                                  : null,
+                              faseTempestadeSegundos:
+                                  _cena.faseTempestadeSegundos,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (widget.aoAlterarCamadaClima != null)
+              Positioned(
+                top: widget.recuoSuperiorControles,
+                left: 12,
+                child: BotaoCamadaClimaMapa(
+                  ativo: widget.camadaClimaAtiva,
+                  aoAlterarAtivo: widget.aoAlterarCamadaClima!,
+                ),
+              ),
+            Positioned(
+              top: widget.recuoSuperiorControles,
+              right: 12,
+              child: CapsulaControlesModoGlobo(
+                modo3D: widget.controlador.modo3D,
+                temLocalizacaoUsuario: widget.localizacaoUsuario != null,
+                buscandoLocalizacaoUsuario: widget.buscandoLocalizacaoUsuario,
+                aoAlternarModo3D: widget.controlador.alternarModo3D,
+                aoResetarGlobo: () => _cena.resetarVisaoGlobo(widget.controlador),
+                aoCentralizarNoUsuario: widget.aoCentralizarNoUsuario,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
