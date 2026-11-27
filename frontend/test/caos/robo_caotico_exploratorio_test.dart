@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'fabrica_dataset_caos.dart';
+import 'motor_robo_caotico.dart';
 
 /// Duração da campanha exploratória em segundos.
 ///
@@ -26,8 +28,8 @@ const bool kReportarSentryCaos = bool.fromEnvironment(
 
 /// Semente inicial opcional (`--dart-define=SEED_INICIAL_CAOS=...`).
 ///
-/// Quando não informada (`0`), utiliza uma semente variável derivada do relógio atual
-/// para que cada pré-release explore caminhos inéditos. Caso falhe, a semente exata de
+/// Quando não informada (`0`), gera uma semente aleatória via `Random.secure()` (`/dev/urandom` / CSPRNG do SO)
+/// para que cada execução explore caminhos inéditos. Caso falhe, a semente exata de
 /// cada sessão fica registrada na receita `.json` e no relatório para reprodução 100% determinística.
 const int kSeedInicialCaosConfigurada = int.fromEnvironment(
   'SEED_INICIAL_CAOS',
@@ -58,9 +60,12 @@ void main() {
           reportarAoSentry: kReportarSentryCaos,
         );
 
-        final seedInicialEfetiva = kSeedInicialCaosConfigurada != 0
-            ? kSeedInicialCaosConfigurada
-            : (DateTime.now().millisecondsSinceEpoch % 100000000);
+        final seedInicialEfetiva = resolverSeedInicialCampanha(
+          kSeedInicialCaosConfigurada,
+        );
+        debugPrint(
+          '🎲 [Robô Caótico] Iniciando campanha exploratória com seedInicial=$seedInicialEfetiva...',
+        );
 
         final relatorio = await motor.executarCampanhaPorTempo(
           duracaoMaxima: const Duration(seconds: kDuracaoCampanhaCaosSegundos),

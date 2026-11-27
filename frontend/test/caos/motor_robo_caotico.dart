@@ -13,6 +13,18 @@ import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart'
 import 'encolhedor_caminho_crash.dart';
 import 'receita_crash_robo.dart';
 
+/// Resolve a semente inicial da campanha do Robô Caótico.
+///
+/// Quando [valorConfigurado] é `<= 0`, gera uma semente aleatória em `[1, 0x7FFFFFFE]`
+/// utilizando o gerador criptograficamente seguro do sistema operacional ([math.Random.secure],
+/// respaldado por `/dev/urandom` / `BCryptGenRandom`), evitando colisões de relógio.
+int resolverSeedInicialCampanha([int valorConfigurado = 0]) {
+  if (valorConfigurado > 0) {
+    return valorConfigurado;
+  }
+  return math.Random.secure().nextInt(0x7FFFFFFE) + 1;
+}
+
 /// Resultado de uma única sessão exploratória executada pelo [MotorRoboCaotico].
 class ResultadoSessaoRobo {
   /// Semente pseudo-aleatória utilizada na sessão.
@@ -82,8 +94,12 @@ class RelatorioCampanhaRobo {
       final ocorrencias = contagemPorAssinatura[receita.assinaturaFalha] ?? 1;
       buffer
         ..writeln('---------------------------------------------')
-        ..writeln('Assinatura: ${receita.assinaturaFalha} ($ocorrencias ocorrência(s))')
-        ..writeln('Seed inicial: ${receita.seed} | Dataset: ${receita.dataset.name}')
+        ..writeln(
+          'Assinatura: ${receita.assinaturaFalha} ($ocorrencias ocorrência(s))',
+        )
+        ..writeln(
+          'Seed inicial: ${receita.seed} | Dataset: ${receita.dataset.name}',
+        )
         ..writeln('Erro: ${receita.resumoErro}')
         ..writeln(
           'Passos reduzidos: ${receita.passosMinimos.length} '
@@ -247,8 +263,9 @@ class MotorRoboCaotico {
   Future<RelatorioCampanhaRobo> executarCampanhaPorTempo({
     required Duration duracaoMaxima,
     int maxPassosPorSessao = 25,
-    int seedInicial = 1,
+    int seedInicial = 0,
   }) async {
+    final seedBase = resolverSeedInicialCampanha(seedInicial);
     final cronometro = Stopwatch()..start();
     final falhasUnicas = <ReceitaCrashRobo>[];
     final contagemPorAssinatura = <String, int>{};
@@ -258,7 +275,7 @@ class MotorRoboCaotico {
       if (reportarAoSentry) {
         await _garantirSentryInicializadoParaCampanha();
       }
-      final seedAtual = seedInicial + sessoesExecutadas;
+      final seedAtual = seedBase + sessoesExecutadas;
       final datasetAtual = sessoesExecutadas.isEven
           ? TipoDatasetCaos.normal
           : TipoDatasetCaos.toxico;
@@ -304,7 +321,9 @@ class MotorRoboCaotico {
       totalSessoesExecutadas: sessoesExecutadas,
       duracaoTotal: cronometro.elapsed,
       falhasUnicas: List<ReceitaCrashRobo>.unmodifiable(falhasUnicas),
-      contagemPorAssinatura: Map<String, int>.unmodifiable(contagemPorAssinatura),
+      contagemPorAssinatura: Map<String, int>.unmodifiable(
+        contagemPorAssinatura,
+      ),
     );
   }
 
@@ -403,7 +422,8 @@ class MotorRoboCaotico {
   /// Garante que o Sentry e o [AppLogger] estejam liberados em tempo real durante toda a campanha.
   Future<void> _garantirSentryInicializadoParaCampanha() async {
     final logger = AppLogger.instance;
-    if (logger.runtimeType != AppLogger || logger.sentryCaptureOverride != null) {
+    if (logger.runtimeType != AppLogger ||
+        logger.sentryCaptureOverride != null) {
       return;
     }
     await tester.runAsync(() async {
@@ -437,7 +457,8 @@ class MotorRoboCaotico {
         'Robô Caótico detectou falha reproduzível (${receita.assinaturaFalha})';
 
     // Em testes unitários com MockAppLogger ou override em memória, chama diretamente
-    if (logger.runtimeType != AppLogger || logger.sentryCaptureOverride != null) {
+    if (logger.runtimeType != AppLogger ||
+        logger.sentryCaptureOverride != null) {
       logger.logCrash(
         mensagem,
         error: excecao,
@@ -624,10 +645,7 @@ class MotorRoboCaotico {
       }
 
       seletores.add(
-        SeletorAlvoRobo.porTipoEIndice(
-          tipoWidget: nomeTipo,
-          ocorrencia: i,
-        ),
+        SeletorAlvoRobo.porTipoEIndice(tipoWidget: nomeTipo, ocorrencia: i),
       );
     }
 
@@ -653,14 +671,19 @@ class MotorRoboCaotico {
           if (finder != null) {
             await tester.drag(
               finder,
-              Offset(passo.deslocamentoDx ?? 0.0, passo.deslocamentoDy ?? -200.0),
+              Offset(
+                passo.deslocamentoDx ?? 0.0,
+                passo.deslocamentoDy ?? -200.0,
+              ),
               warnIfMissed: false,
             );
           }
         case TipoAcaoRobo.voltarSistema:
           await tester.binding.handlePopRoute();
         case TipoAcaoRobo.voltarAppNav:
-          final elementos = find.byType(Scaffold, skipOffstage: true).evaluate();
+          final elementos = find
+              .byType(Scaffold, skipOffstage: true)
+              .evaluate();
           if (elementos.isNotEmpty) {
             AppNav.back(elementos.first);
           }
@@ -753,15 +776,14 @@ class MotorRoboCaotico {
       detalhesFlutter ??= details;
       handlerAnterior?.call(details);
     };
-    AppLogger.instance.aoRegistrarErroOuCrash = (
-      erro,
-      stackTrace,
-      mensagem, {
-      required fatal,
-    }) {
-      falhaLogger ??= _FalhaCapturada(excecao: erro, stackTrace: stackTrace);
-      hookLoggerAnterior?.call(erro, stackTrace, mensagem, fatal: fatal);
-    };
+    AppLogger.instance.aoRegistrarErroOuCrash =
+        (erro, stackTrace, mensagem, {required fatal}) {
+          falhaLogger ??= _FalhaCapturada(
+            excecao: erro,
+            stackTrace: stackTrace,
+          );
+          hookLoggerAnterior?.call(erro, stackTrace, mensagem, fatal: fatal);
+        };
 
     try {
       await bloco();

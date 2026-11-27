@@ -85,6 +85,22 @@ void main() {
   });
 
   group('MotorRoboCaotico', () {
+    test(
+      'resolverSeedInicialCampanha gera sementes distintas via CSPRNG do SO (Random.secure) e preserva semente explícita',
+      () {
+        final amostras =
+            List<int>.generate(32, (_) => resolverSeedInicialCampanha())
+              ..add(resolverSeedInicialCampanha(0))
+              ..add(resolverSeedInicialCampanha(-10));
+
+        for (final s in amostras) {
+          expect(s, inInclusiveRange(1, 0x7FFFFFFE));
+        }
+        expect(amostras.toSet().length, greaterThanOrEqualTo(33));
+        expect(resolverSeedInicialCampanha(4242), equals(4242));
+      },
+    );
+
     testWidgets(
       'Produz caminhada 100% determinística para a mesma seed e executa replay fiel de passos',
       (tester) async {
@@ -258,7 +274,9 @@ void main() {
                     key: const ValueKey<String>('botao_erro_tratado'),
                     onPressed: () {
                       try {
-                        throw const FormatException('Erro silencioso tratado em try/catch');
+                        throw const FormatException(
+                          'Erro silencioso tratado em try/catch',
+                        );
                       } catch (e, st) {
                         AppLogger.instance.logError(
                           'Falha tratada no botão',
