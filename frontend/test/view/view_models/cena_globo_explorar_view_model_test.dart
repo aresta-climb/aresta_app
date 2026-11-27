@@ -90,3 +90,93 @@ void main() {
       );
       addTearDown(vm.dispose);
 
+      // Como iniciou em LOD >= limiarAtivacaoLuzViaria, a luz viária já começa acesa
+      expect(vm.alvoLuzViaria, equals(1.0));
+      expect(vm.progressoLuzViaria, equals(1.0));
+      expect(vm.animacoesAmbienteAtivas, isTrue);
+      expect(vm.obterRedeViaria(picosReferencia), isNull);
+
+      var notificacoes = 0;
+      vm.addListener(() => notificacoes++);
+
+      final futuroInit = vm.inicializarAssetsSeNecessario();
+      completerMalha.complete(malhaSintetica);
+      completerTextura.complete(img);
+      await futuroInit;
+
+      expect(notificacoes, equals(1));
+      expect(vm.malha, same(malhaSintetica));
+      expect(vm.texturaNasa, same(img));
+
+      // Segunda chamada com assets carregados é no-op imediato
+      await vm.inicializarAssetsSeNecessario();
+      expect(notificacoes, equals(1));
+
+      final rede1 = vm.obterRedeViaria(picosReferencia);
+      final rede2 = vm.obterRedeViaria(picosReferencia);
+      expect(rede1, isNotNull);
+      expect(rede2, same(rede1));
+
+      final redeOutraLista = vm.obterRedeViaria(const []);
+      expect(redeOutraLista, isNot(same(rede1)));
+
+      // Memoização O(1) das curvas de nível em coordenadas fixas do mundo durante o movimento da câmera
+      final ctrlCurvas = ControladorCameraGlobo(
+        latitudeInicial: -19.3156,
+        longitudeInicial: -43.6135,
+        lodInicial: 1.20,
+      );
+      addTearDown(ctrlCurvas.dispose);
+      expect(
+        vm.obterCurvasNivelVisiveis(
+          controlador: ctrlCurvas,
+          tamanhoTela: const ui.Size(400, 800),
+          picosReferencia: picosReferencia,
+        ),
+        isNull,
+      );
+      ctrlCurvas.definirLod(3.10);
+      final curvas1 = vm.obterCurvasNivelVisiveis(
+        controlador: ctrlCurvas,
+        tamanhoTela: const ui.Size(400, 800),
+        picosReferencia: picosReferencia,
+      );
+      final curvasMesmoBloco = vm.obterCurvasNivelVisiveis(
+        controlador: ctrlCurvas,
+        tamanhoTela: const ui.Size(400, 800),
+        picosReferencia: picosReferencia,
+      );
+      expect(curvas1, isNotNull);
+      expect(curvasMesmoBloco, same(curvas1));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(vm.amostrarElevacaoReal(-19.3156, -43.6135), isNotNull);
+
+      // Garante segurança se descartado antes de concluir hidratação assíncrona
+      final completerLento = Completer<MalhaGeograficaGlobo>();
+      final vmDescartado = CenaGloboExplorarViewModel(
+        lodInicialCamera: 0.2,
+        carregarMalha: () => completerLento.future,
+        carregarTextura: () async => img,
+      );
+      final futuroCancelado = vmDescartado.inicializarAssetsSeNecessario();
+      vmDescartado.dispose();
+      completerLento.complete(malhaSintetica);
+      await futuroCancelado;
+      expect(vmDescartado.malha, isNull);
+    });
+
+    test('coordena avanço e retração reversa da luz viária, timer de estrelas, clima, sonar e acessibilidade', () async {
+      final ctrl = ControladorCameraGlobo(
+        latitudeInicial: -19.92,
+        longitudeInicial: -43.94,
+        lodInicial: 0.25,
+      );
+      addTearDown(ctrl.dispose);
+
+      final vm = CenaGloboExplorarViewModel(
+        lodInicialCamera: ctrl.lod,
+        carregarMalha: () async => malhaSintetica,
+        carregarTextura: _criarImagem1x1,
+      );
+      addTearDown(vm.dispose);
+
