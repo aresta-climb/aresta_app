@@ -24,7 +24,6 @@ import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -258,7 +257,6 @@ void main() {
 
     tearDown(() async {
       RepositorioCadernetaLocal.instancia = null;
-      ControladorInteracoesUsuario.redefinirParaTestes();
       await datasetRepo.repositorioCatalogo.fechar();
       await servidor.close(force: true);
     });
@@ -267,7 +265,6 @@ void main() {
       'cancela tarefa de segundo plano e sincroniza se não precisa de migração',
       () async {
         RepositorioCadernetaLocal.instancia = null;
-        ControladorInteracoesUsuario.redefinirParaTestes();
         SharedPreferences.setMockInitialValues({
           'cached_data_version': NetworkConstants.kDataVersion,
         });
@@ -291,7 +288,6 @@ void main() {
       'cancela tarefa de segundo plano e não sincroniza se precisa de migração',
       () async {
         RepositorioCadernetaLocal.instancia = null;
-        ControladorInteracoesUsuario.redefinirParaTestes();
         SharedPreferences.setMockInitialValues({
           'cached_data_version': NetworkConstants.kDataVersion - 1,
         });
@@ -312,10 +308,9 @@ void main() {
     );
 
     test(
-      'inicializa RepositorioCadernetaLocal e ControladorInteracoesUsuario carregando dados persistidos no arranque',
+      'inicializa RepositorioCadernetaLocal carregando cadenas persistidas no arranque',
       () async {
         RepositorioCadernetaLocal.instancia = null;
-        ControladorInteracoesUsuario.redefinirParaTestes();
 
         final cadenaPersistida = Cadena.criar(
           escaladaUid: 'viaPersistida1',
@@ -325,7 +320,6 @@ void main() {
         );
         SharedPreferences.setMockInitialValues({
           'cached_data_version': NetworkConstants.kDataVersion,
-          ControladorInteracoesUsuario.chavePreferenciaInteracoes: false,
           'aresta_cadenas_v1': jsonEncode([cadenaPersistida.toMap()]),
         });
 
@@ -335,7 +329,6 @@ void main() {
           workmanager: mockWorkmanager,
         );
 
-        expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isFalse);
         expect(
           RepositorioCadernetaLocal.instancia.cadenasNotifier.value,
           hasLength(1),

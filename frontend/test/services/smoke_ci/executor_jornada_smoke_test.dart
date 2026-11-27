@@ -17,8 +17,7 @@ import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
+import 'package:frontend/services/clima/servico_clima_altimetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -50,8 +49,6 @@ void main() {
     HttpOverrides.global = null;
     SharedPreferences.setMockInitialValues(<String, Object>{});
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    ControladorInteracoesUsuario.redefinirParaTestes();
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
     tempDir = Directory.systemTemp.createTempSync('smoke_executor_aresta_');
@@ -67,10 +64,9 @@ void main() {
         );
     SyncService.baseUrlOverride = null;
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    ServicoClimaAltimetria.redefinirParaTestes();
     try {
       if (tempDir.existsSync()) {
         tempDir.deleteSync(recursive: true);
@@ -169,7 +165,8 @@ void main() {
         }
       });
       await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      await tester.pump(const Duration(seconds: 12));
+      await tester.pump(const Duration(seconds: 12));
 
       expect(resultadoLocal['sucesso'], isTrue);
       expect(relatorioServidor['sucesso'], isTrue);

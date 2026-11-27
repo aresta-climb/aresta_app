@@ -13,8 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/smoke_ci/configuracao_smoke_ci.dart';
 import 'package:frontend/services/smoke_ci/main_smoke_ci.dart' as smoke_entry;
@@ -43,8 +41,6 @@ void main() {
     HttpOverrides.global = null;
     SharedPreferences.setMockInitialValues(<String, Object>{});
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    ControladorInteracoesUsuario.redefinirParaTestes();
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
     tempDir = Directory.systemTemp.createTempSync('main_smoke_ci_aresta_');
@@ -65,8 +61,6 @@ void main() {
         );
     SyncService.baseUrlOverride = null;
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
     try {
