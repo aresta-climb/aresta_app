@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../main.dart';
 import '../../navigation/arvore_navegacao.dart';
 import '../../theme/cores_app.dart';
@@ -140,7 +141,7 @@ Widget buildTermsCard(BuildContext context) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Termos de Uso e Privacidade',
+                  context.tr(ChaveTexto.comunidadeTermosTitulo),
                   style: TextStyle(
                     color: context.colors.chalkWhite,
                     fontSize: 14,
@@ -150,7 +151,7 @@ Widget buildTermsCard(BuildContext context) {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Controle voluntário de riscos e diretrizes de privacidade offline.',
+                  context.tr(ChaveTexto.comunidadeTermosSub),
                   style: TextStyle(
                     color: context.colors.ashGrey,
                     fontSize: 12,
@@ -190,7 +191,9 @@ Widget buildFooter(BuildContext context) {
         child: Column(
           children: [
             Text(
-              'Aresta Climb v$version • Beta Aberto',
+              context.tr(ChaveTexto.comunidadeRodapeVersao, {
+                'versao': version,
+              }),
               style: TextStyle(
                 color: context.colors.dryMoss,
                 fontSize: 12,
@@ -199,7 +202,7 @@ Widget buildFooter(BuildContext context) {
             ),
             const SizedBox(height: 8),
             Text(
-              'Uma iniciativa independente pelo montanhismo livre do Brasil.',
+              context.tr(ChaveTexto.comunidadeIniciativaLivre),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: context.colors.ashGrey,
@@ -230,9 +233,9 @@ Future<void> launchURL(BuildContext context, String url) async {
       stackTrace: stackTrace,
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o link.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr(ChaveTexto.comumErroAbrirLink))),
+      );
     }
   }
 }
@@ -339,10 +342,10 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
                 size: 24,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'TERMOS E PRIVACIDADE',
-                  style: TextStyle(
+                  context.tr(ChaveTexto.comunidadeTermosModalHeader),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -439,9 +442,9 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'FECHAR',
-                  style: TextStyle(
+                child: Text(
+                  context.tr(ChaveTexto.comumFecharCaixaAlta),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
@@ -560,7 +563,7 @@ void showLinkOverlay(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'ACESSAR ',
+                      context.tr(ChaveTexto.comumAcessar),
                       style: TextStyle(
                         color: context.colors.deepBasalt,
                         fontSize: 14,
@@ -588,9 +591,9 @@ void showLinkOverlay(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'FECHAR',
-                        style: TextStyle(
+                      child: Text(
+                        context.tr(ChaveTexto.comumFecharCaixaAlta),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
@@ -614,7 +617,9 @@ void showLinkOverlay(
                           await Clipboard.setData(ClipboardData(text: link));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Link copiado!')),
+                              SnackBar(
+                                content: Text(tr(ChaveTexto.comumLinkCopiado)),
+                              ),
                             );
                           }
                         }
@@ -632,9 +637,9 @@ void showLinkOverlay(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'ABRIR LINK',
-                        style: TextStyle(
+                      child: Text(
+                        context.tr(ChaveTexto.comumAbrirLink),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
@@ -751,10 +756,10 @@ class _PrivacyBottomSheetContentState
                 size: 24,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'POLÍTICA DE PRIVACIDADE',
-                  style: TextStyle(
+                  context.tr(ChaveTexto.comunidadePoliticaModalHeader),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -843,9 +848,9 @@ class _PrivacyBottomSheetContentState
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'FECHAR',
-                  style: TextStyle(
+                child: Text(
+                  context.tr(ChaveTexto.comumFecharCaixaAlta),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,

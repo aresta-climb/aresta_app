@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/estatisticas_caderneta.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/caderneta/card_estatistica.dart';
 
@@ -116,14 +117,16 @@ Widget buildSecaoHistoricoCadenas(
   String? Function(Cadena cadena)? formatarCitacaoNotas,
 }) {
   return SecaoHistoricoCadenas(
-    tituloSecao: tituloSecao ?? 'Histórico de Ascensões (${historico.length})',
+    tituloSecao:
+        tituloSecao ??
+        tr(ChaveTexto.cadHistoricoContagem, {'n': '${historico.length}'}),
     historico: historico,
     obterNomeVia: obterNomeVia,
     obterGrauVia: obterGrauVia,
     formatarSubtitulo:
         formatarSubtitulo ??
         (cadena) =>
-            '${formatarData(cadena.dataAscensao)} • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? 'tentativa' : 'tentativas'}',
+            '${formatarData(cadena.dataAscensao)} • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? tr(ChaveTexto.estiloTentativaSingular) : tr(ChaveTexto.estiloTentativaPlural)}',
     formatarCitacaoNotas:
         formatarCitacaoNotas ??
         (cadena) =>
@@ -169,7 +172,7 @@ class EstadoVazioHistoricoCaderneta extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Nenhuma ascensão registrada ainda',
+            context.tr(ChaveTexto.cadNenhumaAscensaoAinda),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: cores.chalkWhite,
@@ -179,7 +182,7 @@ class EstadoVazioHistoricoCaderneta extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Suas cadenas salvas nas páginas das vias aparecerão aqui.',
+            context.tr(ChaveTexto.cadNenhumaAscensaoSub),
             textAlign: TextAlign.center,
             style: TextStyle(color: cores.ashGrey, fontSize: 12, height: 1.4),
           ),
@@ -344,7 +347,7 @@ class ItemHistoricoCadena extends StatelessWidget {
                         size: 18,
                         color: cores.ashGrey,
                       ),
-                      tooltip: 'Editar ascensão',
+                      tooltip: context.tr(ChaveTexto.cadEditarAscensaoTooltip),
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(
                         minWidth: 28,
@@ -360,7 +363,7 @@ class ItemHistoricoCadena extends StatelessWidget {
                       size: 18,
                       color: cores.ashGrey,
                     ),
-                    tooltip: 'Excluir ascensão',
+                    tooltip: context.tr(ChaveTexto.cadExcluirAscensaoTooltip),
                     padding: const EdgeInsets.all(4),
                     constraints: const BoxConstraints(
                       minWidth: 28,
@@ -398,7 +401,7 @@ Widget buildItemHistoricoCadena(
     grauVia: grauVia,
     subtituloFormatado:
         subtituloFormatado ??
-        '$dataFormatada • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? 'tentativa' : 'tentativas'}',
+        '$dataFormatada • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? tr(ChaveTexto.estiloTentativaSingular) : tr(ChaveTexto.estiloTentativaPlural)}',
     citacaoNotas:
         citacaoNotas ??
         (cadena.notasPrivadas.isNotEmpty ? '“${cadena.notasPrivadas}”' : null),
@@ -423,17 +426,20 @@ class DialogoConfirmarExclusaoCadena extends StatelessWidget {
         side: BorderSide(color: cores.graniteEdge),
       ),
       title: Text(
-        'Excluir Ascensão?',
+        context.tr(ChaveTexto.cadExcluirAscensaoTitulo),
         style: TextStyle(color: cores.chalkWhite, fontWeight: FontWeight.bold),
       ),
       content: Text(
-        'Esta ação removerá este registro esportivo permanentemente da sua caderneta.',
+        context.tr(ChaveTexto.cadExcluirAscensaoCorpo),
         style: TextStyle(color: cores.ashGrey, fontSize: 13),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text('Cancelar', style: TextStyle(color: cores.ashGrey)),
+          child: Text(
+            context.tr(ChaveTexto.comumCancelar),
+            style: TextStyle(color: cores.ashGrey),
+          ),
         ),
         ElevatedButton(
           key: const Key('btn_confirmar_exclusao'),
@@ -442,7 +448,7 @@ class DialogoConfirmarExclusaoCadena extends StatelessWidget {
             foregroundColor: cores.chalkWhite,
           ),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Excluir'),
+          child: Text(context.tr(ChaveTexto.comumExcluir)),
         ),
       ],
     );
