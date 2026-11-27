@@ -473,3 +473,73 @@ abstract final class PintorRedeViariaArestaGlobo {
     }
     if (compTotal <= 1e-7) return const [];
 
+    final alvo = compTotal * fracao;
+    final resultado = <Offset>[vertices.first];
+    var acumulado = 0.0;
+    for (var i = 0; i < vertices.length - 1; i++) {
+      final a = vertices[i];
+      final b = vertices[i + 1];
+      final seg = (b - a).distance;
+      if (acumulado + seg >= alvo) {
+        final t = seg <= 1e-7 ? 1.0 : ((alvo - acumulado) / seg).clamp(0.0, 1.0);
+        resultado.add(Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t));
+        break;
+      }
+      resultado.add(b);
+      acumulado += seg;
+    }
+    return resultado;
+  }
+
+  static void _desenharEscudosCodigoRodovia({
+    required Canvas canvas,
+    required List<({Offset pos, String codigo})> escudos,
+    required double opacidade,
+  }) {
+    if (opacidade <= 0.04) return;
+    final pincelFundo = Paint()
+      ..color = Color.fromRGBO(12, 16, 23, (0.86 * opacidade).clamp(0.0, 1.0));
+    final pincelBorda = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.85
+      ..color = corLaranjaAresta.withValues(
+        alpha: (0.62 * opacidade).clamp(0.0, 1.0),
+      );
+
+    for (final item in escudos) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: item.codigo,
+          style: TextStyle(
+            color: Color.fromRGBO(
+              248,
+              250,
+              252,
+              (0.92 * opacidade).clamp(0.0, 1.0),
+            ),
+            fontSize: 8.6,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.35,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: item.pos,
+          width: tp.width + 9.0,
+          height: tp.height + 3.6,
+        ),
+        const Radius.circular(5.0),
+      );
+      canvas.drawRRect(rrect, pincelFundo);
+      canvas.drawRRect(rrect, pincelBorda);
+      tp.paint(
+        canvas,
+        Offset(item.pos.dx - tp.width * 0.5, item.pos.dy - tp.height * 0.5),
+      );
+      tp.dispose();
+    }
+  }
+
