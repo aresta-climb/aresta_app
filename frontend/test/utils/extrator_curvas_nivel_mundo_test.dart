@@ -157,7 +157,7 @@ void main() {
       );
       expect(oceano.curvas, isEmpty);
 
-      // Planície entre 810 m e 890 m sem cruzar múltiplo inteiro de 250 m -> retorna lista vazia
+      // Planície entre 810 m e 890 m sem cruzar múltiplo inteiro de 400 m -> retorna lista vazia
       final planicieEntreCotas = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janela,
         nivelDetalhe: 0,
@@ -167,7 +167,6 @@ void main() {
       );
       expect(planicieEntreCotas.curvas, isEmpty);
 
-      // Campo hiperbólico de sela exercitando máscaras 5 e 10 (média alta e média baixa) + curvas abertas
       final sela = ExtratorCurvasNivelMundo.extrairCurvasBloco(
         janela: janela,
         nivelDetalhe: 1,
@@ -176,12 +175,15 @@ void main() {
         amostrarElevacaoMetros: (lat, lon) {
           final x = (lon + 44.0) * 85.0;
           final y = (lat + 20.0) * 85.0;
-          return 900.0 + 260.0 * (x * y) + 120.0 * math.sin(x * 1.4 + y * 1.2);
+          return 1000.0 + 320.0 * (x * y) + 140.0 * math.sin(x * 1.4 + y * 1.2);
         },
       );
       expect(sela.curvas, isNotEmpty);
       for (final c in sela.curvas) {
-        expect(c.verticesLonLat.every((Offset p) => p.dx.isFinite && p.dy.isFinite), isTrue);
+        expect(
+          c.verticesLonLat.every((Offset p) => p.dx.isFinite && p.dy.isFinite),
+          isTrue,
+        );
       }
     });
   });
