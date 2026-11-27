@@ -369,3 +369,103 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
     );
   }
 
+  Widget _construirAlcaCabecalho({
+    required BuildContext context,
+    required AppColors colors,
+    required int totalCards,
+    required bool mostraCabecalho,
+  }) {
+    return GestureDetector(
+      key: const Key('alca_gaveta_explorar'),
+      behavior: HitTestBehavior.opaque,
+      onTap: _encaixeAtual == PosicaoEncaixeGaveta.mapa
+          ? () => _animarParaEncaixe(PosicaoEncaixeGaveta.dividir)
+          : null,
+      onVerticalDragUpdate: (detalhes) {
+        _animadorAltura.stop();
+        setState(() {
+          _fracaoAtual =
+              (_fracaoAtual - detalhes.delta.dy / _alturaTotalDisponivel)
+                  .clamp(0.034, 1.0);
+        });
+        _publicarAlturaEmPixels();
+      },
+      onVerticalDragEnd: (_) {
+        var maisProximo = PosicaoEncaixeGaveta.dividir;
+        var menorDist = 999.0;
+        for (final p in PosicaoEncaixeGaveta.values) {
+          final d = (p.fracaoAltura - _fracaoAtual).abs();
+          if (d < menorDist) {
+            menorDist = d;
+            maisProximo = p;
+          }
+        }
+        _animarParaEncaixe(maisProximo);
+      },
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 6, 16, mostraCabecalho ? 4 : 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (mostraCabecalho) ...[
+              const SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.tr(
+                      ChaveTexto.explorarContagemPicos,
+                      {'n': totalCards},
+                    ),
+                    style: TextStyle(
+                      color: colors.dryMoss,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.3,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: colors.deepBasalt,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: PosicaoEncaixeGaveta.values.map((pos) {
+                        final ativo = _encaixeAtual == pos;
+                        return InkWell(
+                          key: Key('encaixe_gaveta_${pos.name}'),
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _animarParaEncaixe(pos),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ativo
+                                  ? colors.rustIron.withValues(alpha: 0.24)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              pos.rotulo,
+                              style: TextStyle(
+                                color: ativo ? colors.rustIron : colors.ashGrey,
+                                fontSize: 11,
+                                fontWeight:
+                                    ativo ? FontWeight.w800 : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
