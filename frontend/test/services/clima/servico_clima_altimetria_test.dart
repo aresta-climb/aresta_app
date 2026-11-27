@@ -341,3 +341,80 @@ void main() {
       },
     );
 
+    test(
+      'obterUmidadePico respeita a data civil local do dispositivo sem adiantar para o dia seguinte após 21h BRT (00h UTC)',
+      () async {
+        // 25/11 às 22:30 BRT corresponde a 26/11 às 01:30 UTC: o usuário ainda está no dia 25!
+        final fake = ClienteClimaAltimetriaFake(
+          snapshotInicial: SnapshotClimaAltimetria(
+            geradoEm: DateTime.utc(2026, 11, 26, 1, 15),
+            bolhasChuva: const [],
+            chuvaPorPico: {
+              'pico_com_evento_utc_adiantado': [
+                EventoChuvaPico(
+                  data: DateTime.utc(2026, 11, 26),
+                  milimetros: 18.0,
+                ),
+              ],
+              'pico_chuva_hoje_25': [
+                EventoChuvaPico(
+                  data: DateTime.utc(2026, 11, 25),
+                  milimetros: 12.0,
+                ),
+              ],
+            },
+            altimetriaPorPico: const {
+              'pico_com_evento_utc_adiantado': CotaAltimetricaPico(
+                altitudeBaseMetros: 800,
+                altitudePicoMetros: 1100,
+              ),
+              'pico_chuva_hoje_25': CotaAltimetricaPico(
+                altitudeBaseMetros: 800,
+                altitudePicoMetros: 1100,
+              ),
+            },
+          ),
+        );
+
+        final servico = ServicoClimaAltimetria(
+          armazenamento: armazenamento,
+          fonteRemota: fake,
+          relogioUtc: () => DateTime.utc(2026, 11, 26, 1, 30),
+          relogioLocal: () => DateTime(2026, 11, 25, 22, 30),
+        );
+        addTearDown(servico.dispose);
+
+        await servico.inicializar();
+        await servico.sincronizarSeNecessario(forcar: true);
+
+        // Evento datado de 26/11 não pode aparecer enquanto o calendário local ainda é 25/11
+        expect(
+          servico.obterUmidadePico('pico_com_evento_utc_adiantado').nivel,
+          equals(NivelUmidadePico.seco),
+        );
+
+        // Evento de 25/11 permanece no dia 0 da janela de 4 dias com data formatada 25/11
+        final estado25 = servico.obterUmidadePico('pico_chuva_hoje_25');
+        expect(estado25.nivel, equals(NivelUmidadePico.possivelmenteUmido));
+        expect(estado25.dataChuvaFormatadaCurta, equals('25/11'));
+        expect(estado25.diasParaSecar, equals(4));
+        expect(
+          servico.obterCotaAltimetrica('pico_chuva_hoje_25')?.altitudeBaseMetros,
+          equals(800),
+        );
+
+        // Exercita singleton compartilhado, redefinirParaTestes e relógios padrão (UTC + local)
+        expect(ServicoClimaAltimetria.instancia, isNotNull);
+        ServicoClimaAltimetria.redefinirParaTestes();
+
+        final servicoRelogiosPadrao = ServicoClimaAltimetria(
+          armazenamento: armazenamento,
+          fonteRemota: fake,
+        );
+        addTearDown(servicoRelogiosPadrao.dispose);
+        await servicoRelogiosPadrao.sincronizarSeNecessario(forcar: true);
+        expect(servicoRelogiosPadrao.temSnapshotClima, isTrue);
+      },
+    );
+  });
+}
