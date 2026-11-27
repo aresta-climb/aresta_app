@@ -181,3 +181,90 @@ void main() {
         }
         expect(diferencaTotal, greaterThan(500));
 
+        // Projeta tambem sobre o relevo SRTM 3D (LOD 2.1) e no modo 2D plano
+        ctrl.definirLod(2.1);
+        final ptRelevo = ctrl.projetarCoordenada(
+          latitude: -20.5,
+          longitude: -43.8,
+          elevacaoMetros: 1420.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idxRelevo =
+            (ptRelevo.y.round().clamp(0, 219) * 220 +
+                    ptRelevo.x.round().clamp(0, 219)) *
+                4;
+        final quadroRelevo = await _renderizarPixels(
+          ctrl: ctrl,
+          bolhas: [bolhas.first],
+          faseSegundos: 0.4,
+          picos: const [
+            PicoRelevoReferencia(
+              id: 'igarape',
+              latitude: -20.5,
+              longitude: -43.8,
+              altitudeBaseMetros: 900,
+              altitudePicoMetros: 1420,
+            ),
+          ],
+        );
+        expect(quadroRelevo[idxRelevo + 3], greaterThan(10));
+
+        ctrl.alternarModo3D();
+        final pt2D = ctrl.projetarCoordenada(
+          latitude: -20.5,
+          longitude: -43.8,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idx2D = (pt2D.y.round() * 220 + pt2D.x.round()) * 4;
+        final quadro2D = await _renderizarPixels(
+          ctrl: ctrl,
+          bolhas: [bolhas.first],
+          faseSegundos: 1.2,
+        );
+        expect(quadro2D[idx2D + 3], greaterThan(10));
+
+        // Tempestade ciclônica cruzando o horizonte 3D (parte visivel, parte oculta) e o antimeridiano 2D (±180°)
+        const ciclonePacifico = BolhaAtivaRenderizavel(
+          bolha: BolhaChuvaRegional(
+            id: 'ciclone_pacifico',
+            latitude: 0.0,
+            longitude: 179.0,
+            intensidadeMmHora: 5.0,
+            ventoRumoGraus: 90.0,
+            ventoVelocidadeKmh: 30.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: 165.0, latitude: -8.0),
+              PontoContornoGeo(longitude: 172.0, latitude: -8.0),
+              PontoContornoGeo(longitude: 178.5, latitude: -4.0),
+              PontoContornoGeo(longitude: -176.0, latitude: 0.0),
+              PontoContornoGeo(longitude: -165.0, latitude: 6.0),
+              PontoContornoGeo(longitude: 170.0, latitude: 7.0),
+            ],
+          ),
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+        );
+        final ctrlLimb3D = ControladorCameraGlobo(
+          latitudeInicial: 0.0,
+          longitudeInicial: 92.0,
+          lodInicial: 0.0,
+        );
+        addTearDown(ctrlLimb3D.dispose);
+        await _renderizarPixels(
+          ctrl: ctrlLimb3D,
+          bolhas: const [ciclonePacifico],
+          faseSegundos: 0.2,
+        );
+
+        final ctrlAntimeridiano2D = ControladorCameraGlobo(
+          latitudeInicial: 0.0,
+          longitudeInicial: 0.0,
+          lodInicial: 0.0,
+        )..alternarModo3D();
+        addTearDown(ctrlAntimeridiano2D.dispose);
+        await _renderizarPixels(
+          ctrl: ctrlAntimeridiano2D,
+          bolhas: const [ciclonePacifico],
+          faseSegundos: 0.2,
+        );
+
