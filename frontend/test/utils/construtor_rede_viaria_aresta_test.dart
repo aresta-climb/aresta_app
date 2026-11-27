@@ -179,8 +179,25 @@ void main() {
               Offset(-43.6500, -19.7000),
             ],
           ),
+          RodoviaRegionalMapa(
+            ehPrincipal: false,
+            nivelViario: 3,
+            codigo: '',
+            verticesLonLat: [
+              Offset(-43.6500, -19.7000),
+              Offset(-43.6420, -19.6920),
+            ],
+          ),
         ],
-        localidades: const [],
+        localidades: const [
+          LocalidadeRegionalMapa(
+            nome: 'Arraial da Pedra',
+            ehCidade: false,
+            nivel: 3,
+            longitude: -43.6420,
+            latitude: -19.6920,
+          ),
+        ],
         picos: const [
           PicoRelevoReferencia(
             id: 'destino',
@@ -193,7 +210,8 @@ void main() {
       );
       expect(redeLosango.trechosCorredorAresta, isNotEmpty);
       expect(redeLosango.rodoviasFundo.first.codigo, isEmpty);
-      expect(redeLosango.rodoviasFundo.last.codigo, equals('BR-040'));
+      expect(redeLosango.rodoviasFundo[1].codigo, equals('BR-040'));
+      expect(redeLosango.cidadesClassificadas.single.viasUrbanasLonLat, isNotEmpty);
     });
   });
 }
