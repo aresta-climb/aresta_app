@@ -4,6 +4,7 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import '../../data/modelos/tipo_feedback.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../navigation/wrapper_navegacao_arvore.dart';
 import '../../navigation/arvore/no_navegacao.dart';
 import '../../theme/cores_app.dart';
@@ -257,6 +258,13 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirFormulario(context),
+    );
+  }
+
+  Widget _construirFormulario(BuildContext context) {
     final textColor = context.colors.chalkWhite;
     final hintColor = context.colors.ashGrey;
     final fillColor = context.colors.caveShadow;
@@ -282,7 +290,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              'Sobre o que é a sugestão?',
+              context.tr(ChaveTexto.feedbackPerguntaTipo),
               maxLines: 1,
               style: TextStyle(
                 color: textColor,
@@ -293,16 +301,16 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
             if (temCroquiAtivo) ...[
               const SizedBox(height: 6),
               SegmentedButton<TipoFeedback>(
-                segments: const [
+                segments: [
                   ButtonSegment<TipoFeedback>(
                     value: TipoFeedback.croqui,
-                    label: Text('Sobre o Croqui'),
-                    icon: Icon(Icons.terrain_rounded, size: 16),
+                    label: Text(context.tr(ChaveTexto.feedbackSobreCroqui)),
+                    icon: const Icon(Icons.terrain_rounded, size: 16),
                   ),
                   ButtonSegment<TipoFeedback>(
                     value: TipoFeedback.aplicativo,
-                    label: Text('Sobre o App'),
-                    icon: Icon(Icons.phone_android_rounded, size: 16),
+                    label: Text(context.tr(ChaveTexto.feedbackSobreApp)),
+                    icon: const Icon(Icons.phone_android_rounded, size: 16),
                   ),
                 ],
                 selected: _tipoSelecionado != null
@@ -356,7 +364,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                   style: TextStyle(color: textColor),
                   cursorColor: buttonColor,
                   decoration: InputDecoration(
-                    hintText: 'Descreva o problema ou sugestão...',
+                    hintText: context.tr(ChaveTexto.feedbackHintDescricao),
                     hintStyle: TextStyle(color: hintColor),
                     filled: true,
                     fillColor: fillColor,
@@ -386,7 +394,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.center,
                 child: Text(
-                  'Feedback público. Nenhum dado pessoal é exposto.',
+                  context.tr(ChaveTexto.feedbackAvisoPublico),
                   style: TextStyle(
                     color: hintColor,
                     fontSize: 11,
@@ -427,9 +435,12 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                           );
                         }
                         : null,
-                  child: const Text(
-                    'Enviar',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: Text(
+                    context.tr(ChaveTexto.feedbackEnviarBtn),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 );
               },

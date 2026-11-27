@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
@@ -70,7 +71,10 @@ class LinhaLocalizacaoSetor extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Abrir croqui do setor $_textoHierarquia',
+      label: context.tr(
+        ChaveTexto.setorAbrirCroquiSemantics,
+        {'nome': _textoHierarquia},
+      ),
       child: InkWell(
         onTap: () => _aoTocar(context),
         borderRadius: BorderRadius.circular(12),
@@ -121,7 +125,7 @@ class LinhaLocalizacaoSetor extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        'Ver no croqui',
+                        context.tr(ChaveTexto.setorVerNoCroqui),
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: context.colors.mossRock,

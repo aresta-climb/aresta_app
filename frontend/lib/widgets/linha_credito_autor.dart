@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../utils/formatador_creditos.dart';
 
@@ -16,6 +17,7 @@ class LinhaCreditoAutor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.idiomaApp;
     final textoFormatado = FormatadorCreditos.formatarLinhaCreditos(creditos);
     if (textoFormatado == null) {
       return const SizedBox.shrink();

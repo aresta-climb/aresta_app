@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -202,9 +203,21 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              (widget.carrosselItensOverride?.length ?? widget.mapas.length) > 1
-                                  ? 'Mapas Interativos (${widget.carrosselItensOverride?.length ?? widget.mapas.length})'
-                                  : 'Abrir Mapa Interativo',
+                              (widget.carrosselItensOverride?.length ??
+                                          widget.mapas.length) >
+                                      1
+                                  ? context.tr(
+                                      ChaveTexto.croquiMapasInterativosContagem,
+                                      {
+                                        'n':
+                                            widget.carrosselItensOverride
+                                                ?.length ??
+                                            widget.mapas.length,
+                                      },
+                                    )
+                                  : context.tr(
+                                      ChaveTexto.croquiAbrirMapaInterativo,
+                                    ),
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: fishBone,
