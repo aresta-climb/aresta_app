@@ -79,3 +79,85 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     });
 
+    let altimetriaRotacionada = false;
+    if (picosSemAltimetria.length > 0) {
+      const novasCotas = await extrairCotasSrtm30m(picosSemAltimetria);
+      const consolidadoAltimetria: Record<string, CotaAltimetricaDem> = {
+        ...altimetriaExistente,
+        ...novasCotas,
+      };
+      await chamarRpcSupabase(
+        supabaseUrl,
+        chaveServiceRole,
+        "rotacionar_snapshot_altimetria_picos",
+        {
+          p_gerado_em: geradoEm,
+          p_altimetria_por_pico: consolidadoAltimetria,
+        },
+      );
+      altimetriaRotacionada = true;
+    }
+
+    // 2. Curva hídrica de 5 dias + tempestades ao vivo + incêndios florestais filtrados contra chuva ativa
+    const chaveNasaFirms = (Deno.env.get("NASA_FIRMS_MAP_KEY") ?? "").trim();
+    const [chuvaPorPicoBruta, bolhasChuva] = await Promise.all([
+      coletarHistoricoChuvaPicosOpenMeteo(picos),
+      coletarTempestadesAoVivoContornosOpenMeteo(picos),
+    ]);
+    const bolhasIncendio = await coletarIncendiosFlorestaisContornos(
+      picos,
+      chaveNasaFirms,
+      bolhasChuva,
+    );
+
+    const chuvaPorPico = associarPicosAsTempestadesAtivas(
+      picos,
+      chuvaPorPicoBruta,
+      bolhasChuva,
+    );
+
+    await chamarRpcSupabase(
+      supabaseUrl,
+      chaveServiceRole,
+      "rotacionar_estado_clima_picos",
+      {
+        p_gerado_em: geradoEm,
+        p_bolhas_chuva: bolhasChuva,
+        p_chuva_por_pico: chuvaPorPico,
+        p_bolhas_incendio: bolhasIncendio,
+      },
+    );
+
+    return respostaJson({
+      sucesso: true,
+      gerado_em: geradoEm,
+      total_picos: picos.length,
+      novos_picos_altimetria: picosSemAltimetria.length,
+      altimetria_rotacionada: altimetriaRotacionada,
+      bolhas_ativas: bolhasChuva.length,
+      bolhas_incendio_ativas: bolhasIncendio.length,
+      picos_com_chuva_recente: Object.keys(chuvaPorPico).length,
+    });
+  } catch (erro) {
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    console.error(
+      `[sincronizar-clima-picos] Falha abortada com segurança: ${mensagem}`,
+    );
+    return respostaJson(
+      {
+        sucesso: false,
+        erro: mensagem,
+        detalhe:
+          "Rotação abortada para preservar intactos os slots atual e copia_seguranca.",
+      },
+      502,
+    );
+  }
+});
+
+function respostaJson(corpo: unknown, status = 200): Response {
+  return new Response(JSON.stringify(corpo), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+}
