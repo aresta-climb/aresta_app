@@ -110,8 +110,8 @@ abstract final class PintorTerrenoVetoresGlobo {
         ? ControladorCameraGlobo.smoothstep(1.80, 2.75, lod) *
             (1.0 - 0.45 * ControladorCameraGlobo.smoothstep(3.10, 4.10, lod))
         : 0.0;
-    // Mantém sombreamento direcional vigoroso mesmo no zoom máximo (LOD 4.65) para esculpir vales e cristas
-    final ganhoRelevoLuz = 1.0 + 6.2 * fatorMonocromatico;
+    // Mantém sombreamento de relevo aveludado e contínuo sem criar facetas triangulares duras sob as curvas sólidas
+    final ganhoRelevoLuz = 1.0 + 2.8 * fatorMonocromatico;
 
     final passoMetrosLat =
         math.max(4.0, ((latMax - latMin) / rows) * 111320.0);
@@ -152,7 +152,7 @@ abstract final class PintorTerrenoVetoresGlobo {
             1.0 / math.sqrt(dzDxLuz * dzDxLuz + dzDyLuz * dzDyLuz + 1.0);
         final solDot = (-dzDxLuz * 0.64 + dzDyLuz * 0.48 + 0.56) * invNorm;
         final luzSolar =
-            (0.42 + 1.08 * solDot.clamp(0.0, 1.0)).clamp(0.42, 1.48);
+            (0.62 + 0.64 * solDot.clamp(0.0, 1.0)).clamp(0.62, 1.24);
 
         var r = corHipsometrica.r * luzSolar;
         var g = corHipsometrica.g * luzSolar;

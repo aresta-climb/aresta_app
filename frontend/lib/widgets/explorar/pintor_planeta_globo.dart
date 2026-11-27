@@ -225,7 +225,8 @@ class PintorPlanetaGlobo extends CustomPainter {
     }
     final dadosMalha = malha;
     final mViario = controlador.fatorModoViario;
-    final alfaMicroGrade = ControladorCameraGlobo.smoothstep(1.65, 2.35, lod);
+    final alfaMicroGrade = ControladorCameraGlobo.smoothstep(1.55, 2.05, lod) *
+        (1.0 - ControladorCameraGlobo.smoothstep(2.15, 2.65, lod));
     if (alfaMicroGrade > 0.02 && dadosMalha != null) {
       PintorTerrenoVetoresGlobo.desenharMicroGradeTopograficaTerrestre(
         canvas: canvas,
