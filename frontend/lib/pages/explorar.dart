@@ -131,47 +131,53 @@ class _BrowsePageState extends State<BrowsePage> {
             return Stack(
               fit: StackFit.expand,
               children: [
-                SuperficieGloboExplorar(
-                  controlador: _controladorCamera,
-                  picos: viewModel.marcadoresGlobo,
-                  bolhasAtivas: viewModel.bolhasChuvaAtivas,
-                  incendiosAtivos: viewModel.bolhasIncendioAtivas,
-                  camadaClimaAtiva: viewModel.radarClimaMapaAtivo,
-                  aoAlterarCamadaClima: viewModel.definirRadarClimaMapaAtivo,
-                  picoSelecionadoId: viewModel.picoSelecionadoId,
-                  alturaGavetaNotificador: _alturaGavetaPx,
-                  localizacaoUsuario: viewModel.localizacaoUsuarioAtiva,
-                  buscandoLocalizacaoUsuario: viewModel.buscandoLocalizacao,
-                  aoCentralizarNoUsuario: _centralizarNaLocalizacaoUsuario,
-                  recuoSuperiorControles: 66.0,
-                  aoSelecionarPicoNoMapa: (id) =>
-                      viewModel.selecionarPico(id, origemMapa: true),
+                RepaintBoundary(
+                  child: SuperficieGloboExplorar(
+                    controlador: _controladorCamera,
+                    picos: viewModel.marcadoresGlobo,
+                    referenciasRelevoCatalogo:
+                        viewModel.referenciasRelevoCatalogo,
+                    bolhasAtivas: viewModel.bolhasChuvaAtivas,
+                    incendiosAtivos: viewModel.bolhasIncendioAtivas,
+                    camadaClimaAtiva: viewModel.radarClimaMapaAtivo,
+                    aoAlterarCamadaClima: viewModel.definirRadarClimaMapaAtivo,
+                    picoSelecionadoId: viewModel.picoSelecionadoId,
+                    alturaGavetaNotificador: _alturaGavetaPx,
+                    localizacaoUsuario: viewModel.localizacaoUsuarioAtiva,
+                    buscandoLocalizacaoUsuario: viewModel.buscandoLocalizacao,
+                    aoCentralizarNoUsuario: _centralizarNaLocalizacaoUsuario,
+                    recuoSuperiorControles: 66.0,
+                    aoSelecionarPicoNoMapa: (id) =>
+                        viewModel.selecionarPico(id, origemMapa: true),
+                  ),
                 ),
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _alturaGavetaPx,
-                    builder: (context, alturaGaveta, child) {
-                      final opacidadeFundoLista =
-                          calcularOpacidadeFundoBarraTopo(
-                        alturaGavetaPx: alturaGaveta,
-                        alturaTelaPx: MediaQuery.sizeOf(context).height,
-                      );
-                      return ColoredBox(
-                        color: const Color(0xF514181E)
-                            .withValues(alpha: opacidadeFundoLista),
-                        child: child,
-                      );
-                    },
-                    child: BarraBuscaFiltrosExplorar(
-                      viewModel: viewModel,
-                      aoSincronizar: () async =>
-                          await viewModel.sincronizarServing(context),
-                      aoTrocarServing: viewModel.modoEditorAtivo
-                          ? () => viewModel.trocarServing(context)
-                          : null,
+                  child: RepaintBoundary(
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _alturaGavetaPx,
+                      builder: (context, alturaGaveta, child) {
+                        final opacidadeFundoLista =
+                            calcularOpacidadeFundoBarraTopo(
+                          alturaGavetaPx: alturaGaveta,
+                          alturaTelaPx: MediaQuery.sizeOf(context).height,
+                        );
+                        return ColoredBox(
+                          color: const Color(0xF514181E)
+                              .withValues(alpha: opacidadeFundoLista),
+                          child: child,
+                        );
+                      },
+                      child: BarraBuscaFiltrosExplorar(
+                        viewModel: viewModel,
+                        aoSincronizar: () async =>
+                            await viewModel.sincronizarServing(context),
+                        aoTrocarServing: viewModel.modoEditorAtivo
+                            ? () => viewModel.trocarServing(context)
+                            : null,
+                      ),
                     ),
                   ),
                 ),
