@@ -8,41 +8,51 @@ import '../data/modelos/modelos_rede_viaria_aresta.dart';
 import '../data/modelos/modelos_relevo_topografico.dart';
 import 'geometria_clipping_mapa.dart';
 
-/// Extrator cartográfico puro e sem estado de curvas de nível ancoradas em coordenadas fixas do mundo.
+/// Extrator cartográfico puro e sem estado de curvas de nível aditivas ancoradas em coordenadas fixas do mundo.
 ///
-/// Resolve definitivamente o artefato de ondulação/caleidoscópio ao mover a câmera:
-/// 1. Quantiza a grade de amostragem em múltiplos inteiros exatos de `passoGraus` no espaço `(lat, lon)`.
-/// 2. Executa *Marching Squares* com desempate assintótico em pontos de sela (nunca cruza curvas em `X`).
-/// 3. Conecta arestas vizinhas em polilinhas contínuas e aplica suavização *Chaikin* de 2 estágios.
-/// 4. Ancora os rótulos de cota mestra (`800 m`, `1200 m`) em coordenadas fixas do mundo.
+/// Garante estabilidade geométrica absoluta durante o zoom:
+/// 1. Utiliza hierarquia diádica estritamente aninhada (`400 m` -> `+200 m` -> `+100 m` -> `+50 m`) para que
+///    nenhuma curva existente desapareça ou mude de cota quando o usuário aproxima ou afasta o zoom.
+/// 2. Avalia um núcleo físico constante em graus do mundo (`0,0040°`, independente do `LOD`), evitando
+///    que mudanças de resolução da grade deformem o formato das curvas existentes.
 abstract final class ExtratorCurvasNivelMundo {
   static const double _grausParaRad = math.pi / 180.0;
+  static const double _raioSuavizacaoFisicaGraus = 0.0040;
 
-  /// Determina a faixa discreta de detalhe (`0`, `1` ou `2`) a partir do `LOD` da câmera.
+  /// Determina a geração diádica máxima (`0` = 400m, `1` = 200m, `2` = 100m, `3` = 50m) para [lod].
   static int resolverNivelDetalhe(double lod) {
-    if (lod >= 3.55) return 2;
-    if (lod >= 2.72) return 1;
+    if (lod >= 3.90) return 3;
+    if (lod >= 3.25) return 2;
+    if (lod >= 2.55) return 1;
     return 0;
   }
 
   /// Passo angular fixo no mundo (em graus) correspondente a cada [nivelDetalhe].
   static double passoGradePorNivel(int nivelDetalhe) => switch (nivelDetalhe) {
-        2 => 0.0035, // ~385 m (maciços e vales amplos sem ruído sub-grade)
-        1 => 0.0100, // ~1,1 km (escala sub-regional / municipal)
-        _ => 0.0280, // ~3,1 km (escala regional)
+        3 => 0.0022,
+        2 => 0.0044,
+        1 => 0.0088,
+        _ => 0.0264,
       };
 
-  /// Intervalo vertical limpo entre linhas de contorno (em metros) para cada [nivelDetalhe],
-  /// priorizando poucas linhas sólidas e informativas em vez de micro-curvas poluídas.
+  /// Intervalo vertical diádico estritamente aninhado (`400 -> 200 -> 100 -> 50 m`).
   static double intervaloCotaMenorPorNivel(int nivelDetalhe) =>
       switch (nivelDetalhe) {
-        2 => 100.0, // Zoom próximo: cotas redondas a cada 100 m (mestras a cada 200 m)
-        1 => 150.0, // Escala municipal: cotas a cada 150 m (mestras a cada 300 m)
-        _ => 250.0, // Escala regional: cotas a cada 250 m (mestras a cada 500 m)
+        3 => 50.0,
+        2 => 100.0,
+        1 => 200.0,
+        _ => 400.0,
       };
 
-  /// Calcula o bloco quantizado do mundo que cobre integralmente [janela] (incluindo o sul próximo
-  /// à câmera inclinada em 3D, como a Serra do Curral em BH), mantendo memoização `O(1)` durante o pan.
+  /// Classifica a geração diádica (`0` = múltiplo de 400m, `1` = 200m, `2` = 100m, `3` = 50m).
+  static int classificarGeracaoCota(int cotaMetros) {
+    if (cotaMetros % 400 == 0) return 0;
+    if (cotaMetros % 200 == 0) return 1;
+    if (cotaMetros % 100 == 0) return 2;
+    return 3;
+  }
+
+  /// Calcula o bloco quantizado do mundo que cobre integralmente [janela], mantendo memoização `O(1)` no pan.
   static ({
     int chaveBloco,
     int iMin,
@@ -55,7 +65,7 @@ abstract final class ExtratorCurvasNivelMundo {
     required int nivelDetalhe,
   }) {
     final passoBase = passoGradePorNivel(nivelDetalhe);
-    const maxCelulasEixo = 68;
+    const maxCelulasEixo = 72;
     const quarteiraoQuantizado = 6;
 
     final spanLat = (janela.maxLat - janela.minLat).clamp(0.01, 16.0);
@@ -95,7 +105,7 @@ abstract final class ExtratorCurvasNivelMundo {
     );
   }
 
-  /// Extrai polilinhas topográficas suaves em coordenadas fixas do mundo usando [amostrarElevacaoMetros].
+  /// Extrai polilinhas topográficas aditivas em coordenadas fixas do mundo usando [amostrarElevacaoMetros].
   static ConjuntoCurvasNivelMundo extrairCurvasBloco({
     required JanelaGeograficaVisivel janela,
     required int nivelDetalhe,
@@ -112,27 +122,28 @@ abstract final class ExtratorCurvasNivelMundo {
     final rows = bloco.jMax - bloco.jMin;
     final passo = bloco.passoGraus;
     final cotaPasso = intervaloCotaMenorPorNivel(nivelDetalhe);
-    const multiploMestra = 2;
 
     final nVertsX = cols + 1;
-    var elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
+    final elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
+    var zGlobalMin = double.infinity;
+    var zGlobalMax = double.negativeInfinity;
+
+    // Núcleo físico fixo (0,0040° em coordenadas do mundo — INVARIANTE ao nível de zoom!)
+    const dFis = _raioSuavizacaoFisicaGraus;
     for (var r = 0; r <= rows; r++) {
       final lat = (bloco.jMin + r) * passo;
       for (var c = 0; c <= cols; c++) {
         final lon = (bloco.iMin + c) * passo;
-        elevs[r * nVertsX + c] = amostrarElevacaoMetros(lat, lon);
+        final zC = amostrarElevacaoMetros(lat, lon);
+        final zN = amostrarElevacaoMetros(lat + dFis, lon);
+        final zS = amostrarElevacaoMetros(lat - dFis, lon);
+        final zL = amostrarElevacaoMetros(lat, lon + dFis);
+        final zO = amostrarElevacaoMetros(lat, lon - dFis);
+        final z = (4.0 * zC + zN + zS + zL + zO) * 0.125;
+        elevs[r * nVertsX + c] = z;
+        if (z < zGlobalMin) zGlobalMin = z;
+        if (z > zGlobalMax) zGlobalMax = z;
       }
-    }
-
-    // Filtro espacial Gaussiano separável [1, 2, 1]/4 (2 passadas) para eliminar serrilhados e
-    // micro-bolhas de dossel/pedreira do SRTM, preservando apenas cristas e vales estruturais.
-    elevs = _suavizarGradeGaussiana(elevs, rows: rows, cols: cols, passadas: 2);
-
-    var zGlobalMin = double.infinity;
-    var zGlobalMax = double.negativeInfinity;
-    for (final z in elevs) {
-      if (z < zGlobalMin) zGlobalMin = z;
-      if (z > zGlobalMax) zGlobalMax = z;
     }
 
     if (!zGlobalMax.isFinite || zGlobalMax < 25.0) {
@@ -155,17 +166,14 @@ abstract final class ExtratorCurvasNivelMundo {
       );
     }
 
-    // Limita estritamente a no máximo 6 níveis verticais limpos e sólidos na tela
-    final saltoNiveis = math.max(1, ((kFim - kIni + 1) / 6).ceil());
-    final raioPicoGraus = nivelDetalhe == 2 ? 0.032 : (nivelDetalhe == 1 ? 0.050 : 0.090);
-    final raioPicoGraus2 = raioPicoGraus * raioPicoGraus;
+    const raioPicoGraus2 = 0.035 * 0.035;
     final curvas = <CurvaNivelMundo>[];
 
     for (var k = kIni; k <= kFim; k++) {
-      final ehMestra = k % multiploMestra == 0;
-      if (!ehMestra && (k - kIni) % saltoNiveis != 0) continue;
       final cota = k * cotaPasso;
       final cotaInt = cota.round();
+      final geracao = classificarGeracaoCota(cotaInt);
+      final ehMestra = geracao == 0 || (geracao == 1 && nivelDetalhe >= 2);
       final segmentos = <(Offset, Offset)>[];
 
       for (var r = 0; r < rows; r++) {
@@ -253,11 +261,11 @@ abstract final class ExtratorCurvasNivelMundo {
       if (segmentos.isEmpty) continue;
       final polilinhas = _costurarESuavizarPolilinhas(segmentos, passo);
       for (final poli in polilinhas) {
-        if (poli.length < 3) continue;
+        if (poli.length < 4) continue;
         final meio = poli[poli.length ~/ 2];
         final cosLat = math.max(0.35, math.cos(meio.dy * _grausParaRad));
         var ehEscarpa = false;
-        if (ehMestra) {
+        if (geracao <= 1) {
           for (final p in picosReferencia) {
             final dx = (meio.dx - p.longitude) * cosLat;
             final dy = meio.dy - p.latitude;
@@ -268,12 +276,13 @@ abstract final class ExtratorCurvasNivelMundo {
           }
         }
 
-        final ancoraRotulo = (ehMestra && poli.length >= 9)
+        final ancoraRotulo = (ehMestra && poli.length >= 8)
             ? _escolherAncoraDeterministicaMundo(poli, passo)
             : null;
         curvas.add(
           CurvaNivelMundo(
             cotaMetros: cotaInt,
+            geracaoDetalhe: geracao,
             ehMestra: ehMestra,
             ehEscarpaPico: ehEscarpa,
             verticesLonLat: poli,
@@ -361,10 +370,9 @@ abstract final class ExtratorCurvasNivelMundo {
       final fechado = cadeia.length >= 4 &&
           (cadeia.first - cadeia.last).distanceSquared <
               (passoGraus * 0.08) * (passoGraus * 0.08);
-      // Descarta fragmentos curtos e micro-anéis isolados de topo de morro para manter visual limpo
-      final minVerticesBrutos = fechado ? 9 : 6;
+      final minVerticesBrutos = fechado ? 8 : 5;
       if (cadeia.length >= minVerticesBrutos) {
-        resultado.add(_suavizarChaikin(cadeia, fechado: fechado));
+        resultado.add(_suavizarCantoUnico(cadeia, fechado: fechado));
       }
     }
     return resultado;
