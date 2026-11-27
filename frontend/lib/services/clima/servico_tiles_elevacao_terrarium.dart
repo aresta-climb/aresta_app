@@ -273,25 +273,61 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
   }
 
   /// Amostra sincronamente em `O(1)` a melhor elevação SRTM disponível (`z=12 -> z=10 -> z=8 -> offline`).
+  ///
+  /// Quando [lod] é fornecido pela câmera em tempo real, interpola progressivamente a entrada dos tiles
+  /// finos (`z=10` e `z=12`) sobre a base regional para impedir saltos bruscos de relevo durante o zoom.
   double? amostrarElevacaoReal({
     required double latitude,
     required double longitude,
+    double? lod,
   }) {
-    const niveisZoom = <int>[12, 10, 8];
-    for (final z in niveisZoom) {
-      final proj = TileElevacaoTerrarium.projetarWebMercator(
-        latitude: latitude,
-        longitude: longitude,
-        zoom: z,
-      );
-      final chave =
-          TileElevacaoTerrarium.calcularChave(z, proj.tileX, proj.tileY);
-      final tile = _cacheLru[chave];
-      if (tile != null) {
-        return tile.amostrarLocal(proj.localX, proj.localY);
+    if (lod == null) {
+      const niveisZoom = <int>[12, 10, 8];
+      for (final z in niveisZoom) {
+        final cota = _amostrarTileNoZoom(latitude, longitude, z);
+        if (cota != null) return cota;
+      }
+      return _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
+    }
+
+    final baseOffline =
+        _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
+    final z8 = _amostrarTileNoZoom(latitude, longitude, 8);
+    var cota = z8 ?? baseOffline;
+
+    final pesoZ10 = _smoothstep(2.50, 3.15, lod);
+    if (pesoZ10 > 0.001) {
+      final z10 = _amostrarTileNoZoom(latitude, longitude, 10);
+      if (z10 != null) {
+        cota = cota == null ? z10 : cota + (z10 - cota) * pesoZ10;
       }
     }
-    return _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
+
+    final pesoZ12 = _smoothstep(3.40, 4.05, lod);
+    if (pesoZ12 > 0.001) {
+      final z12 = _amostrarTileNoZoom(latitude, longitude, 12);
+      if (z12 != null) {
+        cota = cota == null ? z12 : cota + (z12 - cota) * pesoZ12;
+      }
+    }
+    return cota;
+  }
+
+  double? _amostrarTileNoZoom(double latitude, double longitude, int zoom) {
+    final proj = TileElevacaoTerrarium.projetarWebMercator(
+      latitude: latitude,
+      longitude: longitude,
+      zoom: zoom,
+    );
+    final chave =
+        TileElevacaoTerrarium.calcularChave(zoom, proj.tileX, proj.tileY);
+    final tile = _cacheLru[chave];
+    return tile?.amostrarLocal(proj.localX, proj.localY);
+  }
+
+  static double _smoothstep(double e0, double e1, double x) {
+    final t = ((x - e0) / (e1 - e0)).clamp(0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
   }
 
   /// Decodifica um PNG `256x256` em buffer RGBA bruto utilizando o codec nativo C++ do Flutter.
