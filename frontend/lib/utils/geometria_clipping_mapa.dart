@@ -174,3 +174,67 @@ abstract final class GeometriaClippingMapa {
         continue;
       }
 
+      final segMinLon = math.min(a.dx, b.dx);
+      final segMaxLon = math.max(a.dx, b.dx);
+      final segMinLat = math.min(a.dy, b.dy);
+      final segMaxLat = math.max(a.dy, b.dy);
+      if (segMaxLon < janela.minLon ||
+          segMinLon > janela.maxLon ||
+          segMaxLat < janela.minLat ||
+          segMinLat > janela.maxLat) {
+        descarregar();
+        continue;
+      }
+
+      final deltaMax = math.max((b.dx - a.dx).abs(), (b.dy - a.dy).abs());
+      final passos = math.min(96, math.max(1, (deltaMax / passoSeguro).ceil()));
+
+      for (var s = 0; s <= passos; s++) {
+        if (s == 0 && atual.isNotEmpty) continue;
+        final t = s / passos;
+        final p = Offset(
+          a.dx + (b.dx - a.dx) * t,
+          a.dy + (b.dy - a.dy) * t,
+        );
+        if (pontoNaJanela(p)) {
+          atual.add(p);
+        } else {
+          descarregar();
+        }
+      }
+    }
+
+    descarregar();
+    return cadeias;
+  }
+
+  static List<Offset> _recortarSemiplano(
+    List<Offset> entrada, {
+    required bool Function(Offset) dentro,
+    required Offset Function(Offset, Offset) intersecao,
+  }) {
+    final saida = <Offset>[];
+    var anterior = entrada.last;
+    var antDentro = dentro(anterior);
+
+    for (final p in entrada) {
+      final pDentro = dentro(p);
+      if (pDentro) {
+        if (!antDentro) {
+          saida.add(intersecao(anterior, p));
+        }
+        saida.add(p);
+      } else if (antDentro) {
+        saida.add(intersecao(anterior, p));
+      }
+      anterior = p;
+      antDentro = pDentro;
+    }
+    return saida;
+  }
+
+  static double _smoothstep(double borda0, double borda1, double x) {
+    final t = ((x - borda0) / (borda1 - borda0)).clamp(0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
+  }
+}
