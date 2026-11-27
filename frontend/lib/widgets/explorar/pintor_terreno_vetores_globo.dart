@@ -438,3 +438,78 @@ abstract final class PintorTerrenoVetoresGlobo {
       canvas.drawPath(path, paintGrade);
     }
 
+    for (var lon = -180.0; lon < 180.0; lon += 15.0) {
+      final path = Path();
+      var ativo = false;
+      var antX = 0.0;
+      for (var lat = -85.0; lat <= 85.0; lat += 5.0) {
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lon,
+          elevacaoMetros: 0,
+          tamanhoTela: size,
+        );
+        if (!pt.visivel) {
+          ativo = false;
+          continue;
+        }
+        if (!ativo || (pt.x - antX).abs() > limiteSaltoX) {
+          path.moveTo(pt.x, pt.y);
+          ativo = true;
+        } else {
+          path.lineTo(pt.x, pt.y);
+        }
+        antX = pt.x;
+      }
+      canvas.drawPath(path, paintGrade);
+    }
+  }
+
+  /// Projeta e desenha um polígono/polilinha geográfica de fronteiras continentais, nacionais ou estaduais.
+  static void desenharPoligonoGeo({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required List<Offset> verticesLonLat,
+    Color? preenchimento,
+    Color? borda,
+    double espessuraBorda = 1.0,
+  }) {
+    final caminho = Path();
+    var iniciado = false;
+    var lonAnt = 0.0;
+    for (final v in verticesLonLat) {
+      final pt = controlador.projetarCoordenada(
+        latitude: v.dy,
+        longitude: v.dx,
+        elevacaoMetros: 0.0,
+        tamanhoTela: size,
+      );
+      if (!pt.visivel) {
+        iniciado = false;
+        continue;
+      }
+      if (!iniciado || (v.dx - lonAnt).abs() > 150.0) {
+        caminho.moveTo(pt.x, pt.y);
+        iniciado = true;
+      } else {
+        caminho.lineTo(pt.x, pt.y);
+      }
+      lonAnt = v.dx;
+    }
+
+    if (!iniciado) return;
+    if (preenchimento != null) {
+      canvas.drawPath(caminho, Paint()..color = preenchimento);
+    }
+    if (borda != null) {
+      canvas.drawPath(
+        caminho,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = espessuraBorda
+          ..color = borda,
+      );
+    }
+  }
+}
