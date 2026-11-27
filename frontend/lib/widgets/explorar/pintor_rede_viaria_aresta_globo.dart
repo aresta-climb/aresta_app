@@ -394,21 +394,10 @@ abstract final class PintorRedeViariaArestaGlobo {
         continue;
       }
 
-      final elev = math.max(
-            0.0,
-            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              picosReferencia: picosReferencia,
-              ehTerraConfirmada: true,
-              amostradorElevacaoReal: amostradorElevacaoReal,
-            ),
-          ) *
-          pesoTerreno;
       final pt = controlador.projetarCoordenada(
         latitude: loc.latitude,
         longitude: loc.longitude,
-        elevacaoMetros: elev + 6.0,
+        elevacaoMetros: 0.0,
         tamanhoTela: size,
       );
       if (!pt.visivel ||
@@ -422,14 +411,12 @@ abstract final class PintorRedeViariaArestaGlobo {
       final pos = Offset(pt.x, pt.y);
 
       if (!jaIluminada) {
-        // Cidade de referência (ou já apagada na retração): ponto branco limpo no modo P&B
         final raioRef = loc.nivel == 1 ? 2.8 : 2.1;
         canvas.drawCircle(pos, raioRef + 1.1, pincelBordaPontoRef);
         canvas.drawCircle(pos, raioRef, pincelPontoBrancoRef);
         continue;
       }
 
-      // Cidade Aresta-relevante iluminada: destaca todas as rodovias e avenidas reais da cidade
       for (final viaUrbana in cidade.viasUrbanasLonLat) {
         if (_adicionarPolilinhaSuaveAoPath(
           destino: caminhoContornosCidades,
@@ -438,9 +425,6 @@ abstract final class PintorRedeViariaArestaGlobo {
           passoSubdivisaoGraus: passoSubdivisaoGraus,
           size: size,
           controlador: controlador,
-          picosReferencia: picosReferencia,
-          pesoTerreno: pesoTerreno,
-          amostradorElevacaoReal: amostradorElevacaoReal,
         )) {
           temContornoCidade = true;
         }
@@ -478,19 +462,19 @@ abstract final class PintorRedeViariaArestaGlobo {
         caminhoContornosCidades,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.2
+          ..strokeWidth = 3.0
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..color = corLaranjaAresta.withValues(
-            alpha: (0.44 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+            alpha: (0.42 * opacidadeLuzLaranja).clamp(0.0, 1.0),
           )
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.4),
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.2),
       );
       canvas.drawPath(
         caminhoContornosCidades,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.25
+          ..strokeWidth = 1.20
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..color = corBrilhoViasAresta.withValues(
@@ -522,7 +506,9 @@ abstract final class PintorRedeViariaArestaGlobo {
       final seg = (b - a).distance;
       if (acumulado + seg >= alvo) {
         final t = seg <= 1e-7 ? 1.0 : ((alvo - acumulado) / seg).clamp(0.0, 1.0);
-        resultado.add(Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t));
+        resultado.add(
+          Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t),
+        );
         break;
       }
       resultado.add(b);
@@ -590,9 +576,6 @@ abstract final class PintorRedeViariaArestaGlobo {
     required double passoSubdivisaoGraus,
     required Size size,
     required ControladorCameraGlobo controlador,
-    required List<PicoRelevoReferencia> picosReferencia,
-    required double pesoTerreno,
-    double? Function(double latitude, double longitude)? amostradorElevacaoReal,
     ValueChanged<Offset>? aoAmostrarPontoCentral,
   }) {
     final cadeiasVisiveis = GeometriaClippingMapa.subdividirERecortarPolilinha(
@@ -636,23 +619,10 @@ abstract final class PintorRedeViariaArestaGlobo {
       }
 
       for (final v in cadeia) {
-        final elev = pesoTerreno > 0.02
-            ? math.max(
-                  0.0,
-                  GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-                    latitude: v.dy,
-                    longitude: v.dx,
-                    picosReferencia: picosReferencia,
-                    ehTerraConfirmada: true,
-                    amostradorElevacaoReal: amostradorElevacaoReal,
-                  ),
-                ) *
-                pesoTerreno
-            : 0.0;
         final pt = controlador.projetarCoordenada(
           latitude: v.dy,
           longitude: v.dx,
-          elevacaoMetros: elev + 5.0,
+          elevacaoMetros: 0.0,
           tamanhoTela: size,
         );
         if (!pt.visivel ||
