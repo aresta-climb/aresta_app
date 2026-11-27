@@ -257,3 +257,69 @@ class ServicoClimaAltimetria extends ChangeNotifier {
         altimetriaPorPico: altMesclada,
       );
 
+      await _armazenamento.salvarSnapshot(consolidado);
+      if (_descartado) return false;
+      _aplicarSnapshotEmMemoria(consolidado);
+      _ultimaSincronizacaoUtc = agora;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      AppLogger.instance.logAviso(
+        '[ServicoClimaAltimetria] Sincronização remota indisponível; mantendo cache local ($e).',
+      );
+      return false;
+    }
+  }
+
+  void _aplicarSnapshotEmMemoria(SnapshotClimaAltimetria snap) {
+    _altimetriaPorPico.addAll(snap.altimetriaPorPico);
+    _chuvaPorPico
+      ..clear()
+      ..addAll(snap.chuvaPorPico);
+    _bolhasBrutas = snap.bolhasChuva;
+    _incendiosBrutos = snap.bolhasIncendio;
+    _geradoEmClimaUtc = snap.geradoEm;
+  }
+
+  /// Retorna a altitude máxima do maciço em metros (ou `null` quando desconhecida).
+  int? obterAltitudePico(String idSlug) =>
+      _altimetriaPorPico[idSlug]?.altitudePicoMetros;
+
+  /// Retorna a cota completa (`base` e `pico`) para escalonamento do relevo 3D no `LOD 3`.
+  CotaAltimetricaPico? obterCotaAltimetrica(String idSlug) =>
+      _altimetriaPorPico[idSlug];
+
+  /// Calcula em `O(1)` o estado vigente de umidade de [idSlug] na data civil local do dispositivo.
+  EstadoUmidadePico obterUmidadePico(String idSlug) {
+    final eventos = _chuvaPorPico[idSlug];
+    if (eventos == null || eventos.isEmpty) {
+      return const EstadoUmidadePico.seco();
+    }
+    return CalculadoraUmidadePico.avaliarHistoricoPico(
+      eventos: eventos,
+      dataReferencia: _relogioLocal(),
+    );
+  }
+
+  /// Lista de tempestades ao vivo vigentes para pintura animada nos `LODs 0–3`.
+  List<BolhaAtivaRenderizavel> get bolhasAtivas {
+    final gerado = _geradoEmClimaUtc;
+    if (gerado == null || _bolhasBrutas.isEmpty) return const [];
+    return CalculadoraUmidadePico.filtrarBolhasAtivas(
+      bolhas: _bolhasBrutas,
+      geradoEm: gerado,
+      dataReferencia: _relogioUtc(),
+    );
+  }
+
+  /// Lista de zonas de incêndio florestal vigentes (NASA FIRMS / INPE VIIRS-MODIS) nas últimas 24h.
+  List<BolhaIncendioAtivaRenderizavel> get bolhasIncendioAtivas {
+    final gerado = _geradoEmClimaUtc;
+    if (gerado == null || _incendiosBrutos.isEmpty) return const [];
+    return CalculadoraUmidadePico.filtrarIncendiosAtivos(
+      incendios: _incendiosBrutos,
+      geradoEm: gerado,
+      dataReferencia: _relogioUtc(),
+    );
+  }
+}
