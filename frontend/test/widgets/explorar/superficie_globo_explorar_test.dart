@@ -827,3 +827,63 @@ void main() {
           findsOneWidget,
         );
 
+        // Zoom-out parcial para LOD 1.70 ainda abaixo do limiar? Não; desce para 1.10 -> recolhe das extremidades até BH!
+        ctrl.definirLod(1.10);
+        await tester.pump(const Duration(milliseconds: 500));
+        // Após 1,35s totais, a retração termina no centro de BH e o Ticker estabiliza
+        await tester.pumpAndSettle();
+        expect(ctrl.fatorModoViario, equals(0.0));
+
+        // Valida injeção e substituição de CenaGloboExplorarViewModel via didUpdateWidget na mesma árvore
+        final cenaExterna = CenaGloboExplorarViewModel(
+          lodInicialCamera: ctrl.lod,
+        );
+        addTearDown(cenaExterna.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                cenaViewModel: cenaExterna,
+                picos: picosTeste,
+                bolhasAtivas: const [],
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Valida também o ramo sem animações (acessibilidade disableAnimations) na ida e na volta
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(disableAnimations: true),
+              child: Scaffold(
+                body: SuperficieGloboExplorar(
+                  controlador: ctrl,
+                  cenaViewModel: cenaExterna,
+                  picos: picosTeste,
+                  bolhasAtivas: const [],
+                  picoSelecionadoId: null,
+                  aoSelecionarPicoNoMapa: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        ctrl.definirLod(1.90);
+        await tester.pump();
+        expect(
+          find.byKey(const Key('cidade_aresta_Belo Horizonte')),
+          findsOneWidget,
+        );
+        ctrl.definirLod(0.90);
+        await tester.pump();
+        expect(ctrl.fatorModoViario, equals(0.0));
+      },
+    );
+  });
+}
