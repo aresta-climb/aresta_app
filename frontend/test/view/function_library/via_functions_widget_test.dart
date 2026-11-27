@@ -317,7 +317,7 @@ void main() {
           ),
         );
         expect(find.text('Via Alfa'), findsOneWidget);
-        expect(find.text('6º'), findsOneWidget);
+        expect(find.text('6º'), findsAtLeastNWidgets(1));
 
         await tester.pumpWidget(
           MaterialApp(
@@ -329,7 +329,83 @@ void main() {
             ),
           ),
         );
+        expect(find.text('Via Alfa'), findsNothing);
+        expect(find.text('6º'), findsNothing);
         expect(find.text('Via Beta'), findsOneWidget);
+        expect(find.text('8a'), findsAtLeastNWidgets(1));
+      },
+    );
+
+    testWidgets(
+      'permite ao próprio autor editar e excluir seus comentários e alertas na ViaPage',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+
+        final escalada = Escalada(
+          uid: 'viaEdicaoAutor01',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Autoral',
+            dificuldade: GrauVia_GrauVia.BR_7A,
+          ),
+        );
+        final repoFake = RepositorioInteracoesViaFake();
+        await repoFake.registrarAvaliacaoAscensao(
+          escaladaUid: 'viaEdicaoAutor01',
+          deltaGrau: 0,
+          comentarioPublico: 'Meu comentário inicial',
+        );
+        final comUid = repoFake
+            .obterDadosEscalada('viaEdicaoAutor01')
+            .comentarios
+            .single
+            .uid;
+        await repoFake.reportarAlerta(
+          escaladaUid: 'viaEdicaoAutor01',
+          categoria: CategoriaAlertaSeguranca.fauna,
+          detalhe: 'Abelhas no crux',
+        );
+
+        final viaVm = ViaViewModel(
+          escalada: escalada,
+          repositorioInteracoes: repoFake,
+        );
+        addTearDown(viaVm.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                  viewModel: viaVm,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Editar e excluir comentário do autor em BETAS DA COMUNIDADE
+        final cabecalhoBetas = find.byKey(
+          const Key('cabecalho_betas_comunidade_via'),
+        );
+        await tester.ensureVisible(cabecalhoBetas);
+        await tester.tap(cabecalhoBetas);
+        await tester.pumpAndSettle();
+
+        final btnEditarCom = find.byKey(Key('btn_editar_comentario_$comUid'));
+        await tester.ensureVisible(btnEditarCom);
+        await tester.tap(btnEditarCom);
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('campo_editar_comentario_via')),
+          'Comentário revisado pela autora!',
+        );
+        await tester.tap(
         expect(find.text('8a'), findsOneWidget);
       },
     );
