@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
-import '../../services/controlador_interacoes_usuario.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../utils/formatador_escalada.dart';
@@ -45,9 +44,6 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
   /// Repositório reativo compartilhado de alertas e interações.
   final RepositorioInteracoesVia repositorioInteracoes;
 
-  /// Controlador de recursos ativos no ambiente.
-  final ControladorInteracoesUsuario controladorInteracoes;
-
   /// Duração da janela para desfazer resolução de alerta antes de persistir no Supabase.
   final Duration duracaoJanelaDesfazer;
 
@@ -63,16 +59,12 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
     required Mapa mapa,
     required Map<Mapa_Referencia, ResolvedDataset> referenciasResolvidas,
     RepositorioInteracoesVia? repositorioInteracoes,
-    ControladorInteracoesUsuario? controladorInteracoes,
     this.duracaoJanelaDesfazer = const Duration(seconds: 4),
   }) : _mapa = mapa,
        _referenciasResolvidas = Map.unmodifiable(referenciasResolvidas),
        repositorioInteracoes =
-           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
-       controladorInteracoes =
-           controladorInteracoes ?? ControladorInteracoesUsuario.instancia {
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia {
     this.repositorioInteracoes.alteracoesListenable.addListener(_notificar);
-    this.controladorInteracoes.interacoesAtivasNotifier.addListener(_notificar);
     _sincronizarViasDoMapa();
   }
 
@@ -87,10 +79,7 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
     _notificar();
   }
 
-  bool get _habilitado => controladorInteracoes.recursoHabilitadoNoAmbiente;
-
   void _sincronizarViasDoMapa() {
-    if (!_habilitado) return;
     final novosUids = <String>{};
     for (final resolvido in _referenciasResolvidas.values) {
       for (final esc in _coletarEscaladasDoAlvo(resolvido)) {
@@ -134,13 +123,12 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
       );
     }
     repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
-    controladorInteracoes.interacoesAtivasNotifier.removeListener(_notificar);
     super.dispose();
   }
 
   /// Retorna os alertas ativos visíveis de [escaladaUid] (excluindo janelas pendentes de Desfazer).
   List<AlertaSegurancaVia> obterAlertasDaEscalada(String escaladaUid) {
-    if (!_habilitado || escaladaUid.trim().isEmpty) return const [];
+    if (escaladaUid.trim().isEmpty) return const [];
     return repositorioInteracoes
         .obterDadosEscalada(escaladaUid.trim())
         .alertasAtivos
@@ -158,7 +146,6 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
 
   /// Retorna todos os alertas ativos agregados das vias pertencentes a [setor].
   List<AlertaSegurancaVia> obterAlertasDoSetor(Setor setor) {
-    if (!_habilitado) return const [];
     final resultado = <AlertaSegurancaVia>[];
     for (final esc in setor.escaladas) {
       resultado.addAll(obterAlertasDaEscalada(esc.uid));
@@ -168,7 +155,7 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
 
   /// Projeta todas as bolhas ativas nas coordenadas normalizadas `(relX, relY)` do [_mapa].
   List<BolhaAlertaMapaApresentacao> get bolhasNoMapa {
-    if (!_habilitado || _mapa.larguraMapa <= 0 || _mapa.alturaMapa <= 0) {
+    if (_mapa.larguraMapa <= 0 || _mapa.alturaMapa <= 0) {
       return const [];
     }
     final poiPorUid = <String, Mapa_PontoDeInteresse>{
@@ -248,6 +235,50 @@ class AlertasMapaInterativoViewModel extends ChangeNotifier {
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Falha ao confirmar alerta $alertaUid pelo mapa na via $escaladaUid',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Edita um alerta criado pelo próprio usuário diretamente a partir da bolha no mapa interativo.
+  Future<bool> editarAlerta(
+    String escaladaUid,
+    String alertaUid,
+    CategoriaAlertaSeguranca novaCategoria, {
+    String? detalhe,
+  }) async {
+    try {
+      await repositorioInteracoes.editarAlerta(
+        escaladaUid: escaladaUid,
+        alertaUid: alertaUid,
+        novaCategoria: novaCategoria,
+        detalhe: detalhe,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao editar alerta $alertaUid pelo mapa na via $escaladaUid',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Exclui permanentemente um alerta criado pelo próprio usuário diretamente pelo mapa interativo.
+  Future<bool> excluirAlerta(String escaladaUid, String alertaUid) async {
+    _resolucoesPendentes.remove(alertaUid)?.timer.cancel();
+    try {
+      await repositorioInteracoes.excluirAlerta(
+        escaladaUid: escaladaUid,
+        alertaUid: alertaUid,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao excluir alerta $alertaUid pelo mapa na via $escaladaUid',
         error: e,
         stackTrace: stackTrace,
       );
