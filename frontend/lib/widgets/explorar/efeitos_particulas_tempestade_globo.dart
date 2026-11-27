@@ -82,3 +82,91 @@ abstract final class EfeitosParticulasTempestadeGlobo {
     }
   }
 
+  /// Desenha iluminação radial volumétrica interna ancorada ao centro geográfico real da tempestade.
+  static void desenharIluminacaoVolumetricaTempestade({
+    required Canvas canvas,
+    required Rect limitesRecorteTela,
+    required Offset centroMundoTela,
+    required double maiorLadoMundoPx,
+    required double menorLadoMundoPx,
+    required NivelIntensidadeChuva nivel,
+    required PaletaTempestadeGlobo paleta,
+    required double faseSegundos,
+  }) {
+    if (nivel == NivelIntensidadeChuva.fraca || menorLadoMundoPx < 18.0) return;
+    final raio = math.max(12.0, maiorLadoMundoPx * 0.56);
+    final pulso = 0.86 + 0.14 * math.sin(faseSegundos * 2.4 + nivel.peso);
+    final shader = ui.Gradient.radial(
+      centroMundoTela,
+      raio,
+      <Color>[
+        paleta.luzCentro.withValues(
+          alpha: (paleta.luzCentro.a * pulso).clamp(0.0, 1.0),
+        ),
+        paleta.preenchimento.withValues(alpha: 0.04),
+        paleta.sombraBorda,
+      ],
+      const <double>[0.0, 0.58, 1.0],
+    );
+    canvas.drawRect(limitesRecorteTela.inflate(8.0), Paint()..shader = shader);
+  }
+
+  /// Desenha bandas nebulosas suaves ancoradas ao ponto geográfico da tempestade (sem deslizar com a câmera).
+  static void desenharBandasAdveccaoVento({
+    required Canvas canvas,
+    required Rect limitesRecorteTela,
+    required Offset ancoraMundoTela,
+    required double menorLadoMundoPx,
+    required Offset dirTela,
+    required double faseSegundos,
+    required double fatorVel,
+    required Color corCrista,
+  }) {
+    final comprimentoOndaPx = (menorLadoMundoPx * 0.95).clamp(18.0, 64.0);
+    final atenuacaoPequena =
+        ((menorLadoMundoPx - 16.0) / 36.0).clamp(0.28, 1.0);
+    final deslocamento = (faseSegundos * 22.0 * fatorVel) % comprimentoOndaPx;
+    final origem = ancoraMundoTela + dirTela * deslocamento;
+    final destino = origem + dirTela * comprimentoOndaPx;
+
+    final shader = ui.Gradient.linear(
+      origem,
+      destino,
+      <Color>[
+        Colors.transparent,
+        corCrista.withValues(
+          alpha: (corCrista.a * atenuacaoPequena).clamp(0.0, 1.0),
+        ),
+        Colors.transparent,
+      ],
+      const <double>[0.0, 0.5, 1.0],
+      TileMode.repeated,
+    );
+    canvas.drawRect(
+      limitesRecorteTela.inflate(comprimentoOndaPx),
+      Paint()..shader = shader,
+    );
+  }
+
+  /// Desenha células volumétricas de nuvem e relâmpagos posicionados em coordenadas geográficas reais `(lon, lat)`.
+  static void desenharCelulasNuvemTempestade({
+    required Canvas canvas,
+    required BolhaChuvaRegional bolha,
+    required double menorLadoMundoPx,
+    required double uLon,
+    required double uLat,
+    required double faseSegundos,
+    required double fatorVel,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required NivelIntensidadeChuva nivel,
+    required Color corNuvem,
+  }) {
+    if (nivel == NivelIntensidadeChuva.fraca) return;
+    final spanLon = math.max(0.08, bolha.maxLon - bolha.minLon);
+    final spanLat = math.max(0.08, bolha.maxLat - bolha.minLat);
+    final qtdNuvens = nivel.peso * 2;
+    final opacidadeCelula = 0.20 + 0.09 * nivel.peso;
+
