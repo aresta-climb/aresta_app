@@ -219,9 +219,71 @@ class BrowseViewModel extends ChangeNotifier {
           : null;
 
   String get termoBusca => _termoBusca;
-
-  /// Critério de ordenação selecionado pelo usuário.
   OrdemOrdenacaoPico get ordem => _ordem;
+  Set<ModalidadeExploracaoPico> get modalidadesAtivas =>
+      Set<ModalidadeExploracaoPico>.unmodifiable(_modalidadesAtivas);
+  int? get minGrauVia => _minGrauVia;
+  int? get maxGrauVia => _maxGrauVia;
+  int? get minGrauBoulder => _minGrauBoulder;
+  int? get maxGrauBoulder => _maxGrauBoulder;
+  double? get raioMaximoKm => _raioMaximoKm;
+  bool get apenasSalvosOffline => _apenasSalvosOffline;
+
+  bool get temFiltroGrauVia => _minGrauVia != null || _maxGrauVia != null;
+  bool get temFiltroGrauBoulder =>
+      _minGrauBoulder != null || _maxGrauBoulder != null;
+
+  /// Quantidade de critérios de filtragem/ordenação não-padrão ativos para exibição de badge.
+  int get totalFiltrosAtivos {
+    var total = 0;
+    if (_modalidadesAtivas.isNotEmpty) total++;
+    if (temFiltroGrauVia) total++;
+    if (temFiltroGrauBoulder) total++;
+    if (_raioMaximoKm != null) total++;
+    if (_apenasSalvosOffline) total++;
+    if (_ordem != OrdemOrdenacaoPico.proximidade) total++;
+    return total;
+  }
+
+  /// Seleciona um pico sincronizando mapa e gaveta; dispara auto-scroll quando [origemMapa] é verdadeiro.
+  void selecionarPico(String? picoId, {bool origemMapa = false}) {
+    _picoSelecionadoId = picoId;
+    notifyListeners();
+    if (origemMapa && picoId != null) {
+      _solicitacaoAutoScrollPicoSelecionado.value++;
+    }
+  }
+
+  void alternarModalidade(ModalidadeExploracaoPico modalidade) {
+    if (!_modalidadesAtivas.remove(modalidade)) {
+      _modalidadesAtivas.add(modalidade);
+    }
+    notifyListeners();
+  }
+
+  void definirModalidades(Set<ModalidadeExploracaoPico> novas) {
+    _modalidadesAtivas
+      ..clear()
+      ..addAll(novas);
+    notifyListeners();
+  }
+
+  void definirFaixaGrauVia(int? minValor, int? maxValor) {
+    _minGrauVia = minValor;
+    _maxGrauVia = maxValor;
+    notifyListeners();
+  }
+
+  void definirFaixaGrauBoulder(int? minValor, int? maxValor) {
+    _minGrauBoulder = minValor;
+    _maxGrauBoulder = maxValor;
+    notifyListeners();
+  }
+
+  void definirRaioMaximoKm(double? km) {
+    _raioMaximoKm = km;
+    notifyListeners();
+  }
 
   /// Atualiza a coordenada geográfica do usuário para cálculo de distâncias e ordenação.
   void atualizarLocalizacaoUsuario(double lat, double lon) {
