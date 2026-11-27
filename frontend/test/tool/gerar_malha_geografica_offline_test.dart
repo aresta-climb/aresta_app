@@ -91,3 +91,92 @@ void main() {
       },
     );
 
+    test(
+      'deve preservar atual e restaurar da copia_seguranca quando o servico do IBGE ou NASA falhar ou retornar dados invalidos',
+      () async {
+        final caminhoMalha = '${dirTemp.path}/malha_globo_brasil.json';
+        final caminhoSeguranca =
+            '${dirTemp.path}/malha_globo_brasil.seguranca.json';
+
+        await GeradorMalhaGeograficaOffline.executarGeracaoMalha(
+          caminhoSaida: caminhoMalha,
+          caminhoSeguranca: caminhoSeguranca,
+          provedorMalhaExterna: () async =>
+              GeradorMalhaGeograficaOffline.construirMalhaPadraoEmbutida(
+                versao: 'v_estavel',
+              ),
+        );
+
+        // Simula queda da API externa (HTTP 503 / SocketException)
+        final resQueda = await GeradorMalhaGeograficaOffline.executarGeracaoMalha(
+          caminhoSaida: caminhoMalha,
+          caminhoSeguranca: caminhoSeguranca,
+          provedorMalhaExterna: () async =>
+              throw const SocketException('IBGE indisponivel'),
+        );
+
+        expect(resQueda.usouCopiaSeguranca, isTrue);
+        final jsonAposQueda =
+            jsonDecode(File(caminhoMalha).readAsStringSync())
+                as Map<String, dynamic>;
+        expect(jsonAposQueda['versao'], equals('v_estavel'));
+
+        // Simula corrupcao do arquivo atual antes de nova falha externa -> restaura de copia_seguranca
+        File(caminhoMalha).writeAsStringSync('{corrompido');
+        final resRestaurado =
+            await GeradorMalhaGeograficaOffline.executarGeracaoMalha(
+              caminhoSaida: caminhoMalha,
+              caminhoSeguranca: caminhoSeguranca,
+              provedorMalhaExterna: () async => {'estados_br': []},
+            );
+
+        expect(resRestaurado.usouCopiaSeguranca, isTrue);
+        final jsonRestaurado =
+            jsonDecode(File(caminhoMalha).readAsStringSync())
+                as Map<String, dynamic>;
+        expect(jsonRestaurado['versao'], equals('v_estavel'));
+      },
+    );
+
+    test(
+      'deve gerar altimetria inicial e rotacionar copia de seguranca validando cotas de base e pico',
+      () async {
+        final caminhoAlt = '${dirTemp.path}/altimetria_picos_inicial.json';
+        final caminhoAltSeg =
+            '${dirTemp.path}/altimetria_picos_inicial.seguranca.json';
+
+        await GeradorMalhaGeograficaOffline.executarGeracaoAltimetria(
+          caminhoSaida: caminhoAlt,
+          caminhoSeguranca: caminhoAltSeg,
+          provedorAltimetriaExterna: () async => {
+            'versao': 'nasa_v1',
+            'picos': {
+              'br_mg_igarape_pedra_grande': {
+                'altitude_base_m': 980,
+                'altitude_pico_m': 1430,
+              },
+            },
+          },
+        );
+
+        await GeradorMalhaGeograficaOffline.executarGeracaoAltimetria(
+          caminhoSaida: caminhoAlt,
+          caminhoSeguranca: caminhoAltSeg,
+          provedorAltimetriaExterna: () async => {
+            'versao': 'nasa_v2',
+            'picos': {
+              'br_mg_igarape_pedra_grande': {
+                'altitude_base_m': 985,
+                'altitude_pico_m': 1434,
+              },
+            },
+          },
+        );
+
+        final atual =
+            jsonDecode(File(caminhoAlt).readAsStringSync())
+                as Map<String, dynamic>;
+        final seg =
+            jsonDecode(File(caminhoAltSeg).readAsStringSync())
+                as Map<String, dynamic>;
+
