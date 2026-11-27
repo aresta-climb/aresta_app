@@ -7,9 +7,6 @@ import '../../theme/cores_app.dart';
 /// Barra inferior fixa ao alcance do polegar (*Thumb Dock*, Dumb UI) exibindo a ação primária
 /// de registro de cadena ou tentativa alinhada com os cartões da `ViaPage`.
 class BarraInferiorAcoesVia extends StatelessWidget {
-  /// Indica se o botão principal de caderneta deve ser exibido.
-  final bool exibirBotaoCaderneta;
-
   /// Indica se o escalador já encadenou a via (destacando o botão em verde musgo).
   final bool possuiCadena;
 
@@ -22,7 +19,6 @@ class BarraInferiorAcoesVia extends StatelessWidget {
   /// Cria uma instância de [BarraInferiorAcoesVia].
   const BarraInferiorAcoesVia({
     super.key,
-    required this.exibirBotaoCaderneta,
     required this.possuiCadena,
     required this.rotuloBotaoCaderneta,
     required this.aoRegistrarCadena,
@@ -30,9 +26,6 @@ class BarraInferiorAcoesVia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!exibirBotaoCaderneta) {
-      return const SizedBox.shrink();
-    }
     final cores = context.colors;
 
     return Container(
