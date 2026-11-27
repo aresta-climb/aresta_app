@@ -14,8 +14,10 @@ void main() {
   late HttpServer servidor;
   late String baseUrl;
   Map<String, dynamic>? ultimoPayloadRecebido;
+  String? ultimoMetodoHttp;
   String? ultimoAuthHeader;
   String? ultimoApikeyHeader;
+  String? ultimoPreferHeader;
   Uri? ultimaUriRequisitada;
   int statusResposta = 200;
   Object corpoRespostaGet = <Map<String, dynamic>>[];
@@ -23,8 +25,10 @@ void main() {
   setUp(() async {
     HttpOverrides.global = null;
     ultimoPayloadRecebido = null;
+    ultimoMetodoHttp = null;
     ultimoAuthHeader = null;
     ultimoApikeyHeader = null;
+    ultimoPreferHeader = null;
     ultimaUriRequisitada = null;
     statusResposta = 200;
     corpoRespostaGet = <Map<String, dynamic>>[];
@@ -33,13 +37,23 @@ void main() {
     baseUrl = 'http://127.0.0.1:${servidor.port}/';
 
     servidor.listen((req) async {
+      ultimoMetodoHttp = req.method;
       ultimoAuthHeader = req.headers.value('authorization');
       ultimoApikeyHeader = req.headers.value('apikey');
+      ultimoPreferHeader = req.headers.value('prefer');
       ultimaUriRequisitada = req.uri;
-      if (req.method == 'POST') {
+      if (req.method == 'POST' || req.method == 'PATCH') {
         final texto = await utf8.decoder.bind(req).join();
-        ultimoPayloadRecebido = jsonDecode(texto) as Map<String, dynamic>;
-        req.response.statusCode = statusResposta == 200 ? 201 : statusResposta;
+        ultimoPayloadRecebido = texto.isNotEmpty
+            ? jsonDecode(texto) as Map<String, dynamic>
+            : null;
+        req.response.statusCode = statusResposta == 200
+            ? (req.method == 'POST' ? 201 : 204)
+            : statusResposta;
+        await req.response.close();
+      } else if (req.method == 'DELETE') {
+        ultimoPayloadRecebido = null;
+        req.response.statusCode = statusResposta == 200 ? 204 : statusResposta;
         await req.response.close();
       } else {
         req.response.statusCode = statusResposta;
@@ -94,6 +108,7 @@ void main() {
         'id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         'autor_id_publico': 'c3Lk9P1x4Vw8Mn',
         'autor_nome_publico': 'Mariana',
+        'autor_avatar_url': 'https://cdn.aresta.cc/avatars/mariana.webp',
         'escalada_uid': 'x8siJek3FiG3aB',
         'tipo': 'COMENTARIO',
         'texto_comentario': 'Ótimo crux!',
@@ -113,6 +128,7 @@ void main() {
     expect(ultimoAuthHeader, isNull);
     expect(lista, hasLength(1));
     expect(lista.single.textoComentario, 'Ótimo crux!');
+    expect(lista.single.autorAvatarUrl, 'https://cdn.aresta.cc/avatars/mariana.webp');
 
     expect(await cliente.buscarInteracoesPendentes('   '), isEmpty);
     expect(await cliente.buscarInteracoesPendentesEmLote(['  ', '']), isEmpty);
