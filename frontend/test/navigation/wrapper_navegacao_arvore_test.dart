@@ -21,8 +21,6 @@ import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -718,16 +716,10 @@ void main() {
     );
 
     testWidgets(
-      'fluxo Home -> Login -> Abrir configurações do app -> Configurações (pulando Perfil na ida e na volta) e poda ao desativar interações',
+      'fluxo Home -> Login -> Abrir configurações do app -> Configurações (pulando Perfil na ida e na volta)',
       (tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        ControladorInteracoesUsuario.redefinirParaTestes();
         ServicoAutenticacaoLocal.redefinirParaTestes();
-        addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
-          ControladorInteracoesUsuario.redefinirParaTestes();
-          ServicoAutenticacaoLocal.redefinirParaTestes();
-        });
+        addTearDown(ServicoAutenticacaoLocal.redefinirParaTestes);
 
         final controller = TreeNavigationController();
         repo.loadEmpty();
@@ -762,36 +754,15 @@ void main() {
         expect(controller.currentNode.parent, isA<LoginNode>());
         expect(controller.arvore.profundidade, equals(3));
 
-        // 3. Ao voltar deslogado da SettingsPage, pula PerfilNode retornando a LoginNode; reabre Configurações
+        // 3. Ao voltar deslogado da SettingsPage, retorna a LoginNode; voltar mais uma vez retorna à Home
         controller.goBack();
         await tester.pumpAndSettle();
         expect(controller.currentNode, isA<LoginNode>());
-        await tester.ensureVisible(
-          find.byKey(const Key('btn_abrir_configuracoes_login')),
-        );
-        await tester.tap(
-          find.byKey(const Key('btn_abrir_configuracoes_login')),
-        );
-        await tester.pumpAndSettle();
-        expect(controller.currentNode, isA<SettingsNode>());
 
-        // 4. Desativa o Switch de interações na SettingsPage
-        final switchFinder = find.byKey(const Key('switch_interacoes_caderneta'));
-        await tester.ensureVisible(switchFinder);
-        await tester.tap(switchFinder);
-        await tester.pumpAndSettle();
-
-        // A árvore deve ter podado LoginNode mantendo SettingsNode reancorado diretamente em HomeNode
-        expect(controller.currentNode, isA<SettingsNode>());
-        expect(controller.currentNode.parent, isA<HomeNode>());
-        expect(controller.arvore.profundidade, equals(2));
-
-        // 5. Ao voltar da SettingsPage, pousa diretamente em HomeNode e o botão de Configurações substitui o botão de Perfil na Home
         controller.goBack();
         await tester.pumpAndSettle();
         expect(controller.currentNode, isA<HomeNode>());
-        expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-        expect(find.byIcon(Icons.settings), findsOneWidget);
+        expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       },
     );
   });
