@@ -268,3 +268,91 @@ abstract final class PintorTempestadeGlobo {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
         );
       }
+      canvas.drawPath(
+        projecaoExterna.caminho,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = realcada
+              ? 2.1
+              : (menorLadoMundoPx < 14.0
+                  ? 0.62
+                  : (menorLadoMundoPx < 26.0
+                      ? espessuraBase * 0.82
+                      : espessuraBase))
+          ..color = menorLadoMundoPx < 14.0
+              ? paleta.borda.withValues(
+                  alpha: (paleta.borda.a * 0.58).clamp(0.0, 1.0),
+                )
+              : paleta.borda,
+      );
+      if (ptCentroMundo.visivel && menorLadoMundoPx >= 24.0) {
+        EfeitosParticulasTempestadeGlobo.desenharEmblemaNuvemChuva(
+          canvas: canvas,
+          centro: Offset(ptCentroMundo.x, ptCentroMundo.y),
+          escalaPx: (menorLadoMundoPx * 0.16).clamp(7.0, 12.5),
+          faseSegundos: faseSegundos,
+          nivel: bolhaAtiva.nivelIntensidade,
+          corBorda: paleta.tracoChuva,
+        );
+      }
+    }
+
+    return desenhadas;
+  }
+
+  static ({Path caminho, Rect limites, bool visivel}) _projetarAnelContorno({
+    required List<PontoContornoGeo> anel,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required double faseSegundos,
+    required double uLon,
+    required double uLat,
+    required double fatorVel,
+    required double amplitudeOndulacaoGraus,
+  }) {
+    final caminho = Path();
+    var pontosProjetados = <Offset>[];
+    final segmentos = <List<Offset>>[];
+    var dLonAnterior = 0.0;
+    var minX = double.infinity;
+    var maxX = double.negativeInfinity;
+    var minY = double.infinity;
+    var maxY = double.negativeInfinity;
+
+    var verticesAnimados = <Offset>[];
+    for (var k = 0; k < anel.length; k++) {
+      final v = anel[k];
+      final onda = amplitudeOndulacaoGraus *
+          math.sin(faseSegundos * 1.35 * fatorVel + k * 0.85);
+      verticesAnimados.add(
+        Offset(
+          v.longitude + onda * uLon,
+          (v.latitude + onda * uLat).clamp(-89.5, 89.5),
+        ),
+      );
+    }
+
+    // Em zoom aproximado 3D (LOD >= 1.65), recorta o polígono da frente contra o frustum visível
+    // para impedir cordas artificiais quando os vértices sul passam atrás da lente perspectiva
+    if (controlador.modo3D && controlador.lod >= 1.65) {
+      final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
+        modo3D: true,
+        latitudeCentral: controlador.latitudeCentral,
+        longitudeCentral: controlador.longitudeCentral,
+        lod: controlador.lod,
+        raioAparentePx: controlador.raioAparentePx,
+        escala2D: 1.0,
+        tamanhoTela: tamanhoTela,
+        fatorMargem: 1.06,
+      );
+      verticesAnimados = GeometriaClippingMapa.recortarPoligonoNoRetangulo(
+        anelLonLat: verticesAnimados,
+        janela: janela,
+      );
+      if (verticesAnimados.length < 3) {
+        return (caminho: caminho, limites: Rect.zero, visivel: false);
+      }
+    }
+
