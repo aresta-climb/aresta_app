@@ -341,3 +341,67 @@ abstract final class ExtratorCurvasNivelMundo {
         tras.add(ka == kIni ? seg.$2 : seg.$1);
       }
 
+      final cadeia = <Offset>[
+        for (var t = tras.length - 1; t >= 0; t--) tras[t],
+        ...frente,
+      ];
+      if (cadeia.length >= 3) {
+        final fechado =
+            (cadeia.first - cadeia.last).distanceSquared < (passoGraus * 0.08) * (passoGraus * 0.08);
+        resultado.add(_suavizarChaikin(cadeia, fechado: fechado));
+      }
+    }
+    return resultado;
+  }
+
+  /// Aplica 2 iterações de corte de cantos *Chaikin* para gerar curvas topográficas orgânicas sem quinas.
+  static List<Offset> _suavizarChaikin(
+    List<Offset> pontos, {
+    required bool fechado,
+  }) {
+    var atual = pontos;
+    for (var iter = 0; iter < 2; iter++) {
+      if (atual.length < 3) break;
+      final prox = <Offset>[];
+      if (fechado) {
+        final m = atual.length - 1;
+        for (var i = 0; i < m; i++) {
+          final a = atual[i];
+          final b = atual[(i + 1) % m];
+          prox
+            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
+        }
+        if (prox.isNotEmpty) prox.add(prox.first);
+      } else {
+        prox.add(atual.first);
+        for (var i = 0; i < atual.length - 1; i++) {
+          final a = atual[i];
+          final b = atual[i + 1];
+          prox
+            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
+        }
+        prox.add(atual.last);
+      }
+      atual = prox;
+    }
+    return List<Offset>.unmodifiable(atual);
+  }
+
+  /// Escolhe um vértice canônico em espaço do mundo (ex.: extremo norte da curva) para que
+  /// a etiqueta `800 m` jamais salte entre vértices quando a câmera se move.
+  static Offset _escolherAncoraDeterministicaMundo(
+    List<Offset> poli,
+    double passo,
+  ) {
+    var melhor = poli[poli.length ~/ 2];
+    for (var i = 2; i < poli.length - 2; i++) {
+      final p = poli[i];
+      if (p.dy > melhor.dy + passo * 0.01) {
+        melhor = p;
+      }
+    }
+    return melhor;
+  }
+}
