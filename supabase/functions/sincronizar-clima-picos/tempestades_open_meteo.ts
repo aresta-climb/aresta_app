@@ -354,3 +354,96 @@ export async function coletarTempestadesAoVivoContornosOpenMeteo(
         Math.ceil((maxLonAnel - regiao.minLon) / passoLon) + 2,
       );
 
+      let picoMmH = 0;
+      let somaPeso = 0;
+      let somaLat = 0;
+      let somaLon = 0;
+      let somaWx = 0;
+      let somaWy = 0;
+
+      for (let r = rIni; r <= rFim; r++) {
+        for (let c = cIni; c <= cFim; c++) {
+          const lon = lonsGrade[c];
+          const lat = latsGrade[r];
+          if (!pontoEmPoligono(lon, lat, contornoSuave)) continue;
+          const val = Math.max(matrizSuave[r][c], campoFino[r][c].mmHora);
+          if (val > picoMmH) picoMmH = val;
+          const peso = Math.max(0.1, val);
+          somaPeso += peso;
+          somaLat += lat * peso;
+          somaLon += lon * peso;
+          somaWx += campoFino[r][c].ventoWx * peso;
+          somaWy += campoFino[r][c].ventoWy * peso;
+        }
+      }
+
+      if (somaPeso <= 0) {
+        const centroide = calcularCentroideAnel(contornoSuave);
+        const interpCentro = interpolarGradeMeteo(
+          gradeMeteo,
+          regiao.minLat,
+          regiao.minLon,
+          passoLatMeteo,
+          passoLonMeteo,
+          centroide[1],
+          centroide[0],
+        );
+        somaLon = centroide[0];
+        somaLat = centroide[1];
+        somaWx = interpCentro.ventoWx;
+        somaWy = interpCentro.ventoWy;
+        somaPeso = 1;
+        picoMmH = Math.max(picoMmH, LIMIAR_FRENTE_AO_VIVO_MM_H + 0.08);
+      }
+
+      const latCentro = arredondar(somaLat / somaPeso, 4);
+      const lonCentro = arredondar(somaLon / somaPeso, 4);
+      const mediaWx = somaWx / somaPeso;
+      const mediaWy = somaWy / somaPeso;
+      const velMedia = Math.hypot(mediaWx, mediaWy);
+      const rumoGraus =
+        velMedia > 0.2
+          ? (((Math.atan2(mediaWx, mediaWy) * 180) / Math.PI) + 360) % 360
+          : 45;
+
+      const nucleosInternos: ParLonLat[][] = [];
+      for (const nucBruto of contornosNucleos) {
+        const areaNuc = Math.abs(calcularAreaAssinada(nucBruto));
+        if (areaNuc < 0.0012) continue;
+        const cNuc = calcularCentroideAnel(nucBruto);
+        if (
+          cNuc[0] < minLonAnel ||
+          cNuc[0] > maxLonAnel ||
+          cNuc[1] < minLatAnel ||
+          cNuc[1] > maxLatAnel
+        ) {
+          continue;
+        }
+        if (!pontoEmPoligono(cNuc[0], cNuc[1], contornoSuave)) continue;
+        const nucSuave = simplificarAnelUniforme(
+          suavizarChaikin(nucBruto, 1),
+          areaNuc >= 0.15 ? 36 : 18,
+        );
+        if (nucSuave.length >= 3) {
+          nucleosInternos.push(nucSuave);
+        }
+      }
+
+      const bolhaSemId: Omit<BolhaChuvaJson, "id"> = {
+        lat: latCentro,
+        lon: lonCentro,
+        intensidade_mm_h: arredondar(picoMmH, 2),
+        vento_rumo_graus: arredondar(rumoGraus, 1),
+        vento_kmh: arredondar(Math.max(6, velMedia), 1),
+        contorno_externo: contornoSuave,
+      };
+      if (nucleosInternos.length > 0) {
+        bolhaSemId.nucleos_intensos = nucleosInternos;
+      }
+      candidatosGlobais.push({
+        bolha: bolhaSemId,
+        relevancia: areaAbs * (0.5 + picoMmH),
+      });
+    }
+  }
+
