@@ -82,9 +82,111 @@ class ArmazenamentoFilaInteracoes {
   Future<void> salvarCacheAlertasUsuario(List<ItemFilaInteracao> itens) =>
       _salvarLista(chaveCacheAlertasUsuario, itens);
 
+  /// Hidrata em memória [_eventosAlertasPorVia] a partir do disco.
+  Future<void> hidratarMemoriaAlertas() async {
+    for (final ev in await carregarCacheAlertasUsuario()) {
+      _eventosAlertasPorVia
+          .putIfAbsent(ev.escaladaUid, () => <ItemFilaInteracao>[])
+          .add(ev);
+    }
+  }
+
+  /// Substitui todos os eventos de alertas em memória e persiste em disco.
+  Future<void> substituirTodosEventosAlertas(
+    Iterable<ItemFilaInteracao> itens,
+  ) async {
+    _eventosAlertasPorVia.clear();
+    for (final item in itens) {
+      _eventosAlertasPorVia
+          .putIfAbsent(item.escaladaUid, () => <ItemFilaInteracao>[])
+          .add(item);
+    }
+    await persistirMemoriaAlertas();
+  }
+
+  /// Atualiza em memória os eventos de alerta de uma única [uidVia].
+  void atualizarEventosDaVia(
+    String uidVia,
+    Iterable<ItemFilaInteracao> itens,
+  ) {
+    final filtrados = itens
+        .where(
+          (i) =>
+              i.tipo == TipoFilaInteracao.alertaSeguranca ||
+              i.tipo == TipoFilaInteracao.confirmacaoAlerta,
+        )
+        .toList();
+    if (filtrados.isEmpty) {
+      _eventosAlertasPorVia.remove(uidVia);
+    } else {
+      _eventosAlertasPorVia[uidVia] = filtrados;
+    }
+  }
+
+  /// Adiciona um evento local de alerta em memória e persiste em disco.
+  Future<void> adicionarEventoAlerta(ItemFilaInteracao evento) async {
+    _eventosAlertasPorVia
+        .putIfAbsent(evento.escaladaUid, () => <ItemFilaInteracao>[])
+        .add(evento);
+    await persistirMemoriaAlertas();
+  }
+
+  /// Aplica uma mutação de alerta em memória para [uidVia] e persiste em disco.
+  Future<void> aplicarMutacaoAlertaNaVia(
+    String uidVia,
+    MutacaoFilaInteracao mutacao,
+  ) async {
+    final existentes = _eventosAlertasPorVia[uidVia];
+    if (existentes == null) return;
+    final filtrados = aplicarMutacoesSobreItens(existentes, [mutacao]);
+    if (filtrados.isEmpty) {
+      _eventosAlertasPorVia.remove(uidVia);
+    } else {
+      _eventosAlertasPorVia[uidVia] = filtrados;
+    }
+    await persistirMemoriaAlertas();
+  }
+
+  /// Persiste em disco o mapa [_eventosAlertasPorVia] atual.
+  Future<void> persistirMemoriaAlertas() => salvarCacheAlertasUsuario([
+    for (final lista in _eventosAlertasPorVia.values) ...lista,
+  ]);
+
+  /// Carrega as mutações de edição/exclusão retidas offline.
+  Future<List<MutacaoFilaInteracao>> carregarMutacoesPendentes() async {
+    final prefs = await _obterPrefs();
+    final bruto = prefs.getString(chaveMutacoesPendentes);
+    if (bruto == null || bruto.isEmpty) return const [];
+    try {
+      final lista = jsonDecode(bruto) as List<dynamic>;
+      return lista
+          .whereType<Map<String, dynamic>>()
+          .map(MutacaoFilaInteracao.fromJson)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Salva as mutações de edição/exclusão pendentes em disco (removendo a chave quando vazia).
+  Future<void> salvarMutacoesPendentes(
+    List<MutacaoFilaInteracao> mutacoes,
+  ) async {
+    final prefs = await _obterPrefs();
+    if (mutacoes.isEmpty) {
+      await prefs.remove(chaveMutacoesPendentes);
+      return;
+    }
+    final serializado = jsonEncode(
+      mutacoes.map((m) => m.toJson()).toList(growable: false),
+    );
+    await prefs.setString(chaveMutacoesPendentes, serializado);
+  }
+
   /// Remove integralmente a fila offline persistida em disco.
   Future<void> limparFila() async {
     final prefs = await _obterPrefs();
     await prefs.remove(chaveFilaPendente);
+    await prefs.remove(chaveMutacoesPendentes);
   }
 }
