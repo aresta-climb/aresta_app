@@ -18,8 +18,6 @@ import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -36,15 +34,6 @@ class _FakePathProviderPlatform extends PathProviderPlatform
   Future<String?> getLibraryPath() async => tempPath;
   @override
   Future<String?> getTemporaryPath() async => tempPath;
-}
-
-class _ItemComId {
-  final String id;
-  const _ItemComId(this.id);
-}
-
-class _ItemQueLancaNoId {
-  String get id => throw StateError('Sem id');
 }
 
 void main() {
@@ -261,7 +250,7 @@ void main() {
     });
 
     testWidgets(
-      'toMapas e toMapaGlobal empilham os nós de mapa normalizando identificadores',
+      'toMapas empilha o nó MapasCarrosselNode com cragId e índice inicial',
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
@@ -301,29 +290,6 @@ void main() {
         );
 
         expect(controller.currentNode, isA<MapasCarrosselNode>());
-
-        // toMapaGlobal extraindo IDs de String, objeto com .id e Map
-        AppNav.toMapaGlobal(
-          context,
-          crags: [
-            'pico_1',
-            const _ItemComId('pico_2'),
-            {'id': 'pico_3'},
-            _ItemQueLancaNoId(),
-          ],
-        );
-        expect(controller.currentNode, isA<MapaGlobalNode>());
-        expect(
-          (controller.currentNode as MapaGlobalNode).picoIds,
-          equals(['pico_1', 'pico_2', 'pico_3']),
-        );
-
-        // toMapaGlobal com picoIds explícitos e crags não-iterável
-        AppNav.toMapaGlobal(context, picoIds: ['explicito_1']);
-        expect(
-          (controller.currentNode as MapaGlobalNode).picoIds,
-          equals(['explicito_1']),
-        );
       },
     );
 
@@ -401,12 +367,6 @@ void main() {
     testWidgets(
       'AppNav.toLogin, abrirPerfilOuLogin, toPerfil, toCaderneta e canGoBack operam como no-op seguro quando não há TreeNavigationWrapper montado',
       (tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-        addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
-          ControladorInteracoesUsuario.redefinirParaTestes();
-        });
-
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData(extensions: const [AppColors.dark]),
@@ -425,14 +385,6 @@ void main() {
         AppNav.toCaderneta(context);
         await tester.pumpAndSettle();
         expect(find.text('Tela Inicial'), findsOneWidget);
-
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        ControladorInteracoesUsuario.redefinirParaTestes();
-        AppNav.toLogin(context);
-        AppNav.toPerfil(context);
-        AppNav.toCaderneta(context);
-        await tester.pumpAndSettle();
-        expect(find.text('Tela Inicial'), findsOneWidget);
         expect(AppNav.canGoBack(context), isFalse);
       },
     );
@@ -440,9 +392,6 @@ void main() {
     testWidgets(
       'AppNav.toLogin, abrirPerfilOuLogin, toPerfil, toCaderneta e toSettings empilham nós quando TreeNavigationController está presente',
       (tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
-
         final prefs = await SharedPreferences.getInstance();
         final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
         await repoCaderneta.inicializar();
@@ -694,15 +643,8 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toLogin, abrirPerfilOuLogin, toPerfil e toCaderneta respeitam a flag perfilHabilitado e a preferência local em ControladorInteracoesUsuario',
+      'AppNav.toLogin, abrirPerfilOuLogin, toPerfil e toCaderneta estão sempre ativos por padrão na árvore',
       (tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        ControladorInteracoesUsuario.redefinirParaTestes();
-        addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
-          ControladorInteracoesUsuario.redefinirParaTestes();
-        });
-
         await tester.pumpWidget(
           MaterialApp(
             home: TreeNavigationWrapper(
@@ -719,24 +661,6 @@ void main() {
         final controller =
             TreeNavigationWrapper.navKey.currentState!.treeController;
 
-        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
-          false,
-        );
-        AppNav.toLogin(context);
-        expect(controller.currentNode, isA<HomeNode>());
-
-        AppNav.abrirPerfilOuLogin(context);
-        expect(controller.currentNode, isA<HomeNode>());
-
-        AppNav.toPerfil(context);
-        expect(controller.currentNode, isA<HomeNode>());
-
-        AppNav.toCaderneta(context);
-        expect(controller.currentNode, isA<HomeNode>());
-
-        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
-          true,
-        );
         AppNav.toLogin(context);
         expect(controller.currentNode, isA<LoginNode>());
 
