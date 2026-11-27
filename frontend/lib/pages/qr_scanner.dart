@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../theme/cores_app.dart';
 
@@ -26,42 +27,32 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      appBar: buildCommonAppBar(context, 'Escanear QR Code'),
-      body: Stack(
-        children: [
-          MobileScanner(
-            controller: cameraController,
-            onDetect: (BarcodeCapture capture) {
-              if (_isScanned) return;
-
-              final List<Barcode> barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                final String? rawValue = barcode.rawValue;
-                if (rawValue != null && rawValue.isNotEmpty) {
-                  _isScanned = true;
-                  Navigator.pop(context, rawValue);
-                  break;
-                }
-              }
-            },
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          appBar: buildCommonAppBar(
+            context,
+            context.tr(ChaveTexto.qrTituloPagina),
           ),
-          // Um overlay simples para indicar a área de leitura
-          Center(
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFC04F34), width: 3),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFC04F34).withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
+          body: Stack(
+            children: [
+              MobileScanner(
+                controller: cameraController,
+                onDetect: (BarcodeCapture capture) {
+                  if (_isScanned) return;
+
+                  final List<Barcode> barcodes = capture.barcodes;
+                  for (final barcode in barcodes) {
+                    final String? rawValue = barcode.rawValue;
+                    if (rawValue != null && rawValue.isNotEmpty) {
+                      _isScanned = true;
+                      Navigator.pop(context, rawValue);
+                      break;
+                    }
+                  }
+                },
               ),
             ),
           ),
