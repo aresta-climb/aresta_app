@@ -93,3 +93,99 @@ void main() {
         contornoExterno: trianguloPadrao,
       );
 
+      expect(fraca.nivelIntensidade, equals(NivelIntensidadeChuva.fraca));
+      expect(moderada.nivelIntensidade, equals(NivelIntensidadeChuva.moderada));
+      expect(fortePorNucleo.nivelIntensidade, equals(NivelIntensidadeChuva.forte));
+      expect(
+        extremaPorMultiplosNucleos.nivelIntensidade,
+        equals(NivelIntensidadeChuva.extrema),
+      );
+      expect(extremaPorTaxa.nivelIntensidade, equals(NivelIntensidadeChuva.extrema));
+    });
+
+    test('serializa núcleos intensos, ordena rastros passados e calcula limites', () {
+      final bolha = BolhaChuvaRegional.deMapa({
+        'id': 'chuva_mg',
+        'lat': -20.0,
+        'lon': -44.0,
+        'intensidade_mm_h': 4.5,
+        'vento_rumo_graus': -45.0,
+        'vento_kmh': 24.0,
+        'contorno_externo': [
+          [-44.3, -20.2],
+          [-43.7, -20.2],
+          [-44.0, -19.7],
+        ],
+        'nucleos_intensos': [
+          [
+            [-44.1, -20.1],
+            [-43.9, -20.1],
+            [-44.0, -19.9],
+          ],
+        ],
+        'rastros_passados': [
+          {
+            'horas_atras': 3,
+            'contorno': [
+              [-44.5, -20.4],
+              [-44.2, -20.4],
+              [-44.3, -20.1],
+            ],
+          },
+          {
+            'horas_atras': 6,
+            'contorno': [
+              [-44.8, -20.6],
+              [-44.5, -20.6],
+              [-44.6, -20.3],
+            ],
+          },
+        ],
+      });
+
+      expect(bolha.ventoRumoGraus, closeTo(315.0, 1e-6));
+      expect(bolha.minLon, closeTo(-44.3, 1e-6));
+      expect(bolha.maxLon, closeTo(-43.7, 1e-6));
+      expect(bolha.minLat, closeTo(-20.2, 1e-6));
+      expect(bolha.maxLat, closeTo(-19.7, 1e-6));
+      expect(bolha.nivelIntensidade, equals(NivelIntensidadeChuva.forte));
+      expect(
+        bolha.obterPegadasTrajetoria().map((r) => r.horasAtras).toList(),
+        equals([6, 3]),
+      );
+
+      final restaurada = BolhaChuvaRegional.deMapa(bolha.paraMapa());
+      expect(restaurada.nucleosIntensos, hasLength(1));
+      expect(restaurada.rastrosPassados, hasLength(2));
+
+      final renderizavel = BolhaAtivaRenderizavel(
+        bolha: restaurada,
+        nivelIntensidade: restaurada.nivelIntensidade,
+      );
+      expect(renderizavel.bolha.id, equals('chuva_mg'));
+      expect(renderizavel.nivelIntensidade, equals(NivelIntensidadeChuva.forte));
+    });
+
+    test('retroprojeta pegadas cinemáticas pelo vento inclusive cruzando o antimeridiano', () {
+      const bolhaOeste = BolhaChuvaRegional(
+        id: 'antimeridiano_oeste',
+        latitude: 0.0,
+        longitude: 179.9,
+        intensidadeMmHora: 2.0,
+        ventoRumoGraus: 270.0,
+        ventoVelocidadeKmh: 60.0,
+        contornoExterno: [
+          PontoContornoGeo(longitude: 179.8, latitude: -0.2),
+          PontoContornoGeo(longitude: 180.0, latitude: -0.2),
+          PontoContornoGeo(longitude: 179.9, latitude: 0.2),
+        ],
+      );
+      final pegadasOeste = bolhaOeste.obterPegadasTrajetoria();
+      expect(pegadasOeste.map((p) => p.horasAtras).toList(), equals([6, 3]));
+      expect(
+        pegadasOeste.first.contorno.every(
+          (p) => p.longitude >= -180.0 && p.longitude <= 180.0,
+        ),
+        isTrue,
+      );
+
