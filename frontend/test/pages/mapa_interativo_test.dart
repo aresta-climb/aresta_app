@@ -22,7 +22,6 @@ import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 
@@ -4355,7 +4354,6 @@ void main() {
     testWidgets(
       'exibe bolha vermelha de alerta estilo Waze sobre a via diretamente no mapa interativo do setor',
       (tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         final repoFake = RepositorioInteracoesViaFake()
           ..semearDados(
             'faraoUid123456',
@@ -4372,7 +4370,6 @@ void main() {
           );
         RepositorioInteracoesViaMemoria.instancia = repoFake;
         addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
           RepositorioInteracoesViaMemoria.redefinirParaTestes();
         });
 
