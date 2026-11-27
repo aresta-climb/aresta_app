@@ -236,3 +236,71 @@ class CartaoCondicaoHidricaPico extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: corDestaque.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: corDestaque.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Text(
+                    '${diasRestantes}d / ${PaletaUmidadePico.totalDiasJanelaConservadora}d',
+                    style: TextStyle(
+                      color: corTexto,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (estaUmido) ...[
+            const SizedBox(height: 10),
+            Row(
+              key: const Key('barra_janela_secagem_pico'),
+              children: List<Widget>.generate(
+                PaletaUmidadePico.totalDiasJanelaConservadora,
+                (indice) {
+                  final ativo = indice < diasRestantes;
+                  return Expanded(
+                    child: Container(
+                      height: 5,
+                      margin: EdgeInsets.only(
+                        right: indice <
+                                PaletaUmidadePico.totalDiasJanelaConservadora -
+                                    1
+                            ? 5
+                            : 0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ativo
+                            ? corDestaque
+                            : Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            estaUmido
+                ? tr(ChaveTexto.climaNotaJanelaQuatroDias)
+                : tr(ChaveTexto.climaNotaEstimativaSatelite),
+            style: TextStyle(
+              color: corTexto.withValues(alpha: 0.76),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              height: 1.28,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
