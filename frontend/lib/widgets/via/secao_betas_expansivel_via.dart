@@ -402,3 +402,63 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
                               texto: notas[i].rotuloEstilo!,
                             ),
                         ],
+                      ),
+                    ),
+                    if (notas[i].pertenceAoUsuarioAtual &&
+                        aoEditarNota != null)
+                      IconButton(
+                        key: Key('btn_editar_comentario_${notas[i].uid}'),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          size: 17,
+                          color: cores.ashGrey,
+                        ),
+                        tooltip: context.tr(
+                          ChaveTexto.viaEditarComentarioTooltip,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => aoEditarNota!(notas[i]),
+                      ),
+                    if (notas[i].pertenceAoUsuarioAtual &&
+                        aoExcluirNota != null)
+                      IconButton(
+                        key: Key('btn_excluir_comentario_${notas[i].uid}'),
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 17,
+                          color: cores.ashGrey,
+                        ),
+                        tooltip: context.tr(
+                          ChaveTexto.viaExcluirComentarioTooltip,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => aoExcluirNota!(notas[i]),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  notas[i].texto,
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
