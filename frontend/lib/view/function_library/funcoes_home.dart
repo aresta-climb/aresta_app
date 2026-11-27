@@ -10,6 +10,8 @@ import '../../services/firebase/telemetria.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../theme/cores_app.dart';
+import '../../idioma/tradutor_app.dart';
+import '../../widgets/idioma/botao_bolha_idioma.dart';
 import '../../widgets/carrossel_picos_proximos.dart';
 import '../../widgets/busca_global.dart';
 import '../../services/http/sync_service.dart';
@@ -238,8 +240,8 @@ Future<void> handlePicoSelection(
       stackTrace: StackTrace.current,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Erro ao abrir o croqui salvo. Tente sincronizar novamente.'),
+      SnackBar(
+        content: Text(tr(ChaveTexto.homeErroAbrirSalvo)),
       ),
     );
   } else {
@@ -260,14 +262,14 @@ Future<void> handlePicoSelection(
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Este croqui ainda não está salvo offline. Conecte-se à internet para abri-lo.',
+                tr(ChaveTexto.homeCroquiNaoSalvoOffline),
                 style: TextStyle(color: context.colors.chalkWhite),
               ),
             ),
           ],
         ),
         action: SnackBarAction(
-          label: 'Tentar novamente',
+          label: tr(ChaveTexto.comumTentarNovamente),
           textColor: context.colors.beastHide,
           onPressed: () {
             if (context.mounted) {
@@ -334,25 +336,35 @@ Widget buildHomeBody(
   );
 }
 
-/// Constrói o texto de boas-vindas e introdução no topo da rolagem da página inicial.
+/// Constrói o texto de boas-vindas, botão de bolha de idioma e introdução no topo da página inicial.
 Widget _buildHeroWelcome(BuildContext context) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'BEM VINDO!',
-          style: TextStyle(
-            color: context.colors.dryMoss,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                context.tr(ChaveTexto.homeBoasVindas),
+                style: TextStyle(
+                  color: context.colors.dryMoss,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const BotaoBolhaIdioma(key: Key('bolha_idioma_home')),
+          ],
         ),
         const SizedBox(height: 6),
         Text(
-          'BORA PRA PEDRA?',
+          context.tr(ChaveTexto.homeBoraPraPedra),
           style: TextStyle(
             color: context.colors.chalkWhite,
             fontSize: 22,
@@ -362,7 +374,7 @@ Widget _buildHeroWelcome(BuildContext context) {
         ),
         const SizedBox(height: 12),
         Text(
-          'O guia definitivo para facilitar a sua escalada. Explore setores, vias e boulders locais e salve os croquis para acessar totalmente offline.',
+          context.tr(ChaveTexto.homeDescricaoHeroi),
           style: TextStyle(
             color: context.colors.chalkWhite.withValues(alpha: 0.85),
             fontSize: 15,
@@ -413,9 +425,13 @@ Widget _buildSearchBar(BuildContext context, HomeViewModel viewModel) {
           children: [
             Icon(Icons.search, color: context.colors.ashGrey, size: 20),
             const SizedBox(width: 12),
-            Text(
-              'Buscar picos, setores ou vias...',
-              style: TextStyle(color: context.colors.ashGrey, fontSize: 15),
+            Expanded(
+              child: Text(
+                context.tr(ChaveTexto.homeBuscaHint),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.colors.ashGrey, fontSize: 15),
+              ),
             ),
           ],
         ),
@@ -424,9 +440,9 @@ Widget _buildSearchBar(BuildContext context, HomeViewModel viewModel) {
   );
 }
 
-/// Constrói o card explicativo do "Guia Rápido do Aresta" com 4 passos
-/// para orientar o escalador a encontrar picos, salvar offline, utilizar
-/// o croqui interativo e compartilhar links diretos de vias e setores.
+/// Constrói o card explicativo do "Guia Rápido do Aresta" apresentando as principais
+/// ferramentas do aplicativo (Globo 3D/clima, exploração online/offline, croqui com alertas,
+/// caderneta/consenso/betas sem spoiler, atalho segurando voltar para o Início e compartilhamento).
 Widget _buildGuiaRapido(BuildContext context) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
@@ -450,7 +466,7 @@ Widget _buildGuiaRapido(BuildContext context) {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              'COMO FUNCIONA',
+              context.tr(ChaveTexto.homeComoFunciona),
               style: TextStyle(
                 color: context.colors.rustIron,
                 fontSize: 10,
@@ -461,7 +477,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           ),
           const SizedBox(height: 14),
           Text(
-            'GUIA RÁPIDO DO ARESTA',
+            context.tr(ChaveTexto.homeGuiaRapidoTitulo),
             style: TextStyle(
               color: context.colors.chalkWhite,
               fontSize: 20,
@@ -471,7 +487,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           ),
           const SizedBox(height: 8),
           Text(
-            'Quatro passos pra você sair do app direto pro paredão.',
+            context.tr(ChaveTexto.homeGuiaRapidoSubtitulo),
             style: TextStyle(
               color: context.colors.ashGrey,
               fontSize: 14,
@@ -483,36 +499,48 @@ Widget _buildGuiaRapido(BuildContext context) {
             context,
             num: '01',
             icon: Icons.search,
-            title: 'ENCONTRE O PICO',
-            desc:
-                'Use a busca ou explore os picos próximos no carrossel superior da home.',
+            title: context.tr(ChaveTexto.homePasso1Titulo),
+            desc: context.tr(ChaveTexto.homePasso1Desc),
             iconColor: const Color(0xFFE25844),
           ),
           _buildStepItem(
             context,
             num: '02',
             icon: Icons.download_outlined,
-            title: 'SALVE OFFLINE',
-            desc:
-                'Baixe os croquis e setores inteiros para continuar navegando sem sinal de internet.',
+            title: context.tr(ChaveTexto.homePasso2Titulo),
+            desc: context.tr(ChaveTexto.homePasso2Desc),
             iconColor: const Color(0xFF6D9578),
           ),
           _buildStepItem(
             context,
             num: '03',
             icon: Icons.menu_book_outlined,
-            title: 'CROQUI INTERATIVO',
-            desc:
-                'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
+            title: context.tr(ChaveTexto.homePasso3Titulo),
+            desc: context.tr(ChaveTexto.homePasso3Desc),
             iconColor: const Color(0xFFBCA646),
           ),
           _buildStepItem(
             context,
             num: '04',
+            icon: Icons.emoji_events_outlined,
+            title: context.tr(ChaveTexto.homePasso4Titulo),
+            desc: context.tr(ChaveTexto.homePasso4Desc),
+            iconColor: const Color(0xFFA855F7),
+          ),
+          _buildStepItem(
+            context,
+            num: '05',
+            icon: Icons.home_rounded,
+            title: context.tr(ChaveTexto.homePasso5Titulo),
+            desc: context.tr(ChaveTexto.homePasso5Desc),
+            iconColor: const Color(0xFFE27D60),
+          ),
+          _buildStepItem(
+            context,
+            num: '06',
             icon: Icons.share_outlined,
-            title: 'COMPARTILHE',
-            desc:
-                'Envie links de vias, setores e picos para sua cordada abrir direto no app ou navegador.',
+            title: context.tr(ChaveTexto.homePasso6Titulo),
+            desc: context.tr(ChaveTexto.homePasso6Desc),
             iconColor: const Color(0xFF5B81A7),
             isLast: true,
           ),
@@ -646,7 +674,7 @@ Widget _buildConservacao(BuildContext context) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CONSERVAÇÃO E ACESSO',
+                  context.tr(ChaveTexto.homeConservacaoTitulo),
                   style: TextStyle(
                     color: context.colors.fernGreen,
                     fontSize: 14,
@@ -655,7 +683,7 @@ Widget _buildConservacao(BuildContext context) {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'O acesso aos picos depende de cuidado, ética e envolvimento com as comunidades locais. Cada local tem suas regras, seus guardiões e sua história. Escalar com responsabilidade é garantir que os picos continuem abertos.',
+                  context.tr(ChaveTexto.homeConservacaoCorpo),
                   style: TextStyle(
                     color: context.colors.fernGreen.withValues(alpha: 0.7),
                     fontSize: 13,
