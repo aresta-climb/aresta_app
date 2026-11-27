@@ -97,3 +97,99 @@ const Map<ChaveTexto, String> dicionarioEspanhol = {
   ChaveTexto.comumBuscarPicosHint: 'Buscar zonas para escalar...',
   ChaveTexto.comumMapaGeral: 'Mapa General',
 
+  // Sistema, prévia experimental, versão e migração
+  ChaveTexto.sistemaModoExperimentalAtivo: 'MODO EXPERIMENTAL ACTIVO',
+  ChaveTexto.sistemaSair: 'SALIR',
+  ChaveTexto.sistemaSessaoPreviaEncerradaTitulo: 'Sesión de Vista Previa Cerrada',
+  ChaveTexto.sistemaSessaoPreviaEncerradaCorpo:
+      'La conexión con el Editor de Escritorio ha finalizado. Como la vista previa es temporal, restauramos automáticamente el catálogo oficial de Aresta Climb.',
+  ChaveTexto.sistemaFaseBetaTitulo: 'Fase Beta Abierta',
+  ChaveTexto.sistemaFaseBetaIntro:
+      'Aresta Climb es una iniciativa independiente en desarrollo activo junto a la comunidad escaladora.',
+  ChaveTexto.sistemaFaseBetaItem1Titulo: 'Nuevos sectores y croquis continuos',
+  ChaveTexto.sistemaFaseBetaItem1Corpo:
+      'Nuestra base de vías, bloques, croquis y mapas crece y se actualiza constantemente.',
+  ChaveTexto.sistemaFaseBetaItem2Titulo: 'Funciones en constante evolución',
+  ChaveTexto.sistemaFaseBetaItem2Corpo:
+      'Filtros avanzados, navegación 3D y mejoras de rendimiento están en camino.',
+  ChaveTexto.sistemaFaseBetaItem3Titulo: 'Construcción comunitaria',
+  ChaveTexto.sistemaFaseBetaItem3Corpo:
+      'Tu experiencia en la roca es clave para pulir detalles y priorizar lo importante.',
+  ChaveTexto.sistemaInstagramOficial: 'Instagram Oficial',
+  ChaveTexto.sistemaComunidadeWhatsapp: 'Comunidad en WhatsApp',
+  ChaveTexto.sistemaEnviarSugestao: 'Enviar Sugerencia',
+  ChaveTexto.sistemaRodapeVersaoBeta: 'Aresta Climb v{versao} (Beta Abierta)',
+  ChaveTexto.sistemaAtualizeParaBaixar:
+      'Actualiza Aresta para volver a descargar y sincronizar croquis.',
+  ChaveTexto.sistemaAtualizacaoRecomendada:
+      'Actualización Recomendada: hay una nueva versión disponible.',
+  ChaveTexto.sistemaAtualizar: 'ACTUALIZAR',
+  ChaveTexto.sistemaAtualizacaoNecessaria: 'ACTUALIZACIÓN\nNECESARIA',
+  ChaveTexto.sistemaVersaoAntigaCorpo:
+      'Tu versión de Aresta es muy antigua y ya no tiene soporte. Actualízala en la tienda para seguir explorando croquis.',
+  ChaveTexto.sistemaAtualizarAgora: 'ACTUALIZAR AHORA',
+  ChaveTexto.sistemaPreviaFalhaConectar:
+      'No se pudo conectar a la sesión de vista previa "{codigo}".',
+  ChaveTexto.sistemaDeepLinkNaoEncontrado:
+      'No se encontró la vía o sector para el código "{uid}". Verifica tu conexión o descarga la zona primero.',
+  ChaveTexto.sistemaMigracaoVerificando: 'Verificando conexión a internet...',
+  ChaveTexto.sistemaMigracaoBaixando: 'Descargando nuevo catálogo de croquis...',
+  ChaveTexto.sistemaMigracaoErro:
+      'No se pudo actualizar la base de datos. Verifica tu conexión a internet.',
+  ChaveTexto.sistemaMigracaoTitulo: 'ACTUALIZACIÓN DE BASE DE DATOS',
+  ChaveTexto.sistemaMigracaoCorpo:
+      'Esta nueva versión incluye mejoras estructurales en el catálogo y necesita sincronizar por internet una sola vez.',
+
+  // Página Inicial (Home) e Busca Global
+  ChaveTexto.homeMeuPerfilTooltip: 'Mi Perfil',
+  ChaveTexto.homeConfiguracoesTooltip: 'Ajustes',
+  ChaveTexto.homeSincronizarTooltip: 'Sincronizar catálogo y croquis',
+  ChaveTexto.homeBoasVindas: '¡BIENVENIDO!',
+  ChaveTexto.homeBoraPraPedra: '¿VAMOS A LA ROCA?',
+  ChaveTexto.homeDescricaoHeroi:
+      'La guía definitiva para tu escalada. Explora sectores, vías y bloques locales y guarda los croquis para acceder 100% sin conexión.',
+  ChaveTexto.homeBuscaHint: 'Buscar zonas, sectores o vías...',
+  ChaveTexto.homeErroAbrirSalvo:
+      'Error al abrir el croquis guardado. Intenta sincronizar de nuevo.',
+  ChaveTexto.homeCroquiNaoSalvoOffline:
+      'Este croquis aún no está guardado offline. Conéctate a internet para abrirlo.',
+  ChaveTexto.homeMaisProximosTitulo: 'MÁS CERCANOS A TI',
+  ChaveTexto.homePermitaLocalizacao:
+      'Permite el acceso a tu ubicación para ver las zonas más cercanas.',
+  ChaveTexto.homePermitirLocalizacaoBtn: 'Permitir Ubicación',
+  ChaveTexto.homeAguardandoGps: 'Esperando señal GPS...',
+  ChaveTexto.homeNenhumPicoLocalizado: 'No se encontraron zonas con ubicación.',
+  ChaveTexto.homeVerMais: 'VER MÁS ->',
+  ChaveTexto.homeComoFunciona: 'CÓMO FUNCIONA',
+  ChaveTexto.homeGuiaRapidoTitulo: 'GUÍA RÁPIDA DE ARESTA',
+  ChaveTexto.homeGuiaRapidoSubtitulo:
+      'Todo lo que necesitas para ir directo de la app a la pared.',
+  ChaveTexto.homePasso1Titulo: 'ENCUENTRA LA ZONA',
+  ChaveTexto.homePasso1Desc:
+      'Consulta el tiempo de viaje o explora el Geoide 3D/2D con relieve, GPS en vivo, radar de lluvia, incendios y humedad de la roca.',
+  ChaveTexto.homePasso2Titulo: 'GUARDA OFFLINE',
+  ChaveTexto.homePasso2Desc:
+      'Abre cualquier zona al instante estando online o descarga la guía completa para usarla 100% sin señal al pie de vía.',
+  ChaveTexto.homePasso3Titulo: 'CROQUIS INTERACTIVO',
+  ChaveTexto.homePasso3Desc:
+      'Toca las líneas en la pared para ver grados y seguros, y revisa o reporta alertas rápidas en la roca (🐝, 🪨, 🔩, ⚠️).',
+  ChaveTexto.homePasso4Titulo: 'LIBRETA Y COMUNIDAD',
+  ChaveTexto.homePasso4Desc:
+      'Registra encadenes, vota el grado y despliega videos y betas de la comunidad solo cuando quieras (ocultos por defecto contra spoilers).',
+  ChaveTexto.homePasso5Titulo: 'ATAJO AL INICIO',
+  ChaveTexto.homePasso5Desc:
+      'Toca volver (←) para subir un nivel o mantén pulsado el botón volver para saltar directo al Inicio.',
+  ChaveTexto.homePasso6Titulo: 'COMPARTE',
+  ChaveTexto.homePasso6Desc:
+      'Envía enlaces de vías, sectores y zonas a tu cordada para abrirlos directo en la app o navegador.',
+  ChaveTexto.homeConservacaoTitulo: 'CONSERVACIÓN Y ACCESO',
+  ChaveTexto.homeConservacaoCorpo:
+      'El acceso a las zonas de escalada depende del cuidado, la ética y el respeto a las comunidades locales. Escalar con responsabilidad mantiene las rocas abiertas.',
+  ChaveTexto.buscaTodos: 'Todos',
+  ChaveTexto.buscaPicos: 'Zonas',
+  ChaveTexto.buscaSetores: 'Sectores',
+  ChaveTexto.buscaDica:
+      'Consejo: busca por zonas, sectores, vías o grados (ej: 7a, V4)',
+  ChaveTexto.buscaNenhumResultado: 'No se encontraron resultados.',
+  ChaveTexto.buscaFiltroPrefixo: 'Filtro: {filtro}',
+
