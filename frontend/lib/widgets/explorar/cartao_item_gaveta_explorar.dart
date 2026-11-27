@@ -68,3 +68,74 @@ class CartaoItemGavetaExplorar extends StatelessWidget {
                 right: 16,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (altitudeMetros != null) ...[
+                      Container(
+                        key: Key('badge_altitude_${card.id}'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xCC0F151D),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.terrain_rounded,
+                              size: 12,
+                              color: Color(0xFFD1D5DB),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Alt. ${altitudeMetros}m',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Material(
+                      color: const Color(0xCC0F151D),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        key: Key('botao_ver_no_globo_${card.id}'),
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: aoFocarNoGlobo,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          child: Icon(
+                            Icons.public_rounded,
+                            size: 14,
+                            color: Color(0xFFE27D60),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (umidade.nivel.estaUmido)
+          TarjaUmidadePico(
+            key: Key('alerta_umidade_${card.id}'),
+            umidade: umidade,
+            margem: const EdgeInsets.only(top: 6),
+          ),
+      ],
+    );
+  }
+}
