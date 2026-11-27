@@ -7,6 +7,7 @@ import '../../data/modelos/cadena.dart';
 import '../../data/modelos/estatisticas_caderneta.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/perfil_escalador.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
@@ -72,6 +73,9 @@ class PerfilViewModel extends ChangeNotifier {
       _aoAtualizarRepositorio,
     );
     _escutaMetadados?.addListener(_aoAtualizarRepositorio);
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(
+      _aoAtualizarRepositorio,
+    );
     unawaited(
       this.repositorioInteracoes.sincronizarMeusAlertasContribuidos().catchError(
         (Object e) {
@@ -140,6 +144,9 @@ class PerfilViewModel extends ChangeNotifier {
       _aoAtualizarRepositorio,
     );
     _escutaMetadados?.removeListener(_aoAtualizarRepositorio);
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _aoAtualizarRepositorio,
+    );
     _catalogoViasProprio?.dispose();
     super.dispose();
   }
@@ -151,8 +158,9 @@ class PerfilViewModel extends ChangeNotifier {
   List<Cadena> get historicoCadenas => repositorio.cadenasNotifier.value;
 
   /// Retorna o título formatado da seção de histórico com a contagem atual de registros.
-  String get tituloSecaoHistorico =>
-      'Histórico de Ascensões (${historicoCadenas.length})';
+  String get tituloSecaoHistorico => tr(ChaveTexto.cadHistoricoContagem, {
+    'n': '${historicoCadenas.length}',
+  });
 
   /// Retorna os alertas criados (`CRIADO POR VOCÊ`) e confirmados (`CONFIRMADO (+1)`) pelo perfil atual.
   List<AlertaContribuidoCaderneta> get meusAlertas => repositorioInteracoes
@@ -170,8 +178,9 @@ class PerfilViewModel extends ChangeNotifier {
       .toList(growable: false);
 
   /// Título formatado da seção de alertas na Caderneta.
-  String get tituloSecaoMeusAlertas =>
-      'Meus Alertas na Rocha (${meusAlertas.length})';
+  String get tituloSecaoMeusAlertas => tr(ChaveTexto.cadMeusAlertasContagem, {
+    'n': '${meusAlertas.length}',
+  });
 
   /// Marca otimisticamente [alerta] como resolvido na Caderneta e agenda o envio após [duracaoJanelaDesfazer].
   void iniciarResolucaoMeuAlertaComDesfazer(AlertaSegurancaVia alerta) {
@@ -198,6 +207,49 @@ class PerfilViewModel extends ChangeNotifier {
     if (pendente != null) {
       pendente.timer.cancel();
       _aoAtualizarRepositorio();
+    }
+  }
+
+  /// Edita a categoria e/ou o detalhe de um alerta ativo criado pelo próprio escalador na Caderneta.
+  Future<bool> editarMeuAlerta(
+    AlertaSegurancaVia alerta,
+    CategoriaAlertaSeguranca novaCategoria, {
+    String? detalhe,
+  }) async {
+    try {
+      await repositorioInteracoes.editarAlerta(
+        escaladaUid: alerta.escaladaUid,
+        alertaUid: alerta.uid,
+        novaCategoria: novaCategoria,
+        detalhe: detalhe,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao editar alerta ${alerta.uid} pela Caderneta',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Exclui permanentemente um alerta criado pelo próprio escalador na Caderneta.
+  Future<bool> excluirMeuAlerta(AlertaSegurancaVia alerta) async {
+    _resolucoesAlertasPendentes.remove(alerta.uid)?.timer.cancel();
+    try {
+      await repositorioInteracoes.excluirAlerta(
+        escaladaUid: alerta.escaladaUid,
+        alertaUid: alerta.uid,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao excluir alerta ${alerta.uid} pela Caderneta',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
     }
   }
 
@@ -266,7 +318,7 @@ class PerfilViewModel extends ChangeNotifier {
 
   /// Obtém o nome amigável da escalada pelo seu [uid], provendo fallback quando não localizado.
   String obterNomeEscalada(String uid) {
-    return obterNomeDaVia?.call(uid) ?? 'Via ($uid)';
+    return obterNomeDaVia?.call(uid) ?? '${tr(ChaveTexto.modVia)} ($uid)';
   }
 
   /// Obtém a graduação formatada da escalada pelo seu [uid].
@@ -285,7 +337,9 @@ class PerfilViewModel extends ChangeNotifier {
   /// com concordância nominal pronta para exibição na Dumb UI.
   String formatarSubtituloAscensao(Cadena cadena) {
     final data = formatarDataAscensao(cadena.dataAscensao);
-    final rotuloTentativas = cadena.tentativas == 1 ? 'tentativa' : 'tentativas';
+    final rotuloTentativas = cadena.tentativas == 1
+        ? tr(ChaveTexto.estiloTentativaSingular)
+        : tr(ChaveTexto.estiloTentativaPlural);
     return '$data • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} $rotuloTentativas';
   }
 

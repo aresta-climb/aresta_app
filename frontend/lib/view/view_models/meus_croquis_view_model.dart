@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import 'card_croqui_view_model.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../services/repositorio_dataset.dart';
@@ -29,6 +30,8 @@ class MeusCroquisViewModel extends ChangeNotifier {
     required this.syncService,
   }) {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .addListener(_aoAtualizarDataset);
   }
 
   void _aoAtualizarDataset() {
@@ -37,6 +40,8 @@ class MeusCroquisViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .removeListener(_aoAtualizarDataset);
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
     super.dispose();
   }
@@ -52,7 +57,7 @@ class MeusCroquisViewModel extends ChangeNotifier {
     return dataset.picosBaixados.map((pico) {
       final stats = pico.estatisticas;
       final textoStats = stats != null
-          ? '${stats.totalSetores} setores • ${stats.totalVias} escaladas'
+          ? '${stats.totalSetores} ${tr(ChaveTexto.modSetoresMinusculo)} • ${stats.totalVias} ${tr(ChaveTexto.modEscaladasMinusculo)}'
           : '';
       return CardCroquiViewModel(
         id: pico.id,
@@ -103,8 +108,8 @@ class MeusCroquisViewModel extends ChangeNotifier {
       datasetRepo.updatePriorityAfterNavigation(cragId);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro ao abrir o guia offline.'),
+        SnackBar(
+          content: Text(tr(ChaveTexto.meusCroquisErroAbrir)),
         ),
       );
     }
@@ -116,22 +121,28 @@ class MeusCroquisViewModel extends ChangeNotifier {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.caveShadow,
-        title: const Text('Excluir?', style: TextStyle(color: Colors.white)),
+        title: Text(
+          ctx.tr(ChaveTexto.meusCroquisExcluirTitulo),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: Text(
-          'Deseja excluir o guia de $nome?',
+          ctx.tr(ChaveTexto.meusCroquisExcluirPergunta, {'nome': nome}),
           style: TextStyle(color: context.colors.ashGrey),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              'CANCELAR',
+              ctx.tr(ChaveTexto.comumCancelarCaixaAlta),
               style: TextStyle(color: context.colors.ashGrey),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
+            child: Text(
+              ctx.tr(ChaveTexto.comumExcluirCaixaAlta),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -145,7 +156,9 @@ class MeusCroquisViewModel extends ChangeNotifier {
           ..showSnackBar(
             SnackBar(
               content: Text(
-                success ? 'Guia excluído.' : 'Erro ao excluir guia.',
+                success
+                    ? tr(ChaveTexto.meusCroquisExcluidoToast)
+                    : tr(ChaveTexto.meusCroquisErroExcluirToast),
               ),
               backgroundColor: success
                   ? context.colors.dryMoss
