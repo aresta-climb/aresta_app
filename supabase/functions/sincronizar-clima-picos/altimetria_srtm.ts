@@ -165,3 +165,65 @@ export async function decodificarPngTerrarium256(
     offset = dadosIni + tam + 4;
   }
 
+  if (largura !== 256 || altura !== 256) {
+    throw new Error(`Dimensão inesperada de tile (${largura}x${altura})`);
+  }
+
+  const idatUnido = new Uint8Array(totalIdat);
+  let cursorIdat = 0;
+  for (const p of pedacosIdat) {
+    idatUnido.set(p, cursorIdat);
+    cursorIdat += p.length;
+  }
+
+  const streamDescompressao = new Blob([idatUnido])
+    .stream()
+    .pipeThrough(new DecompressionStream("deflate"));
+  const descomprimido = new Uint8Array(
+    await new Response(streamDescompressao).arrayBuffer(),
+  );
+
+  const bpp = tipoCor === 6 ? 4 : 3;
+  const stride = largura * bpp;
+  const linhaAtual = new Uint8Array(stride);
+  const linhaAnterior = new Uint8Array(stride);
+  const elevacoes = new Float64Array(largura * altura);
+
+  const paeth = (a: number, b: number, c: number): number => {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
+  };
+
+  let src = 0;
+  for (let y = 0; y < altura; y++) {
+    const filtro = descomprimido[src++];
+    for (let i = 0; i < stride; i++) {
+      const bruto = descomprimido[src++];
+      const esq = i >= bpp ? linhaAtual[i - bpp] : 0;
+      const cima = linhaAnterior[i];
+      const diag = i >= bpp ? linhaAnterior[i - bpp] : 0;
+      let rec = bruto;
+      if (filtro === 1) rec = (bruto + esq) & 0xff;
+      else if (filtro === 2) rec = (bruto + cima) & 0xff;
+      else if (filtro === 3) rec = (bruto + ((esq + cima) >> 1)) & 0xff;
+      else if (filtro === 4) rec = (bruto + paeth(esq, cima, diag)) & 0xff;
+      linhaAtual[i] = rec;
+    }
+    for (let x = 0; x < largura; x++) {
+      const idx = x * bpp;
+      elevacoes[y * largura + x] =
+        linhaAtual[idx] * 256 +
+        linhaAtual[idx + 1] +
+        linhaAtual[idx + 2] / 256 -
+        32768;
+    }
+    linhaAnterior.set(linhaAtual);
+  }
+
+  return elevacoes;
+}
