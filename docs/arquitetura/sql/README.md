@@ -9,7 +9,7 @@ Este diretório contém os arquivos de banco de dados para contas de escaladores
 | Arquivo | Finalidade |
 | :--- | :--- |
 | `supabase_contas_cadenas_interacoes.sql` | Script DDL e RLS idempotente para execução no **SQL Editor** do Supabase (`perfis`, `cadenas`, `fila_interacoes`, bucket `avatars`, função `excluir_minha_conta` e publicação `powersync`). |
-| `supabase_clima_e_altimetria_picos.sql` | Script DDL, RLS e `pg_cron` (3h) para `estado_clima_picos` (precipitação Open-Meteo e bolhas regionais de chuva) e `snapshots_altimetria_picos` (cotas NASA SRTM/NASADEM 30m), com rotação atômica de dois slots (`atual` e `copia_seguranca`) que atualiza a cópia de segurança e descarta dados antigos. |
+| `supabase_clima_e_altimetria_picos.sql` | Script DDL, RLS e `pg_cron` (3h) para `estado_clima_picos` (precipitação Open-Meteo e bolhas regionais de chuva), `snapshots_altimetria_picos` (cotas NASA SRTM/NASADEM 30m) e `snapshots_malha_viaria_picos` (malha hierárquica pavimentada OpenStreetMap em 3 níveis), com rotação atômica de dois slots (`atual` e `copia_seguranca`) que atualiza a cópia de segurança e descarta dados antigos. |
 | `powersync_sync_rules.yaml` | Regras de sincronização (`bucket_usuario`) para configuração no PowerSync. |
 
 ---

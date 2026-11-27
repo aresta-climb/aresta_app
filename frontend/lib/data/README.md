@@ -17,8 +17,8 @@ lib/data/
     ├── modelos_clima_pico.dart          - Eventos de chuva, cotas altimétricas DEM 30m, estado de umidade e snapshot consolidado
     ├── modelos_estatisticas_clima.dart  - Estudo estatístico de ~85% (hindcast ERA5 vs GFS, matriz 2x2, Tabela Z padrão Φ(Z) e 6 fontes)
     ├── modelos_fenomenos_clima.dart     - Isoietas de tempestades (4 níveis), rastros passados e perímetros orbitais de incêndios florestais (4 níveis)
-    ├── modelos_rede_viaria_aresta.dart  - Polígonos geográficos, localidades IBGE, rodovias OSRM contínuas e modelo imutável da rede viária Aresta
-    ├── modelos_relevo_topografico.dart  - Grade offline DEM com interpolação bicúbica Catmull-Rom (C¹), tiles SRTM Terrarium e isolinhas do mundo
+    ├── modelos_rede_viaria_aresta.dart  - Polígonos geográficos, localidades IBGE, rodovias hierárquicas OSM (3 níveis), snapshot viário offline e modelo imutável da rede viária Aresta
+    ├── modelos_relevo_topografico.dart  - Grade offline DEM com interpolação bicúbica Catmull-Rom (C¹), tiles SRTM Terrarium e isolinhas diádicas aditivas do mundo (400/200/100/50m)
     ├── perfil_escalador.dart        - Dados do perfil, identificador público e tokens de sessão
     ├── tipo_ascensao.dart           - Enum de estilos (À Vista, Flash, Trabalhado, Tentativa)
     └── tipo_escalada.dart           - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
