@@ -132,24 +132,32 @@ abstract final class PintorRedeViariaArestaGlobo {
           alfaMiolo: 0.21 * alfaNivel3,
           corMiolo: const Color(0xFFBAC6D6),
         );
-        canvas.drawPath(
-          caminhoFundo,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.95 * escalaViaZoom
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..color = Color.fromRGBO(
-              214,
-              224,
-              236,
-              (0.28 * fatorModoViario).clamp(0.0, 1.0),
-            ),
+      }
+      if (temN2) {
+        _desenharCamadaAsfalticaFundo(
+          canvas: canvas,
+          caminho: caminhoNivel2,
+          larguraBorda: 1.85 * escalaViaZoom,
+          larguraMiolo: 0.82 * escalaViaZoom,
+          alfaBorda: 0.56 * alfaNivel2,
+          alfaMiolo: 0.26 * alfaNivel2,
+          corMiolo: const Color(0xFFCBD5E1),
+        );
+      }
+      if (temN1) {
+        _desenharCamadaAsfalticaFundo(
+          canvas: canvas,
+          caminho: caminhoNivel1,
+          larguraBorda: 2.30 * escalaViaZoom,
+          larguraMiolo: 1.04 * escalaViaZoom,
+          alfaBorda: 0.64 * fatorModoViario,
+          alfaMiolo: 0.34 * fatorModoViario,
+          corMiolo: const Color(0xFFDEE7F2),
         );
       }
     }
 
-    // 2. Corredores laranja Aresta (ida: BH -> extremidades; volta ao dar zoom-out: extremidades -> centro de BH)
+    // 2. Corredores laranja Aresta (ida: BH -> picos; retração no zoom-out: picos -> BH)
     if (progressoLuzViaria > 0.0 && rede.trechosCorredorAresta.isNotEmpty) {
       _desenharCorredoresIluminados(
         canvas: canvas,
@@ -158,15 +166,12 @@ abstract final class PintorRedeViariaArestaGlobo {
         rede: rede,
         janelaVisivel: janelaVisivel,
         passoSubdivisaoGraus: passoSubdivisaoGraus,
-        picosReferencia: picosReferencia,
-        pesoTerreno: pesoTerreno,
         fatorModoViario: opacidadeLuzLaranja,
         progressoLuz: progressoLuzViaria,
-        amostradorElevacaoReal: amostradorElevacaoReal,
       );
     }
 
-    // 3. Dois tipos de cidade: referência (pontos brancos) vs Aresta-relevantes (contorno viário brilhante)
+    // 3. Cidades de referência (pontos brancos) vs cidades Aresta (vias arteriais iluminadas)
     _desenharCidadesClassificadas(
       canvas: canvas,
       size: size,
@@ -174,12 +179,9 @@ abstract final class PintorRedeViariaArestaGlobo {
       rede: rede,
       janelaVisivel: janelaVisivel,
       passoSubdivisaoGraus: passoSubdivisaoGraus,
-      picosReferencia: picosReferencia,
-      pesoTerreno: pesoTerreno,
       fatorModoViario: fatorModoViario,
       opacidadeLuzLaranja: opacidadeLuzLaranja,
       progressoLuz: progressoLuzViaria,
-      amostradorElevacaoReal: amostradorElevacaoReal,
     );
 
     if (escudosRodovia.isNotEmpty && fatorModoViario > 0.25) {
@@ -193,6 +195,35 @@ abstract final class PintorRedeViariaArestaGlobo {
     }
   }
 
+  static void _desenharCamadaAsfalticaFundo({
+    required Canvas canvas,
+    required Path caminho,
+    required double larguraBorda,
+    required double larguraMiolo,
+    required double alfaBorda,
+    required double alfaMiolo,
+    required Color corMiolo,
+  }) {
+    canvas.drawPath(
+      caminho,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = larguraBorda
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = Color.fromRGBO(7, 10, 15, alfaBorda.clamp(0.0, 1.0)),
+    );
+    canvas.drawPath(
+      caminho,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = larguraMiolo
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = corMiolo.withValues(alpha: alfaMiolo.clamp(0.0, 1.0)),
+    );
+  }
+
   static void _desenharCorredoresIluminados({
     required Canvas canvas,
     required Size size,
@@ -200,12 +231,8 @@ abstract final class PintorRedeViariaArestaGlobo {
     required RedeViariaArestaGlobo rede,
     required JanelaGeograficaVisivel janelaVisivel,
     required double passoSubdivisaoGraus,
-    required List<PicoRelevoReferencia> picosReferencia,
-    required double pesoTerreno,
     required double fatorModoViario,
     required double progressoLuz,
-    required double? Function(double latitude, double longitude)?
-        amostradorElevacaoReal,
   }) {
     final caminhoAceso = Path();
     final pontasOnda = <Offset>[];
@@ -232,9 +259,6 @@ abstract final class PintorRedeViariaArestaGlobo {
         passoSubdivisaoGraus: passoSubdivisaoGraus,
         size: size,
         controlador: controlador,
-        picosReferencia: picosReferencia,
-        pesoTerreno: pesoTerreno,
-        amostradorElevacaoReal: amostradorElevacaoReal,
       );
       if (!visivel) continue;
 
@@ -246,7 +270,7 @@ abstract final class PintorRedeViariaArestaGlobo {
         final ptPonta = controlador.projetarCoordenada(
           latitude: pontaGeo.dy,
           longitude: pontaGeo.dx,
-          elevacaoMetros: 6.0,
+          elevacaoMetros: 0.0,
           tamanhoTela: size,
         );
         if (ptPonta.visivel) {
@@ -259,9 +283,8 @@ abstract final class PintorRedeViariaArestaGlobo {
 
     final lod = controlador.lod;
     final espessuraNuc =
-        1.25 + 1.10 * ControladorCameraGlobo.smoothstep(2.20, 4.15, lod);
+        1.25 + 1.05 * ControladorCameraGlobo.smoothstep(2.20, 4.15, lod);
     if (lod >= 2.35) {
-      // Leito asfáltico escuro preciso sob o corredor Aresta
       canvas.drawPath(
         caminhoAceso,
         Paint()
@@ -312,7 +335,6 @@ abstract final class PintorRedeViariaArestaGlobo {
         ),
     );
 
-    // Frentes luminosas ativas durante os 1,65s de propagação a partir de Belo Horizonte
     if (progressoLuz < 1.0 && pontasOnda.isNotEmpty) {
       final pincelHaloPonta = Paint()
         ..color = corBrilhoViasAresta.withValues(
@@ -337,13 +359,9 @@ abstract final class PintorRedeViariaArestaGlobo {
     required RedeViariaArestaGlobo rede,
     required JanelaGeograficaVisivel janelaVisivel,
     required double passoSubdivisaoGraus,
-    required List<PicoRelevoReferencia> picosReferencia,
-    required double pesoTerreno,
     required double fatorModoViario,
     required double opacidadeLuzLaranja,
     required double progressoLuz,
-    required double? Function(double latitude, double longitude)?
-        amostradorElevacaoReal,
   }) {
     final lod = controlador.lod;
     final nivelMaxVisivel = lod >= 2.85 ? 3 : (lod >= 2.05 ? 2 : 1);
@@ -367,8 +385,9 @@ abstract final class PintorRedeViariaArestaGlobo {
 
     for (final cidade in rede.cidadesClassificadas) {
       final loc = cidade.localidade;
-      final jaIluminada =
-          cidade.ehRelevanteAresta && progressoLuz > 0.0 && progressoLuz >= cidade.tempoAtivacao;
+      final jaIluminada = cidade.ehRelevanteAresta &&
+          progressoLuz > 0.0 &&
+          progressoLuz >= cidade.tempoAtivacao;
       if (!jaIluminada && fatorModoViario <= 0.02) continue;
       if (!cidade.ehRelevanteAresta && loc.nivel > nivelMaxVisivel) continue;
       if (cidade.ehRelevanteAresta && loc.nivel == 3 && lod < 2.15) {
