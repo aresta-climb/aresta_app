@@ -354,3 +354,61 @@ abstract final class EfeitosParticulasIncendioGlobo {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5),
     );
 
+    final balanco = math.sin(faseSegundos * 5.2) * escalaPx * 0.13 +
+        inclinacaoVentoX * escalaPx;
+    final alongamento = 1.0 + 0.08 * math.sin(faseSegundos * 6.8 + 0.7);
+    final h = escalaPx * alongamento;
+    final w = escalaPx * 0.70;
+
+    final corExterna = switch (severidade) {
+      NivelSeveridadeIncendio.baixo =>
+        Color.fromRGBO(245, 158, 11, (0.90 * op).clamp(0.0, 1.0)),
+      NivelSeveridadeIncendio.moderado =>
+        Color.fromRGBO(249, 115, 22, (0.92 * op).clamp(0.0, 1.0)),
+      NivelSeveridadeIncendio.alto =>
+        Color.fromRGBO(239, 68, 68, (0.94 * op).clamp(0.0, 1.0)),
+      NivelSeveridadeIncendio.extremo =>
+        Color.fromRGBO(220, 38, 38, (0.96 * op).clamp(0.0, 1.0)),
+    };
+
+    if (severidade.peso >= 2) {
+      _desenharLinguaChama(
+        canvas: canvas,
+        base: centro.translate(w * 0.42, h * 0.14),
+        altura: h * 0.62,
+        largura: w * 0.46,
+        inclinacaoTopo: balanco * 0.8 + w * 0.18,
+        cor: corExterna,
+      );
+    }
+    if (severidade.peso >= 3) {
+      _desenharLinguaChama(
+        canvas: canvas,
+        base: centro.translate(-w * 0.42, h * 0.16),
+        altura: h * 0.58,
+        largura: w * 0.44,
+        inclinacaoTopo: balanco * 0.8 - w * 0.18,
+        cor: corExterna,
+      );
+    }
+
+    _desenharLinguaChama(
+      canvas: canvas,
+      base: centro,
+      altura: h,
+      largura: w,
+      inclinacaoTopo: balanco,
+      cor: corExterna,
+    );
+
+    _desenharLinguaChama(
+      canvas: canvas,
+      base: centro.translate(0, h * 0.10),
+      altura: h * 0.56,
+      largura: w * 0.48,
+      inclinacaoTopo: balanco * 0.6,
+      cor: severidade == NivelSeveridadeIncendio.extremo
+          ? Color.fromRGBO(255, 238, 118, (0.98 * op).clamp(0.0, 1.0))
+          : Color.fromRGBO(254, 230, 110, (0.94 * op).clamp(0.0, 1.0)),
+    );
+
