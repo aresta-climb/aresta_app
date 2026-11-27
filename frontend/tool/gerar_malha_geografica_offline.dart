@@ -801,3 +801,75 @@ abstract final class GeradorMalhaGeograficaOffline {
     throw HttpException('Falha após retentativas em $url');
   }
 
+  /// Malha sintética mínima exclusiva para testes unitários determinísticos sem rede.
+  static Map<String, dynamic> construirMalhaPadraoEmbutida({
+    String versao = '2026.11-sintetica-teste',
+  }) {
+    const ufs = <String>[
+      'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+      'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+      'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+    ];
+    return <String, dynamic>{
+      'versao': versao,
+      'fonte': 'Malha sintética para testes unitários offline',
+      'continentes': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'america_do_sul',
+          'poligono': const <List<double>>[
+            [-79.5, 9.2], [-35.0, -5.8], [-53.6, -33.6], [-71.0, -53.0], [-79.5, 9.2],
+          ],
+        },
+      ],
+      'brasil': const <List<double>>[
+        [-70.0, -4.2], [-60.2, 4.2], [-49.5, 1.8], [-38.5, -3.8],
+        [-34.8, -8.2], [-39.1, -16.8], [-43.2, -23.0], [-48.5, -26.5],
+        [-53.6, -33.6], [-58.2, -16.2], [-70.0, -4.2],
+      ],
+      'estados_br': [
+        for (var i = 0; i < ufs.length; i++)
+          <String, dynamic>{
+            'uf': ufs[i],
+            'poligono': <List<double>>[
+              [-50.0 + (i % 5), -22.0 + (i ~/ 5)],
+              [-49.0 + (i % 5), -22.0 + (i ~/ 5)],
+              [-49.0 + (i % 5), -21.0 + (i ~/ 5)],
+              [-50.0 + (i % 5), -21.0 + (i ~/ 5)],
+              [-50.0 + (i % 5), -22.0 + (i ~/ 5)],
+            ],
+          },
+      ],
+    };
+  }
+
+  /// Altimetria sintética mínima exclusiva para testes unitários determinísticos sem rede.
+  static Map<String, dynamic> construirAltimetriaDoIndiceLocal({
+    required String caminhoIndiceBinaryPb,
+    String versao = '2026.11-sintetica-teste',
+  }) {
+    final arquivo = File(caminhoIndiceBinaryPb);
+    final picosMapa = <String, Map<String, dynamic>>{};
+    if (arquivo.existsSync()) {
+      final indice = Indice.fromBuffer(arquivo.readAsBytesSync());
+      for (final c in indice.croquis) {
+        if (c.id.isEmpty) continue;
+        picosMapa[c.id] = const <String, dynamic>{
+          'altitude_base_m': 700,
+          'altitude_pico_m': 980,
+        };
+      }
+    }
+    if (picosMapa.isEmpty) {
+      picosMapa['br_mg_igarape_pedra_grande'] = const <String, dynamic>{
+        'altitude_base_m': 950,
+        'altitude_pico_m': 1425,
+      };
+    }
+    return <String, dynamic>{
+      'versao': versao,
+      'fonte': 'Altimetria sintética para testes unitários offline',
+      'picos': picosMapa,
+    };
+  }
+}
+
