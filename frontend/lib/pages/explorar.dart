@@ -128,31 +128,61 @@ class _BrowsePageState extends State<BrowsePage> {
               );
             }
 
-            final filteredCrags = viewModel.picosCards;
-            final isEditor = viewModel.modoEditorAtivo;
-
-            final addCallback = isEditor
-                ? () => viewModel.trocarServing(context)
-                : null;
-
-            return buildBrowseBody(
-              context,
-              filteredCrags,
-              viewModel.downloadingCrags,
-              isDownloadedChecker: viewModel.estaBaixado,
-              onSearchChanged: viewModel.alterarTermoBusca,
-              onDownload: (crag) => widget.handleDownload(context, crag),
-              onOpen: (crag) {
-                final String id = crag is CardCroquiViewModel
-                    ? crag.id
-                    : (crag is Map ? crag['id']?.toString() ?? '' : crag.toString());
-                viewModel.abrirPico(context, id);
-              },
-              onAddExperimental: addCallback,
-              onSyncPressed: () async => await viewModel.sincronizarServing(context),
-              onFilterPressed: () => _mostrarFiltroOrdenacao(context),
-              scrollController: _scrollController,
-              chaveSetimoPico: _chaveSetimoPico,
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                SuperficieGloboExplorar(
+                  controlador: _controladorCamera,
+                  picos: viewModel.marcadoresGlobo,
+                  bolhasAtivas: viewModel.bolhasChuvaAtivas,
+                  incendiosAtivos: viewModel.bolhasIncendioAtivas,
+                  camadaClimaAtiva: viewModel.radarClimaMapaAtivo,
+                  aoAlterarCamadaClima: viewModel.definirRadarClimaMapaAtivo,
+                  picoSelecionadoId: viewModel.picoSelecionadoId,
+                  alturaGavetaNotificador: _alturaGavetaPx,
+                  localizacaoUsuario: viewModel.localizacaoUsuarioAtiva,
+                  buscandoLocalizacaoUsuario: viewModel.buscandoLocalizacao,
+                  aoCentralizarNoUsuario: _centralizarNaLocalizacaoUsuario,
+                  recuoSuperiorControles: 66.0,
+                  aoSelecionarPicoNoMapa: (id) =>
+                      viewModel.selecionarPico(id, origemMapa: true),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _alturaGavetaPx,
+                    builder: (context, alturaGaveta, child) {
+                      final opacidadeFundoLista =
+                          calcularOpacidadeFundoBarraTopo(
+                        alturaGavetaPx: alturaGaveta,
+                        alturaTelaPx: MediaQuery.sizeOf(context).height,
+                      );
+                      return ColoredBox(
+                        color: const Color(0xF514181E)
+                            .withValues(alpha: opacidadeFundoLista),
+                        child: child,
+                      );
+                    },
+                    child: BarraBuscaFiltrosExplorar(
+                      viewModel: viewModel,
+                      aoSincronizar: () async =>
+                          await viewModel.sincronizarServing(context),
+                      aoTrocarServing: viewModel.modoEditorAtivo
+                          ? () => viewModel.trocarServing(context)
+                          : null,
+                    ),
+                  ),
+                ),
+                GavetaDeslizanteExplorar(
+                  viewModel: viewModel,
+                  alturaGavetaPx: _alturaGavetaPx,
+                  posicaoInicial: PosicaoEncaixeGaveta.dividir,
+                  aoAbrirPico: (card) => viewModel.abrirPico(context, card.id),
+                  aoFocarPicoNaLista: _voarAtePicoSelecionadoNaLista,
+                ),
+              ],
             );
           },
         ),
