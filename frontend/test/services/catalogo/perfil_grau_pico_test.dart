@@ -63,3 +63,82 @@ void main() {
       },
     );
 
+    test(
+      'deve agregar perfis de grau por id_slug e croqui_uid a partir de catalogo_aresta e filtrar intervalos',
+      () async {
+        await repositorio.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_graus_1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'uid_cipo',
+                  idSlug: 'br_mg_serra_do_cipo',
+                  nome: 'Serra do Cipó',
+                  cidade: 'Santana do Riacho',
+                  estado: 'MG',
+                ),
+                CatalogoCroqui(
+                  croquiUid: 'uid_milho',
+                  idSlug: 'br_mg_milho_verde',
+                  nome: 'Milho Verde',
+                  cidade: 'Serro',
+                  estado: 'MG',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'e1',
+                  tipo: 'escalada',
+                  croquiUid: 'uid_cipo',
+                  nome: 'Via Sete B',
+                  escaladaGrau: '7b',
+                  escaladaTipo: 'esportiva',
+                ),
+                CatalogoEntidade(
+                  uid: 'e2',
+                  tipo: 'escalada',
+                  croquiUid: 'uid_cipo',
+                  nome: 'Paredao Seis Sup',
+                  escaladaGrau: '6sup',
+                  escaladaTipo: 'multienfiada',
+                ),
+                CatalogoEntidade(
+                  uid: 'e3',
+                  tipo: 'escalada',
+                  croquiUid: 'uid_milho',
+                  nome: 'Mandala',
+                  escaladaGrau: 'V8',
+                  escaladaTipo: 'boulder',
+                ),
+                CatalogoEntidade(
+                  uid: 'e4',
+                  tipo: 'escalada',
+                  croquiUid: 'uid_milho',
+                  nome: 'Fita Highline',
+                  escaladaGrau: '60m',
+                  escaladaTipo: 'highline',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final perfis = await repositorio.carregarPerfisGrauPorCroqui();
+        final cipo = perfis['br_mg_serra_do_cipo']!;
+        final milho = perfis['br_mg_milho_verde']!;
+
+        expect(perfis['uid_cipo'], isNotNull);
+        expect(cipo.atendeIntervaloVia(810, 830), isTrue); // 7a..7c contem 7b
+        expect(cipo.atendeIntervaloVia(910, 1030), isFalse); // 8a..9c
+        expect(cipo.atendeIntervaloBoulder(100, 1600), isFalse);
+
+        expect(milho.atendeIntervaloBoulder(800, 1000), isTrue); // V7..V9 contem V8
+        expect(milho.atendeIntervaloBoulder(100, 400), isFalse); // V0..V3
+        expect(milho.contarEscaladasNoIntervalo(minBoulder: 800, maxBoulder: 1000), equals(1));
+        expect(cipo.contarEscaladasNoIntervalo(minVia: 700, maxVia: 830), equals(2));
+      },
+    );
+  });
+}
