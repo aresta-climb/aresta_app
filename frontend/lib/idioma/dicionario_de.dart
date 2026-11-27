@@ -740,3 +740,92 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.configIdiomaTitulo: 'SPRACHE',
   ChaveTexto.configIdiomaSubtitulo:
       'Wechsle sofort die Anzeigesprache der gesamten App.',
+  ChaveTexto.configAparenciaTitulo: 'DARSTELLUNG',
+  ChaveTexto.configAparenciaSub: 'App-Design anpassen.',
+  ChaveTexto.configEscolherTemaManual: 'Design manuell wählen',
+  ChaveTexto.configTemaEscuro: 'DUNKEL',
+  ChaveTexto.configPerfilCadernetaTitulo: 'PROFIL & TOURENBUCH',
+  ChaveTexto.configPerfilCadernetaSub:
+      'Profil und Tourenbuch ein- oder ausblenden, ohne lokale Daten zu löschen.',
+  ChaveTexto.configExibirPerfilSwitch: 'Profil & Tourenbuch anzeigen',
+  ChaveTexto.configConectarEditorTitulo: 'Editor verbinden',
+  ChaveTexto.configConectarEditorInstrucao:
+      'Gib den 8-stelligen Code aus dem Desktop-Editor ein oder scanne den QR-Code.',
+  ChaveTexto.configConectarEditorHint: 'z. B. k9x2-p83a oder vollständige URL',
+  ChaveTexto.configEscanearQrBtn: 'QR-CODE SCANNEN',
+  ChaveTexto.configComoFuncionaEditor:
+      'Wie funktioniert der Desktop-Editor? Mehr erfahren',
+  ChaveTexto.configConectarBtn: 'VERBINDEN',
+  ChaveTexto.configModoExperimentalTitulo: 'EXPERIMENTELLER / VORSCHAU-MODUS',
+  ChaveTexto.configModoExperimentalSub:
+      'Live-Synchronisierung mit dem Desktop-Editor aktiv.',
+  ChaveTexto.configVoltarModoOficialBtn: 'ZURÜCK ZUM OFFIZIELLEN MODUS',
+  ChaveTexto.configModoOficialTitulo: 'OFFIZIELLER MODUS',
+  ChaveTexto.configModoOficialSub:
+      'Verbunden mit dem offiziellen Aresta-Climb-Katalog. Verbinde den Desktop-Editor für Live-Vorschauen.',
+  ChaveTexto.configConectarEditorPreviaBtn: 'MIT EDITOR / VORSCHAU VERBINDEN',
+  ChaveTexto.configComoFazerSaibaMais: 'Wie geht das? Mehr erfahren',
+  ChaveTexto.configVoltandoOficialToast: 'Wechsle zum offiziellen Katalog...',
+  ChaveTexto.configReativandoExpToast:
+      'Stelle lokale Vorschau-Daten wieder her...',
+  ChaveTexto.configReativarExpBtn: 'VORSCHAU-MODUS REAKTIVIEREN',
+  ChaveTexto.configApagarTudoTitulo: 'Alles löschen?',
+  ChaveTexto.configApagarTudoCorpo:
+      'Dadurch werden der Vorschau-Index und alle darin geladenen Gebiete dauerhaft gelöscht. Fortfahren?',
+  ChaveTexto.configApagarTudoBtn: 'ALLES LÖSCHEN',
+  ChaveTexto.configAmbienteExpLimpoToast: 'Vorschau-Daten gelöscht.',
+  ChaveTexto.configLimparExpBtn: 'VORSCHAU-DATEN LÖSCHEN',
+  ChaveTexto.configConectadoEditorToast: 'Mit Editor-Repository verbunden!',
+  ChaveTexto.configErroIndiceStatus:
+      'Fehler: Index nicht erreichbar (Status {status})',
+  ChaveTexto.configErroConexaoUrl: 'Verbindungsfehler: URL prüfen',
+  ChaveTexto.qrTituloPagina: 'QR-Code scannen',
+  ChaveTexto.qrAponteCamera: 'Richte die Kamera auf den\nRepository-QR-Code',
+  ChaveTexto.feedbackPerguntaTipo: 'Worum geht es bei deinem Feedback?',
+  ChaveTexto.feedbackSobreCroqui: 'Zum Topo',
+  ChaveTexto.feedbackSobreApp: 'Zur App',
+  ChaveTexto.feedbackHintDescricao: 'Problem oder Vorschlag beschreiben...',
+  ChaveTexto.feedbackAvisoPublico:
+      'Öffentliches Feedback. Es werden keine persönlichen Daten veröffentlicht.',
+  ChaveTexto.feedbackEnviarBtn: 'Senden',
+  ChaveTexto.shareConfiraPico:
+      'Schau dir das Topo von {pico}{loc} in Aresta an:\n{url}',
+  ChaveTexto.shareConfiraGrupo:
+      'Schau dir {grupo} ({pico}) in Aresta an:\n{url}',
+  ChaveTexto.shareConfiraSetor:
+      'Schau dir {setor} ({pico}) in Aresta an:\n{url}',
+  ChaveTexto.shareConfiraEscalada:
+      'Schau dir {via}{grau}{setor} ({pico}) in Aresta an:\n{url}',
+  ChaveTexto.gpsDesligadoUltimaConhecida:
+      'GPS ausgeschaltet; zentriere auf letzten bekannten Standort.',
+  ChaveTexto.gpsAtiveAparelho:
+      'Aktiviere das Geräte-GPS, um auf deinen Standort zu zentrieren.',
+  ChaveTexto.gpsPermissaoNegada: 'Standortberechtigung verweigert.',
+  ChaveTexto.gpsSinalIndisponivel:
+      'Derzeit konnte kein GPS-Signal empfangen werden.',
+  ChaveTexto.filtroSecaoFiltros: 'FILTER',
+  ChaveTexto.filtroModalidadesTitulo: 'Disziplinen',
+  ChaveTexto.setorNenhumaEscaladaFiltrosAtuais:
+      'Keine Routen entsprechen den aktiven Filtern.',
+  ChaveTexto.modEsportivaMinusculo: 'Sportroute',
+  ChaveTexto.modMovelMinusculo: 'Trad-Route',
+  ChaveTexto.modBoulderMinusculo: 'Boulder',
+  ChaveTexto.modMultienfiadaMinusculo: 'Mehrseillänge',
+  ChaveTexto.modMultienfiadasMinusculo: 'Mehrseillängen',
+  ChaveTexto.modHighlineMinusculo: 'Highline',
+  ChaveTexto.comumFecharCaixaAlta: 'SCHLIESSEN',
+  ChaveTexto.authValidacaoCodigo6Digitos:
+      'Gib den per E-Mail gesendeten 6-stelligen Zahlencode ein.',
+  ChaveTexto.authServicoIndisponivel:
+      'Authentifizierungsdienst ist derzeit nicht verfügbar.',
+  ChaveTexto.configTestarObsolescenciaBtn: 'VERALTUNGSHINWEIS TESTEN',
+  ChaveTexto.configTestarBloqueioBtn: 'SPERRBILDSCHIRM TESTEN',
+  ChaveTexto.notifBaixandoPct: 'Wird geladen... {pct}%',
+  ChaveTexto.notifCroquiSalvoOffline:
+      '✓ Topo für die Offline-Nutzung gespeichert.',
+  ChaveTexto.notifFalhaBaixarCroqui:
+      'Topo-Download fehlgeschlagen. Verbindung prüfen.',
+  ChaveTexto.feedbackRecebidoObrigado:
+      'Feedback erhalten! Vielen Dank für deine Hilfe zur Verbesserung der App.',
+  ChaveTexto.sistemaMigracaoTentarNovamente: 'Erneut versuchen',
+};
