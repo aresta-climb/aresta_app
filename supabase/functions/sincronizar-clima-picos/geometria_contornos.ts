@@ -92,3 +92,88 @@ export function extrairContornosMarchingSquares(
     lista.push({ ini, fim, usada: false });
   };
 
+  for (let r = 0; r < R - 1; r++) {
+    for (let c = 0; c < C - 1; c++) {
+      const vSW = campo[r][c];
+      const vSE = campo[r][c + 1];
+      const vNE = campo[r + 1][c + 1];
+      const vNW = campo[r + 1][c];
+
+      const mask =
+        (vSW >= limiar ? 1 : 0) |
+        (vSE >= limiar ? 2 : 0) |
+        (vNE >= limiar ? 4 : 0) |
+        (vNW >= limiar ? 8 : 0);
+      if (mask === 0 || mask === 15) continue;
+
+      const S: ParLonLat = [interp(lons[c], lons[c + 1], vSW, vSE), lats[r]];
+      const E: ParLonLat = [
+        lons[c + 1],
+        interp(lats[r], lats[r + 1], vSE, vNE),
+      ];
+      const N: ParLonLat = [
+        interp(lons[c], lons[c + 1], vNW, vNE),
+        lats[r + 1],
+      ];
+      const W: ParLonLat = [lons[c], interp(lats[r], lats[r + 1], vSW, vNW)];
+      const mediaCentro = (vSW + vSE + vNE + vNW) * 0.25;
+
+      switch (mask) {
+        case 1:
+          registrarSegmento(S, W);
+          break;
+        case 2:
+          registrarSegmento(E, S);
+          break;
+        case 3:
+          registrarSegmento(E, W);
+          break;
+        case 4:
+          registrarSegmento(N, E);
+          break;
+        case 5:
+          if (mediaCentro >= limiar) {
+            registrarSegmento(S, E);
+            registrarSegmento(N, W);
+          } else {
+            registrarSegmento(S, W);
+            registrarSegmento(N, E);
+          }
+          break;
+        case 6:
+          registrarSegmento(N, S);
+          break;
+        case 7:
+          registrarSegmento(N, W);
+          break;
+        case 8:
+          registrarSegmento(W, N);
+          break;
+        case 9:
+          registrarSegmento(S, N);
+          break;
+        case 10:
+          if (mediaCentro >= limiar) {
+            registrarSegmento(E, N);
+            registrarSegmento(W, S);
+          } else {
+            registrarSegmento(E, S);
+            registrarSegmento(W, N);
+          }
+          break;
+        case 11:
+          registrarSegmento(E, N);
+          break;
+        case 12:
+          registrarSegmento(W, E);
+          break;
+        case 13:
+          registrarSegmento(S, E);
+          break;
+        case 14:
+          registrarSegmento(W, S);
+          break;
+      }
+    }
+  }
+
