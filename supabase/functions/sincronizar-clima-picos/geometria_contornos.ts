@@ -177,3 +177,51 @@ export function extrairContornosMarchingSquares(
     }
   }
 
+  const aneis: ParLonLat[][] = [];
+  for (const lista of arestasPorOrigem.values()) {
+    for (const arestaInicial of lista) {
+      if (arestaInicial.usada) continue;
+      arestaInicial.usada = true;
+      const anel: ParLonLat[] = [arestaInicial.ini];
+      const chaveFecho = chavePt(arestaInicial.ini);
+      let cursor = arestaInicial.fim;
+      let seguranca = 0;
+
+      while (chavePt(cursor) !== chaveFecho && seguranca++ < 2000) {
+        anel.push(cursor);
+        const candidatas = arestasPorOrigem.get(chavePt(cursor));
+        const proxima = candidatas?.find((a) => !a.usada);
+        if (!proxima) break;
+        proxima.usada = true;
+        cursor = proxima.fim;
+      }
+
+      if (anel.length >= 3) {
+        aneis.push(anel);
+      }
+    }
+  }
+
+  return aneis;
+}
+
+/** Aplica subdivisão de corte de cantos de Chaikin produzindo contornos orgânicos suaves. */
+export function suavizarChaikin(
+  anel: ParLonLat[],
+  iteracoes: number,
+): ParLonLat[] {
+  let atual = anel;
+  for (let it = 0; it < iteracoes; it++) {
+    const proximo: ParLonLat[] = [];
+    const n = atual.length;
+    for (let i = 0; i < n; i++) {
+      const p0 = atual[i];
+      const p1 = atual[(i + 1) % n];
+      proximo.push([0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]]);
+      proximo.push([0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1]]);
+    }
+    atual = proximo;
+  }
+  return atual;
+}
+
