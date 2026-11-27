@@ -272,3 +272,72 @@ void main() {
                 },
               ]));
             }
+          } else if (req.uri.path.endsWith('/snapshots_altimetria_picos')) {
+            if (slot == 'eq.atual' && modoServidor == 'fallback_seguranca') {
+              req.response.write('[]');
+            } else {
+              req.response.write(jsonEncode([
+                {
+                  'slot': slot.replaceFirst('eq.', ''),
+                  'gerado_em': '2026-11-25T12:00:00Z',
+                  'altimetria_por_pico': {
+                    'cipo': {
+                      'altitude_base_m': 810,
+                      'altitude_pico_m': 1120,
+                    },
+                  },
+                },
+              ]));
+            }
+          }
+          await req.response.close();
+        });
+
+        final cliente = ClienteClimaAltimetriaSupabase(
+          urlBaseSupabase: 'http://127.0.0.1:${servidor.port}/',
+          chaveAnonima: 'eyJhbGciOiJIUzI1NiJ9.teste',
+          clienteHttp: ClienteHttpAresta.instancia,
+        );
+
+        // Por padrao nao consulta snapshots_altimetria_picos (economia de banda)
+        final snapApenasClima = await cliente.buscarSnapshotRemoto();
+        expect(authRecebido, equals('Bearer eyJhbGciOiJIUzI1NiJ9.teste'));
+        expect(snapApenasClima.bolhasChuva.single.id, equals('frente_cipo'));
+        expect(snapApenasClima.altimetriaPorPico, isEmpty);
+        expect(requisicoesAltimetria, equals(0));
+
+        final snapSeg = await cliente.buscarSnapshotRemoto(
+          incluirAltimetria: true,
+        );
+        expect(requisicoesAltimetria, greaterThan(0));
+        expect(
+          snapSeg.altimetriaPorPico['cipo']!.altitudePicoMetros,
+          equals(1120),
+        );
+
+        modoServidor = 'direto_atual';
+        final snapAtual = await cliente.buscarSnapshotRemoto(
+          incluirAltimetria: true,
+        );
+        expect(
+          snapAtual.altimetriaPorPico['cipo']!.altitudePicoMetros,
+          equals(1120),
+        );
+
+        modoServidor = 'ambos_vazios';
+        await expectLater(
+          cliente.buscarSnapshotRemoto(),
+          throwsA(isA<HttpException>()),
+        );
+
+        modoServidor = 'erro_500';
+        await expectLater(
+          cliente.buscarSnapshotRemoto(),
+          throwsA(isA<HttpException>()),
+        );
+        final servicoPadrao = ServicoClimaAltimetria();
+        expect(servicoPadrao.bolhasAtivas, isEmpty);
+        servicoPadrao.dispose();
+      },
+    );
+
