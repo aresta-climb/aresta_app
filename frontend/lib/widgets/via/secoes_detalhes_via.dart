@@ -306,63 +306,17 @@ class SecaoEnfiadasVia extends StatelessWidget {
                           ChaveTexto.viaMovelPrefixo,
                           {'equip': enfiadas[i].equipamentoMovel},
                         ),
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _TituloSecaoVia(titulo: 'Vídeos & Betas'),
-          const SizedBox(height: 10),
-          ...midias.map((item) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => aoAbrirMidia(item.url),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: cores.caveShadow,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: cores.graniteEdge),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.play_circle_fill_rounded,
-                        color: cores.rustIron,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.titulo,
-                              style: TextStyle(
-                                color: cores.chalkWhite,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item.origemRotulo,
-                              style: TextStyle(
-                                color: cores.ashGrey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.open_in_new_rounded,
-                        size: 18,
-                        color: cores.ashGrey,
+                        style: TextStyle(color: cores.ashGrey, fontSize: 12),
                       ),
                     ],
-                  ),
+                    if (enfiadas[i].descricao != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        enfiadas[i].descricao!,
+                        style: TextStyle(color: cores.chalkWhite, fontSize: 13),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             );
