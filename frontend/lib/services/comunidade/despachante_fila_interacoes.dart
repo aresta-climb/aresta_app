@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../data/modelos/item_fila_interacao.dart';
+import '../../data/modelos/mutacao_fila_interacao.dart';
+import '../../data/modelos/perfil_escalador.dart';
 import '../../utils/gerador_uid.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/repositorio_caderneta.dart';
@@ -10,13 +12,14 @@ import 'armazenamento_fila_interacoes.dart';
 import 'cliente_fila_interacoes_supabase.dart';
 
 /// Orquestra a fila persistente de envio offline (*outbox*) para `public.fila_interacoes`,
-/// reconciliando sessão/perfil autenticado em falhas `401`/`403` e descartando conflitos `409`.
+/// coalescendo inserções, edições e exclusões locais e reconciliando sessão/perfil em `401`/`403`.
 class DespachanteFilaInteracoes {
   final RepositorioCaderneta _repositorioCaderneta;
   final ServicoAutenticacao _servicoAutenticacao;
   final ArmazenamentoFilaInteracoes _armazenamentoFila;
 
   final List<ItemFilaInteracao> _filaPendente = [];
+  final List<MutacaoFilaInteracao> _mutacoesPendentes = [];
   bool _carregada = false;
 
   /// Cria uma instância de [DespachanteFilaInteracoes].
@@ -28,8 +31,12 @@ class DespachanteFilaInteracoes {
        _servicoAutenticacao = servicoAutenticacao,
        _armazenamentoFila = armazenamentoFila;
 
-  /// Itens atualmente retidos na fila offline aguardando conectividade ou sessão válida.
+  /// Itens de criação atualmente retidos na fila offline aguardando conectividade ou sessão válida.
   List<ItemFilaInteracao> get itensPendentes => List.unmodifiable(_filaPendente);
+
+  /// Mutações de edição/exclusão atualmente retidas na fila offline.
+  List<MutacaoFilaInteracao> get mutacoesPendentes =>
+      List.unmodifiable(_mutacoesPendentes);
 
   /// Garante a hidratação inicial da fila offline a partir do armazenamento local.
   Future<void> garantirCarregada() async {
@@ -38,6 +45,9 @@ class DespachanteFilaInteracoes {
     _filaPendente
       ..clear()
       ..addAll(await _armazenamentoFila.carregarItensPendentes());
+    _mutacoesPendentes
+      ..clear()
+      ..addAll(await _armazenamentoFila.carregarMutacoesPendentes());
   }
 
   /// Adiciona [novosItens] à fila (substituindo voto anterior da mesma via) e drena em [cliente].
@@ -59,10 +69,91 @@ class DespachanteFilaInteracoes {
     await drenar(cliente);
   }
 
-  /// Envia os itens pendentes para [cliente] com token JWT autenticado e reconciliação automática.
+  /// Registra uma edição ou exclusão, coalescendo em memória caso o item original ainda esteja
+  /// retido em [_filaPendente] (sem jamais enviar tráfego desnecessário à rede), ou enfileirando
+  /// em [_mutacoesPendentes] e drenando quando `cliente` estiver disponível.
+  Future<void> registrarMutacao(
+    ClienteFilaInteracoes? cliente,
+    MutacaoFilaInteracao mutacao,
+  ) async {
+    await garantirCarregada();
+    if (_absorverMutacaoEmItemAindaNaoEnviado(mutacao)) {
+      await _armazenamentoFila.salvarItensPendentes(_filaPendente);
+      return;
+    }
+
+    _mutacoesPendentes.removeWhere(
+      (p) =>
+          p.alvoUid == mutacao.alvoUid &&
+          _pertenceAoMesmoDominio(p.tipo, mutacao.tipo),
+    );
+    _mutacoesPendentes.add(mutacao);
+    await _armazenamentoFila.salvarMutacoesPendentes(_mutacoesPendentes);
+
+    if (cliente != null) {
+      await drenar(cliente);
+    }
+  }
+
+  bool _absorverMutacaoEmItemAindaNaoEnviado(MutacaoFilaInteracao mutacao) {
+    switch (mutacao.tipo) {
+      case TipoMutacaoFilaInteracao.editarComentario:
+        final idx = _filaPendente.indexWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.comentario && p.id == mutacao.alvoUid,
+        );
+        if (idx < 0) return false;
+        _filaPendente[idx] = _filaPendente[idx].comTextoComentario(
+          mutacao.novoTexto!,
+        );
+        return true;
+      case TipoMutacaoFilaInteracao.excluirComentario:
+        final antes = _filaPendente.length;
+        _filaPendente.removeWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.comentario && p.id == mutacao.alvoUid,
+        );
+        return _filaPendente.length != antes;
+      case TipoMutacaoFilaInteracao.editarAlerta:
+        final idx = _filaPendente.indexWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.alertaSeguranca &&
+              p.alertaAlvoUid == mutacao.alvoUid,
+        );
+        if (idx < 0) return false;
+        _filaPendente[idx] = _filaPendente[idx].comEdicaoAlerta(
+          categoria: mutacao.novaCategoria!,
+          detalhe: mutacao.novoTexto,
+        );
+        return true;
+      case TipoMutacaoFilaInteracao.excluirAlerta:
+        final antes = _filaPendente.length;
+        _filaPendente.removeWhere(
+          (p) =>
+              p.tipo == TipoFilaInteracao.alertaSeguranca &&
+              p.alertaAlvoUid == mutacao.alvoUid,
+        );
+        return _filaPendente.length != antes;
+    }
+  }
+
+  static bool _pertenceAoMesmoDominio(
+    TipoMutacaoFilaInteracao a,
+    TipoMutacaoFilaInteracao b,
+  ) {
+    final aEhComentario =
+        a == TipoMutacaoFilaInteracao.editarComentario ||
+        a == TipoMutacaoFilaInteracao.excluirComentario;
+    final bEhComentario =
+        b == TipoMutacaoFilaInteracao.editarComentario ||
+        b == TipoMutacaoFilaInteracao.excluirComentario;
+    return aEhComentario == bEhComentario;
+  }
+
+  /// Envia os itens e mutações pendentes para [cliente] com token JWT e reconciliação automática.
   Future<void> drenar(ClienteFilaInteracoes cliente) async {
     await garantirCarregada();
-    if (_filaPendente.isEmpty) return;
+    if (_filaPendente.isEmpty && _mutacoesPendentes.isEmpty) return;
 
     var perfilAtual = _repositorioCaderneta.obterPerfil();
     if (perfilAtual.estaAutenticado && perfilAtual.accessToken == null) {
