@@ -12,7 +12,7 @@ import 'geometria_clipping_mapa.dart';
 /// via grade espacial `O(1)` e preservando fielmente as curvas asfálticas sem cordas sintéticas.
 abstract final class ConstrutorRedeViariaAresta {
   static const double _grausParaRad = math.pi / 180.0;
-  static const double _passoCelulaEspacial = 0.005;
+  static const double _passoCelulaEspacial = 0.016;
 
   /// Constrói deterministicamente [RedeViariaArestaGlobo] a partir de [rodovias], [localidades] e [picos],
   /// priorizando rodovias arteriais (`BR`/`MG` nível 1 -> nível 2 -> acesso pavimentado nível 3).
@@ -74,11 +74,11 @@ abstract final class ConstrutorRedeViariaAresta {
     }
 
     for (final via in rodoviasNormalizadas) {
+      // A animação laranja ilumina estritamente as rodovias e artérias principais (níveis 1 e 2)
+      if (via.nivelViario > 2) continue;
       final verts = via.verticesLonLat;
       if (verts.length < 2) continue;
-      final penalidadeNivel = via.nivelViario == 1
-          ? 1.00
-          : (via.nivelViario == 2 ? 1.12 : 1.35);
+      final penalidadeNivel = via.nivelViario == 1 ? 1.00 : 1.15;
       final ids = verts.map(obterOuCriarNo).toList(growable: false);
       garantirAdj(nos.length - 1);
       pontasPolilinhas
@@ -106,8 +106,8 @@ abstract final class ConstrutorRedeViariaAresta {
       );
     }
 
-    // Ponte virtual O(1) via vizinhança espacial 3x3 (<= 0,45 km) para conectar alças de trevos
-    // e pistas duplas sem jamais desenhar retas aéreas fora do leito asfáltico
+    // Ponte virtual O(1) via vizinhança espacial 3x3 (<= 1,80 km) para conectar trevos desnivelados
+    // do OpenStreetMap sem jamais desenhar retas aéreas fora das rodovias reais
     for (final u in pontasPolilinhas) {
       final pu = nos[u];
       final cx0 = (pu.dx / _passoCelulaEspacial).floor();
@@ -119,13 +119,13 @@ abstract final class ConstrutorRedeViariaAresta {
           for (final v in candidatos) {
             if (u == v) continue;
             final pv = nos[v];
-            if ((pu.dx - pv.dx).abs() > 0.0045 ||
-                (pu.dy - pv.dy).abs() > 0.0045) {
+            if ((pu.dx - pv.dx).abs() > 0.017 ||
+                (pu.dy - pv.dy).abs() > 0.017) {
               continue;
             }
             final d = _distanciaKm(pu, pv);
-            if (d <= 0.45) {
-              final custoVirtual = d * 1.25;
+            if (d <= 1.80) {
+              final custoVirtual = d * 1.38;
               adj[u].add((
                 vizinho: v,
                 custoPondKm: custoVirtual,
