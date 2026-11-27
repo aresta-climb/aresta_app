@@ -85,3 +85,93 @@ class CapsulaControlesModoGlobo extends StatelessWidget {
   final VoidCallback aoResetarGlobo;
   final VoidCallback? aoCentralizarNoUsuario;
 
+  const CapsulaControlesModoGlobo({
+    super.key,
+    required this.modo3D,
+    required this.temLocalizacaoUsuario,
+    required this.buscandoLocalizacaoUsuario,
+    required this.aoAlternarModo3D,
+    required this.aoResetarGlobo,
+    this.aoCentralizarNoUsuario,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xCC10141A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            key: const Key('botao_alternar_3d_2d'),
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(20),
+            ),
+            onTap: aoAlternarModo3D,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                modo3D ? '3D' : '2D',
+                style: const TextStyle(
+                  color: Color(0xFFE27D60),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          Container(width: 1, height: 14, color: Colors.white12),
+          InkWell(
+            key: const Key('botao_resetar_globo'),
+            borderRadius: aoCentralizarNoUsuario == null
+                ? const BorderRadius.horizontal(right: Radius.circular(20))
+                : BorderRadius.zero,
+            onTap: aoResetarGlobo,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+              child: Icon(
+                Icons.public,
+                size: 14,
+                color: Color(0xFFD1D5DB),
+              ),
+            ),
+          ),
+          if (aoCentralizarNoUsuario != null) ...[
+            Container(width: 1, height: 14, color: Colors.white12),
+            InkWell(
+              key: const Key('botao_minha_localizacao'),
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(20),
+              ),
+              onTap: aoCentralizarNoUsuario,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                child: buscandoLocalizacaoUsuario
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.8,
+                          color: Color(0xFF38BDF8),
+                        ),
+                      )
+                    : Icon(
+                        Icons.my_location_rounded,
+                        size: 14,
+                        color: temLocalizacaoUsuario
+                            ? const Color(0xFF38BDF8)
+                            : const Color(0xFFD1D5DB),
+                      ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
