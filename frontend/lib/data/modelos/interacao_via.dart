@@ -557,4 +557,77 @@ class DadosComunidadeVia {
   /// Remove o alerta [alertaUid] exigindo autoria de [autorIdPublico] sob Fail-Fast.
   DadosComunidadeVia semAlertaDoAutor({
     required String alertaUid,
+    required String autorIdPublico,
+  }) {
+    final idx = alertasAtivos.indexWhere((a) => a.uid == alertaUid.trim());
+    if (idx < 0) {
+      throw StateError('Alerta $alertaUid não encontrado nesta via.');
+    }
+    if (!alertasAtivos[idx].foiCriadoPor(autorIdPublico)) {
+      throw StateError('Apenas o próprio autor pode excluir este alerta.');
+    }
+    final lista = List<AlertaSegurancaVia>.from(alertasAtivos)..removeAt(idx);
+    return copyWith(alertasAtivos: List.unmodifiable(lista));
+  }
+
+  /// Registra ou reforça um alerta em [categoria], retornando `(novoEstado, alerta, jaContribuira)`.
+  (DadosComunidadeVia, AlertaSegurancaVia, bool) comAlertaReportado({
+    required String escaladaUid,
+    required CategoriaAlertaSeguranca categoria,
+    required String autorIdPublico,
+    required String autorNomePublico,
+    String? detalhe,
+  }) {
+    final alertas = List<AlertaSegurancaVia>.from(alertasAtivos);
+    final idx = alertas.indexWhere((a) => a.categoria == categoria);
+    if (idx >= 0) {
+      final ant = alertas[idx];
+      final jaContribuira = ant.jaConfirmadoPor(autorIdPublico);
+      final det = detalhe?.trim();
+      final res = ant.copyWith(
+        confirmacoesAtivas: jaContribuira
+            ? ant.confirmacoesAtivas
+            : ant.confirmacoesAtivas + 1,
+        confirmadoresUids: {...ant.confirmadoresUids, autorIdPublico},
+        detalhe: (det != null && det.isNotEmpty) ? det : ant.detalhe,
+      );
+      alertas[idx] = res;
+      return (
+        copyWith(alertasAtivos: List.unmodifiable(alertas)),
+        res,
+        jaContribuira,
+      );
+    }
+    final novo = AlertaSegurancaVia.criar(
+      escaladaUid: escaladaUid,
+      categoria: categoria,
+      detalhe: detalhe,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: autorNomePublico,
+    );
+    alertas.insert(0, novo);
+    return (copyWith(alertasAtivos: List.unmodifiable(alertas)), novo, false);
+  }
+
+  /// Aplica uma confirmação (`+1` ou resolução) sobre [alertaUid], retornando `null` se ignorada.
+  DadosComunidadeVia? comConfirmacaoAlerta({
+    required String alertaUid,
+    required String autorIdPublico,
+    required bool aindaEstaLa,
+  }) {
+    final alertas = List<AlertaSegurancaVia>.from(alertasAtivos);
+    final idx = alertas.indexWhere((a) => a.uid == alertaUid);
+    if (idx < 0) return null;
+    if (aindaEstaLa) {
+      final ant = alertas[idx];
+      if (ant.jaConfirmadoPor(autorIdPublico)) return null;
+      alertas[idx] = ant.copyWith(
+        confirmacoesAtivas: ant.confirmacoesAtivas + 1,
+        confirmadoresUids: {...ant.confirmadoresUids, autorIdPublico},
+      );
+    } else {
+      alertas.removeAt(idx);
+    }
+    return copyWith(alertasAtivos: List.unmodifiable(alertas));
+  }
 }
