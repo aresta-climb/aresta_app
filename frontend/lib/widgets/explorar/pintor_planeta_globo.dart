@@ -286,21 +286,10 @@ class PintorPlanetaGlobo extends CustomPainter {
   void _desenharOndaSonarSelecao(Canvas canvas, Size size, double lod) {
     final alvoSonar = sonarPico;
     if (alvoSonar == null || progressoSonar >= 1.0) return;
-    final elev = lod > 1.35
-        ? math.max(
-            0.0,
-            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-              latitude: alvoSonar.latitude,
-              longitude: alvoSonar.longitude,
-              picosReferencia: picosReferencia,
-              amostradorElevacaoReal: amostradorElevacaoReal,
-            ),
-          )
-        : 0.0;
     final pt = controlador.projetarCoordenada(
       latitude: alvoSonar.latitude,
       longitude: alvoSonar.longitude,
-      elevacaoMetros: elev,
+      elevacaoMetros: 0.0,
       tamanhoTela: size,
     );
     if (!pt.visivel) return;
