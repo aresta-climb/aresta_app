@@ -90,3 +90,100 @@ class RastroPassadoTempestade {
     required this.contorno,
   });
 
+  factory RastroPassadoTempestade.deMapa(Map<String, dynamic> mapa) {
+    final horas = mapa['horas_atras'];
+    final contornoBruto = mapa['contorno'];
+    if (horas is! num ||
+        horas <= 0 ||
+        contornoBruto is! List ||
+        contornoBruto.length < 3) {
+      throw const FormatException('RastroPassadoTempestade inválido.');
+    }
+    return RastroPassadoTempestade(
+      horasAtras: horas.round(),
+      contorno: List<PontoContornoGeo>.unmodifiable(
+        contornoBruto.map((p) => PontoContornoGeo.deLista(p as List<dynamic>)),
+      ),
+    );
+  }
+
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'horas_atras': horasAtras,
+        'contorno': contorno.map((p) => p.paraLista()).toList(growable: false),
+      };
+}
+
+/// Sistema meteorológico de chuva ao vivo delimitado por contornos reais (isoietas) e vetor de vento.
+class BolhaChuvaRegional {
+  final String id;
+  final double latitude;
+  final double longitude;
+  final double intensidadeMmHora;
+  final double ventoRumoGraus;
+  final double ventoVelocidadeKmh;
+  final List<PontoContornoGeo> contornoExterno;
+  final List<List<PontoContornoGeo>> nucleosIntensos;
+  final List<RastroPassadoTempestade> rastrosPassados;
+
+  const BolhaChuvaRegional({
+    required this.id,
+    required this.latitude,
+    required this.longitude,
+    required this.intensidadeMmHora,
+    required this.ventoRumoGraus,
+    required this.ventoVelocidadeKmh,
+    required this.contornoExterno,
+    this.nucleosIntensos = const [],
+    this.rastrosPassados = const [],
+  });
+
+  /// Classifica o sistema em 4 níveis visuais combinando taxa de precipitação (`mm/h`)
+  /// e multiplicidade de núcleos convectivos internos extraídos do radar/modelo.
+  NivelIntensidadeChuva get nivelIntensidade {
+    if (intensidadeMmHora >= 5.8 ||
+        (intensidadeMmHora >= 4.0 && nucleosIntensos.length >= 2)) {
+      return NivelIntensidadeChuva.extrema;
+    }
+    if (intensidadeMmHora >= 2.8 ||
+        (intensidadeMmHora >= 2.2 && nucleosIntensos.isNotEmpty)) {
+      return NivelIntensidadeChuva.forte;
+    }
+    if (intensidadeMmHora >= 0.9) {
+      return NivelIntensidadeChuva.moderada;
+    }
+    return NivelIntensidadeChuva.fraca;
+  }
+
+  /// Retorna as pegadas passadas da tempestade (ordenadas da mais antiga para a mais recente),
+  /// utilizando os contornos horários do Open-Meteo quando presentes ou retroprojetando pela
+  /// cinemática real de `(ventoRumoGraus, ventoVelocidadeKmh)` quando ainda ausentes no snapshot.
+  List<RastroPassadoTempestade> obterPegadasTrajetoria() {
+    if (rastrosPassados.isNotEmpty) {
+      return rastrosPassados;
+    }
+    final velEfetivaKmh = math.max(8.0, ventoVelocidadeKmh);
+    final rumoRad = ventoRumoGraus * (math.pi / 180.0);
+    final uLon = math.sin(rumoRad);
+    final uLat = math.cos(rumoRad);
+    final cosLat = math.max(0.28, math.cos(latitude * (math.pi / 180.0)));
+
+    RastroPassadoTempestade projetarHorasAtras(int horas, double escalaForma) {
+      final distKm = velEfetivaKmh * horas;
+      final dLat = -(uLat * distKm) / 111.32;
+      final dLon = -(uLon * distKm) / (111.32 * cosLat);
+      final cLat = (latitude + dLat).clamp(-89.0, 89.0);
+      final cLon = longitude + dLon;
+      final vertices = contornoExterno.map((p) {
+        final relLon = (p.longitude - longitude) * escalaForma;
+        final relLat = (p.latitude - latitude) * escalaForma;
+        var lon = cLon + relLon;
+        if (lon > 180.0) lon -= 360.0;
+        if (lon < -180.0) lon += 360.0;
+        return PontoContornoGeo(
+          longitude: lon,
+          latitude: (cLat + relLat).clamp(-89.5, 89.5),
+        );
+      }).toList(growable: false);
+      return RastroPassadoTempestade(horasAtras: horas, contorno: vertices);
+    }
+
