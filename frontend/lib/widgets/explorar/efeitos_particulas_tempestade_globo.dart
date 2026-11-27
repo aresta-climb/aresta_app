@@ -170,3 +170,99 @@ abstract final class EfeitosParticulasTempestadeGlobo {
     final qtdNuvens = nivel.peso * 2;
     final opacidadeCelula = 0.20 + 0.09 * nivel.peso;
 
+    Offset? projetarPontoBolha(double lon, double lat) {
+      final elev = sobreRelevo
+          ? math.max(
+                0.0,
+                GeradorRelevoLod.amostrarElevacaoMetros(
+                  latitude: lat,
+                  longitude: lon,
+                  picosReferencia: picosReferencia,
+                ),
+              ) +
+              18.0
+          : 0.0;
+      final pt = controlador.projetarCoordenada(
+        latitude: lat,
+        longitude: lon,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!pt.visivel) return null;
+      return Offset(pt.x, pt.y);
+    }
+
+    for (var i = 0; i < qtdNuvens; i++) {
+      final sx = ((i * 47 + 13) % 83) / 83.0;
+      final sy = ((i * 31 + 29) % 79) / 79.0;
+      final avancoGraus = faseSegundos * 0.025 * fatorVel + i * 0.17;
+      final uFrac = ((sx + uLon * avancoGraus) % 1.0 + 1.0) % 1.0;
+      final vFrac = ((sy + uLat * avancoGraus) % 1.0 + 1.0) % 1.0;
+      final lon = bolha.minLon + (0.08 + 0.84 * uFrac) * spanLon;
+      final lat = bolha.minLat + (0.08 + 0.84 * vFrac) * spanLat;
+      final pos = projetarPontoBolha(lon, lat);
+      if (pos == null) continue;
+
+      final raio =
+          (menorLadoMundoPx * (0.20 + (i % 3) * 0.07)).clamp(5.5, 30.0);
+      canvas.drawCircle(
+        pos,
+        raio,
+        Paint()
+          ..color = corNuvem.withValues(
+            alpha: (corNuvem.a * opacidadeCelula).clamp(0.0, 1.0),
+          )
+          ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal,
+            (raio * 0.52).clamp(3.0, 11.0),
+          ),
+      );
+    }
+
+    if (nivel == NivelIntensidadeChuva.forte) {
+      final centro = projetarPontoBolha(bolha.longitude, bolha.latitude);
+      if (centro != null) {
+        final pulsoCumulus = 0.55 + 0.45 * math.sin(faseSegundos * 2.5);
+        canvas.drawCircle(
+          centro,
+          (menorLadoMundoPx * 0.30).clamp(8.0, 30.0),
+          Paint()
+            ..color = Color.fromRGBO(
+              125,
+              211,
+              252,
+              (0.24 * pulsoCumulus).clamp(0.0, 1.0),
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0),
+        );
+      }
+    } else if (nivel == NivelIntensidadeChuva.extrema) {
+      // 3 células elétricas fixas em coordenadas geográficas da tempestade
+      const deslocamentos = <Offset>[
+        Offset(0.0, 0.0),
+        Offset(-0.22, -0.16),
+        Offset(0.24, 0.18),
+      ];
+      for (var k = 0; k < deslocamentos.length; k++) {
+        final onda = math
+            .pow(0.5 + 0.5 * math.sin(faseSegundos * 3.2 + k * 2.09), 4)
+            .toDouble();
+        if (onda <= 0.12) continue;
+        final c = projetarPontoBolha(
+          bolha.longitude + deslocamentos[k].dx * spanLon,
+          (bolha.latitude + deslocamentos[k].dy * spanLat).clamp(-89.0, 89.0),
+        );
+        if (c == null) continue;
+        final raioClarao = (menorLadoMundoPx * 0.30).clamp(8.0, 34.0);
+        canvas.drawCircle(
+          c,
+          raioClarao,
+          Paint()
+            ..color = Color.fromRGBO(
+              224,
+              242,
+              254,
+              (0.42 * onda).clamp(0.0, 1.0),
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9.0),
+        );
