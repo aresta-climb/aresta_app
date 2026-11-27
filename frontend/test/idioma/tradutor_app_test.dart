@@ -94,3 +94,63 @@ void main() {
           '25 november 2026',
         );
 
+        // Fallback seguro para entradas malformadas ou não numéricas
+        expect(
+          TradutorApp.formatarDataExtensoLegal('data-invalida'),
+          'data-invalida',
+        );
+        expect(
+          TradutorApp.formatarDataExtensoLegal(
+            '2026-xx-yy',
+            idioma: IdiomaApp.ingles,
+          ),
+          'January yy, 2026',
+        );
+      },
+    );
+
+    testWidgets(
+      'extensão em BuildContext expõe idiomaApp e traduz chaves reativamente ao alternar o idioma na árvore',
+      (tester) async {
+        final controlador = ControladorIdiomaApp.criarIsolado();
+
+        await tester.pumpWidget(
+          EscopoIdiomaApp(
+            notificador: controlador.notificadorIdioma,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Builder(
+                builder: (context) {
+                  return Column(
+                    children: [
+                      Text(context.idiomaApp.nomeNativo),
+                      Text(
+                        context.tr(
+                          ChaveTexto.explorarContagemPicos,
+                          {'n': 12},
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Português'), findsOneWidget);
+        expect(find.text('12 PICOS'), findsOneWidget);
+
+        await controlador.definirIdioma(IdiomaApp.ingles);
+        await tester.pump();
+        expect(find.text('English'), findsOneWidget);
+        expect(find.text('12 CRAGS'), findsOneWidget);
+
+        await controlador.definirIdioma(IdiomaApp.alemao);
+        await tester.pump();
+        expect(find.text('Deutsch'), findsOneWidget);
+        expect(find.text('12 GEBIETE'), findsOneWidget);
+      },
+    );
+  });
+}
