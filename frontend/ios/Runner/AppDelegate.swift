@@ -3,7 +3,6 @@ import UIKit
 import AuthenticationServices
 import CryptoKit
 import Security
-import GoogleMaps
 #if canImport(workmanager_apple)
 import workmanager_apple
 #elseif canImport(workmanager)
@@ -21,8 +20,6 @@ import workmanager
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Chave oficial iOS do projeto app-escalada-croquis (mesma de GoogleService-Info.plist, com Maps SDK for iOS ativo)
-    GMSServices.provideAPIKey("AIzaSyBEN0WNF_d3mo1NSNyz1INq_YDedDDIhpo")
 #if canImport(workmanager_apple)
     WorkmanagerPlugin.registerLaunchHandlers()
 #elseif canImport(workmanager)

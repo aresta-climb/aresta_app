@@ -20,9 +20,6 @@
         android:enableOnBackInvokedCallback="false"
         android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:icon="@mipmap/ic_launcher">
-        
-        <meta-data android:name="com.google.android.geo.API_KEY"
-                   android:value="AIzaSyCjd3zB7EP0VR5G5RXb3s6u0GKRXlTs9i8"/>
 
         <activity
             android:name=".MainActivity"
