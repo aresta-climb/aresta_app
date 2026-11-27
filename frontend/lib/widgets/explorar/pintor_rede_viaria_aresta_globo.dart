@@ -8,15 +8,16 @@ import '../../utils/geometria_clipping_mapa.dart';
 import 'controlador_camera_globo.dart';
 import 'malha_relevo_lod.dart';
 
-/// Renderizador cartográfico puramente declarativo (Dumb UI) da camada viária monocromática
-/// e do pulso luminoso laranja Aresta pré-computado em [RedeViariaArestaGlobo].
+/// Renderizador cartográfico puramente declarativo (Dumb UI) da malha viária hierárquica
+/// (`OpenStreetMap` em 3 níveis progressivos de zoom) e do pulso luminoso laranja Aresta,
+/// projetado diretamente na superfície do geoide (`elevacaoMetros = 0`) sem paralaxe.
 abstract final class PintorRedeViariaArestaGlobo {
   static const Color corLaranjaAresta = Color(0xFFE27D60);
   static const Color corBrilhoViasAresta = Color(0xFFFF9248);
   static const Color corFilamentoQuente = Color(0xFFFFE3B8);
 
-  /// Desenha a malha rodoviária P&B de fundo, as cidades de referência (pontos brancos),
-  /// a propagação/retração laranja Aresta nas rodovias e o contorno viário das cidades Aresta.
+  /// Desenha a malha rodoviária P&B hierárquica (`motorway/trunk`, `primary`, `secondary/tertiary`),
+  /// as cidades de referência, os corredores laranjas Aresta e os escudos de rodovia.
   static void desenharRedeViariaECidades({
     required Canvas canvas,
     required Size size,
@@ -38,8 +39,10 @@ abstract final class PintorRedeViariaArestaGlobo {
 
     final rede = redeViaria;
     final lod = controlador.lod;
-    final pesoTerreno = ControladorCameraGlobo.smoothstep(1.35, 2.05, lod);
-    final mostrarSecundarias = lod >= 1.95;
+    final alfaNivel2 =
+        fatorModoViario * ControladorCameraGlobo.smoothstep(1.90, 2.45, lod);
+    final alfaNivel3 =
+        fatorModoViario * ControladorCameraGlobo.smoothstep(2.65, 3.20, lod);
     final janelaVisivel = GeometriaClippingMapa.calcularJanelaVisivelCamera(
       modo3D: controlador.modo3D,
       latitudeCentral: controlador.latitudeCentral,
@@ -53,29 +56,52 @@ abstract final class PintorRedeViariaArestaGlobo {
     final passoSubdivisaoGraus =
         lod >= 3.40 ? 0.0022 : (lod >= 2.40 ? 0.0070 : 0.024);
 
-    // 1. Malha rodoviária monocromática com leito asfáltico progressivo no zoom próximo
+    // 1. Malha rodoviária hierárquica em 3 níveis progressivos sem pop abrupto
     final escudosRodovia = <({Offset pos, String codigo})>[];
     if (fatorModoViario > 0.02) {
-      final caminhoFundo = Path();
-      var temFundo = false;
+      final caminhoNivel1 = Path();
+      final caminhoNivel2 = Path();
+      final caminhoNivel3 = Path();
+      var temN1 = false;
+      var temN2 = false;
+      var temN3 = false;
+
       for (final via in rede.rodoviasFundo) {
-        if (!via.ehPrincipal && !mostrarSecundarias) continue;
+        final nivel = via.nivelViario;
+        if (nivel == 2 && alfaNivel2 <= 0.02) continue;
+        if (nivel >= 3 && alfaNivel3 <= 0.02) continue;
+        if (!via.interceptaJanela(
+          janelaMinLon: janelaVisivel.minLon,
+          janelaMaxLon: janelaVisivel.maxLon,
+          janelaMinLat: janelaVisivel.minLat,
+          janelaMaxLat: janelaVisivel.maxLat,
+        )) {
+          continue;
+        }
+
+        final destinoNivel = nivel == 1
+            ? caminhoNivel1
+            : (nivel == 2 ? caminhoNivel2 : caminhoNivel3);
         Offset? pontoMeioVia;
         if (_adicionarPolilinhaSuaveAoPath(
-          destino: caminhoFundo,
+          destino: destinoNivel,
           verticesLonLat: via.verticesLonLat,
           janelaVisivel: janelaVisivel,
           passoSubdivisaoGraus: passoSubdivisaoGraus,
           size: size,
           controlador: controlador,
-          picosReferencia: picosReferencia,
-          pesoTerreno: pesoTerreno,
-          amostradorElevacaoReal: amostradorElevacaoReal,
-          aoAmostrarPontoCentral: lod >= 2.35 && via.codigo.isNotEmpty
-              ? (pt) => pontoMeioVia ??= pt
-              : null,
+          aoAmostrarPontoCentral:
+              lod >= 2.35 && nivel <= 2 && via.codigo.isNotEmpty
+                  ? (pt) => pontoMeioVia ??= pt
+                  : null,
         )) {
-          temFundo = true;
+          if (nivel == 1) {
+            temN1 = true;
+          } else if (nivel == 2) {
+            temN2 = true;
+          } else {
+            temN3 = true;
+          }
           if (pontoMeioVia != null && escudosRodovia.length < 4) {
             final p = pontoMeioVia!;
             final dentroMargem = p.dx > 52.0 &&
@@ -94,22 +120,17 @@ abstract final class PintorRedeViariaArestaGlobo {
         }
       }
 
-      if (temFundo) {
-        final escalaViaZoom =
-            1.0 + 1.35 * ControladorCameraGlobo.smoothstep(2.40, 4.20, lod);
-        canvas.drawPath(
-          caminhoFundo,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.2 * escalaViaZoom
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..color = Color.fromRGBO(
-              7,
-              10,
-              15,
-              (0.62 * fatorModoViario).clamp(0.0, 1.0),
-            ),
+      final escalaViaZoom =
+          1.0 + 1.25 * ControladorCameraGlobo.smoothstep(2.40, 4.20, lod);
+      if (temN3) {
+        _desenharCamadaAsfalticaFundo(
+          canvas: canvas,
+          caminho: caminhoNivel3,
+          larguraBorda: 1.45 * escalaViaZoom,
+          larguraMiolo: 0.66 * escalaViaZoom,
+          alfaBorda: 0.48 * alfaNivel3,
+          alfaMiolo: 0.21 * alfaNivel3,
+          corMiolo: const Color(0xFFBAC6D6),
         );
         canvas.drawPath(
           caminhoFundo,
