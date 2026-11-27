@@ -64,9 +64,7 @@ abstract final class PintorTerrenoVetoresGlobo {
     final rows = (jMax - jMin).clamp(2, 56);
     final cols = (iMax - iMin).clamp(2, 56);
     final latMax = (jMin + rows) * passoMundo;
-    final latMin = jMin * passoMundo;
     final lonMin = iMin * passoMundo;
-    final lonMax = (iMin + cols) * passoMundo;
 
     final totalVerts = (rows + 1) * (cols + 1);
     final posicoes = List<Offset>.filled(totalVerts, Offset.zero);
@@ -110,19 +108,15 @@ abstract final class PintorTerrenoVetoresGlobo {
         ? ControladorCameraGlobo.smoothstep(1.80, 2.75, lod) *
             (1.0 - 0.45 * ControladorCameraGlobo.smoothstep(3.10, 4.10, lod))
         : 0.0;
-    // Mantém sombreamento de relevo aveludado e contínuo sem criar facetas triangulares duras sob as curvas sólidas
-    final ganhoRelevoLuz = 1.0 + 2.8 * fatorMonocromatico;
-
-    final passoMetrosLat =
-        math.max(4.0, ((latMax - latMin) / rows) * 111320.0);
-    final passoMetrosLon =
-        math.max(4.0, ((lonMax - lonMin) / cols) * 111320.0 * cosLat0);
+    // Sombreamento com passo físico fixo no mundo (0,0080°) para que a luz do relevo jamais salte ao mudar o zoom
+    final ganhoRelevoLuz = 1.0 + 1.45 * fatorMonocromatico;
+    const deltaSombraGraus = 0.0080;
+    const distYFixaMetros = 2.0 * deltaSombraGraus * 111320.0;
+    final distXFixaMetros =
+        math.max(40.0, 2.0 * deltaSombraGraus * 111320.0 * cosLat0);
 
     for (var j = 0; j <= rows; j++) {
-      final jAnt = math.max(0, j - 1);
-      final jProx = math.min(rows, j + 1);
-      final distY = (jProx - jAnt) * passoMetrosLat;
-
+      final lat = latMax - j * passoMundo;
       for (var i = 0; i <= cols; i++) {
         final idx = j * (cols + 1) + i;
         if (!visiveis[idx]) continue;
@@ -132,16 +126,40 @@ abstract final class PintorTerrenoVetoresGlobo {
         final alfaVert = opacidadeBase * alfaCosta;
         if (alfaVert <= 0.01) continue;
 
-        final iAnt = math.max(0, i - 1);
-        final iProx = math.min(cols, i + 1);
-        final distX = (iProx - iAnt) * passoMetrosLon;
+        final lon = lonMin + i * passoMundo;
+        final ehTerra =
+            dadosMalha?.contemPontoTerrestre(latitude: lat, longitude: lon);
+        final zLeste = GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat,
+          longitude: lon + deltaSombraGraus,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: ehTerra,
+          amostradorElevacaoReal: amostradorElevacaoReal,
+        );
+        final zOeste = GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat,
+          longitude: lon - deltaSombraGraus,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: ehTerra,
+          amostradorElevacaoReal: amostradorElevacaoReal,
+        );
+        final zSul = GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat - deltaSombraGraus,
+          longitude: lon,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: ehTerra,
+          amostradorElevacaoReal: amostradorElevacaoReal,
+        );
+        final zNorte = GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat + deltaSombraGraus,
+          longitude: lon,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: ehTerra,
+          amostradorElevacaoReal: amostradorElevacaoReal,
+        );
 
-        final dzDx =
-            (elevs[j * (cols + 1) + iProx] - elevs[j * (cols + 1) + iAnt]) /
-                distX;
-        final dzDySul =
-            (elevs[jProx * (cols + 1) + i] - elevs[jAnt * (cols + 1) + i]) /
-                distY;
+        final dzDx = (zLeste - zOeste) / distXFixaMetros;
+        final dzDySul = (zSul - zNorte) / distYFixaMetros;
         final declive = math.sqrt(dzDx * dzDx + dzDySul * dzDySul);
 
         final corHipsometrica =
