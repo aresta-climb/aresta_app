@@ -270,3 +270,74 @@ abstract final class ExtratorCurvasNivelMundo {
       }
     }
 
+    return ConjuntoCurvasNivelMundo(
+      chaveBloco: bloco.chaveBloco,
+      nivelDetalhe: nivelDetalhe,
+      versaoDadosElevacao: versaoDadosElevacao,
+      curvas: List<CurvaNivelMundo>.unmodifiable(curvas),
+    );
+  }
+
+  static double _fracao(double z1, double z2, double cota) {
+    final denom = z2 - z1;
+    if (denom.abs() < 1e-6) return 0.5;
+    return ((cota - z1) / denom).clamp(0.02, 0.98);
+  }
+
+  static List<List<Offset>> _costurarESuavizarPolilinhas(
+    List<(Offset, Offset)> segmentos,
+    double passoGraus,
+  ) {
+    final escalaChave = 2048.0 / passoGraus;
+    int chavePonto(Offset p) {
+      final qx = (p.dx * escalaChave).round() + 500000000;
+      final qy = (p.dy * escalaChave).round() + 500000000;
+      return qx * 1000000007 + qy;
+    }
+
+    final n = segmentos.length;
+    final usado = List<bool>.filled(n, false);
+    final porVertice = <int, List<int>>{};
+    for (var i = 0; i < n; i++) {
+      final ka = chavePonto(segmentos[i].$1);
+      final kb = chavePonto(segmentos[i].$2);
+      (porVertice[ka] ??= <int>[]).add(i);
+      (porVertice[kb] ??= <int>[]).add(i);
+    }
+
+    int? proximoSegmento(int chaveExtremidade) {
+      final candidatos = porVertice[chaveExtremidade];
+      if (candidatos == null) return null;
+      for (final idx in candidatos) {
+        if (!usado[idx]) return idx;
+      }
+      return null;
+    }
+
+    final resultado = <List<Offset>>[];
+    for (var i = 0; i < n; i++) {
+      if (usado[i]) continue;
+      usado[i] = true;
+
+      final frente = <Offset>[segmentos[i].$1, segmentos[i].$2];
+      while (true) {
+        final kFim = chavePonto(frente.last);
+        final prox = proximoSegmento(kFim);
+        if (prox == null) break;
+        usado[prox] = true;
+        final seg = segmentos[prox];
+        final ka = chavePonto(seg.$1);
+        frente.add(ka == kFim ? seg.$2 : seg.$1);
+      }
+
+      final tras = <Offset>[];
+      while (true) {
+        final kIni = chavePonto(tras.isEmpty ? frente.first : tras.last);
+        final prox = proximoSegmento(kIni);
+        if (prox == null) break;
+        usado[prox] = true;
+        final seg = segmentos[prox];
+        final ka = chavePonto(seg.$1);
+        tras.add(ka == kIni ? seg.$2 : seg.$1);
+      }
+
