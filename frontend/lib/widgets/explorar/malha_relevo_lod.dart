@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 
 import '../../data/modelos/modelos_rede_viaria_aresta.dart';
+import '../../utils/codificador_malha_binaria.dart';
 
 export '../../data/modelos/modelos_rede_viaria_aresta.dart';
 
@@ -70,7 +70,7 @@ abstract final class TexturaGloboNasa {
 /// Malha geográfica offline imutável dos continentes, contorno brasileiro, 27 UFs, cidades IBGE e rodovias.
 class MalhaGeograficaGlobo {
   static const String caminhoAssetPadrao =
-      'assets/geometria/malha_globo_brasil.json';
+      'assets/geometria/malha_globo_brasil.bin';
   static MalhaGeograficaGlobo? _cacheMemoria;
 
   /// Retorna a malha geográfica já decodificada em RAM, evitando flash inicial ao reabrir a aba.
@@ -106,7 +106,7 @@ class MalhaGeograficaGlobo {
         versaoMalhaViaria: versaoMalhaViaria ?? this.versaoMalhaViaria,
       );
 
-  /// Carrega e decodifica a malha geográfica em `Isolate.run`, mantendo cache em RAM.
+  /// Carrega e decodifica o ativo binário compacto em `Isolate.run`, mantendo cache em RAM sem pausas de GC.
   static Future<MalhaGeograficaGlobo> carregarDoAssetBundle({
     AssetBundle? bundle,
     bool usarCache = true,
@@ -114,10 +114,10 @@ class MalhaGeograficaGlobo {
     if (usarCache && _cacheMemoria != null) {
       return _cacheMemoria!;
     }
-    final textoJson =
-        await (bundle ?? rootBundle).loadString(caminhoAssetPadrao);
+    final bd = await (bundle ?? rootBundle).load(caminhoAssetPadrao);
+    final bytes = bd.buffer.asUint8List(bd.offsetInBytes, bd.lengthInBytes);
     final decodificada = await Isolate.run(
-      () => _decodificarJsonEmIsolate(textoJson),
+      () => _decodificarBinarioEmIsolate(bytes),
     );
     if (usarCache) {
       _cacheMemoria = decodificada;
@@ -125,69 +125,16 @@ class MalhaGeograficaGlobo {
     return decodificada;
   }
 
-  static MalhaGeograficaGlobo _decodificarJsonEmIsolate(String textoJson) {
-    final raiz = jsonDecode(textoJson) as Map<String, dynamic>;
-    final listaCont = (raiz['continentes'] as List<dynamic>)
-        .map((c) {
-          final m = c as Map<String, dynamic>;
-          return PoligonoGeografico(
-            id: m['id'] as String,
-            verticesLonLat: _converterListaVertices(m['poligono'] as List<dynamic>),
-          );
-        })
-        .toList(growable: false);
-
-    final brasilVertices =
-        _converterListaVertices(raiz['brasil'] as List<dynamic>);
-
-    final listaEstados = (raiz['estados_br'] as List<dynamic>)
-        .map((e) {
-          final m = e as Map<String, dynamic>;
-          return PoligonoGeografico(
-            id: m['uf'] as String,
-            verticesLonLat: _converterListaVertices(m['poligono'] as List<dynamic>),
-          );
-        })
-        .toList(growable: false);
-
-    final listaLocalidades =
-        ((raiz['localidades_proximas'] as List<dynamic>?) ?? const [])
-            .map((item) {
-              final m = item as Map<String, dynamic>;
-              final nivelLido = ((m['nivel'] as num?)?.toInt() ?? 1).clamp(1, 3);
-              return LocalidadeRegionalMapa(
-                nome: (m['nome'] as String?) ?? '',
-                ehCidade: nivelLido == 1,
-                nivel: nivelLido,
-                longitude: (m['lon'] as num).toDouble(),
-                latitude: (m['lat'] as num).toDouble(),
-              );
-            })
-            .toList(growable: false);
-
-    final listaRodovias =
-        ((raiz['rodovias_proximas'] as List<dynamic>?) ?? const [])
-            .map((item) => RodoviaRegionalMapa.deMapa(item as Map<String, dynamic>))
-            .toList(growable: false);
-    final versaoViaria = (raiz['versao_malha_viaria'] as String?) ?? '';
-
+  static MalhaGeograficaGlobo _decodificarBinarioEmIsolate(Uint8List bytes) {
+    final d = CodificadorMalhaBinaria.decodificarMalhaGlobo(bytes);
     return MalhaGeograficaGlobo(
-      continentes: listaCont,
-      brasil: brasilVertices,
-      estados: listaEstados,
-      localidadesProximas: listaLocalidades,
-      rodoviasProximas: listaRodovias,
-      versaoMalhaViaria: versaoViaria,
+      continentes: d.continentes,
+      brasil: d.brasil,
+      estados: d.estados,
+      localidadesProximas: d.localidades,
+      rodoviasProximas: d.rodovias,
+      versaoMalhaViaria: d.versaoMalhaViaria,
     );
-  }
-
-  static List<Offset> _converterListaVertices(List<dynamic> bruto) {
-    return bruto
-        .map((par) {
-          final p = par as List<dynamic>;
-          return Offset((p[0] as num).toDouble(), (p[1] as num).toDouble());
-        })
-        .toList(growable: false);
   }
 
   /// Determina em espaço geográfico exato `(longitude, latitude)` se o ponto pertence à terra firme
