@@ -366,3 +366,99 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
+  Widget _celulaCabecalhoTabelaZ(String texto, double largura, AppColors cores) =>
+      SizedBox(width: largura, child: _textoCabecalhoTabelaZ(texto, cores));
+
+  Widget _textoCabecalhoTabelaZ(String texto, AppColors cores) => Text(
+    texto,
+    style: TextStyle(color: cores.chalkWhite, fontSize: 11, fontWeight: FontWeight.w800),
+  );
+
+  Widget _construirSecaoFontesEspecificas(
+    BuildContext context,
+    AppColors cores,
+  ) {
+    return _CartaoSecaoEstatistica(
+      titulo: context.tr(ChaveTexto.estatClimaSecaoFontesTitulo),
+      cores: cores,
+      filho: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.tr(ChaveTexto.estatClimaGrupoFontesMeteo),
+            style: TextStyle(
+              color: cores.rustIron,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final fonte
+              in EstudoEstatisticoClimaAresta.fontesMeteorologicas) ...[
+            _CartaoFonteDados(fonte: fonte, cores: cores),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            context.tr(ChaveTexto.estatClimaGrupoFontesNasa),
+            style: TextStyle(
+              color: cores.rustIron,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final fonte
+              in EstudoEstatisticoClimaAresta.fontesMissoesNasa) ...[
+            _CartaoFonteDados(fonte: fonte, cores: cores),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CartaoSecaoEstatistica extends StatelessWidget {
+  final String titulo;
+  final AppColors cores;
+  final Widget filho;
+
+  const _CartaoSecaoEstatistica({
+    required this.titulo,
+    required this.cores,
+    required this.filho,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              color: cores.chalkWhite,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.9,
+            ),
+          ),
+          const SizedBox(height: 12),
+          filho,
+        ],
+      ),
+    );
+  }
+}
+
