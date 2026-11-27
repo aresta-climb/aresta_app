@@ -361,5 +361,33 @@ void main() {
         expect(vm.nomeAtleta, 'Marina Pedra');
       },
     );
+
+    test(
+      'comCatalogo reutiliza ServicoAutenticacaoLocal.instancia quando repositorio e servicoAutenticacao não são informados',
+      () async {
+        RepositorioCadernetaLocal.instancia = repositorio;
+        final authCompartilhado = ServicoAutenticacaoFake(
+          repositorio: repositorio,
+        );
+        ServicoAutenticacaoLocal.instancia = authCompartilhado;
+        addTearDown(() {
+          ServicoAutenticacaoLocal.redefinirParaTestes();
+          RepositorioCadernetaLocal.instancia = null;
+        });
+
+        await authCompartilhado.entrarComGoogle();
+
+        final vm = HubPerfilCadernetaViewModel.comCatalogo(
+          datasetRepo: DatasetRepository(editorDeCroqui: EditorDeCroqui()),
+        );
+        addTearDown(vm.dispose);
+
+        await vm.atualizarNome('Atleta Integrado');
+        expect(vm.nomeAtleta, 'Atleta Integrado');
+
+        expect(await vm.excluirConta(), isTrue);
+        expect(vm.estaAutenticado, isFalse);
+      },
+    );
   });
 }

@@ -97,7 +97,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     );
     return HubPerfilCadernetaViewModel(
       repositorio: repo,
-      servicoAutenticacao: servicoAutenticacao,
+      servicoAutenticacao:
+          servicoAutenticacao ??
+          (repositorio == null ? ServicoAutenticacaoLocal.instancia : null),
       seletorFotoPerfil: seletorFotoPerfil,
       funcaoAtleta: funcaoAtleta,
       obterTotalPicos: catalogoVias.obterTotalPicosDistintos,

@@ -19,6 +19,9 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
   /// Quando `true`, lança [ExcecaoAutenticacaoCancelada] na próxima chamada a Google ou Apple.
   bool cancelarProximoLoginSocial;
 
+  /// Quando `true`, consome [cancelarProximoLoginSocial] após o primeiro cancelamento simulado.
+  final bool cancelarApenasUmaVez;
+
   /// Exceção determinística opcional lançada em [solicitarCodigoOtpEmail].
   Object? erroAoSolicitarOtp;
 
@@ -54,6 +57,7 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
     RepositorioCaderneta? repositorio,
     this.codigoOtpEsperado = '123456',
     this.cancelarProximoLoginSocial = false,
+    this.cancelarApenasUmaVez = false,
     this.erroAoSolicitarOtp,
     this.erroAoVerificarOtp,
     this.erroNoLoginSocial,
@@ -130,6 +134,9 @@ class ServicoAutenticacaoFake implements ServicoAutenticacao {
     required String nomePadrao,
   }) async {
     if (cancelarProximoLoginSocial) {
+      if (cancelarApenasUmaVez) {
+        cancelarProximoLoginSocial = false;
+      }
       throw const ExcecaoAutenticacaoCancelada();
     }
     if (erroNoLoginSocial != null) {

@@ -9,6 +9,8 @@ import '../../theme/temas.dart';
 import '../autenticacao/servico_autenticacao.dart';
 import '../caderneta/cliente_cadenas_supabase.dart';
 import '../caderneta/repositorio_caderneta.dart';
+import '../comunidade/cliente_fila_interacoes_supabase.dart';
+import '../comunidade/repositorio_interacoes_via.dart';
 import '../editor_croqui.dart';
 import '../http/sync_service.dart';
 import '../repositorio_dataset.dart';
@@ -39,12 +41,26 @@ Future<void> iniciarSmokeCi() async {
       resolvedorAnonKey: () => 'smoke-anon-key-ci',
     ),
   );
+  // ignore: invalid_use_of_visible_for_testing_member
+  RepositorioCadernetaLocal.instancia = repoCaderneta;
+
   final servicoAuth = ServicoAutenticacaoLocal(
     repositorio: repoCaderneta,
     obterUrlSupabase: () => configuracao.uriBase.toString(),
     obterAnonKeySupabase: () => 'smoke-anon-key-ci',
   );
   ServicoAutenticacaoLocal.instancia = servicoAuth;
+
+  final repoInteracoes = RepositorioInteracoesViaMemoria(
+    repositorioCaderneta: repoCaderneta,
+    servicoAutenticacao: servicoAuth,
+    clienteFila: ClienteFilaInteracoesSupabase(
+      resolvedorBaseUrl: () => configuracao.uriBase.toString(),
+      resolvedorAnonKey: () => 'smoke-anon-key-ci',
+    ),
+  );
+  // ignore: invalid_use_of_visible_for_testing_member
+  RepositorioInteracoesViaMemoria.instancia = repoInteracoes;
 
   runApp(
     BetterFeedback(
@@ -69,6 +85,7 @@ Future<void> iniciarSmokeCi() async {
     syncService: syncService,
     repositorioCaderneta: repoCaderneta,
     servicoAutenticacao: servicoAuth,
+    repositorioInteracoes: repoInteracoes,
   );
   await executor.executarEEnviarRelatorio();
 }

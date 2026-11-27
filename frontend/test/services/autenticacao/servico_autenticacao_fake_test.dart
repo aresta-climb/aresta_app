@@ -136,5 +136,22 @@ void main() {
       await expectLater(fake.entrarComGoogle, throwsStateError);
       await expectLater(fake.entrarComApple, throwsStateError);
     });
+
+    test('permite configurar cancelamento único silencioso sem bloquear tentativas seguintes', () async {
+      final fake = ServicoAutenticacaoFake(
+        repositorio: repositorio,
+        cancelarProximoLoginSocial: true,
+        cancelarApenasUmaVez: true,
+      );
+
+      await expectLater(
+        fake.entrarComGoogle,
+        throwsA(isA<ExcecaoAutenticacaoCancelada>()),
+      );
+      expect(fake.estaAutenticado, isFalse);
+
+      final perfil = await fake.entrarComGoogle();
+      expect(perfil.estaAutenticado, isTrue);
+    });
   });
 }

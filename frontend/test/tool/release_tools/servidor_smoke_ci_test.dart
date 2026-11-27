@@ -175,5 +175,240 @@ void main() {
         expect(recebido['sucesso'], isTrue);
       },
     );
+
+    test(
+      'suporta Magic Code OTP, OAuth PKCE S256, refresh_token, fila_interacoes com falha 503 e excluir_minha_conta',
+      () async {
+        final client = HttpClient();
+        addTearDown(client.close);
+
+        // 1. Magic Code OTP (/auth/v1/otp e /auth/v1/verify)
+        final reqOtp = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/auth/v1/otp'),
+        );
+        reqOtp.headers.contentType = ContentType.json;
+        reqOtp.write(jsonEncode(<String, dynamic>{
+          'email': 'escalador@arestaclimb.com',
+          'create_user': true,
+        }));
+        final respOtp = await reqOtp.close();
+        await respOtp.drain<void>();
+        expect(respOtp.statusCode, 200);
+
+        final reqVerifyErrado = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/auth/v1/verify'),
+        );
+        reqVerifyErrado.headers.contentType = ContentType.json;
+        reqVerifyErrado.write(jsonEncode(<String, dynamic>{
+          'type': 'email',
+          'email': 'escalador@arestaclimb.com',
+          'token': '000000',
+        }));
+        final respVerifyErrado = await reqVerifyErrado.close();
+        await respVerifyErrado.drain<void>();
+        expect(respVerifyErrado.statusCode, 401);
+
+        final reqVerifyOk = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/auth/v1/verify'),
+        );
+        reqVerifyOk.headers.contentType = ContentType.json;
+        reqVerifyOk.write(jsonEncode(<String, dynamic>{
+          'type': 'email',
+          'email': 'escalador@arestaclimb.com',
+          'token': ServidorSmokeCi.codigoOtpSmoke,
+        }));
+        final respVerifyOk = await reqVerifyOk.close();
+        expect(respVerifyOk.statusCode, 200);
+        final jsonOtp = jsonDecode(
+          await utf8.decoder.bind(respVerifyOk).join(),
+        ) as Map<String, dynamic>;
+        expect(jsonOtp['access_token'], isNotEmpty);
+        expect(jsonOtp['refresh_token'], isNotEmpty);
+
+        // 2. OAuth PKCE S256 (/auth/v1/authorize e /auth/v1/token?grant_type=pkce)
+        const verifier = 'verificador_pkce_smoke_ci_seguro_123456';
+        final challenge = base64Url
+            .encode(sha256.convert(utf8.encode(verifier)).bytes)
+            .replaceAll('=', '');
+
+        final reqAuth = await client.getUrl(
+          servidor.uriLocalHost.replace(
+            path: '/auth/v1/authorize',
+            queryParameters: <String, String>{
+              'provider': 'google',
+              'redirect_to': 'aresta://app.arestaclimb.com/auth-callback',
+              'code_challenge': challenge,
+              'code_challenge_method': 's256',
+            },
+          ),
+        );
+        final respAuth = await reqAuth.close();
+        expect(respAuth.statusCode, 200);
+        final jsonAuth = jsonDecode(
+          await utf8.decoder.bind(respAuth).join(),
+        ) as Map<String, dynamic>;
+        final callbackUri = Uri.parse(jsonAuth['callbackUrl'] as String);
+        final authCode = callbackUri.queryParameters['code'];
+        expect(authCode, isNotNull);
+
+        final reqPkceErrado = await client.postUrl(
+          servidor.uriLocalHost.replace(
+            path: '/auth/v1/token',
+            query: 'grant_type=pkce',
+          ),
+        );
+        reqPkceErrado.headers.contentType = ContentType.json;
+        reqPkceErrado.write(jsonEncode(<String, dynamic>{
+          'auth_code': authCode,
+          'code_verifier': 'verifier_invalido',
+        }));
+        final respPkceErrado = await reqPkceErrado.close();
+        await respPkceErrado.drain<void>();
+        expect(respPkceErrado.statusCode, 401);
+
+        final reqPkceOk = await client.postUrl(
+          servidor.uriLocalHost.replace(
+            path: '/auth/v1/token',
+            query: 'grant_type=pkce',
+          ),
+        );
+        reqPkceOk.headers.contentType = ContentType.json;
+        reqPkceOk.write(jsonEncode(<String, dynamic>{
+          'auth_code': authCode,
+          'code_verifier': verifier,
+        }));
+        final respPkceOk = await reqPkceOk.close();
+        expect(respPkceOk.statusCode, 200);
+        final jsonPkce = jsonDecode(
+          await utf8.decoder.bind(respPkceOk).join(),
+        ) as Map<String, dynamic>;
+        final refreshToken = jsonPkce['refresh_token'] as String;
+        expect(refreshToken, isNotEmpty);
+
+        // 3. Renovação via refresh_token
+        final reqRefresh = await client.postUrl(
+          servidor.uriLocalHost.replace(
+            path: '/auth/v1/token',
+            query: 'grant_type=refresh_token',
+          ),
+        );
+        reqRefresh.headers.contentType = ContentType.json;
+        reqRefresh.write(jsonEncode(<String, dynamic>{
+          'refresh_token': refreshToken,
+        }));
+        final respRefresh = await reqRefresh.close();
+        expect(respRefresh.statusCode, 200);
+        final jsonRefresh = jsonDecode(
+          await utf8.decoder.bind(respRefresh).join(),
+        ) as Map<String, dynamic>;
+        expect(jsonRefresh['access_token'], contains('renovado'));
+
+        // 4. Fila de interações semeada + falha 503 controlada + CRUD
+        final reqGetInicial = await client.getUrl(
+          servidor.uriLocalHost.replace(
+            path: '/rest/v1/fila_interacoes',
+            queryParameters: <String, String>{
+              'escalada_uid': 'eq.${ServidorSmokeCi.uidEscaladaSmoke}',
+              'status': 'eq.PENDENTE',
+            },
+          ),
+        );
+        final respGetInicial = await reqGetInicial.close();
+        expect(respGetInicial.statusCode, 200);
+        final listaInicial = jsonDecode(
+          await utf8.decoder.bind(respGetInicial).join(),
+        ) as List<dynamic>;
+        expect(listaInicial, hasLength(1));
+        expect(listaInicial.first['alerta_alvo_uid'], 'altFaunaSmk001');
+
+        // Ativa 1 falha 503 na próxima escrita
+        final reqArmarFalha = await client.postUrl(
+          servidor.uriLocalHost.replace(
+            path: '/__smoke__/falhar-proxima-escrita-fila',
+          ),
+        );
+        reqArmarFalha.headers.contentType = ContentType.json;
+        reqArmarFalha.write(jsonEncode(<String, dynamic>{'quantidade': 1}));
+        final respArmarFalha = await reqArmarFalha.close();
+        await respArmarFalha.drain<void>();
+        expect(respArmarFalha.statusCode, 200);
+
+        final reqPost503 = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/rest/v1/fila_interacoes'),
+        );
+        reqPost503.headers.contentType = ContentType.json;
+        reqPost503.write(jsonEncode(<String, dynamic>{
+          'id': '00000000-0000-4000-8000-000000000099',
+          'autor_id_publico': 'autSmokeCi0001',
+          'autor_nome_publico': 'Escalador Smoke',
+          'escalada_uid': ServidorSmokeCi.uidEscaladaSmoke,
+          'tipo': 'COMENTARIO',
+          'texto_comentario': 'Beta inicial',
+        }));
+        final respPost503 = await reqPost503.close();
+        await respPost503.drain<void>();
+        expect(respPost503.statusCode, 503);
+
+        // Segunda escrita deve suceder normalmente
+        final reqPost201 = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/rest/v1/fila_interacoes'),
+        );
+        reqPost201.headers.contentType = ContentType.json;
+        reqPost201.write(jsonEncode(<String, dynamic>{
+          'id': '00000000-0000-4000-8000-000000000099',
+          'autor_id_publico': 'autSmokeCi0001',
+          'autor_nome_publico': 'Escalador Smoke',
+          'escalada_uid': ServidorSmokeCi.uidEscaladaSmoke,
+          'tipo': 'COMENTARIO',
+          'texto_comentario': 'Beta inicial',
+        }));
+        final respPost201 = await reqPost201.close();
+        await respPost201.drain<void>();
+        expect(respPost201.statusCode, 201);
+
+        // PATCH comentário
+        final reqPatch = await client.patchUrl(
+          servidor.uriLocalHost.replace(
+            path: '/rest/v1/fila_interacoes',
+            queryParameters: <String, String>{
+              'id': 'eq.00000000-0000-4000-8000-000000000099',
+              'autor_id_publico': 'eq.autSmokeCi0001',
+              'tipo': 'eq.COMENTARIO',
+            },
+          ),
+        );
+        reqPatch.headers.contentType = ContentType.json;
+        reqPatch.write(jsonEncode(<String, dynamic>{
+          'texto_comentario': 'Beta editado',
+        }));
+        final respPatch = await reqPatch.close();
+        await respPatch.drain<void>();
+        expect(respPatch.statusCode, 204);
+
+        // DELETE via RPC excluir_minha_conta remove dados do autor
+        final reqExcluirConta = await client.postUrl(
+          servidor.uriLocalHost.replace(path: '/rest/v1/rpc/excluir_minha_conta'),
+        );
+        reqExcluirConta.headers.set('Authorization', 'Bearer token-valido');
+        reqExcluirConta.write('{}');
+        final respExcluirConta = await reqExcluirConta.close();
+        await respExcluirConta.drain<void>();
+        expect(respExcluirConta.statusCode, 204);
+
+        final reqGetAposExcluir = await client.getUrl(
+          servidor.uriLocalHost.replace(
+            path: '/rest/v1/fila_interacoes',
+            queryParameters: <String, String>{
+              'autor_id_publico': 'eq.autSmokeCi0001',
+            },
+          ),
+        );
+        final respGetAposExcluir = await reqGetAposExcluir.close();
+        final restantesAutor = jsonDecode(
+          await utf8.decoder.bind(respGetAposExcluir).join(),
+        ) as List<dynamic>;
+        expect(restantesAutor, isEmpty);
+      },
+    );
   });
 }

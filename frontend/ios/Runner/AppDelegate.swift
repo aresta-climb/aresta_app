@@ -72,6 +72,14 @@ import workmanager
       case "solicitarIdTokenGoogle":
 #if targetEnvironment(simulator)
         if let cfgSmoke = self.obterConfiguracaoSmokeSimulator() {
+          let urlAutorizacao = (args?["urlAutorizacaoPkce"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+          if !urlAutorizacao.isEmpty {
+            self.solicitarCallbackPkceLoopbackSmoke(
+              urlAutorizacaoPkce: urlAutorizacao,
+              result: result
+            )
+            return
+          }
           self.solicitarIdTokenLoopbackSmoke(
             servidorUrl: cfgSmoke.servidorUrl,
             webClientId: (args?["webClientId"] as? String) ?? "smoke-google-client",
@@ -136,6 +144,45 @@ import workmanager
       return nil
     }
     return ("http://\(host):\(port)", tokBruto)
+  }
+
+  private func solicitarCallbackPkceLoopbackSmoke(
+    urlAutorizacaoPkce: String,
+    result: @escaping FlutterResult
+  ) {
+    guard let url = URL(string: urlAutorizacaoPkce),
+          let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+          comps.scheme == "http",
+          let host = comps.host?.lowercased(),
+          ["127.0.0.1", "localhost", "10.0.2.2"].contains(host) else {
+      result(["erro": "URL PKCE de smoke fora de loopback local."])
+      return
+    }
+
+    var requisicao = URLRequest(url: url)
+    requisicao.httpMethod = "GET"
+    requisicao.timeoutInterval = 10
+
+    URLSession.shared.dataTask(with: requisicao) { dados, resposta, erro in
+      DispatchQueue.main.async {
+        if let erro = erro {
+          result(["erro": erro.localizedDescription])
+          return
+        }
+        guard let http = resposta as? HTTPURLResponse,
+              (200...299).contains(http.statusCode),
+              let dados = dados,
+              let json = (try? JSONSerialization.jsonObject(with: dados)) as? [String: Any],
+              let callbackUrl = json["callbackUrl"] as? String else {
+          result(["erro": "Falha ao obter callbackUrl PKCE do servidor local de smoke."])
+          return
+        }
+        result([
+          "callbackUrl": callbackUrl,
+          "cancelado": false
+        ])
+      }
+    }.resume()
   }
 
   private func solicitarIdTokenLoopbackSmoke(

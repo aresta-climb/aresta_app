@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/smoke_ci/configuracao_smoke_ci.dart';
 import 'package:frontend/services/smoke_ci/main_smoke_ci.dart' as smoke_entry;
@@ -43,6 +45,7 @@ void main() {
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
     tempDir = Directory.systemTemp.createTempSync('main_smoke_ci_aresta_');
     PathProviderPlatform.instance = _PathProviderTemp(tempDir.path);
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
@@ -63,6 +66,8 @@ void main() {
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
+    RepositorioCadernetaLocal.instancia = null;
     try {
       if (tempDir.existsSync()) {
         tempDir.deleteSync(recursive: true);
@@ -74,6 +79,12 @@ void main() {
     'main() monta a árvore do app e conclui o envio do relatório de smoke via canal nativo',
     (WidgetTester tester) async {
       HttpOverrides.global = null;
+      tester.view.physicalSize = const Size(1236, 2745);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
       await tester.runAsync(() async {
         final servidor = await ServidorSmokeCi.iniciar(tokenEsperado: 'tok_main_1');

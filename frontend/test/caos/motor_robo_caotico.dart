@@ -10,6 +10,7 @@ import 'package:frontend/main.dart' show kSentryDsn;
 import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
+import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import 'encolhedor_caminho_crash.dart';
 import 'receita_crash_robo.dart';
 
@@ -122,7 +123,11 @@ class MotorRoboCaotico {
   final WidgetTester tester;
 
   /// Callback responsável por reiniciar e montar a árvore de widgets limpa para um [TipoDatasetCaos].
-  final Future<void> Function(TipoDatasetCaos dataset) montarCenario;
+  final Future<void> Function(TipoDatasetCaos dataset)? montarCenario;
+
+  /// Callback opcional que recebe também a [seed] da sessão para alternar plataforma e estado inicial.
+  final Future<void> Function(TipoDatasetCaos dataset, int seed)?
+  montarCenarioComSeed;
 
   /// Callback opcional para simular a conclusão de sincronização em segundo plano.
   final Future<void> Function()? aoDispararEventoSync;
@@ -139,11 +144,14 @@ class MotorRoboCaotico {
   /// Limite máximo de execuções de replay durante o shrinking por busca binária.
   final int maxTentativasShrinking;
 
-  /// Strings de fuzzing usadas para testar campos de busca e formulários.
+  /// Strings de fuzzing usadas para testar campos de busca e formulários (incluindo OTP e e-mail).
   static final List<String> _entradasTextoFuzz = <String>[
     '',
     ' ',
     'cipó',
+    'escalador@arestaclimb.com',
+    '123456',
+    '000000',
     '🧗‍♂️🔥⛰️',
     'a' * 250,
     r"'; DROP TABLE cadenas; --",
@@ -161,6 +169,7 @@ class MotorRoboCaotico {
     FloatingActionButton,
     BackButton,
     BotaoVoltarComRetornoInicio,
+    BolhaEmojiAlertaVia,
     ListTile,
     NavigationDestination,
     Tab,
@@ -175,13 +184,24 @@ class MotorRoboCaotico {
   /// Cria uma instância do [MotorRoboCaotico].
   const MotorRoboCaotico({
     required this.tester,
-    required this.montarCenario,
+    this.montarCenario,
+    this.montarCenarioComSeed,
     this.aoDispararEventoSync,
     this.aoAlternarConectividade,
     this.diretorioSaidaReceitas,
     this.reportarAoSentry = false,
     this.maxTentativasShrinking = 25,
-  });
+  }) : assert(
+         montarCenario != null || montarCenarioComSeed != null,
+         'Informe montarCenario ou montarCenarioComSeed.',
+       );
+
+  Future<void> _prepararCenario(TipoDatasetCaos dataset, int seed) {
+    if (montarCenarioComSeed != null) {
+      return montarCenarioComSeed!(dataset, seed);
+    }
+    return montarCenario!(dataset);
+  }
 
   /// Executa uma única sessão exploratória determinística com a [seed] e [dataset] informados.
   Future<ResultadoSessaoRobo> executarSessao({
@@ -195,7 +215,7 @@ class MotorRoboCaotico {
 
     final falhaMontagem = await _executarCapturandoErro(() async {
       await tester.pumpWidget(const SizedBox.shrink());
-      await montarCenario(dataset);
+      await _prepararCenario(dataset, seed);
     });
     if (falhaMontagem != null) {
       ReceitaCrashRobo? receita;
@@ -334,10 +354,11 @@ class MotorRoboCaotico {
   Future<String?> reproduzirCaminho({
     required TipoDatasetCaos dataset,
     required List<PassoRobo> passos,
+    int seed = 1,
   }) async {
     final falhaMontagem = await _executarCapturandoErro(() async {
       await tester.pumpWidget(const SizedBox.shrink());
-      await montarCenario(dataset);
+      await _prepararCenario(dataset, seed);
     });
     if (falhaMontagem != null) {
       return ReceitaCrashRobo.extrairAssinaturaFalha(
@@ -381,6 +402,7 @@ class MotorRoboCaotico {
         final assinaturaObtida = await reproduzirCaminho(
           dataset: dataset,
           passos: candidato,
+          seed: seed,
         );
         if (assinaturaObtida == null) return null;
         if (assinaturaObtida == assinaturaAlvo ||
@@ -589,7 +611,28 @@ class MotorRoboCaotico {
     for (final tipo in _tiposInterativosTap) {
       resultado.addAll(_descobrirSeletoresPorTipo(tipo));
     }
+    resultado.addAll(_descobrirGestureDetectorsIdentificados());
     return resultado;
+  }
+
+  /// Descobre [GestureDetector]s visíveis com `ValueKey<String>` própria e `onTap` ativo.
+  List<SeletorAlvoRobo> _descobrirGestureDetectorsIdentificados() {
+    final finder = find.byType(GestureDetector, skipOffstage: true);
+    final elementos = finder.evaluate().toList();
+    final seletores = <SeletorAlvoRobo>[];
+    final contagemPorKey = <String, int>{};
+
+    for (final el in elementos) {
+      final widget = el.widget as GestureDetector;
+      final key = widget.key;
+      if (widget.onTap == null || key is! ValueKey<String>) continue;
+      final ocorrencia = contagemPorKey[key.value] ?? 0;
+      contagemPorKey[key.value] = ocorrencia + 1;
+      seletores.add(
+        SeletorAlvoRobo.porKey(key.value, ocorrencia: ocorrencia),
+      );
+    }
+    return seletores;
   }
 
   /// Descobre seletores semânticos resilientes para todos os elementos visíveis de [tipo].

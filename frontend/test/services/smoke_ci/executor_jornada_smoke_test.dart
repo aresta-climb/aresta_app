@@ -16,13 +16,17 @@ import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
+import 'package:frontend/services/caderneta/cliente_cadenas_supabase.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/clima/servico_clima_altimetria.dart';
+import 'package:frontend/services/comunidade/cliente_fila_interacoes_supabase.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/smoke_ci/configuracao_smoke_ci.dart';
 import 'package:frontend/services/smoke_ci/executor_jornada_smoke.dart';
+import 'package:frontend/theme/temas.dart';
 import '../../mocks/mock_geolocator_platform.dart';
 import '../autenticacao/servico_autenticacao_fake.dart';
 import '../../../tool/release_tools/servidor_smoke_ci.dart';
@@ -51,6 +55,7 @@ void main() {
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
     tempDir = Directory.systemTemp.createTempSync('smoke_executor_aresta_');
     PathProviderPlatform.instance = _PathProviderTemp(tempDir.path);
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
@@ -66,6 +71,8 @@ void main() {
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
     AutenticadorNativoCanal.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
+    RepositorioCadernetaLocal.instancia = null;
     ServicoClimaAltimetria.redefinirParaTestes();
     try {
       if (tempDir.existsSync()) {
@@ -74,16 +81,42 @@ void main() {
     } catch (_) {}
   });
 
+  void configurarViewportMovel(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1236, 2745);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+  }
+
   void registrarMockCanalAutenticacaoOidc(
     ServidorSmokeCi servidor, {
     bool falhar = false,
+    bool simularPkceGoogle = false,
   }) {
     const canalAuth = MethodChannel(AutenticadorNativoCanal.nomeCanal);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(canalAuth, (MethodCall call) async {
-      if (call.method == 'solicitarIdTokenGoogle') {
+      if (call.method == 'solicitarIdTokenGoogle' ||
+          call.method == 'solicitarIdTokenApple') {
         if (falhar) {
-          return <String, dynamic>{'erro': 'Falha simulada no CredentialManager'};
+          return <String, dynamic>{'erro': 'Falha simulada no canal nativo'};
+        }
+        final args = call.arguments as Map<dynamic, dynamic>?;
+        final urlPkce = args?['urlAutorizacaoPkce'] as String?;
+        if (call.method == 'solicitarIdTokenGoogle' &&
+            simularPkceGoogle &&
+            urlPkce != null &&
+            urlPkce.isNotEmpty) {
+          final client = HttpClient();
+          final req = await client.getUrl(Uri.parse(urlPkce));
+          final resp = await req.close();
+          final mapa = jsonDecode(
+            await utf8.decoder.bind(resp).join(),
+          ) as Map<String, dynamic>;
+          client.close(force: true);
+          return mapa;
         }
         final client = HttpClient();
         final req = await client.postUrl(
@@ -105,85 +138,147 @@ void main() {
     });
   }
 
-  testWidgets(
-    'executa jornada completa: Termos Legais, sincronização e abertura de Croqui Protobuf, navegação UI, login OIDC, perfil, Cadena e relatório',
-    (WidgetTester tester) async {
-      HttpOverrides.global = null;
-      final editor = EditorDeCroqui();
-      final datasetRepo = DatasetRepository(editorDeCroqui: editor);
-      final syncService = SyncService(datasetRepository: datasetRepo);
-      final repoCaderneta = RepositorioCadernetaLocal();
+  Future<void> executarEVerificarJornadaCompleta({
+    required WidgetTester tester,
+    required TargetPlatform plataforma,
+    required bool simularPkceGoogle,
+    required String tokenSmoke,
+  }) async {
+    HttpOverrides.global = null;
+    configurarViewportMovel(tester);
 
-      await tester.pumpWidget(
-        BetterFeedback(
-          child: MaterialApp(
-            home: TreeNavigationWrapper(
-              key: TreeNavigationWrapper.navKey,
-              datasetRepo: datasetRepo,
-              syncService: syncService,
+    late Map<String, dynamic> resultadoLocal;
+    late Map<String, dynamic> relatorioServidor;
+    late ServicoAutenticacaoLocal servicoAuth;
+    late RepositorioCadernetaLocal repoCaderneta;
+
+    await tester.runAsync(() async {
+      final servidor = await ServidorSmokeCi.iniciar(tokenEsperado: tokenSmoke);
+      try {
+        registrarMockCanalAutenticacaoOidc(
+          servidor,
+          simularPkceGoogle: simularPkceGoogle,
+        );
+        final cfg = ConfiguracaoSmokeCi.validar(
+          servidorUrl: servidor.uriLocalHost.toString(),
+          token: tokenSmoke,
+        );
+
+        final editor = EditorDeCroqui();
+        final datasetRepo = DatasetRepository(editorDeCroqui: editor);
+        final syncService = SyncService(datasetRepository: datasetRepo);
+        repoCaderneta = RepositorioCadernetaLocal(
+          clienteCadenas: ClienteCadenasSupabase(
+            resolvedorBaseUrl: () => cfg.uriBase.toString(),
+            resolvedorAnonKey: () => 'smoke-anon-key',
+          ),
+        );
+        RepositorioCadernetaLocal.instancia = repoCaderneta;
+
+        servicoAuth = ServicoAutenticacaoLocal(
+          repositorio: repoCaderneta,
+          obterUrlSupabase: () => cfg.uriBase.toString(),
+          obterAnonKeySupabase: () => 'smoke-anon-key',
+        );
+        ServicoAutenticacaoLocal.instancia = servicoAuth;
+
+        final repoInteracoes = RepositorioInteracoesViaMemoria(
+          repositorioCaderneta: repoCaderneta,
+          servicoAutenticacao: servicoAuth,
+          clienteFila: ClienteFilaInteracoesSupabase(
+            resolvedorBaseUrl: () => cfg.uriBase.toString(),
+            resolvedorAnonKey: () => 'smoke-anon-key',
+          ),
+        );
+        RepositorioInteracoesViaMemoria.instancia = repoInteracoes;
+
+        await tester.pumpWidget(
+          BetterFeedback(
+            child: MaterialApp(
+              themeMode: ThemeMode.dark,
+              theme: construirTemaClaro().copyWith(platform: plataforma),
+              darkTheme: construirTemaEscuro().copyWith(platform: plataforma),
+              home: TreeNavigationWrapper(
+                key: TreeNavigationWrapper.navKey,
+                datasetRepo: datasetRepo,
+                syncService: syncService,
+              ),
             ),
           ),
-        ),
+        );
+        await tester.pump();
+
+        final futuroRelatorio = servidor.aguardarRelatorio();
+        final executor = ExecutorJornadaSmoke(
+          configuracao: cfg,
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          repositorioCaderneta: repoCaderneta,
+          servicoAutenticacao: servicoAuth,
+          repositorioInteracoes: repoInteracoes,
+          aguardarFrameUi: () => Future<void>.delayed(
+            const Duration(milliseconds: 5),
+          ),
+        );
+        resultadoLocal = await executor.executarEEnviarRelatorio();
+        relatorioServidor = await futuroRelatorio;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      } finally {
+        await servidor.encerrar();
+      }
+    });
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 12));
+    await tester.pump(const Duration(seconds: 12));
+
+    expect(
+      resultadoLocal['sucesso'],
+      isTrue,
+      reason: 'Erros locais: ${resultadoLocal['erros']}',
+    );
+    expect(relatorioServidor['sucesso'], isTrue);
+    expect(
+      relatorioServidor['etapas'],
+      containsAll(<String>[
+        'termos_legais_aceitos',
+        'croqui_protobuf_aberto',
+        'login_magic_code_otp_ui_concluido',
+        'login_apple_ui_validado',
+        'login_google_nativo_ui_concluido',
+        'perfil_editado_modal_ui_sincronizado',
+        'arvore_ui_navegada',
+        'cadena_voto_e_beta_modal_ui_registrados',
+        'comentario_editado_modal_ui',
+        'alerta_waze_outbox_e_confirmacao_ui',
+        'caderneta_alertas_refresh_e_exclusao_ui',
+      ]),
+    );
+    expect(servicoAuth.estaAutenticado, isFalse);
+    expect(repoCaderneta.calcularEstatisticas().totalCadenas, 0);
+  }
+
+  testWidgets(
+    'executa jornada completa Android via UI real: OTP, ocultação Apple, Google OIDC, perfil, modal cadena/voto/beta, alerta Waze offline/+1, Caderneta e exclusão',
+    (WidgetTester tester) async {
+      await executarEVerificarJornadaCompleta(
+        tester: tester,
+        plataforma: TargetPlatform.android,
+        simularPkceGoogle: false,
+        tokenSmoke: 'tok_exec_android',
       );
-      await tester.pump();
+    },
+  );
 
-      late Map<String, dynamic> resultadoLocal;
-      late Map<String, dynamic> relatorioServidor;
-      late ServicoAutenticacaoLocal servicoAuth;
-
-      await tester.runAsync(() async {
-        final servidor = await ServidorSmokeCi.iniciar(tokenEsperado: 'tok_exec_1');
-        try {
-          registrarMockCanalAutenticacaoOidc(servidor);
-          final cfg = ConfiguracaoSmokeCi.validar(
-            servidorUrl: servidor.uriLocalHost.toString(),
-            token: 'tok_exec_1',
-          );
-          servicoAuth = ServicoAutenticacaoLocal(
-            repositorio: repoCaderneta,
-            obterUrlSupabase: () => cfg.uriBase.toString(),
-            obterAnonKeySupabase: () => 'smoke-anon-key',
-          );
-          ServicoAutenticacaoLocal.instancia = servicoAuth;
-
-          final futuroRelatorio = servidor.aguardarRelatorio();
-          final executor = ExecutorJornadaSmoke(
-            configuracao: cfg,
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            repositorioCaderneta: repoCaderneta,
-            servicoAutenticacao: servicoAuth,
-            aguardarFrameUi: () => Future<void>.delayed(
-              const Duration(milliseconds: 5),
-            ),
-          );
-          resultadoLocal = await executor.executarEEnviarRelatorio();
-          relatorioServidor = await futuroRelatorio;
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-        } finally {
-          await servidor.encerrar();
-        }
-      });
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 12));
-      await tester.pump(const Duration(seconds: 12));
-
-      expect(resultadoLocal['sucesso'], isTrue);
-      expect(relatorioServidor['sucesso'], isTrue);
-      expect(
-        relatorioServidor['etapas'],
-        containsAll(<String>[
-          'termos_legais_aceitos',
-          'croqui_protobuf_aberto',
-          'arvore_ui_navegada',
-          'login_oidc_concluido',
-          'perfil_remoto_sincronizado',
-          'cadena_registrada_e_contabilizada',
-          'caderneta_ui_renderizada',
-        ]),
+  testWidgets(
+    'executa jornada completa iOS via UI real: OTP, Apple OIDC nativo, Google PKCE S256, perfil, modais de interação e exclusão',
+    (WidgetTester tester) async {
+      await executarEVerificarJornadaCompleta(
+        tester: tester,
+        plataforma: TargetPlatform.iOS,
+        simularPkceGoogle: true,
+        tokenSmoke: 'tok_exec_ios',
       );
-      expect(servicoAuth.estaAutenticado, isTrue);
-      expect(repoCaderneta.calcularEstatisticas().totalCadenas, 1);
     },
   );
 

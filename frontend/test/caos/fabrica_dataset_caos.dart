@@ -12,40 +12,58 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
+import 'package:frontend/data/modelos/item_fila_interacao.dart';
+import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/theme/temas.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../services/autenticacao/servico_autenticacao_fake.dart';
+import '../services/caderneta/cliente_cadenas_supabase_fake.dart';
+import '../services/comunidade/cliente_fila_interacoes_supabase_fake.dart';
 import 'motor_robo_caotico.dart';
 import 'receita_crash_robo.dart';
 
-/// Estrutura imutável com o estado inicial de catálogo e caderneta para uma sessão do robô caótico.
+/// Estrutura imutável com o estado inicial de catálogo, caderneta e interações comunitárias para o robô caótico.
 class EstadoDatasetCaos {
   /// Conjunto de dados de croquis (baixados e disponíveis online) injetado no `DatasetRepository`.
   final ConjuntoDadosCroqui conjuntoDados;
 
-  /// Lista inicial de cadenas para popular o banco SQLite da Caderneta antes da exploração.
+  /// Lista inicial de cadenas para popular a Caderneta antes da exploração.
   final List<Cadena> cadenasIniciais;
+
+  /// Eventos iniciais de `fila_interacoes` (alertas Waze, votos e comentários públicos).
+  final List<ItemFilaInteracao> interacoesIniciais;
 
   /// Constrói o estado inicial do dataset de caos.
   const EstadoDatasetCaos({
     required this.conjuntoDados,
     required this.cadenasIniciais,
+    this.interacoesIniciais = const [],
   });
 }
 
 /// Fábrica determinística de datasets de teste para o Robô Caótico.
 ///
-/// Disponibiliza dois perfis:
-/// - [TipoDatasetCaos.normal]: Catálogo realista com picos baixados e online, setores, vias e cadenas coerentes.
+/// Disponibiliza dois perfis com UIDs NanoID 14c Base62 válidos (`validarUid`):
+/// - [TipoDatasetCaos.normal]: Catálogo realista com picos baixados e online, setores, vias, cadenas e interações.
 /// - [TipoDatasetCaos.toxico]: Catálogo de estresse desenhado para expor falhas de layout (`RenderFlex overflow`),
-///   acessos a listas vazias (`Bad state: No element`), markdown extremo e cadenas órfãs.
+///   acessos a listas vazias (`Bad state: No element`), markdown extremo, cadenas órfãs e alertas extremos.
 abstract final class FabricaDatasetCaos {
+  /// Identificador público NanoID 14c do perfil local simulado nas sessões do robô.
+  static const String autorIdPublicoCaos = 'autCaosLoc0001';
+
+  /// Identificador público NanoID 14c de um segundo escalador para testar confirmações (`+1`).
+  static const String autorIdOutroCaos = 'autCaosOut0002';
+
   /// Constrói o [EstadoDatasetCaos] correspondente ao [tipo] informado.
   static EstadoDatasetCaos construir(TipoDatasetCaos tipo) {
     switch (tipo) {
@@ -79,18 +97,18 @@ abstract final class FabricaDatasetCaos {
       ..descricao = 'Saída sentado em regletes.';
 
     final setorPrincipal = Setor()
-      ..uid = 'set_norm_00001'
+      ..uid = 'setNormCaos001'
       ..nome = 'Setor Principal'
       ..descricao = 'Acesso por trilha de 10 minutos.'
       ..escaladas.addAll([
         Escalada()
-          ..uid = 'via_norm_00001'
+          ..uid = 'viaNormCaos001'
           ..viaEsportiva = via1,
         Escalada()
-          ..uid = 'via_norm_00002'
+          ..uid = 'viaNormCaos002'
           ..viaEsportiva = via2,
         Escalada()
-          ..uid = 'bld_norm_00003'
+          ..uid = 'bldNormCaos003'
           ..boulder = boulder1,
       ]);
 
@@ -105,7 +123,7 @@ abstract final class FabricaDatasetCaos {
 
     final croquiBaixado = Croqui()
       ..id = 'serra_do_cipo'
-      ..uid = 'crq_norm_00001'
+      ..uid = 'crqNormCaos001'
       ..picos.add(picoBaixado);
 
     final resumoBaixado = ResumoPico(
@@ -146,12 +164,59 @@ abstract final class FabricaDatasetCaos {
     final cadenas = <Cadena>[
       Cadena(
         id: '11111111-1111-4111-8111-111111111111',
-        escaladaUid: 'via_norm_00001',
+        escaladaUid: 'viaNormCaos001',
         dataAscensao: DateTime.utc(2026, 5, 10),
         tipoAscensao: TipoAscensao.aVista,
         tipoEscalada: TipoEscalada.guiado,
         tentativas: 1,
         notasPrivadas: 'Ótima aderência no calcário.',
+      ),
+    ];
+
+    final interacoes = <ItemFilaInteracao>[
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Clara Rocha',
+        escaladaUid: 'viaNormCaos001',
+        alertaAlvoUid: 'altNormFaun001',
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+        detalhe: 'Ninho de marimbondo no 3º grampo.',
+        criadoEm: DateTime.utc(2026, 6, 1, 10),
+      ),
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaNormCaos002',
+        alertaAlvoUid: 'altNormProt002',
+        categoriaAlerta: CategoriaAlertaSeguranca.protecaoPrecaria,
+        detalhe: 'Chapeleta da parada girando.',
+        criadoEm: DateTime.utc(2026, 6, 2, 11),
+      ),
+      ItemFilaInteracao.votoGrau(
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Clara Rocha',
+        escaladaUid: 'viaNormCaos001',
+        deltaGrau: 1,
+        tipoAscensao: TipoAscensao.flash,
+        criadoEm: DateTime.utc(2026, 6, 3, 12),
+      ),
+      ItemFilaInteracao.comentario(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Clara Rocha',
+        escaladaUid: 'viaNormCaos001',
+        textoComentario: 'Levar costura longa para o teto.',
+        tipoAscensao: TipoAscensao.flash,
+        criadoEm: DateTime.utc(2026, 6, 3, 13),
+      ),
+      ItemFilaInteracao.comentario(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaNormCaos001',
+        textoComentario: 'Crux bem protegido com peça média.',
+        tipoAscensao: TipoAscensao.aVista,
+        criadoEm: DateTime.utc(2026, 6, 4, 14),
       ),
     ];
 
@@ -161,6 +226,7 @@ abstract final class FabricaDatasetCaos {
         picosDisponiveis: [resumoBaixado, resumoOnline],
       ),
       cadenasIniciais: cadenas,
+      interacoesIniciais: interacoes,
     );
   }
 
@@ -171,7 +237,7 @@ abstract final class FabricaDatasetCaos {
       ..descricao = '';
     final croquiVazio = Croqui()
       ..id = 'pico_toxico_vazio'
-      ..uid = 'crq_tox_vazio0'
+      ..uid = 'crqToxVazio000'
       ..picos.add(picoVazio);
     final resumoVazio = ResumoPico(
       id: 'pico_toxico_vazio',
@@ -197,7 +263,7 @@ abstract final class FabricaDatasetCaos {
         '[Link quebrado](htp://url invalida com espacos)';
 
     final setorSemVias = Setor()
-      ..uid = 'set_tox_vazio1'
+      ..uid = 'setToxVazio001'
       ..nome = 'Setor Fantasma Sem Escaladas'
       ..descricao = 'Setor sem nenhuma via nem imagem de croqui.';
 
@@ -208,12 +274,12 @@ abstract final class FabricaDatasetCaos {
       ..descricao = descricaoMarkdownLimite;
 
     final setorTextoExtremo = Setor()
-      ..uid = 'set_tox_txt001'
+      ..uid = 'setToxTexto001'
       ..nome = 'Setor_${'Z' * 250}'
       ..descricao = descricaoMarkdownLimite
       ..escaladas.add(
         Escalada()
-          ..uid = 'via_tox_txt001'
+          ..uid = 'viaToxTexto001'
           ..viaEsportiva = viaTextoExtremo,
       );
 
@@ -229,7 +295,7 @@ abstract final class FabricaDatasetCaos {
 
     final croquiTextoExtremo = Croqui()
       ..id = 'pico_toxico_texto_extremo'
-      ..uid = 'crq_tox_txt001'
+      ..uid = 'crqToxTexto001'
       ..picos.add(picoTextoExtremo);
 
     final resumoTextoExtremo = ResumoPico(
@@ -255,11 +321,12 @@ abstract final class FabricaDatasetCaos {
     final todosGrausBoulder = GrauBoulder_GrauBoulder.values;
 
     for (var i = 0; i < 60; i++) {
+      final sufixo = i.toString().padLeft(2, '0');
       if (i % 3 == 0) {
         final grauBoulder = todosGrausBoulder[i % todosGrausBoulder.length];
         escaladasVolume.add(
           Escalada()
-            ..uid = 'bld_tox_vol_${i.toString().padLeft(2, '0')}'
+            ..uid = 'bldToxVolum0$sufixo'
             ..boulder = (Boulder()
               ..nome = i == 0 ? '' : 'Boulder Caótico #$i'
               ..dificuldade = grauBoulder
@@ -269,7 +336,7 @@ abstract final class FabricaDatasetCaos {
         final grauVia = todosGrausVia[i % todosGrausVia.length];
         escaladasVolume.add(
           Escalada()
-            ..uid = 'via_tox_vol_${i.toString().padLeft(2, '0')}'
+            ..uid = 'viaToxVolum0$sufixo'
             ..viaEsportiva = (ViaEsportiva()
               ..nome = 'Via Volume #$i (${grauVia.name})'
               ..dificuldade = grauVia
@@ -280,7 +347,7 @@ abstract final class FabricaDatasetCaos {
     }
 
     final setorVolume = Setor()
-      ..uid = 'set_tox_vol001'
+      ..uid = 'setToxVolum001'
       ..nome = 'Setor Maratona 60 Vias'
       ..escaladas.addAll(escaladasVolume);
 
@@ -293,7 +360,7 @@ abstract final class FabricaDatasetCaos {
 
     final croquiVolume = Croqui()
       ..id = 'pico_toxico_alto_volume'
-      ..uid = 'crq_tox_vol001'
+      ..uid = 'crqToxVolum001'
       ..picos.add(picoVolume);
 
     final resumoVolume = ResumoPico(
@@ -325,7 +392,7 @@ abstract final class FabricaDatasetCaos {
       tamanhoFormatado: '0 B',
     );
 
-    // 5. Cadenas tóxicas (incluindo cadena órfã apontando para via inexistente e datas limites)
+    // 5. Cadenas tóxicas (incluindo cadena órfã legada, órfã NanoID 14c e datas limites)
     final cadenasToxicas = <Cadena>[
       Cadena(
         id: '22222222-2222-4222-8222-222222222222',
@@ -338,12 +405,95 @@ abstract final class FabricaDatasetCaos {
       ),
       Cadena(
         id: '33333333-3333-4333-8333-333333333333',
-        escaladaUid: 'via_tox_txt001',
+        escaladaUid: 'viaToxTexto001',
         dataAscensao: DateTime.utc(2099, 12, 31),
         tipoAscensao: TipoAscensao.flash,
         tipoEscalada: TipoEscalada.boulder,
         tentativas: 1,
         notasPrivadas: '🧗‍♂️🔥',
+      ),
+      Cadena(
+        id: '44444444-4444-4444-8444-444444444444',
+        escaladaUid: 'viaOrfaCaos404',
+        dataAscensao: DateTime.utc(2026, 8, 15),
+        tipoAscensao: TipoAscensao.trabalhado,
+        tipoEscalada: TipoEscalada.guiado,
+        tentativas: 4,
+        notasPrivadas: 'Via removida do catálogo.',
+      ),
+    ];
+
+    final detalheLimite = '⚠️${'A' * 98}';
+    final comentarioLimite = '🧗${'B' * 278}';
+    final interacoesToxicas = <ItemFilaInteracao>[
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Escalador Extremo',
+        escaladaUid: 'viaToxTexto001',
+        alertaAlvoUid: 'altToxFauna001',
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+        detalhe: detalheLimite,
+        criadoEm: DateTime.utc(2026, 7, 1, 9),
+      ),
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaToxTexto001',
+        alertaAlvoUid: 'altToxRocha002',
+        categoriaAlerta: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+        detalhe: 'Laca gigante 🪨',
+        criadoEm: DateTime.utc(2026, 7, 1, 10),
+      ),
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Escalador Extremo',
+        escaladaUid: 'viaToxTexto001',
+        alertaAlvoUid: 'altToxProte003',
+        categoriaAlerta: CategoriaAlertaSeguranca.protecaoPrecaria,
+        criadoEm: DateTime.utc(2026, 7, 1, 11),
+      ),
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaToxTexto001',
+        alertaAlvoUid: 'altToxExpos004',
+        categoriaAlerta: CategoriaAlertaSeguranca.exposicaoE4Mais,
+        detalhe: 'Queda no platô E5',
+        criadoEm: DateTime.utc(2026, 7, 1, 12),
+      ),
+      ItemFilaInteracao.alertaSeguranca(
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaOrfaCaos404',
+        alertaAlvoUid: 'altToxOrfao005',
+        categoriaAlerta: CategoriaAlertaSeguranca.fauna,
+        detalhe: 'Alerta em via órfã',
+        criadoEm: DateTime.utc(2026, 7, 1, 13),
+      ),
+      ItemFilaInteracao.votoGrau(
+        autorIdPublico: autorIdOutroCaos,
+        autorNomePublico: 'Escalador Extremo',
+        escaladaUid: 'viaToxTexto001',
+        deltaGrau: 2,
+        tipoAscensao: TipoAscensao.aVista,
+        criadoEm: DateTime.utc(2026, 7, 1, 14),
+      ),
+      ItemFilaInteracao.votoGrau(
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaToxTexto001',
+        deltaGrau: -2,
+        tipoAscensao: TipoAscensao.trabalhado,
+        criadoEm: DateTime.utc(2026, 7, 1, 15),
+      ),
+      ItemFilaInteracao.comentario(
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+        autorIdPublico: autorIdPublicoCaos,
+        autorNomePublico: 'Escalador Caos',
+        escaladaUid: 'viaToxTexto001',
+        textoComentario: comentarioLimite,
+        tipoAscensao: TipoAscensao.flash,
+        criadoEm: DateTime.utc(2026, 7, 1, 16),
       ),
     ];
 
@@ -358,6 +508,7 @@ abstract final class FabricaDatasetCaos {
         ],
       ),
       cadenasIniciais: cadenasToxicas,
+      interacoesIniciais: interacoesToxicas,
     );
   }
 }
@@ -389,6 +540,10 @@ class AmbienteAppCaos {
 
   DatasetRepository? _repoAtual;
   SyncService? _syncAtual;
+  RepositorioCadernetaLocal? _cadernetaAtual;
+  RepositorioInteracoesViaMemoria? _interacoesAtual;
+  ClienteCadenasFake? _clienteCadenasAtual;
+  ClienteFilaInteracoesFake? _clienteFilaAtual;
 
   AmbienteAppCaos._(this.diretorioTemporario);
 
@@ -396,7 +551,6 @@ class AmbienteAppCaos {
   static Future<AmbienteAppCaos> inicializar() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
-    ServicoAutenticacaoLocal.instancia = ServicoAutenticacaoFake();
     final tempDir = Directory.systemTemp.createTempSync('aresta_caos_app_');
     PathProviderPlatform.instance = _FakePathProviderCaos(tempDir.path);
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
@@ -413,8 +567,58 @@ class AmbienteAppCaos {
       tester: tester,
       diretorioSaidaReceitas: diretorioSaidaReceitas,
       reportarAoSentry: reportarAoSentry,
-      montarCenario: (dataset) async {
+      montarCenarioComSeed: (dataset, seed) async {
         final estado = FabricaDatasetCaos.construir(dataset);
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final prefs = await SharedPreferences.getInstance();
+
+        final clienteCadenas = ClienteCadenasFake();
+        final repoCaderneta = RepositorioCadernetaLocal(
+          preferencias: prefs,
+          clienteCadenas: clienteCadenas,
+        );
+        await repoCaderneta.inicializar();
+
+        final iniciaAutenticado = seed % 3 == 0;
+        await repoCaderneta.salvarPerfil(
+          PerfilEscalador(
+            autorIdPublico: FabricaDatasetCaos.autorIdPublicoCaos,
+            autorNomePublico: 'Escalador Caos',
+            userId: iniciaAutenticado ? 'usr_caos_$seed' : null,
+            accessToken: iniciaAutenticado ? 'jwt_caos_$seed' : null,
+            refreshToken: iniciaAutenticado ? 'refresh_caos_$seed' : null,
+          ),
+        );
+        for (final cadena in estado.cadenasIniciais) {
+          await repoCaderneta.salvarCadena(cadena);
+        }
+        RepositorioCadernetaLocal.instancia = repoCaderneta;
+
+        final servicoAuth = ServicoAutenticacaoFake(
+          repositorio: repoCaderneta,
+          cancelarProximoLoginSocial: seed % 5 == 0,
+          cancelarApenasUmaVez: true,
+        );
+        ServicoAutenticacaoLocal.instancia = servicoAuth;
+
+        final clienteFila = ClienteFilaInteracoesFake()
+          ..semearItens(estado.interacoesIniciais);
+        final repoInteracoes = RepositorioInteracoesViaMemoria(
+          repositorioCaderneta: repoCaderneta,
+          servicoAutenticacao: servicoAuth,
+          clienteFila: clienteFila,
+          preferencias: prefs,
+        );
+        RepositorioInteracoesViaMemoria.instancia = repoInteracoes;
+
+        final uidsParaSincronizar = estado.interacoesIniciais
+            .map((i) => i.escaladaUid)
+            .toSet();
+        if (uidsParaSincronizar.isNotEmpty) {
+          await repoInteracoes.sincronizarEscaladasEmLote(uidsParaSincronizar);
+        }
+        await repoInteracoes.sincronizarMeusAlertasContribuidos();
+
         final editor = EditorDeCroqui();
         final repo = DatasetRepository(editorDeCroqui: editor);
         repo.activeDataset.value = estado.conjuntoDados;
@@ -424,10 +628,23 @@ class AmbienteAppCaos {
 
         _repoAtual = repo;
         _syncAtual = syncService;
+        _cadernetaAtual = repoCaderneta;
+        _interacoesAtual = repoInteracoes;
+        _clienteCadenasAtual = clienteCadenas;
+        _clienteFilaAtual = clienteFila;
+
+        final plataformaAlvo = seed.isOdd
+            ? TargetPlatform.iOS
+            : TargetPlatform.android;
 
         await tester.pumpWidget(
           BetterFeedback(
             child: MaterialApp(
+              themeMode: ThemeMode.dark,
+              theme: construirTemaClaro().copyWith(platform: plataformaAlvo),
+              darkTheme: construirTemaEscuro().copyWith(
+                platform: plataformaAlvo,
+              ),
               home: TreeNavigationWrapper(
                 key: TreeNavigationWrapper.navKey,
                 datasetRepo: repo,
@@ -450,19 +667,34 @@ class AmbienteAppCaos {
       },
       aoAlternarConectividade: () async {
         final sync = _syncAtual;
-        if (sync != null) {
-          sync.syncStatus.value = sync.syncStatus.value == SyncStatus.offline
-              ? SyncStatus.updated
-              : SyncStatus.offline;
+        if (sync == null) return;
+        final ficandoOffline = sync.syncStatus.value != SyncStatus.offline;
+        sync.syncStatus.value = ficandoOffline
+            ? SyncStatus.offline
+            : SyncStatus.updated;
+        if (ficandoOffline) {
+          _clienteFilaAtual?.erroSimulado = const SocketException(
+            'Caos offline',
+          );
+          _clienteCadenasAtual?.erroSimulado = const SocketException(
+            'Caos offline',
+          );
+        } else {
+          _clienteFilaAtual?.erroSimulado = null;
+          _clienteCadenasAtual?.erroSimulado = null;
+          await _cadernetaAtual?.sincronizarComNuvem();
+          await _interacoesAtual?.sincronizarMeusAlertasContribuidos();
         }
       },
     );
   }
 
-  /// Remove o diretório temporário criado para a sessão.
+  /// Remove o diretório temporário criado e restaura singletons globais após a sessão.
   Future<void> limpar() async {
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
+    RepositorioCadernetaLocal.instancia = null;
     if (diretorioTemporario.existsSync()) {
       diretorioTemporario.deleteSync(recursive: true);
     }

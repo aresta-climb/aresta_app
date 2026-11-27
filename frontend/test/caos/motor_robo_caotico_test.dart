@@ -309,5 +309,63 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'Descobre controles GestureDetector com ValueKey e onTap ativo e utiliza entradas de fuzz compatíveis com OTP',
+      (tester) async {
+        var tocouControleCustom = false;
+        var recebeuEmailValido = false;
+        var recebeuOtpValido = false;
+
+        final motor = MotorRoboCaotico(
+          tester: tester,
+          montarCenarioComSeed: (_, seed) async {
+            expect(seed, equals(55));
+            await tester.pumpWidget(
+              MaterialApp(
+                home: Scaffold(
+                  body: Column(
+                    children: [
+                      GestureDetector(
+                        key: const ValueKey<String>('bolha_custom_caos'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => tocouControleCustom = true,
+                        child: const ColoredBox(
+                          color: Colors.red,
+                          child: SizedBox(width: 80, height: 40),
+                        ),
+                      ),
+                      TextField(
+                        key: const ValueKey<String>('campo_otp_fuzz'),
+                        onChanged: (v) {
+                          if (v.contains('@') && v.contains('.')) {
+                            recebeuEmailValido = true;
+                          }
+                          if (v == '123456') {
+                            recebeuOtpValido = true;
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+          },
+        );
+
+        final resultado = await motor.executarSessao(
+          seed: 55,
+          dataset: TipoDatasetCaos.normal,
+          maxPassos: 220,
+        );
+
+        expect(resultado.teveFalha, isFalse);
+        expect(tocouControleCustom, isTrue);
+        expect(recebeuEmailValido, isTrue);
+        expect(recebeuOtpValido, isTrue);
+      },
+    );
   });
 }
