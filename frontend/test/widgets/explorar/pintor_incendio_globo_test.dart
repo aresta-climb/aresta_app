@@ -265,3 +265,58 @@ void main() {
             (ptDentroChuva.y.round() * 220 + ptDentroChuva.x.round()) * 4;
         expect(qRecortado[idxDentroChuva], equals(0));
 
+        // Ao dar zoom alto (LOD 2.85) e arrastar o mapa +40 px, o emblema da chama acompanha a coordenada
+        // geográfica real (-19.35, -43.60) em vez de ficar colado no centro da tela
+        final ctrlPanA = ControladorCameraGlobo(
+          latitudeInicial: -19.35,
+          longitudeInicial: -43.60,
+          lodInicial: 2.85,
+          modo3DInicial: false,
+        );
+        final ctrlPanB = ControladorCameraGlobo(
+          latitudeInicial: -19.35,
+          longitudeInicial: -43.60,
+          lodInicial: 2.85,
+          modo3DInicial: false,
+        )..aplicarArrasto(
+            dxPx: 40.0,
+            dyPx: 0.0,
+            tamanhoTela: const ui.Size(220, 220),
+          );
+        addTearDown(() {
+          ctrlPanA.dispose();
+          ctrlPanB.dispose();
+        });
+
+        final qFogoA = await _renderizarIncendios(
+          ctrl: ctrlPanA,
+          incendios: const [BolhaIncendioAtivaRenderizavel(incendio: incendioCipo)],
+          faseSegundos: 0.6,
+        );
+        final qFogoB = await _renderizarIncendios(
+          ctrl: ctrlPanB,
+          incendios: const [BolhaIncendioAtivaRenderizavel(incendio: incendioCipo)],
+          faseSegundos: 0.6,
+        );
+        final ptFogoAntes = ctrlPanA.projetarCoordenada(
+          latitude: -19.35,
+          longitude: -43.60,
+          elevacaoMetros: 0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final ptFogoDepois = ctrlPanB.projetarCoordenada(
+          latitude: -19.35,
+          longitude: -43.60,
+          elevacaoMetros: 0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idxAntes =
+            (ptFogoAntes.y.round() * 220 + ptFogoAntes.x.round()) * 4;
+        final idxDepois =
+            (ptFogoDepois.y.round() * 220 + ptFogoDepois.x.round()) * 4;
+        expect(qFogoB[idxDepois], closeTo(qFogoA[idxAntes], 6));
+        expect(qFogoB[idxDepois], greaterThan(qFogoB[idxAntes] + 40));
+      },
+    );
+  });
+}
