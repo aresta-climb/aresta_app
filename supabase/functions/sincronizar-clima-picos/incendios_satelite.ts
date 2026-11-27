@@ -371,3 +371,80 @@ function extrairFocosDeCsv(
   const iRisco = cabecalho.indexOf("risco_fogo");
   if (iLat < 0 || iLon < 0) return [];
 
+  const saida: FocoCalorSatelite[] = [];
+  for (let i = 1; i < linhas.length; i++) {
+    const l = linhas[i];
+    if (!l) continue;
+    const cols = l.split(",");
+    if (cols.length <= Math.max(iLat, iLon)) continue;
+    const lat = Number(cols[iLat]);
+    const lon = Number(cols[iLon]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    if (iConf >= 0 && iConf < cols.length) {
+      const conf = cols[iConf].trim().toLowerCase();
+      if (conf === "l" || conf === "low") continue;
+      const confNum = Number(conf);
+      if (Number.isFinite(confNum) && conf.length > 0 && confNum < 50) continue;
+    }
+
+    if (iIndustrial >= 0 && iIndustrial < cols.length) {
+      const idInd = Number(cols[iIndustrial].trim());
+      if (Number.isFinite(idInd) && idInd > 0) continue;
+    }
+
+    if (iPrecip >= 0 && iPrecip < cols.length) {
+      const prec = Number(cols[iPrecip].trim());
+      if (Number.isFinite(prec) && prec > 0.5) continue;
+    }
+    if (iRisco >= 0 && iRisco < cols.length) {
+      const risco = Number(cols[iRisco].trim());
+      if (Number.isFinite(risco) && risco >= 0 && risco < 0.25) continue;
+    }
+
+    if (iFrp < 0 || iFrp >= cols.length) continue;
+    const textoFrp = cols[iFrp].trim();
+    if (textoFrp.length === 0) continue;
+    const frpMw = Number(textoFrp);
+    if (!Number.isFinite(frpMw) || frpMw < 2.5) continue;
+
+    saida.push({ lat, lon, frpMw, fonte });
+  }
+  return saida;
+}
+
+async function consultarCondicoesAtuaisCentroidesIncendioOpenMeteo(
+  pontos: Array<{ lat: number; lon: number }>,
+): Promise<Array<{ rumoGraus: number; velKmh: number; precipMmH: number }>> {
+  if (pontos.length === 0) return [];
+  const lats = pontos.map((p) => p.lat.toFixed(3)).join(",");
+  const lons = pontos.map((p) => p.lon.toFixed(3)).join(",");
+  const url = `${URL_OPEN_METEO_FORECAST}?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m,precipitation,rain,showers&timezone=UTC`;
+  try {
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "ArestaSupabaseClimaSync/2.0" },
+    });
+    if (!resp.ok) {
+      return pontos.map(() => ({ rumoGraus: 270, velKmh: 14, precipMmH: 0 }));
+    }
+    const json = await resp.json();
+    const lista = Array.isArray(json) ? json : [json];
+    return lista.map((item) => {
+      const cur = item?.current ?? {};
+      const velKmh = Math.max(4, Number(cur.wind_speed_10m ?? 14));
+      const dirDe = Number(cur.wind_direction_10m ?? 90);
+      const precipMmH = Math.max(
+        Number(cur.precipitation ?? 0),
+        Number(cur.rain ?? 0),
+        Number(cur.showers ?? 0),
+      );
+      return {
+        rumoGraus: (dirDe + 180) % 360,
+        velKmh,
+        precipMmH: Number.isFinite(precipMmH) ? precipMmH : 0,
+      };
+    });
+  } catch (_) {
+    return pontos.map(() => ({ rumoGraus: 270, velKmh: 14, precipMmH: 0 }));
+  }
+}
