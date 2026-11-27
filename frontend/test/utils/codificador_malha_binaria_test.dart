@@ -91,3 +91,98 @@ void main() {
       );
     });
 
+    test('codifica e decodifica snapshot viário offline e rejeita cabeçalho ou conteúdo vazio', () {
+      final snap = SnapshotMalhaViariaOffline(
+        geradoEm: DateTime.utc(2026, 11, 27, 16, 30),
+        versaoHash: 'osm-snap-1',
+        rodovias: [
+          RodoviaRegionalMapa.comLimites(
+            ehPrincipal: true,
+            nivelViario: 1,
+            codigo: 'MG-010',
+            verticesLonLat: const [
+              Offset(-43.9386, -19.9191),
+              Offset(-43.6135, -19.3156),
+            ],
+          ),
+        ],
+      );
+
+      final bytes = CodificadorMalhaBinaria.codificarSnapshotViario(snap);
+      final decodificado = CodificadorMalhaBinaria.decodificarSnapshotViario(bytes);
+      expect(decodificado.versaoHash, equals('osm-snap-1'));
+      expect(decodificado.geradoEm, equals(DateTime.utc(2026, 11, 27, 16, 30)));
+      expect(decodificado.rodovias.single.codigo, equals('MG-010'));
+
+      expect(
+        () => CodificadorMalhaBinaria.decodificarSnapshotViario(
+          Uint8List.fromList([0, 0, 0, 0, 1, 0]),
+        ),
+        throwsFormatException,
+      );
+
+      final bytesVazio = CodificadorMalhaBinaria.codificarSnapshotViario(
+        SnapshotMalhaViariaOffline(
+          geradoEm: DateTime.utc(2026, 11, 27),
+          versaoHash: '',
+          rodovias: const [],
+        ),
+      );
+      expect(
+        () => CodificadorMalhaBinaria.decodificarSnapshotViario(bytesVazio),
+        throwsFormatException,
+      );
+    });
+
+    test('codifica e decodifica altimetria inicial com e sem grade regional SRTM', () {
+      final grade = GradeElevacaoRegionalOffline(
+        latMin: -21.0,
+        lonMin: -45.0,
+        passoGraus: 0.05,
+        linhas: 2,
+        colunas: 2,
+        cotasMetros: Int16List.fromList([780, 840, 920, 1150]),
+      );
+
+      final bytesComGrade = CodificadorMalhaBinaria.codificarAltimetriaInicial(
+        cotasPorPico: const {
+          'cipo': CotaAltimetricaPico(
+            altitudeBaseMetros: 810,
+            altitudePicoMetros: 1320,
+            altitudePontoMetros: 995,
+            dimensaoGradeDem: 2,
+            raioGradeDemGraus: 0.024,
+            gradeDemMetros: [810, 920, 1100, 1320],
+          ),
+          'urca': CotaAltimetricaPico(
+            altitudeBaseMetros: 12,
+            altitudePicoMetros: 396,
+          ),
+        },
+        gradeRegional: grade,
+      );
+
+      final lido = CodificadorMalhaBinaria.decodificarAltimetriaInicial(bytesComGrade);
+      expect(lido.cotasPorPico['cipo']?.altitudePicoMetros, equals(1320));
+      expect(lido.cotasPorPico['cipo']?.altitudePontoMetros, equals(995));
+      expect(lido.cotasPorPico['cipo']?.gradeDemMetros, equals([810, 920, 1100, 1320]));
+      expect(lido.cotasPorPico['urca']?.altitudePontoMetros, isNull);
+      expect(lido.gradeRegional?.linhas, equals(2));
+      expect(lido.gradeRegional?.cotasMetros, equals([780, 840, 920, 1150]));
+
+      final bytesSemGrade = CodificadorMalhaBinaria.codificarAltimetriaInicial(
+        cotasPorPico: const {},
+      );
+      final semGrade = CodificadorMalhaBinaria.decodificarAltimetriaInicial(bytesSemGrade);
+      expect(semGrade.cotasPorPico, isEmpty);
+      expect(semGrade.gradeRegional, isNull);
+
+      expect(
+        () => CodificadorMalhaBinaria.decodificarAltimetriaInicial(
+          Uint8List.fromList([9, 9, 9, 9, 1, 0]),
+        ),
+        throwsFormatException,
+      );
+    });
+  });
+}
