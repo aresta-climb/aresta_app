@@ -155,3 +155,73 @@ Todo acesso a SDKs de telemetria e logs no cliente Flutter é arquiteturalmente 
 
 Este repositório integra dois **submódulos Git** declarados em [`.gitmodules`](../../.gitmodules) e opera em conjunto com outros dois repositórios da organização [`github.com/aresta-climb`](https://github.com/aresta-climb):
 
+| Caminho / Repositório | URL Oficial | Relação com `aresta_app` |
+|---|---|---|
+| **`frontend/lib/aresta_api`** *(submódulo Git)* | `https://github.com/aresta-climb/aresta_api.git` | **Fonte Única de Verdade** dos contratos `.proto` (`croqui.proto`, `indice.proto`, `beta.proto`, `croqui_experimental.proto`, `serving.proto`), schemas SQL (`catalogo.sql`, `catalogo_d1.sql`, `fixalog_d1.sql`) e especificações OpenAPI 3.1 (`catalogo.yaml`, `app_links.yaml`, `previa.yaml`, `colaboracao.yaml`, `feedback.yaml`, `fixalog.yaml`), incluindo o código Dart gerado. |
+| **`frontend/legal/repo`** *(submódulo Git)* | `https://github.com/aresta-climb/arestaclimb.com.git` | Portal institucional web e fonte canônica dos arquivos `public/docs/termos-de-uso.md` e `public/docs/politica-de-privacidade.md` embarcados no app e atualizados automaticamente via `.github/workflows/update_legal_terms.yml`. |
+| **`aresta-climb/aresta_db`** *(repositório irmão)* | `https://github.com/aresta-climb/aresta_db` | Base comunitária de croquis e interações em YAML, **Aresta Editor Desktop** (Python/PySide6) e pipeline que compila `.binarypb`, `catalogo.db` (incluindo malha Overpass/OSM) e publica no R2/D1. |
+| **`aresta-climb/aresta_backend`** *(repositório irmão)* | `https://github.com/aresta-climb/aresta_backend` | Implementação dos Cloudflare Workers (`catalogo`, `app-links`, `previa`, `feedback`, `alertas`, `fixalog`) e das demais Supabase Edge Functions. |
+
+---
+
+## 8. Ativos Embarcados (`assets/`), Tipografia (`fonts/`) e Cópia de Segurança
+
+### 8.1. Tipografia Embarcada (`frontend/fonts/`)
+Para garantir fidelidade visual offline e padronização tipográfica em todas as telas sem depender de downloads de fontes em tempo de execução:
+- **Montserrat** (`Montserrat-Thin.ttf` `300`, `Montserrat-Regular.ttf` `400`, `Montserrat-Medium.ttf` `500`, `Montserrat-SemiBold.ttf` `600`, `Montserrat-Bold.ttf` `700`) — família principal do tema claro e escuro (`temas.dart`). Autoria: *Julieta Ulanovsky et al.* (Google Fonts). Licença: **SIL Open Font License 1.1 (OFL-1.1)**.
+- **Bebas Neue** (`BebasNeue-Regular.ttf` `400`) — utilizada em títulos de impacto visual. Autoria: *Ryoichi Tsunekawa / Dharma Type* (Google Fonts). Licença: **SIL Open Font License 1.1 (OFL-1.1)**.
+
+### 8.2. Sementes de Dados Pré-Embarcadas e Protocolo `atual` + `copia_seguranca`
+Para que o aplicativo funcione integralmente desde o primeiro segundo após a instalação (mesmo aberto pela primeira vez sem internet) e resista a indisponibilidades de APIs externas (IBGE, NASA, Open-Meteo):
+
+| Caminho em `frontend/assets/` | Origem | Função |
+|---|---|---|
+| `assets/preload/indice.binarypb` e `indice.etag` | Pipeline `aresta_db` (`serving.arestaclimb.com/v4`) | Índice mestre inicial dos picos disponíveis e ETag correspondente para sincronização diferencial na Fase 1. |
+| `assets/preload/catalogo.db` | Pipeline `aresta_db` | Banco SQLite pré-populado com todos os NanoIDs (`14c`), vias, setores, faixas de graduação e nós de distância rodoviária para busca global e resolução imediata de QR Codes offline. |
+| `assets/preload/thumbnails/*.webp` | Acervo autoral Aresta / Conquistadores | Miniaturas WebP compactas dos picos para exibição imediata dos cards antes da primeira sincronização de rede. |
+| `assets/geometria/malha_globo_brasil.json` + `.seguranca.json` | IBGE API v3 + Natural Earth 110m | Malha vetorial dos continentes, costa brasileira e 27 UFs protegida por rotação atômica de cópia única de segurança. |
+| `assets/geometria/textura_globo_nasa.jpg` + `.seguranca.jpg` | NASA Visible Earth (Blue Marble) | Textura equiretangular do globo protegida por cópia única de segurança binária. |
+| `assets/dados/altimetria_picos_inicial.json` + `.seguranca.json` | NASA SRTM 30m (AWS Terrarium `z=12`) | Cotas de base, cume e grade DEM `13×13` de cada pico protegidas por cópia única de segurança. |
+| `assets/logo_*.{png,jpg,svg}` e `assets/team/*.webp` | Equipe Aresta Climb | Identidade visual do aplicativo, ícone adaptativo Android/iOS, *splash screen* nativa e fotos da página *Sobre o Time*. |
+
+---
+
+## 9. Dependências Dart/Flutter, Canais Nativos e Ferramentas de CI/CD
+
+### 9.1. Pacotes Principais (`frontend/pubspec.yaml`)
+
+| Categoria | Pacotes (`pub.dev`) | Uso no Aplicativo |
+|---|---|---|
+| **Serialização, Criptografia e Banco Local** | `protobuf`, `fixnum`, `sqflite`, `shared_preferences`, `path_provider`, `path`, `archive`, `crypto`, `yaml`, `uuid` | Leitura de `.binarypb`, catálogo relacional SQLite (`catalogo.db`), cache local de preferências/filas offline, extração de pacotes, cálculo de hashes `SHA-256` em `Isolate` e desafios PKCE `S256`. |
+| **Rede, Deep Links e Compartilhamento** | `http`, `http_parser`, `connectivity_plus`, `app_links`, `url_launcher`, `share_plus` | Pool HTTP Keep-Alive único (`ClienteHttpAresta`), detecção de conectividade, interceptação de links `aresta.cc` / `arestaclimb.com` / OAuth callback e compartilhamento nativo. |
+| **Sensores, Câmera, Mídia e Segundo Plano** | `geolocator`, `mobile_scanner`, `flutter_image_compress`, `flutter_local_notifications`, `workmanager`, `device_info_plus`, `package_info_plus` | Posição GPS real do escalador (`LocalizadorGpsUsuario`), leitura óptica de placas QR Code nas vias, compressão WebP de avatares e anexos, notificações de progresso de download e classificação de RAM do dispositivo. |
+| **Interface, Vetores, Busca e Feedback** | `flutter_svg`, `path_drawing`, `flutter_markdown_plus`, `markdown`, `fuzzy`, `feedback`, `google_fonts`, `cupertino_icons` | Traçados vetoriais de vias nos croquis (`SOLIDO`, `TRACEJADO`, `PONTILHADO`), renderização de descrições e termos legais em Markdown, busca *fuzzy* tolerante a acentos e captura anotada de tela para relatos de problemas. |
+| **Segurança e Observabilidade** | `firebase_core`, `firebase_analytics`, `firebase_crashlytics`, `firebase_performance`, `firebase_remote_config`, `firebase_app_check`, `sentry_flutter` | Isolados em `lib/services/firebase/` para atestação de hardware, métricas de performance/uso e diagnóstico de falhas. |
+| **Qualidade, Testes e Build (`dev_dependencies`)** | `flutter_test`, `flutter_lints`, `sqflite_common_ffi`, `fake_async`, `flutter_launcher_icons`, `flutter_native_splash`, `sentry_dart_plugin` | Execução determinística da suíte comportamental em máquina host (SQLite FFI em memória/disco temporário), geração de ícones/splash e upload de símbolos de desofuscação. |
+
+### 9.2. Canais Nativos Próprios (`MethodChannel` — Kotlin & Swift)
+- **Autenticação Nativa**: `MainActivity.kt` (Android `androidx.credentials.CredentialManager` + Google ID) e `AppDelegate.swift` (iOS `AuthenticationServices` para Apple ID e `ASWebAuthenticationSession` para OAuth).
+- **Seletor Nativo de Mídia (`app.escalada.croquis/seletor_midia`)**: seleção nativa de imagem de perfil sem exigir permissões amplas de galeria (`Android Photo Picker` / `PHPickerViewController`).
+
+### 9.3. Pipeline de CI/CD e Distribuição (`.github/workflows/`)
+- **GitHub Actions**: compilação automatizada em runners Ubuntu/macOS (`subosito/flutter-action`, `actions/setup-java`, `gradle/actions/setup-gradle`, `maxim-lobanov/setup-xcode`, `ruby/setup-ruby`, `dart-lang/setup-dart`).
+- **Smoke Test Pós-Build (`frontend/tool/release_tools/servidor_smoke_ci.dart` + Google `bundletool 1.17.2`)**: valida o artefato real compilado contra micro-servidor local antes de autorizar publicação nas lojas.
+- **Publicação Transacional nas Lojas**:
+  - **Google Play Store**: upload de `.aab` assinado via **Google Play Developer API** (`r0adkll/upload-google-play`).
+  - **Apple App Store / TestFlight**: upload de `.ipa` assinado e submissão via **App Store Connect API** (`.p8` JWT / Fastlane / `altool`).
+- **Automação de Documentos Legais (`update_legal_terms.yml`)**: sincroniza atualizações do submódulo `arestaclimb.com` e regenera `legal_version.g.dart` via PR assinado pelo **GitHub App Aresta Climb Bot** (`actions/create-github-app-token`).
+
+---
+
+## 10. Matriz Consolidada de Licenciamento e Atribuições
+
+| Ativo / Camada | Licença Aplicável | Titularidade / Atribuição Obrigatória |
+|---|---|---|
+| **Código-fonte de `aresta_app`, `aresta_api` e `supabase/`** | **Mozilla Public License 2.0 (`MPL-2.0`)** + DCO v1.1 (`Signed-off-by`) | `Copyright (C) 2026 Aresta Climb Contributors` ([`LICENSE`](../../LICENSE)). |
+| **Marcas `"Aresta"`, `"Aresta Climb"`, logotipos e ícones** | **Todos os direitos reservados** (não cobertos pela MPL-2.0) | Mantenedores do projeto Aresta Climb. Forks devem substituir nome e identidade visual. |
+| **Croquis, fotografias de parede, topos e descrições autorais** | **Direitos Autorais Reservados** (uso concedido no aplicativo conforme Termos de Uso) | Conquistadores, autores locais de guias e Aresta Climb. |
+| **Interações comunitárias abertas (votos de grau, betas, alertas) e malha viária OSM** | **Open Database License (`ODbL 1.0`)** | Comunidade Aresta Climb (`aresta_db/interacoes/`) e `© Contribuidores do OpenStreetMap` ([openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)). |
+| **Dados de precipitação e vento (`RainTracker`)** | **Creative Commons Attribution 4.0 (`CC BY 4.0`)** | Dados meteorológicos por [Open-Meteo.com](https://open-meteo.com/). |
+| **Malhas territoriais (Brasil, 27 UFs e continentes)** | **Domínio Público / Dados Abertos** | **IBGE** (Malhas Territoriais API v3) e **Natural Earth** (`1:110m Physical Vectors`). |
+| **Textura global e modelo digital de elevação (`30m`)** | **Domínio Público / Open Data** | **NASA Visible Earth** (*Blue Marble*), **NASA/USGS** (*SRTM GL1 / NASADEM*) e **Mapzen/Tilezen** (*Terrain Tiles on AWS Open Data*). |
+| **Fontes tipográficas (`Montserrat` e `Bebas Neue`)** | **SIL Open Font License 1.1 (`OFL-1.1`)** | *Julieta Ulanovsky et al.* (`Montserrat`) e *Ryoichi Tsunekawa / Dharma Type* (`Bebas Neue`). |
