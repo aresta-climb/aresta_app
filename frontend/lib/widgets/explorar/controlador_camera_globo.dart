@@ -527,3 +527,60 @@ class ControladorCameraGlobo extends ChangeNotifier {
     return latitudeAlvo.clamp(limiteInferior, limiteSuperior);
   }
 
+  /// Converte um ponto em pixels na tela para `(latitude, longitude)` exatos no plano 2D atual.
+  ({double latitude, double longitude}) converterTelaParaCoordenada2D({
+    required Offset pontoTela,
+    required Size tamanhoTela,
+  }) {
+    _ultimoTamanhoTela = tamanhoTela;
+    final cy = calcularCentroVerticalOptico(tamanhoTela);
+    final escala2D = calcularEscala2D(tamanhoTela);
+    final latCentro =
+        _limitarLatitude2D(_latitudeCentral, tamanhoTela, cy, escala2D);
+    final lon = GeometriaGeoideGlobo.normalizarLongitude(
+      _longitudeCentral +
+          ((pontoTela.dx - tamanhoTela.width * 0.5) / escala2D) / _grausParaRad,
+    );
+    final lat = (latCentro + ((cy - pontoTela.dy) / escala2D) / _grausParaRad)
+        .clamp(-85.0, 85.0);
+    return (latitude: lat, longitude: lon);
+  }
+
+  /// Raio normalizado do Geoide Terrestre (`WGS84 + NASA EGM96 / GRACE`).
+  static double raioNormalizadoGeoide({
+    required double latitude,
+    required double longitude,
+  }) =>
+      GeometriaGeoideGlobo.raioNormalizadoGeoide(
+        latitude: latitude,
+        longitude: longitude,
+      );
+
+  /// Constrói o contorno fechado da silhueta do Geoide Terrestre na câmera atual.
+  Path construirCaminhoSilhuetaGeoide(
+    Size tamanhoTela, {
+    double escalaExtra = 1.0,
+    int segmentos = 108,
+  }) =>
+      GeometriaGeoideGlobo.construirSilhuetaGeoide(
+        tamanhoTela: tamanhoTela,
+        centroVerticalOpticoPx: calcularCentroVerticalOptico(tamanhoTela),
+        raioAparentePx: raioAparentePx,
+        latitudeCentral: _latitudeCentral,
+        longitudeCentral: _longitudeCentral,
+        lod: _lod,
+        escalaExtra: escalaExtra,
+        segmentos: segmentos,
+      );
+
+  /// Projeta continuamente qualquer coordenada `(latitude, longitude, elevacaoMetros)` do Geoide ao Cume 3D.
+  PontoProjetadoTela projetarCoordenada({
+    required double latitude,
+    required double longitude,
+    required double elevacaoMetros,
+    required Size tamanhoTela,
+    bool estenderBordaHorizonte = false,
+  }) {
+    _ultimoTamanhoTela = tamanhoTela;
+    final cy = calcularCentroVerticalOptico(tamanhoTela);
+
