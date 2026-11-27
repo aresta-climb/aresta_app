@@ -89,3 +89,65 @@ class PerfilGrauPico {
     final match = _regexViaArabico.firstMatch(limpo);
     if (match == null) return null;
 
+    final numero = int.parse(match.group(1)!);
+    if (numero < 1 || numero > 12) return null;
+    final sufixo = match.group(2) ?? '';
+
+    if (numero <= 6) {
+      final base = (numero + 1) * 100;
+      if (sufixo == 'sup' || sufixo == 'b' || sufixo == 'c') {
+        return base + 5;
+      }
+      return base;
+    }
+
+    if (numero == 12) {
+      return 1310;
+    }
+
+    final deslocamentoLetra = sufixo == 'b'
+        ? 20
+        : (sufixo == 'c' || sufixo == 'sup' ? 30 : 10);
+    return (numero + 1) * 100 + deslocamentoLetra;
+  }
+
+  /// Converte um rótulo textual da escala V (`'VB'`, `'V0'`, `'V4/V5'`, `'V15'`)
+  /// para o peso numérico canônico de `OpcoesGrau.grausBoulder` (`100..1600`).
+  static int? converterGrauBoulderParaPeso(String? grauBruto) {
+    if (grauBruto == null) return null;
+    final limpo = grauBruto
+        .trim()
+        .toLowerCase()
+        .split('/')
+        .first
+        .replaceAll('+', '')
+        .replaceAll('-', '')
+        .replaceAll(' ', '');
+    final match = _regexBoulder.firstMatch(limpo);
+    if (match == null) return null;
+
+    final token = match.group(1)!;
+    if (token == 'b') return 100;
+    final n = int.parse(token);
+    if (n <= 0) return 100;
+    if (n >= 15) return 1600;
+    return (n + 1) * 100;
+  }
+
+  static String _substituirRomanoInicial(String s) {
+    const romanos = <(String, String)>[
+      ('vi', '6'),
+      ('iv', '4'),
+      ('iii', '3'),
+      ('ii', '2'),
+      ('v', '5'),
+      ('i', '1'),
+    ];
+    for (final par in romanos) {
+      if (s == par.$1 || s.startsWith('${par.$1}sup')) {
+        return '${par.$2}${s.substring(par.$1.length)}';
+      }
+    }
+    return s;
+  }
+}
