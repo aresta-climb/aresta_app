@@ -650,3 +650,93 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.cadTaxaAVistaFlash: 'Onsight/Flash-ratio',
   ChaveTexto.cadMaiorGrauVias: 'Hoogste graad (Routes)',
   ChaveTexto.cadMaiorGrauBoulders: 'Hoogste graad (Boulders)',
+  ChaveTexto.cadPiramideTitulo: 'Graadpiramide',
+  ChaveTexto.cadNenhumaAscensaoModalidade:
+      'Nog geen beklimmingen geregistreerd in deze discipline.',
+  ChaveTexto.cadHistoricoContagem: 'Beklimmingshistorie ({n})',
+  ChaveTexto.cadMeusAlertasContagem: 'Mijn rotswaarschuwingen ({n})',
+  ChaveTexto.cadNenhumaAscensaoAinda: 'Nog geen beklimmingen gelogd',
+  ChaveTexto.cadNenhumaAscensaoSub:
+      'Je opgeslagen beklimmingen van routepagina’s verschijnen hier.',
+  ChaveTexto.cadEditarAscensaoTooltip: 'Beklimming bewerken',
+  ChaveTexto.cadExcluirAscensaoTooltip: 'Beklimming verwijderen',
+  ChaveTexto.cadExcluirAscensaoTitulo: 'Beklimming verwijderen?',
+  ChaveTexto.cadExcluirAscensaoCorpo:
+      'Deze beklimming wordt definitief uit je logboek verwijderd.',
+  ChaveTexto.cadEstiloEsportivoLabel: 'Klimstijl',
+  ChaveTexto.cadTentativasPegasLabel: 'Pogingen',
+  ChaveTexto.cadDataAscensaoLabel: 'Klimdatum',
+  ChaveTexto.cadNotasPrivadasLabel: 'Privénotities (Crux / Beta)',
+  ChaveTexto.cadNotasPrivadasHint:
+      'Bijv.: Linker heelhook bij 3e haak, lang setje meenemen...',
+  ChaveTexto.cadCadenaSalvaToast: 'Beklimming opgeslagen in logboek!',
+  ChaveTexto.cadTentativaSalvaToast: 'Poging opgeslagen in logboek!',
+  ChaveTexto.cadContribuicaoPublica: 'OPENBARE BIJDRAGE',
+  ChaveTexto.cadPercepcaoGrau: 'Hoe voelde de moeilijkheidsgraad?',
+  ChaveTexto.cadBetaOpcionalLabel: 'Community-beta (optioneel)',
+  ChaveTexto.cadBetaOpcionalHint:
+      'Bijv.: Setje 3 verlengen; linksom lezen in de crux.',
+  ChaveTexto.cadConecteParaContribuir:
+      'Log in bij Profiel om graadstemmen en openbare beta te delen.',
+  ChaveTexto.cadEditarModalTitulo: 'Beklimming bewerken',
+  ChaveTexto.cadRegistrarModalTitulo: 'Beklimming loggen',
+  ChaveTexto.cadSalvarEContribuir: 'Opslaan & Delen',
+  ChaveTexto.cadSalvarNaCaderneta: 'Opslaan in logboek',
+  ChaveTexto.cadEncadenadaEm: 'Getopt op {data} ({estilo})',
+  ChaveTexto.cadTentativaEm: 'Poging op {data}',
+  ChaveTexto.cadNovaAscensaoBtn: 'Nieuwe beklimming / poging',
+  ChaveTexto.cadRegistrarCadenaBtn: 'Beklimming / poging loggen',
+  ChaveTexto.comunidadeHeader: 'MEDIA, STEUN & COMMUNITY',
+  ChaveTexto.comunidadeSobreTimeTitulo: 'OVER HET TEAM',
+  ChaveTexto.comunidadeSobreTimeSub:
+      'Maak kennis met de ontwikkelaars en bijdragers achter Aresta.',
+  ChaveTexto.comunidadeWhatsappTitulo: 'WHATSAPP-GROEP',
+  ChaveTexto.comunidadeWhatsappSub:
+      'Doe mee voor vragen, ideeën en nieuws over Aresta.',
+  ChaveTexto.comunidadeInstagramTitulo: 'OFFICIEEL INSTAGRAM',
+  ChaveTexto.comunidadeInstagramSub:
+      'Volg het laatste nieuws, updates en een kijkje achter de schermen.',
+  ChaveTexto.comunidadeLinkedinTitulo: 'PROJECT LINKEDIN',
+  ChaveTexto.comunidadeLinkedinSub:
+      'Volg nieuws, groei en mijlpalen van Aresta.',
+  ChaveTexto.comunidadeDiscordTitulo: 'DEVELOPER DISCORD',
+  ChaveTexto.comunidadeDiscordSub:
+      'Praat met het team, volg de code en bouw mee aan Aresta.',
+  ChaveTexto.comunidadeGithubTitulo: 'ARESTA GITHUB',
+  ChaveTexto.comunidadeGithubSub:
+      'Bekijk onze open-source repositories op GitHub.',
+  ChaveTexto.comunidadeTermosTitulo: 'Gebruiksvoorwaarden & Privacy',
+  ChaveTexto.comunidadeTermosSub:
+      'Eigen risico bij buitenklimmen en offline-first privacyrichtlijnen.',
+  ChaveTexto.comunidadeRodapeVersao: 'Aresta Climb v{versao} • Open Bèta',
+  ChaveTexto.comunidadeIniciativaLivre:
+      'Een onafhankelijk initiatief voor vrij buitenklimmen.',
+  ChaveTexto.comunidadeTermosModalHeader: 'VOORWAARDEN & PRIVACY',
+  ChaveTexto.comunidadePoliticaModalHeader: 'PRIVACYBELEID',
+  ChaveTexto.timeConhecaSubtitulo: 'MAAK KENNIS MET HET TEAM',
+  ChaveTexto.timeOpenSourceTitulo: 'ARESTA IS OPEN SOURCE',
+  ChaveTexto.timeOpenSourceCorpo:
+      'Wil je bijdragen? Kom naar onze Discord en stuur ons een bericht!',
+  ChaveTexto.timeCargoDesigner: 'Designer',
+  ChaveTexto.timeCargoProduto: 'Product / Marketing',
+  ChaveTexto.timeCargoProdutoQuebra: 'Product/\nMarketing',
+  ChaveTexto.timeCargoBackend: 'Backend',
+  ChaveTexto.timeCargoFrontend: 'Frontend',
+  ChaveTexto.legalTermosTitulo: 'Gebruiksvoorwaarden',
+  ChaveTexto.legalPoliticaTitulo: 'Privacybeleid',
+  ChaveTexto.legalErroTermos:
+      'Fout bij laden van voorwaarden. Probeer het later opnieuw.',
+  ChaveTexto.legalErroPolitica: 'Fout bij laden van privacybeleid.',
+  ChaveTexto.legalBannerAtualizacao:
+      '🌟 Onze juridische documenten zijn bijgewerkt. Lees ze door en bevestig je akkoord.',
+  ChaveTexto.legalDataAtualizacao: 'Bijgewerkt op: {data}',
+  ChaveTexto.legalAceitoEm: 'Geaccepteerd op {data} om {hora}',
+  ChaveTexto.legalConcordoCheckbox:
+      'Ik heb de Gebruiksvoorwaarden en het Privacybeleid gelezen en ga akkoord.',
+  ChaveTexto.legalAceitarContinuar: 'Voorwaarden accepteren & doorgaan',
+  ChaveTexto.configTitulo: 'Instellingen',
+  ChaveTexto.configIdiomaTitulo: 'TAAL',
+  ChaveTexto.configIdiomaSubtitulo:
+      'Wijzig direct de weergavetaal van de hele app.',
+  ChaveTexto.configAparenciaTitulo: 'WEERGAVE',
+  ChaveTexto.configAparenciaSub: 'Pas het thema van de app aan.',
