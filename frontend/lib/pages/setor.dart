@@ -3,12 +3,14 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/gerenciador_filtros_croqui.dart';
 import '../theme/cores_app.dart';
+import '../utils/extrator_detalhes_tecnicos_via.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../utils/indexador_escaladas.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -235,25 +237,11 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
     return null;
   }
 
-  String _obterNomePluralModalidade(String modalidade) {
-    switch (modalidade) {
-      case 'Esportiva':
-        return 'Esportivas';
-      case 'Boulder':
-        return 'Boulders';
-      case 'Móvel':
-        return 'Móveis';
-      case 'Multienfiada':
-        return 'Multienfiadas';
-      case 'Highline':
-        return 'Highlines';
-      default:
-        return modalidade;
-    }
-  }
-
   String _formatarRotuloAba(String modalidade) {
-    final nomePlural = _obterNomePluralModalidade(modalidade);
+    final nomePlural = ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(
+      modalidade,
+      plural: true,
+    );
     final viasBase = _escaladasPorModalidade[modalidade] ?? [];
     if (_estadoFiltros.temFiltrosAtivosParaModalidade(modalidade)) {
       final filtradas = _estadoFiltros
@@ -287,6 +275,13 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirConteudo(context),
+    );
+  }
+
+  Widget _construirConteudo(BuildContext context) {
     final colors = context.colors;
     final validMapas = widget.setor.mapas
         .where((m) =>
@@ -333,7 +328,7 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
                     Icons.share_outlined,
                     color: context.colors.chalkWhite,
                   ),
-                  tooltip: 'Compartilhar setor',
+                  tooltip: context.tr(ChaveTexto.setorCompartilharTooltip),
                   onPressed: () {
                     ServicoCompartilhamento.instancia.compartilharSetor(
                       idCroqui: widget.cragId,
@@ -587,7 +582,7 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'Nenhuma escalada encontrada nos filtros atuais.',
+                context.tr(ChaveTexto.setorNenhumaEscaladaFiltrosAtuais),
                 style: TextStyle(color: colors.ashGrey, fontSize: 14),
               ),
             ),

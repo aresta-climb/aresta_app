@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/sobre_time_functions.dart';
@@ -91,6 +92,13 @@ class _SobreTimePageState extends State<SobreTimePage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) => _construirConteudo(context),
+    );
+  }
+
+  Widget _construirConteudo(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       appBar: AppBar(
@@ -108,7 +116,7 @@ class _SobreTimePageState extends State<SobreTimePage>
           },
         ),
         title: Text(
-          'SOBRE O TIME',
+          context.tr(ChaveTexto.comunidadeSobreTimeTitulo),
           style: TextStyle(
             color: context.colors.dryMoss,
             fontSize: 16,
@@ -130,7 +138,7 @@ class _SobreTimePageState extends State<SobreTimePage>
             children: [
               const SizedBox(height: 20),
               Text(
-                'CONHEÇA QUEM FAZ O ARESTA',
+                context.tr(ChaveTexto.timeConhecaSubtitulo),
                 style: TextStyle(
                   color: context.colors.ashGrey,
                   fontSize: 12,
@@ -187,7 +195,7 @@ class _SobreTimePageState extends State<SobreTimePage>
                   child: Column(
                     children: [
                       Text(
-                        'O ARESTA É OPEN SOURCE',
+                        context.tr(ChaveTexto.timeOpenSourceTitulo),
                         style: TextStyle(
                           color: context.colors.dryMoss,
                           fontSize: 12,
@@ -197,7 +205,7 @@ class _SobreTimePageState extends State<SobreTimePage>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tem interesse em contribuir? Entre no nosso Discord e nos envie uma mensagem!',
+                        context.tr(ChaveTexto.timeOpenSourceCorpo),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: context.colors.ashGrey,
