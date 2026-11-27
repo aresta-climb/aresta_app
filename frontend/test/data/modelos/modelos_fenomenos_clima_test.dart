@@ -274,3 +274,61 @@ void main() {
         }),
         throwsFormatException,
       );
+      expect(
+        () => BolhaChuvaRegional.deMapa({
+          'id': 'b',
+          'lat': -20.0,
+          'lon': -44.0,
+          'intensidade_mm_h': 1.0,
+          'vento_rumo_graus': 90.0,
+          'vento_kmh': 10.0,
+          'contorno_externo': [
+            [-44.1, -20.1],
+            [-43.9, -20.1],
+            [-44.0, -19.9],
+          ],
+          'rastros_passados': ['nao_mapa'],
+        }),
+        throwsFormatException,
+      );
+    });
+  });
+
+  group('BolhaIncendioRegional e NivelSeveridadeIncendio', () {
+    test('classifica os 4 níveis de severidade combinando FRP, focos e núcleos intensos', () {
+      expect(NivelSeveridadeIncendio.values, hasLength(4));
+      for (var i = 0; i < NivelSeveridadeIncendio.values.length; i++) {
+        final s = NivelSeveridadeIncendio.values[i];
+        expect(s.peso, equals(i + 1));
+        expect(s.rotulo, isNotEmpty);
+      }
+
+      final baixo = BolhaIncendioRegional.deMapa({
+        'id': 'f_baixo',
+        'lat': -19.0,
+        'lon': -43.0,
+        'potencia_frp_mw': 9.5,
+        'total_focos': 2,
+        'vento_rumo_graus': 180.0,
+        'vento_kmh': 10.0,
+        'contorno_externo': [
+          [-43.1, -19.1],
+          [-42.9, -19.1],
+          [-43.0, -18.9],
+        ],
+      });
+      expect(baixo.nivelSeveridade, equals(NivelSeveridadeIncendio.baixo));
+      expect(baixo.fonteSatelite, equals('INPE_BDQUEIMADAS_NASA_VIIRS_MODIS'));
+
+      const moderado = BolhaIncendioRegional(
+        id: 'f_moderado',
+        latitude: -19.0,
+        longitude: -43.0,
+        potenciaFrpMw: 22.0,
+        totalFocos: 3,
+        ventoRumoGraus: 90.0,
+        ventoVelocidadeKmh: 12.0,
+        contornoExterno: trianguloPadrao,
+      );
+      expect(moderado.nivelSeveridade, equals(NivelSeveridadeIncendio.moderado));
+
