@@ -4,13 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
 import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
+import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
   group('via_functions _buildTopBadges (Map Buttons)', () {
@@ -162,7 +163,7 @@ void main() {
 
         final dyGrau = tester.getTopLeft(find.text('GRAU OFICIAL')).dy;
         final dyAncoragem = tester.getTopLeft(find.textContaining('Dupla com corrente')).dy;
-        final dyDescricao = tester.getTopLeft(find.text('Descrição')).dy;
+        final dyDescricao = tester.getTopLeft(find.text('DESCRIÇÃO')).dy;
         final dyHistorico = tester.getTopLeft(find.text('HISTÓRICO & CONQUISTA')).dy;
         final dyAcoes = tester.getTopLeft(find.textContaining('Apoie a Manutenção')).dy;
 
@@ -205,42 +206,8 @@ void main() {
     );
 
     testWidgets(
-      'deve ocultar botão e selo de caderneta quando perfilHabilitado for false',
+      'exibe botão e selo de caderneta por padrão',
       (WidgetTester tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
-
-        final escalada = Escalada()
-          ..uid = 'escalada_teste_1'
-          ..viaEsportiva = (ViaEsportiva()
-            ..nome = 'Via Teste Caderneta');
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: ThemeData(extensions: const [AppColors.dark]),
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => buildViaBody(
-                  context,
-                  escalada,
-                  'crag1',
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'deve exibir botão e selo de caderneta quando perfilHabilitado for true',
-      (WidgetTester tester) async {
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
-
         final escalada = Escalada()
           ..uid = 'escalada_teste_2'
           ..viaEsportiva = (ViaEsportiva()
@@ -270,15 +237,9 @@ void main() {
       'persiste grauSugerido oficial da escalada ao registrar cadena pelo modal da ViaPage',
       (WidgetTester tester) async {
         SharedPreferences.setMockInitialValues({});
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        ControladorInteracoesUsuario.redefinirParaTestes();
         final prefs = await SharedPreferences.getInstance();
         final repo = RepositorioCadernetaLocal(preferencias: prefs);
         await repo.inicializar();
-        addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
-          ControladorInteracoesUsuario.redefinirParaTestes();
-        });
 
         final escalada = Escalada(
           uid: 'viaGrauOficial1',
@@ -324,61 +285,6 @@ void main() {
           repo.cadenasNotifier.value.first.grauSugerido,
           equals(GrauVia_GrauVia.BR_7B.value),
         );
-      },
-    );
-
-    testWidgets(
-      'oculta reativamente o bloco de caderneta sem apagar cadenas salvas quando o usuário desativa interações',
-      (WidgetTester tester) async {
-        SharedPreferences.setMockInitialValues({});
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        ControladorInteracoesUsuario.redefinirParaTestes();
-        final prefs = await SharedPreferences.getInstance();
-        final repo = RepositorioCadernetaLocal(preferencias: prefs);
-        await repo.inicializar();
-        addTearDown(() {
-          ConfiguracaoRecursos.redefinirParaTestes();
-          ControladorInteracoesUsuario.redefinirParaTestes();
-        });
-
-        final escalada = Escalada(
-          uid: 'viaToggleTeste1',
-          viaEsportiva: ViaEsportiva(
-            nome: 'Via Toggle',
-            dificuldade: GrauVia_GrauVia.BR_6SUP,
-          ),
-        );
-        final cadernetaVm = SecaoCadernetaViaViewModel(
-          escalada: escalada,
-          repositorio: repo,
-        );
-        addTearDown(cadernetaVm.dispose);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => buildViaBody(
-                  context,
-                  escalada,
-                  'crag1',
-                  cadernetaViewModel: cadernetaVm,
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(const Key('btn_registrar_cadena')), findsOneWidget);
-
-        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
-          false,
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
       },
     );
 
