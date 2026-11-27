@@ -393,8 +393,95 @@ void main() {
             ...repositorio.activeDataset.value!.metadadosDisponiveis,
             ResumoCroqui(
               id: 'slug_sem_indice_direto',
+              croquiUid: 'u_ig',
+              nome: 'Alias Pedra Grande',
+              precomputados: PrecomputadosResumoCroqui(totalEscaladas: 5, totalEsportivas: 5),
+            ),
+          ],
+          croquisBaixados: [Croqui(id: 'p_igarape', nome: 'Pedra Grande')],
+        );
+        viewModel.limparTodosFiltros();
+        viewModel.definirFaixaGrauVia(810, 830);
+        expect(viewModel.minGrauVia, equals(810));
+        expect(viewModel.maxGrauVia, equals(830));
+        expect(viewModel.temFiltroGrauVia, isTrue);
+        expect(
+          viewModel.picosFiltrados.map((p) => p.id).toSet(),
+          equals({'p_igarape', 'slug_sem_indice_direto'}),
+        );
+
+        // 4. Faixa de Grau de Boulder (V8=900 .. V10=1100 -> apenas p_milho possui V9!)
+        viewModel.definirFaixaGrauVia(null, null);
+        viewModel.definirFaixaGrauBoulder(900, 1100);
+        expect(viewModel.minGrauBoulder, equals(900));
+        expect(viewModel.maxGrauBoulder, equals(1100));
+        expect(viewModel.temFiltroGrauBoulder, isTrue);
+        expect(viewModel.picosFiltrados.map((p) => p.id).toList(), equals(['p_milho']));
+
+        // 5. Combinacao simultanea de grau Via + Boulder
+        viewModel.definirFaixaGrauVia(810, 830);
+        expect(
+          viewModel.picosFiltrados.map((p) => p.id).toSet(),
+          equals({'p_igarape', 'slug_sem_indice_direto', 'p_milho'}),
+        );
+
+        // 6. Raio maximo km e apenas salvos offline + construtor padrao de ServicoClimaAltimetria
+        viewModel.limparTodosFiltros();
+        viewModel.definirRaioMaximoKm(100.0);
+        expect(viewModel.raioMaximoKm, equals(100.0));
+        expect(viewModel.picosFiltrados.map((p) => p.id).toList(), contains('p_igarape'));
+
+        viewModel.definirRaioMaximoKm(null);
+        viewModel.definirApenasSalvosOffline(true);
+        expect(viewModel.apenasSalvosOffline, isTrue);
+        expect(viewModel.picosFiltrados.map((p) => p.id).toList(), equals(['p_igarape']));
+
+        final vmPadraoClima = BrowseViewModel(
+          datasetRepo: repositorio,
+          syncService: servicoSync,
+          telemetria: mockTelemetria,
+        );
+        vmPadraoClima.dispose();
+
+        viewModel.limparTodosFiltros();
+        expect(viewModel.totalFiltrosAtivos, equals(0));
+
+        // 7. Clima contextual + Altimetria + Botão opcional do radar no Mapa (inicia desligado)
+        expect(viewModel.obterAltitudePico('p_igarape'), equals(1430));
+        expect(viewModel.obterCotaAltimetricaPico('p_igarape')!.altitudeBaseMetros, equals(980));
+        expect(
+          viewModel.obterUmidadePico('p_igarape').nivel,
+          equals(NivelUmidadePico.possivelmenteUmido),
+        );
+        expect(viewModel.obterUmidadePico('p_urca').nivel, equals(NivelUmidadePico.seco));
+        expect(viewModel.radarClimaMapaAtivo, isFalse);
+        expect(viewModel.bolhasChuvaAtivas, isEmpty);
+        expect(viewModel.bolhasIncendioAtivas, isEmpty);
+
+        viewModel.definirRadarClimaMapaAtivo(false);
+        expect(viewModel.radarClimaMapaAtivo, isFalse);
+
+        viewModel.definirRadarClimaMapaAtivo(true);
+        expect(viewModel.radarClimaMapaAtivo, isTrue);
+        expect(viewModel.bolhasChuvaAtivas.single.bolha.id, equals('bolha_igarape'));
+
+        viewModel.definirRadarClimaMapaAtivo(false);
+        expect(viewModel.bolhasChuvaAtivas, isEmpty);
+
+        // 8. Selecao sincronizada Mapa <-> Lista (auto-scroll dispara apenas quando origemMapa=true!)
+        expect(viewModel.solicitacaoAutoScrollPicoSelecionado.value, equals(0));
+        viewModel.selecionarPico('p_urca', origemMapa: false);
+        expect(viewModel.picoSelecionadoId, equals('p_urca'));
+        expect(viewModel.solicitacaoAutoScrollPicoSelecionado.value, equals(0));
+
+        viewModel.selecionarPico('p_milho', origemMapa: true);
+        expect(viewModel.picoSelecionadoId, equals('p_milho'));
+        expect(viewModel.solicitacaoAutoScrollPicoSelecionado.value, equals(1));
+      },
+    );
+
     testWidgets(
-      'cobre desempate de distância, picos sem coordenadas, debounce de busca, downloads e ações de UI',
+      'cobre desempate de distância, picos sem coordenadas, debounce de busca, downloads com HttpServer local e ações de UI',
       (WidgetTester tester) async {
         SharedPreferences.setMockInitialValues({});
         RegistroPrimeiraVisita.resetForTesting();
