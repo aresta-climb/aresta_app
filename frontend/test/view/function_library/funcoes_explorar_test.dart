@@ -268,12 +268,86 @@ void main() {
           id: 'c7',
           caminhoRelativo: '',
           latitude: -16.0,
-        8,
-        (i) => {
-          'id': 'pico_$i',
-          'nome': 'Pico Item $i',
-          'local': 'MG',
-        },
+          longitude: -56.0,
+        ),
+        equals('BR'),
+      );
+    },
+  );
+
+  test(
+    'construirMarcadorGloboPico e resolverAlvoDownloadExplorar normalizam marcadores e alvos de download',
+    () {
+      final marcadorPadrao = construirMarcadorGloboPico(
+        id: 'br_mg_cipo',
+        nome: '',
+        caminhoRelativo: '',
+        latitude: -19.3,
+        longitude: -43.6,
+        cota: null,
+        umidade: const EstadoUmidadePico.seco(),
+      );
+      expect(marcadorPadrao.uf, equals('MG'));
+      expect(marcadorPadrao.nome, isNotEmpty);
+      expect(marcadorPadrao.altitudePicoMetros, equals(920));
+      expect(marcadorPadrao.altitudeBaseMetros, equals(640));
+
+      final marcadorComCota = construirMarcadorGloboPico(
+        id: 'br_mg_igarape',
+        nome: 'Pedra Grande',
+        caminhoRelativo: '',
+        latitude: -20.07,
+        longitude: -44.30,
+        cota: const CotaAltimetricaPico(
+          altitudeBaseMetros: 960,
+          altitudePicoMetros: 1430,
+          dimensaoGradeDem: 2,
+          raioGradeDemGraus: 0.02,
+          gradeDemMetros: [960, 1100, 1250, 1430],
+        ),
+        umidade: const EstadoUmidadePico.seco(),
+      );
+      expect(marcadorComCota.altitudeBaseMetros, equals(960));
+      expect(marcadorComCota.dimensaoGradeDem, equals(2));
+
+      expect(
+        resolverAlvoDownloadExplorar(
+          const CardCroquiViewModel.deValores(
+            id: 'card_id',
+            titulo: 'Serra do Cipó',
+            textoEstatisticas: '',
+            caminhoMiniatura: '',
+            salvoOffline: false,
+          ),
+        ),
+        equals((id: 'card_id', nome: 'Serra do Cipó')),
+      );
+      expect(
+        resolverAlvoDownloadExplorar({'id': 'map_id', 'nome': 'Pico Mapa'}),
+        equals((id: 'map_id', nome: 'Pico Mapa')),
+      );
+      expect(resolverAlvoDownloadExplorar('str_id').id, equals('str_id'));
+
+      expect(
+        calcularOpacidadeFundoBarraTopo(
+          alturaGavetaPx: 300.0,
+          alturaTelaPx: 800.0,
+        ),
+        equals(0.0),
+      );
+      expect(
+        calcularOpacidadeFundoBarraTopo(
+          alturaGavetaPx: 640.0,
+          alturaTelaPx: 800.0,
+        ),
+        closeTo(0.50, 1e-4),
+      );
+      expect(
+        calcularOpacidadeFundoBarraTopo(
+          alturaGavetaPx: 760.0,
+          alturaTelaPx: 800.0,
+        ),
+        equals(1.0),
       );
 
       await tester.pumpWidget(
