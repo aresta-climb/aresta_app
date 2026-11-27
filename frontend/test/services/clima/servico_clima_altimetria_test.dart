@@ -182,3 +182,93 @@ void main() {
           equals(680),
         );
 
+        expect(await servico.sincronizarSeNecessario(forcar: true), isTrue);
+
+        relogio = relogio.add(const Duration(hours: 2));
+        fake.erroSimulado = const SocketException('Sem rede na rocha');
+        expect(await servico.sincronizarSeNecessario(), isFalse);
+
+        servico.dispose();
+
+        // Verifica tolerancia caso assetBundle falhe e construtor com relogio padrao
+        final servicoAssetFalho = ServicoClimaAltimetria(
+          armazenamento: armazenamento,
+          fonteRemota: fake,
+          assetBundle: _AssetBundleFalho(),
+        );
+        await servicoAssetFalho.inicializar();
+        expect(
+          servicoAssetFalho.obterUmidadePico('inexistente').nivel,
+          NivelUmidadePico.seco,
+        );
+        servicoAssetFalho.dispose();
+        final servicoPadrao = ServicoClimaAltimetria();
+        expect(servicoPadrao.bolhasAtivas, isEmpty);
+        servicoPadrao.dispose();
+      },
+    );
+
+    test(
+      'ClienteClimaAltimetriaSupabase deve lidar com chave JWT, recorrer a copia_seguranca e falhar em HTTP 500 ou ambos vazios',
+      () async {
+        var modoServidor = 'fallback_seguranca';
+        String? authRecebido;
+        final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => servidor.close(force: true));
+
+        var requisicoesAltimetria = 0;
+        servidor.listen((HttpRequest req) async {
+          authRecebido = req.headers.value('authorization');
+          req.response.headers.contentType = ContentType.json;
+          final slot = req.uri.queryParameters['slot'] ?? '';
+          if (req.uri.path.endsWith('/snapshots_altimetria_picos')) {
+            requisicoesAltimetria++;
+          }
+
+          if (modoServidor == 'erro_500') {
+            req.response.statusCode = 503;
+            req.response.write('Unavailable');
+            await req.response.close();
+            return;
+          }
+          if (modoServidor == 'ambos_vazios') {
+            req.response.write('[]');
+            await req.response.close();
+            return;
+          }
+
+          if (req.uri.path.endsWith('/estado_clima_picos')) {
+            if (slot == 'eq.atual' && modoServidor == 'fallback_seguranca') {
+              req.response.write('[]');
+            } else {
+              req.response.write(jsonEncode([
+                {
+                  'slot': slot.replaceFirst('eq.', ''),
+                  'gerado_em': '2026-11-25T12:00:00Z',
+                  'bolhas_chuva': [
+                    {
+                      'id': 'frente_cipo',
+                      'lat': -19.34,
+                      'lon': -43.62,
+                      'intensidade_mm_h': 3.2,
+                      'vento_rumo_graus': 40.0,
+                      'vento_kmh': 19.0,
+                      'contorno_externo': [
+                        [-44.0, -19.8],
+                        [-43.1, -19.7],
+                        [-43.5, -18.9],
+                      ],
+                    },
+                  ],
+                  'chuva_por_pico': {
+                    'cipo': [
+                      {
+                        'data': '2026-11-24',
+                        'mm': 9.4,
+                        'bolha_id': 'frente_cipo',
+                      },
+                    ],
+                  },
+                },
+              ]));
+            }
