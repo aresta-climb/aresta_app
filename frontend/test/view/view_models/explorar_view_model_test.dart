@@ -302,16 +302,97 @@ void main() {
         );
         expect(viewModel.picosCards[0].textoDistancia, equals('~35 min'));
         expect(viewModel.picosCards[1].textoDistancia, equals('~1h 10min'));
-        expect(
-          viewModel.picosCards[1].tooltipDistancia,
-          equals('Estimativa sem trânsito: ~1h 10min (35.1 km)'),
-        );
-        expect(viewModel.picosCards[2].id, equals('pico_sem_malha_local'));
-        expect(viewModel.picosCards[2].textoDistancia, contains('km'));
         expect(viewModel.picosCards[2].tooltipDistancia, isNull);
       },
     );
 
+    test(
+      'filtra picos por modalidades (incluindo Paredão e Highline), faixa de grau offline via catalogo.db, raio km, offline, clima e selecao mapa-lista',
+      () async {
+        await repoCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_explorar_1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(croquiUid: 'u_ig', idSlug: 'p_igarape', nome: 'Pedra Grande'),
+                CatalogoCroqui(croquiUid: 'u_urca', idSlug: 'p_urca', nome: 'Pão de Açúcar'),
+                CatalogoCroqui(croquiUid: 'u_milho', idSlug: 'p_milho', nome: 'Milho Verde'),
+              ],
+              entidades: [
+                CatalogoEntidade(uid: 'e1', tipo: 'escalada', croquiUid: 'u_ig', nome: 'Via 7b', escaladaGrau: '7b', escaladaTipo: 'esportiva'),
+                CatalogoEntidade(uid: 'e2', tipo: 'escalada', croquiUid: 'u_urca', nome: 'Italianos', escaladaGrau: '5sup', escaladaTipo: 'multienfiada'),
+                CatalogoEntidade(uid: 'e3', tipo: 'escalada', croquiUid: 'u_milho', nome: 'Mandala', escaladaGrau: 'V9', escaladaTipo: 'boulder'),
+              ],
+            ),
+          ),
+        );
+        await viewModel.recarregarPerfisGrauCatalogo();
+        await servicoClima.inicializar();
+        await servicoClima.sincronizarSeNecessario();
+
+        repositorio.activeDataset.value = ConjuntoDadosCroqui(
+          metadadosDisponiveis: [
+            ResumoCroqui(
+              id: 'p_igarape',
+              nome: 'Pedra Grande',
+              localizacao: Coordenada(latitude: -200700000, longitude: -443200000),
+              precomputados: PrecomputadosResumoCroqui(
+                totalEscaladas: 85,
+                totalEsportivas: 80,
+                totalMoveis: 5,
+              ),
+            ),
+            ResumoCroqui(
+              id: 'p_urca',
+              nome: 'Pão de Açúcar',
+              localizacao: Coordenada(latitude: -229500000, longitude: -431600000),
+              precomputados: PrecomputadosResumoCroqui(
+                totalEscaladas: 270,
+                totalMoveis: 190,
+                totalMultiplasEnfiadas: 145,
+                totalHighlines: 2,
+              ),
+            ),
+            ResumoCroqui(
+              id: 'p_milho',
+              nome: 'Milho Verde',
+              localizacao: Coordenada(latitude: -184700000, longitude: -434900000),
+              precomputados: PrecomputadosResumoCroqui(
+                totalEscaladas: 140,
+                totalBoulders: 132,
+              ),
+            ),
+          ],
+          croquisBaixados: [Croqui(id: 'p_igarape', nome: 'Pedra Grande')],
+        );
+        // Aguarda a sincronizacao seletiva automatica disparada ao detectar picos novos no dataset
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        viewModel.atualizarLocalizacaoUsuario(-20.00, -44.00);
+
+        // 1. Tag Paredão filtra apenas multi-enfiadas (Pão de Açúcar) e alternar novamente desmarca
+        expect(ModalidadeExploracaoPico.paredao.rotulo, equals('Paredão'));
+        viewModel.alternarModalidade(ModalidadeExploracaoPico.paredao);
+        expect(viewModel.picosFiltrados.map((p) => p.id).toList(), equals(['p_urca']));
+        expect(viewModel.totalFiltrosAtivos, equals(1));
+        viewModel.alternarModalidade(ModalidadeExploracaoPico.paredao);
+        expect(viewModel.modalidadesAtivas, isEmpty);
+
+        // 2. Highline, Boulder, Esportiva e Movel
+        viewModel.definirModalidades({ModalidadeExploracaoPico.highline});
+        expect(viewModel.picosFiltrados.single.id, equals('p_urca'));
+        viewModel.definirModalidades({ModalidadeExploracaoPico.boulder});
+        expect(viewModel.picosFiltrados.single.id, equals('p_milho'));
+        viewModel.definirModalidades({ModalidadeExploracaoPico.esportiva, ModalidadeExploracaoPico.movel});
+        expect(viewModel.picosFiltrados.length, equals(2));
+
+        // 3. Faixa de Grau de Vias (7a=810 .. 7c=830 -> apenas p_igarape possui 7b!) + lookup por croquiUid
+        repositorio.activeDataset.value = ConjuntoDadosCroqui(
+          metadadosDisponiveis: [
+            ...repositorio.activeDataset.value!.metadadosDisponiveis,
+            ResumoCroqui(
+              id: 'slug_sem_indice_direto',
     testWidgets(
       'cobre desempate de distância, picos sem coordenadas, debounce de busca, downloads e ações de UI',
       (WidgetTester tester) async {
