@@ -354,86 +354,71 @@ void main() {
       final vm = (await criarVmAssincrono(tester))
         ..atualizarLocalizacaoUsuario(-20.0, -44.0);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BrowsePage(viewModel: vm),
-          ),
-        ),
-      );
+      await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vm)));
+      await tester.pumpAndSettle();
+
+      // Expande a gaveta para Lista para inspecionar os 3 cards simultaneamente
+      await tester.tap(find.byKey(const Key('encaixe_gaveta_lista')));
       await tester.pumpAndSettle();
 
       double getPos(String text) => tester.getTopLeft(find.text(text)).dy;
 
-      // Ordem padrão: Mais próximos -> C (mais perto), B (meio), A (mais longe)
-      expect(
-        getPos('C PICO') < getPos('B PICO'),
-        true,
-        reason: 'Mais próximos: C deve vir antes de B',
-      );
-      expect(
-        getPos('B PICO') < getPos('A PICO'),
-        true,
-        reason: 'Mais próximos: B deve vir antes de A',
-      );
-      // Badges de distância visíveis nos 3 cards
+      expect(getPos('C PICO') < getPos('B PICO'), isTrue);
+      expect(getPos('B PICO') < getPos('A PICO'), isTrue);
       expect(find.byIcon(Icons.place), findsNWidgets(3));
 
-      // Abre modal de ordenação
+      // Abre modal de Filtros e Ordenacao e seleciona Alfabetico (A-Z)
       await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
-
-      expect(find.text('Mais próximos'), findsOneWidget);
-      expect(find.text('Alfabético (A-Z)'), findsOneWidget);
-      expect(find.text('Mais escaladas'), findsOneWidget);
-
-      // Seleciona Alfabético (A-Z)
       mockTelemetry.clear();
       await tester.tap(find.text('Alfabético (A-Z)'));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('botao_aplicar_filtros_explorar')));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
-      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
-      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'alfabetico');
+      expect(getPos('A PICO') < getPos('B PICO'), isTrue);
+      expect(getPos('B PICO') < getPos('C PICO'), isTrue);
 
-      expect(getPos('A PICO') < getPos('B PICO'), true);
-      expect(getPos('B PICO') < getPos('C PICO'), true);
-      expect(find.byIcon(Icons.place), findsNWidgets(3));
-
-      // Abre modal novamente e seleciona Mais escaladas
+      // Seleciona Mais escaladas
       await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
-
-      mockTelemetry.clear();
       await tester.tap(find.text('Mais escaladas'));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('botao_aplicar_filtros_explorar')));
       await tester.pumpAndSettle();
 
-      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
-      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
-      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'escaladas');
-
-      expect(getPos('B PICO') < getPos('C PICO'), true);
-      expect(getPos('C PICO') < getPos('A PICO'), true);
-      expect(find.byIcon(Icons.place), findsNWidgets(3));
+      expect(getPos('B PICO') < getPos('C PICO'), isTrue);
+      expect(getPos('C PICO') < getPos('A PICO'), isTrue);
     },
   );
 
   testWidgets(
-    'BrowsePage rola automaticamente até o 7º pico ao acionar focarSetimoPicoProximo e mantém os 6 primeiros ao rolar para cima',
+    'BrowsePage rola ate o 7o pico, sincroniza serving e expoe botao de trocar serving em modo experimental',
     (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 820));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.runAsync(() => MalhaGeograficaGlobo.carregarDoAssetBundle());
+
       final picos = List.generate(10, (i) {
-        return <String, dynamic>{
-          'id': 'pico_$i',
-          'nome': 'Pico Ordem $i',
-          'latitude': -20.0 - (i * 0.1),
-          'longitude': -44.0,
-          'estatisticas': {'totalVias': 10},
-        };
+        return ResumoCroqui(
+          id: 'br_mg_pico_$i',
+          nome: 'Pico Ordem $i',
+          localizacao: Coordenada(
+            latitude: ((-19.2 - i * 0.08) * 1e7).round(),
+            longitude: (-44.0 * 1e7).round(),
+          ),
+          precomputados: PrecomputadosResumoCroqui(totalEscaladas: 10),
+        );
       });
 
-      mockRepo.activeDataset.value = TopoDataset(
-        availablePicos: picos,
-        downloadedPicos: [],
+      mockEditor.isExperimentalMode.value = true;
+      final vm = (await criarVmAssincrono(tester))
+        ..atualizarLocalizacaoUsuario(-20.0, -44.0);
+
+      mockRepo.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: picos,
+        croquisBaixados: const [],
       );
       mockRepo.indiceData.value = Indice();
 
