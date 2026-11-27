@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/meus_croquis_functions.dart';
 import '../view/view_models/meus_croquis_view_model.dart';
@@ -23,54 +24,63 @@ class MeusCroquisPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'MEUS CROQUIS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'ARMAZENAMENTO OFFLINE',
-                          style: TextStyle(
-                            color: context.colors.dryMoss,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.sync, color: context.colors.ashGrey),
-                        onPressed: () => viewModel.sincronizarManual(context),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr(ChaveTexto.meusCroquisTitulo),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              context.tr(ChaveTexto.meusCroquisSubtitulo),
+                              style: TextStyle(
+                                color: context.colors.dryMoss,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      buildFeedbackButton(
-                        context,
-                        color: context.colors.ashGrey,
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.sync,
+                              color: context.colors.ashGrey,
+                            ),
+                            onPressed: () =>
+                                viewModel.sincronizarManual(context),
+                          ),
+                          const SizedBox(width: 8),
+                          buildFeedbackButton(
+                            context,
+                            color: context.colors.ashGrey,
+                          ),
+                        ],
                       ),
                     ],
                   ),
