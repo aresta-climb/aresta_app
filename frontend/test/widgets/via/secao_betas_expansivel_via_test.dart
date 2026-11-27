@@ -78,3 +78,71 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('M'), findsOneWidget);
 
+      // Atualizar avatarUrl em didUpdateWidget limpa o estado de falha e exibe a nova imagem
+      await tester.pumpWidget(
+        envolver(
+          const AvatarAutorComunidadeVia(
+            key: Key('avatar_mutavel'),
+            avatarUrl: 'https://exemplo.invalido/falha.webp',
+            iniciais: 'M',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        envolver(
+          const AvatarAutorComunidadeVia(
+            key: Key('avatar_mutavel'),
+            avatarUrl: png1x1DataUri,
+            iniciais: 'M',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('avatar_mutavel')), findsOneWidget);
+
+      // Recolhe novamente quando remontada e tocada no cabeçalho
+      await tester.pumpWidget(
+        envolver(
+          const SecaoNotasComunidadeVia(
+            notas: [
+              NotaComunidadeApresentacao(
+                cabecalhoAutorData: 'Eduardo Utsch • 23/11/2026',
+                iniciaisAutor: 'EU',
+                autorAvatarUrl: png1x1DataUri,
+                rotuloEstilo: 'FLASH ★',
+                texto: 'Boa sorte! Costura 3 pela esquerda.',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Boa sorte! Costura 3 pela esquerda.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('cabecalho_betas_comunidade_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Boa sorte! Costura 3 pela esquerda.'), findsNothing);
+
+      // Exibe ícones de editar e excluir exclusivamente para comentários criados pelo usuário atual
+      NotaComunidadeApresentacao? editada;
+      NotaComunidadeApresentacao? excluida;
+      await tester.pumpWidget(
+        envolver(
+          SecaoNotasComunidadeVia(
+            notas: const [
+              NotaComunidadeApresentacao(
+                uid: 'nota_minha_01',
+                pertenceAoUsuarioAtual: true,
+                cabecalhoAutorData: 'Você • 25/11/2026',
+                iniciaisAutor: 'VC',
+                texto: 'Meu beta editável.',
+              ),
+              NotaComunidadeApresentacao(
+                uid: 'nota_alheia_02',
+                pertenceAoUsuarioAtual: false,
+                cabecalhoAutorData: 'Outro • 24/11/2026',
+                iniciaisAutor: 'OT',
+                texto: 'Beta de outro escalador.',
+              ),
+            ],
