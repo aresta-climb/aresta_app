@@ -375,3 +375,93 @@ abstract final class CamadaMarcadoresGloboExplorar {
       candidatos.add((id: 'loc_$i', cidade: cidade, pos: Offset(pt.x, pt.y)));
     }
 
+    if (candidatos.isEmpty) return const [];
+    candidatos.sort((a, b) {
+      final relA = a.cidade.ehRelevanteAresta ? 0 : 1;
+      final relB = b.cidade.ehRelevanteAresta ? 0 : 1;
+      if (relA != relB) return relA.compareTo(relB);
+      return a.cidade.localidade.nivel.compareTo(b.cidade.localidade.nivel);
+    });
+
+    final entradasColisao = <({
+      String id,
+      String nome,
+      Offset posicao,
+      bool prioritario,
+    })>[];
+    for (final p in picos) {
+      final elevPico = math.max(
+            0.0,
+            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+              latitude: p.latitude,
+              longitude: p.longitude,
+              picosReferencia: referencias,
+              ehTerraConfirmada: true,
+            ),
+          ) *
+          pesoTerreno;
+      final ptPico = controlador.projetarCoordenada(
+        latitude: p.latitude,
+        longitude: p.longitude,
+        elevacaoMetros: elevPico,
+        tamanhoTela: tamanho,
+      );
+      if (ptPico.visivel &&
+          ptPico.x > 0 &&
+          ptPico.x < tamanho.width &&
+          ptPico.y > 0 &&
+          ptPico.y < tamanho.height) {
+        final ehSel = p.id == picoSelecionadoId;
+        entradasColisao.add((
+          id: 'ancora_pico_${p.id}',
+          nome: ehSel ? p.nome : '',
+          posicao: Offset(ptPico.x, ehSel ? ptPico.y - 32.0 : ptPico.y),
+          prioritario: true,
+        ));
+      }
+    }
+    for (final c in candidatos) {
+      entradasColisao.add((
+        id: c.id,
+        nome: c.cidade.localidade.nome,
+        posicao: c.pos,
+        prioritario: false,
+      ));
+    }
+
+    final aprovados = ControladorCameraGlobo.selecionarIdsSemColisaoRotulos(
+      entradasColisao,
+      alturaCaixa: 30.0,
+    );
+
+    final opacidade =
+        ControladorCameraGlobo.smoothstep(1.68, 2.15, controlador.lod);
+    final widgets = <Widget>[];
+    for (final c in candidatos) {
+      if (!aprovados.contains(c.id)) continue;
+      if (widgets.length >= 8) break;
+      final loc = c.cidade.localidade;
+      final ehPolo = loc.nivel == 1;
+      final acesaAresta = c.cidade.ehRelevanteAresta &&
+          progressoLuzViaria >= c.cidade.tempoAtivacao;
+
+      widgets.add(
+        Positioned(
+          left: (c.pos.dx - 70).clamp(6.0, tamanho.width - 146.0),
+          top: c.pos.dy - 9,
+          width: 140,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: opacidade,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    key: Key(
+                      acesaAresta
+                          ? 'cidade_aresta_${loc.nome}'
+                          : 'cidade_referencia_${loc.nome}',
+                    ),
+                    width: acesaAresta ? 6.0 : (ehPolo ? 5.0 : 4.0),
+                    height: acesaAresta ? 6.0 : (ehPolo ? 5.0 : 4.0),
