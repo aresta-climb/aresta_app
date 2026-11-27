@@ -180,3 +180,95 @@ void main() {
       );
       addTearDown(vm.dispose);
 
+      // Ativa timer esparso de estrelas em 3D quando o ticker principal está parado
+      vm.sincronizarEstadoCena(controlador: ctrl, tickerAtivo: false);
+      final faseAntes = vm.faseEstrelasSegundos.value;
+      await Future<void>.delayed(const Duration(milliseconds: 220));
+      expect(vm.faseEstrelasSegundos.value, greaterThan(faseAntes));
+
+      // Ao entrar em 2D, cancela o timer de estrelas
+      ctrl.definirModo3D(false);
+      vm.sincronizarEstadoCena(controlador: ctrl, tickerAtivo: false);
+      ctrl.definirModo3D(true);
+
+      // Zoom-in acima do limiar dispara ida progressiva da luz viária (0 -> 1 em 1.60s)
+      ctrl.definirLod(1.90);
+      vm.sincronizarEstadoCena(controlador: ctrl, tickerAtivo: true);
+      expect(vm.alvoLuzViaria, equals(1.0));
+      expect(
+        vm.precisaAnimarQuadro(controlador: ctrl, temFenomenoAoVivo: false),
+        isTrue,
+      );
+
+      vm.avancarQuadro(
+        dtSegundos: 0.80,
+        controlador: ctrl,
+        temFenomenoAoVivo: true,
+      );
+      expect(vm.progressoLuzViaria, closeTo(0.50, 0.05));
+      expect(vm.faseTempestadeSegundos, greaterThan(0.0));
+
+      vm.avancarQuadro(
+        dtSegundos: 1.00,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoLuzViaria, equals(1.0));
+
+      // Zoom-out abaixo do limiar dispara retração reversa (1 -> 0 em 1.35s)
+      ctrl.definirLod(1.00);
+      vm.avancarQuadro(
+        dtSegundos: 0.675,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.alvoLuzViaria, equals(0.0));
+      expect(vm.progressoLuzViaria, closeTo(0.50, 0.05));
+
+      vm.avancarQuadro(
+        dtSegundos: 0.80,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoLuzViaria, equals(0.0));
+
+      // Com animações desativadas (acessibilidade), transições acontecem instantaneamente
+      vm.atualizarPreferenciaAnimacoesAmbiente(false);
+      ctrl.definirLod(1.95);
+      vm.sincronizarEstadoCena(controlador: ctrl, tickerAtivo: false);
+      expect(vm.progressoLuzViaria, equals(1.0));
+      ctrl.definirLod(0.95);
+      vm.sincronizarEstadoCena(controlador: ctrl, tickerAtivo: false);
+      expect(vm.progressoLuzViaria, equals(0.0));
+    });
+
+    test('resolve pico focado, escalona LODs de seleção, executa duplo-toque 2D/3D e reseta visão orbital', () {
+      final ctrl = ControladorCameraGlobo(
+        latitudeInicial: -20.05,
+        longitudeInicial: -44.30,
+        lodInicial: 0.50,
+      );
+      addTearDown(ctrl.dispose);
+
+      final vm = CenaGloboExplorarViewModel(
+        lodInicialCamera: ctrl.lod,
+        carregarMalha: () async => malhaSintetica,
+        carregarTextura: _criarImagem1x1,
+      );
+      addTearDown(vm.dispose);
+
+      const pico = MarcadorPicoGlobo(
+        id: 'igarape',
+        nome: 'Pedra Grande',
+        uf: 'MG',
+        latitude: -20.07,
+        longitude: -44.32,
+        altitudeBaseMetros: 980,
+        altitudePicoMetros: 1430,
+        umidade: EstadoUmidadePico(
+          nivel: NivelUmidadePico.possivelmenteUmido,
+          diasParaSecar: 3,
+          bolhaIdAssociada: 'b_mg',
+        ),
+      );
+
