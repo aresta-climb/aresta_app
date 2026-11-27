@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../navegacao/botao_voltar_com_retorno_inicio.dart';
 
@@ -31,7 +32,7 @@ class BarraTopoLogin extends StatelessWidget {
           BotaoVoltarComRetornoInicio(
             key: const Key('btn_voltar_login'),
             corIcone: cores.chalkWhite,
-            dica: 'Voltar',
+            dica: context.tr(ChaveTexto.comumVoltar),
             aoVoltar: aoVoltar,
             aoIrParaInicio: aoIrParaInicio,
           ),
@@ -314,8 +315,10 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
     final cores = context.colors;
     final bloqueadoReenvio = carregando || segundosRestantesReenvio > 0;
     final rotuloReenvio = segundosRestantesReenvio > 0
-        ? 'Reenviar código (${segundosRestantesReenvio}s)'
-        : 'Reenviar código';
+        ? context.tr(ChaveTexto.authReenviarComSegundos, {
+            's': '$segundosRestantesReenvio',
+          })
+        : context.tr(ChaveTexto.authReenviarCodigo);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -337,7 +340,7 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
               style: TextStyle(color: cores.chalkWhite, fontSize: 14),
               decoration: _decoracaoCampo(
                 cores: cores,
-                rotulo: 'E-mail',
+                rotulo: context.tr(ChaveTexto.authEmailLabel),
                 icone: Icons.alternate_email,
               ),
             ),
@@ -350,8 +353,10 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   segundosRestantesReenvio > 0
-                      ? 'Aguarde ${segundosRestantesReenvio}s'
-                      : 'Receber código por e-mail',
+                      ? context.tr(ChaveTexto.authAguardeSegundos, {
+                          's': '$segundosRestantesReenvio',
+                        })
+                      : context.tr(ChaveTexto.authReceberCodigoEmail),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14.5,
@@ -387,7 +392,7 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
               ),
               decoration: _decoracaoCampo(
                 cores: cores,
-                rotulo: 'Código de 6 dígitos',
+                rotulo: context.tr(ChaveTexto.authCodigo6DigitosLabel),
                 icone: Icons.pin_outlined,
               ),
             ),
@@ -396,12 +401,12 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
               key: const Key('btn_confirmar_codigo_otp'),
               onPressed: carregando ? null : aoConfirmarCodigo,
               style: _estiloBotaoPrimario(cores),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  'Confirmar código',
+                  context.tr(ChaveTexto.authConfirmarCodigo),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
                   ),
@@ -432,7 +437,7 @@ class CartaoCodigoEmailLogin extends StatelessWidget {
                   key: const Key('btn_alterar_email_otp'),
                   onPressed: carregando ? null : aoAlterarEmailOtp,
                   child: Text(
-                    'Usar outro e-mail',
+                    context.tr(ChaveTexto.authUsarOutroEmail),
                     style: TextStyle(
                       color: cores.ashGrey,
                       fontSize: 12.5,
@@ -520,7 +525,7 @@ class BotaoAbrirConfiguracoesLogin extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              'Abrir configurações do app',
+              context.tr(ChaveTexto.authAbrirConfigApp),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: cores.chalkWhite.withValues(alpha: 0.9),

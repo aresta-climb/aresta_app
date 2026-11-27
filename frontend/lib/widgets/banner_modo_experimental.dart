@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../services/editor_croqui.dart';
 
 /// Widget modular e desacoplado que exibe o banner superior durante o modo experimental ativo.
@@ -104,10 +105,10 @@ class _BannerModoExperimentalState extends State<BannerModoExperimental>
                         size: 14,
                       ),
                       const SizedBox(width: 6),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'MODO EXPERIMENTAL ATIVO',
-                          style: TextStyle(
+                          context.tr(ChaveTexto.sistemaModoExperimentalAtivo),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 10,
@@ -135,20 +136,20 @@ class _BannerModoExperimentalState extends State<BannerModoExperimental>
                                 width: 0.8,
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'SAIR',
-                                  style: TextStyle(
+                                  context.tr(ChaveTexto.sistemaSair),
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 9,
                                     letterSpacing: 0.8,
                                   ),
                                 ),
-                                SizedBox(width: 2),
-                                Icon(
+                                const SizedBox(width: 2),
+                                const Icon(
                                   Icons.close,
                                   color: Colors.white,
                                   size: 10,

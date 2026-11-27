@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../services/firebase/telemetria.dart';
 
@@ -54,9 +55,9 @@ class BannerModoOnline extends StatelessWidget {
               size: 20,
             ),
             const SizedBox(width: 8),
-            const Text(
-              'SALVO OFFLINE',
-              style: TextStyle(
+            Text(
+              context.tr(ChaveTexto.comumSalvoOfflineCaixaAlta),
+              style: const TextStyle(
                 color: Color(0xFF7B8B6F),
                 fontWeight: FontWeight.w900,
                 fontSize: 12,
@@ -72,9 +73,13 @@ class BannerModoOnline extends StatelessWidget {
     final String rotuloBotao = (tamanhoFormatado != null &&
             tamanhoFormatado!.isNotEmpty &&
             tamanhoFormatado != '0 B' &&
-            tamanhoFormatado != 'Offline')
-        ? 'Salvar Offline ($tamanhoFormatado)'
-        : 'Salvar Offline';
+            tamanhoFormatado != 'Offline' &&
+            tamanhoFormatado != tr(ChaveTexto.comumOffline))
+        ? context.tr(
+            ChaveTexto.offlineSalvarComTamanho,
+            {'tamanho': tamanhoFormatado},
+          )
+        : context.tr(ChaveTexto.offlineSalvarSemTamanho);
 
     return Container(
       width: double.infinity,
@@ -98,9 +103,9 @@ class BannerModoOnline extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Text(
-                'MODO ONLINE',
-                style: TextStyle(
+              Text(
+                context.tr(ChaveTexto.offlineModoOnlineTitulo),
+                style: const TextStyle(
                   color: AppColors.brandColor,
                   fontWeight: FontWeight.w900,
                   fontSize: 12,
@@ -111,7 +116,7 @@ class BannerModoOnline extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Você está navegando via internet. Salve o guia completo para usar sem sinal na pedra.',
+            context.tr(ChaveTexto.offlineModoOnlineDesc),
             style: TextStyle(
               color: context.colors.ashGrey,
               fontSize: 13,
@@ -131,7 +136,10 @@ class BannerModoOnline extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'BAIXANDO (${(progressoDownload! * 100).toInt()}%)...',
+              context.tr(
+                ChaveTexto.offlineBaixandoPct,
+                {'pct': (progressoDownload! * 100).toInt()},
+              ),
               style: TextStyle(
                 color: context.colors.dryMoss,
                 fontWeight: FontWeight.bold,
