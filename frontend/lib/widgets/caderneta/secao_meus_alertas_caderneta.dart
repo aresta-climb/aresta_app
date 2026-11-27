@@ -332,11 +332,36 @@ class _CartaoMeuAlertaCaderneta extends StatelessWidget {
                           visualDensity: VisualDensity.compact,
                           onPressed: aoExcluir,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      if (aoResolver != null)
+                        OutlinedButton.icon(
+                          key: Key('btn_resolver_meu_alerta_${alerta.uid}'),
+                          onPressed: aoResolver,
+                          icon: Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 15,
+                            color: cores.fernGreen,
+                          ),
+                          label: Text(
+                            context.tr(ChaveTexto.alertaMarcarResolvido),
+                            style: TextStyle(
+                              color: cores.chalkWhite,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: cores.graniteEdge),
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ],
