@@ -80,3 +80,76 @@ void main() {
       expect(await armSemPlugin.lerSnapshot(), isNull);
       expect(await armSemPlugin.lerCopiaSeguranca(), isNull);
 
+      // Exercita construtor padrão com path_provider via canal simulado
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (call) async => tempRaiz.path,
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
+      });
+      final armPadrao = ArmazenamentoMalhaViariaLocal();
+      expect(await armPadrao.lerSnapshot(), isNull);
+    });
+  });
+
+  group('ClienteMalhaViariaSupabase e ServicoMalhaViariaOffline', () {
+    test('opera 100% offline em áreas remotas e sincroniza incrementalmente via Supabase (atual -> copia_seguranca) quando conectado', () async {
+      final tempDir = await Directory.systemTemp.createTemp('srv_viario_test_');
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      var statusHttp = 200;
+      var slotAtualVazio = false;
+      var slotSegurancaVazio = false;
+      var versaoServidor = 'osm-v1-semente';
+      var consultasVersao = 0;
+      var downloadsCompletos = 0;
+      String? authRecebido;
+
+      final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => servidor.close(force: true));
+
+      servidor.listen((req) async {
+        authRecebido = req.headers.value('authorization');
+        req.response.statusCode = statusHttp;
+        if (statusHttp != 200) {
+          await req.response.close();
+          return;
+        }
+        final select = req.uri.queryParameters['select'] ?? '';
+        final slot = req.uri.queryParameters['slot'] ?? '';
+        final ehAtual = slot == 'eq.atual';
+        if ((ehAtual && slotAtualVazio) || (!ehAtual && slotSegurancaVazio)) {
+          req.response.write('[]');
+          await req.response.close();
+          return;
+        }
+        if (!select.contains('rodovias')) {
+          consultasVersao++;
+          req.response.write(
+            jsonEncode([
+              {'slot': ehAtual ? 'atual' : 'copia_seguranca', 'versao_hash': versaoServidor},
+            ]),
+          );
+        } else {
+          downloadsCompletos++;
+          final snap = _criarSnapshotViario(versaoServidor, 'BR-381');
+          req.response.write(jsonEncode([snap.paraMapa()]));
+        }
+        await req.response.close();
+      });
+
+      final cliente = ClienteMalhaViariaSupabase(
+        urlBaseSupabase: 'http://127.0.0.1:${servidor.port}/',
+        chaveAnonima: 'eyJhbGciOiJIUzI1NiJ9.teste',
+        clienteHttp: ClienteHttpAresta.paraTestes(http.Client()),
+      );
+      final arm = ArmazenamentoMalhaViariaLocal(
+        provedorDiretorioBase: () async => tempDir.path,
+      );
+
