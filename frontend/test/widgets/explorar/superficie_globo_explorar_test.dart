@@ -177,3 +177,105 @@ void main() {
         addTearDown(alturaGaveta.dispose);
         String? selecionadoNoMapa;
 
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: bolhasTeste,
+                picoSelecionadoId: 'igarape',
+                alturaGavetaNotificador: alturaGaveta,
+                localizacaoUsuario: (latitude: -19.92, longitude: -43.94),
+                aoCentralizarNoUsuario: () {},
+                aoSelecionarPicoNoMapa: (id) => selecionadoNoMapa = id,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const Key('marcador_localizacao_usuario')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('botao_minha_localizacao')),
+          findsOneWidget,
+        );
+
+        // Toque no cluster MG 3 aproxima para LOD 1 sem colidir com RJ 1
+        await tester.tap(find.byKey(const Key('cluster_uf_MG')));
+        for (var i = 0; i < 18; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+        expect(selecionadoNoMapa, equals('igarape'));
+        expect(ctrl.indiceLod, equals(1));
+
+        // Em LOD 1 baixo (~1.05), pinos nao selecionados sao pontos compactos clicaveis
+        ctrl.definirLod(1.05);
+        await tester.pump();
+        final pontoCipo = tester
+            .widgetList<GestureDetector>(find.byType(GestureDetector))
+            .toList();
+        expect(pontoCipo.length, greaterThanOrEqualTo(3));
+
+        // Toca no pino rotulado do pico selecionado para voar ate o LOD 3
+        await tester.tap(find.text('Pedra Grande'));
+        for (var i = 0; i < 18; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+
+        // Verifica LOD 2 intermediario com curvas 250m e rotulo autoexplicativo de altitude acima do nivel do mar
+        ctrl.definirLod(2.05);
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(find.text('Pedra Grande'), findsOneWidget);
+        expect(find.text('1430 m acima do mar'), findsOneWidget);
+
+        // Verifica LOD 3 no objeto proximo: terreno continuo detalhado com cidades reais e SEM trilha ficticia!
+        ctrl.iniciarVooParabolico(
+          destinoLat: -20.07,
+          destinoLon: -44.32,
+          destinoLod: 3.45,
+        );
+        for (var i = 0; i < 32; i++) {
+          await tester.pump(const Duration(milliseconds: 45));
+        }
+        expect(find.text('Base / Trilha'), findsNothing);
+        expect(find.text('Igarapé'), findsOneWidget);
+
+        // Ao dar zoom alto (2.9) no meio do Oceano Atlantico (longe de qualquer pico),
+        // NAO exibe Base / Trilha e pinta azul oceanico puro (sem grama falsa!)
+        ctrl.iniciarVooParabolico(
+          destinoLat: -20.0,
+          destinoLon: -35.0,
+          destinoLod: 2.9,
+        );
+        for (var i = 0; i < 32; i++) {
+          await tester.pump(const Duration(milliseconds: 45));
+        }
+        expect(find.text('Base / Trilha'), findsNothing);
+        final boundaryMar = tester.renderObject<RenderRepaintBoundary>(
+          find.descendant(
+            of: find.byType(SuperficieGloboExplorar),
+            matching: find.byType(RepaintBoundary),
+          ).first,
+        );
+        late ui.Image imgMar;
+        await tester.runAsync(() async {
+          imgMar = await boundaryMar.toImage(pixelRatio: 0.5);
+        });
+        final bytesMar = (await tester.runAsync(
+          () => imgMar.toByteData(format: ui.ImageByteFormat.rawRgba),
+        ))!;
+        final wMar = imgMar.width;
+        final hMar = imgMar.height;
+        imgMar.dispose();
+        final cxMar = wMar ~/ 2;
+        final cyMar = hMar ~/ 2;
+        final idxMar = (cyMar * wMar + cxMar) * 4;
+        final rMar = bytesMar.getUint8(idxMar);
+        final gMar = bytesMar.getUint8(idxMar + 1);
+        final bMar = bytesMar.getUint8(idxMar + 2);
+        expect(bMar, greaterThan(gMar + 15));
+        expect(bMar, greaterThan(rMar + 20));
+
