@@ -90,3 +90,89 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     final precisaMalhaOuTextura = _malha == null || _texturaNasa == null;
     if (!precisaMalhaOuTextura && _servicoElevacao.inicializado) return;
 
+    _hidratandoAssets = true;
+    try {
+      final futuros = <Future<Object?>>[
+        if (precisaMalhaOuTextura) _carregarMalha(),
+        if (precisaMalhaOuTextura) _carregarTextura(),
+        if (!_servicoElevacao.inicializado) _servicoElevacao.inicializar(),
+      ];
+      final resultados = await Future.wait<Object?>(futuros);
+      if (_descartado) return;
+      if (precisaMalhaOuTextura) {
+        _malha = resultados[0] as MalhaGeograficaGlobo;
+        _texturaNasa = resultados[1] as ui.Image;
+      }
+    } finally {
+      _hidratandoAssets = false;
+    }
+    notifyListeners();
+  }
+
+  /// Amostra sincronamente em `O(1)` a altitude SRTM real (tile Terrarium ou grade regional offline).
+  double? amostrarElevacaoReal(double latitude, double longitude) =>
+      _servicoElevacao.amostrarElevacaoReal(
+        latitude: latitude,
+        longitude: longitude,
+      );
+
+  /// Obtém em `O(1)` a [RedeViariaArestaGlobo] memoizada nesta instância para a malha e picos atuais.
+  RedeViariaArestaGlobo? obterRedeViaria(List<PicoRelevoReferencia> picos) {
+    final malhaAtual = _malha;
+    if (malhaAtual == null) return null;
+    final assinatura = ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picos);
+    if (_redeViariaMemoizada != null &&
+        identical(_malhaMemoizada, malhaAtual) &&
+        _assinaturaPicosMemoizada == assinatura) {
+      return _redeViariaMemoizada;
+    }
+    final construida = ConstrutorRedeViariaAresta.construir(
+      rodovias: malhaAtual.rodoviasProximas,
+      localidades: malhaAtual.localidadesProximas,
+      picos: picos,
+    );
+    _malhaMemoizada = malhaAtual;
+    _assinaturaPicosMemoizada = assinatura;
+    _redeViariaMemoizada = construida;
+    return construida;
+  }
+
+  /// Obtém as curvas de nível ancoradas em coordenadas fixas do mundo para a região visível,
+  /// solicitando tiles Terrarium sob demanda e reutilizando o cache `O(1)` durante o movimento da câmera.
+  ConjuntoCurvasNivelMundo? obterCurvasNivelVisiveis({
+    required ControladorCameraGlobo controlador,
+    required ui.Size tamanhoTela,
+    required List<PicoRelevoReferencia> picosReferencia,
+  }) {
+    final lod = controlador.lod;
+    if (lod < 1.90 || tamanhoTela.isEmpty) return null;
+
+    final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
+      modo3D: controlador.modo3D,
+      latitudeCentral: controlador.latitudeCentral,
+      longitudeCentral: controlador.longitudeCentral,
+      lod: lod,
+      raioAparentePx: controlador.raioAparentePx,
+      escala2D:
+          controlador.modo3D ? 1.0 : controlador.calcularEscala2D(tamanhoTela),
+      tamanhoTela: tamanhoTela,
+      fatorMargem: 1.08,
+    );
+
+    _servicoElevacao.solicitarTilesVisiveis(
+      minLat: janela.minLat,
+      maxLat: janela.maxLat,
+      minLon: janela.minLon,
+      maxLon: janela.maxLon,
+      lod: lod,
+    );
+
+    final nivel = ExtratorCurvasNivelMundo.resolverNivelDetalhe(lod);
+    final bloco = ExtratorCurvasNivelMundo.calcularGradeBlocoMundo(
+      janela: janela,
+      nivelDetalhe: nivel,
+    );
+    final versao = _servicoElevacao.versaoDados;
+    final assinaturaPicos =
+        ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picosReferencia);
+
