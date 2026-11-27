@@ -102,37 +102,122 @@ class BrowseViewModel extends ChangeNotifier {
     unawaited(_inicializarDadosAuxiliares());
   }
 
+  Iterable<String> get _idsPicosComCoordenada {
+    final lista = datasetRepo.activeDataset.value?.metadadosDisponiveis;
+    if (lista == null) return const [];
+    return lista
+        .where((m) => m.id.isNotEmpty && m.latitude != null && m.longitude != null)
+        .map((m) => m.id);
+  }
+
+  Future<void> _inicializarDadosAuxiliares() async {
+    await _hidratarLocalizacaoCache();
+    if (_descartado) return;
+    await recarregarPerfisGrauCatalogo();
+    if (_descartado) return;
+    await _servicoClima.inicializar();
+    if (_descartado) return;
+    await _servicoClima.sincronizarSeNecessario(
+      idsPicosCatalogo: _idsPicosComCoordenada,
+    );
+  }
+
+  Future<void> _hidratarLocalizacaoCache() async {
+    if (_userLat != null && _userLon != null) return;
+    final cache = await _localizadorGps.lerCoordenadaCache();
+    if (cache != null && !_descartado && _userLat == null) {
+      atualizarLocalizacaoUsuario(cache.latitude, cache.longitude);
+    }
+  }
+
+  /// Indica se há uma consulta ativa de GPS em andamento pelo botão Minha Localização.
+  bool get buscandoLocalizacao => _buscandoLocalizacao;
+
+  /// Consulta o GPS real do dispositivo via [LocalizadorGpsUsuario] e atualiza a posição ativa.
+  Future<ResultadoLocalizacaoGps> obterLocalizacaoTempoReal() async {
+    _buscandoLocalizacao = true;
+    _notificarSeAtivo();
+    try {
+      final res = await _localizadorGps.obterPosicaoAtual(
+        coordenadaFallback: localizacaoUsuarioAtiva,
+      );
+      final coord = res.coordenada;
+      if (coord != null && !_descartado) {
+        atualizarLocalizacaoUsuario(coord.latitude, coord.longitude);
+      }
+      return res;
+    } finally {
+      _buscandoLocalizacao = false;
+      _notificarSeAtivo();
+    }
+  }
+
+  void _aoMudarCatalogo() => unawaited(recarregarPerfisGrauCatalogo());
+
   void _aoAtualizarDataset() {
     _cacheProximidadePorId = null;
-    notifyListeners();
+    if (_servicoClima.inicializado && !_descartado) {
+      unawaited(
+        _servicoClima.sincronizarSeNecessario(
+          idsPicosCatalogo: _idsPicosComCoordenada,
+        ),
+      );
+    }
+    _notificarSeAtivo();
+  }
+
+  void _notificarSeAtivo() {
+    if (!_descartado) notifyListeners();
   }
 
   @override
   void dispose() {
+    _descartado = true;
     _timerDebounce?.cancel();
     _solicitacaoScrollSetimoPico.dispose();
+    _solicitacaoAutoScrollPicoSelecionado.dispose();
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
     datasetRepo.calculadoraDistanciaEstrada.removeListener(_aoAtualizarDataset);
-    datasetRepo.editorDeCroqui.isExperimentalMode.removeListener(_aoAtualizarDataset);
+    datasetRepo.editorDeCroqui.isExperimentalMode
+        .removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.editorUrl.removeListener(_aoAtualizarDataset);
+    datasetRepo.repositorioCatalogo.versaoNotificador
+        .removeListener(_aoMudarCatalogo);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .removeListener(_notificarSeAtivo);
+    _servicoClima.removeListener(_notificarSeAtivo);
     super.dispose();
   }
 
-  /// Monitoramento reativo do mapa de downloads em andamento.
+  /// Recarrega os perfis de graduação agregados a partir do `catalogo.db` local.
+  Future<void> recarregarPerfisGrauCatalogo() async {
+    final carregados =
+        await datasetRepo.repositorioCatalogo.carregarPerfisGrauPorCroqui();
+    if (_descartado) return;
+    _perfisGrauPorPico = carregados;
+    notifyListeners();
+  }
+
   ValueListenable<Map<String, double>> get downloadingCrags =>
       syncService.downloadingCrags;
 
-  /// Notificador reativo incrementado quando a tela deve rolar até o 7º pico mais próximo.
   ValueListenable<int> get solicitacaoScrollSetimoPico =>
       _solicitacaoScrollSetimoPico;
 
-  /// Latitude atual do usuário, se já resolvida.
-  double? get latitudeUsuario => _userLat;
+  /// Notificador incrementado quando um toque no mapa exige auto-scroll animado na lista da gaveta.
+  ValueListenable<int> get solicitacaoAutoScrollPicoSelecionado =>
+      _solicitacaoAutoScrollPicoSelecionado;
 
-  /// Longitude atual do usuário, se já resolvida.
+  String? get picoSelecionadoId => _picoSelecionadoId;
+  double? get latitudeUsuario => _userLat;
   double? get longitudeUsuario => _userLon;
 
-  /// Termo de pesquisa atualmente ativo na barra de busca.
+  /// Coordenada geográfica consolidada do usuário quando latitude e longitude estão disponíveis.
+  ({double latitude, double longitude})? get localizacaoUsuarioAtiva =>
+      (_userLat != null && _userLon != null)
+          ? (latitude: _userLat!, longitude: _userLon!)
+          : null;
+
   String get termoBusca => _termoBusca;
 
   /// Critério de ordenação selecionado pelo usuário.
