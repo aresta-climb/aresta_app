@@ -1,7 +1,8 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/comunidade_functions.dart';
 import '../view/view_models/comunidade_view_model.dart';
@@ -22,30 +23,39 @@ class ComunidadePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = viewModel ?? ComunidadeViewModel.doServico();
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        final vm = viewModel ?? ComunidadeViewModel.doServico();
 
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'MÍDIAS, APOIOS E INTERATIVIDADES',
-                      style: TextStyle(
-                        color: context.colors.dryMoss,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.tr(ChaveTexto.comunidadeHeader),
+                          style: TextStyle(
+                            color: context.colors.dryMoss,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      buildFeedbackButton(
+                        context,
+                        color: context.colors.ashGrey,
+                      ),
+                    ],
                   ),
                   buildFeedbackButton(context, color: context.colors.ashGrey),
                 ],
