@@ -255,3 +255,97 @@ abstract final class CodificadorMalhaBinaria {
     return (cotasPorPico: cotasPorPico, gradeRegional: grade);
   }
 
+  static void _escreverListaRodovias(
+    _EscritorBinario w,
+    List<RodoviaRegionalMapa> rodovias,
+  ) {
+    w.u32(rodovias.length);
+    for (final r in rodovias) {
+      w
+        ..u8(r.nivelViario.clamp(1, 3))
+        ..texto(r.codigo)
+        ..f32(r.minLon)
+        ..f32(r.maxLon)
+        ..f32(r.minLat)
+        ..f32(r.maxLat)
+        ..listaOffsets(r.verticesLonLat);
+    }
+  }
+
+  static List<RodoviaRegionalMapa> _lerListaRodovias(_LeitorBinario r) {
+    final n = r.u32();
+    return List<RodoviaRegionalMapa>.generate(
+      n,
+      (_) {
+        final nivel = r.u8().clamp(1, 3);
+        final codigo = r.texto();
+        final minLon = r.f32();
+        final maxLon = r.f32();
+        final minLat = r.f32();
+        final maxLat = r.f32();
+        final verts = r.listaOffsets();
+        return RodoviaRegionalMapa(
+          ehPrincipal: nivel == 1,
+          nivelViario: nivel,
+          codigo: codigo,
+          verticesLonLat: verts,
+          minLon: minLon,
+          maxLon: maxLon,
+          minLat: minLat,
+          maxLat: maxLat,
+        );
+      },
+      growable: false,
+    );
+  }
+}
+
+class _EscritorBinario {
+  final BytesBuilder _builder = BytesBuilder(copy: false);
+  final ByteData _scratch = ByteData(8);
+
+  void u8(int v) => _builder.addByte(v & 0xFF);
+
+  void u16(int v) {
+    _scratch.setUint16(0, v, Endian.little);
+    _builder.add(Uint8List.fromList([_scratch.getUint8(0), _scratch.getUint8(1)]));
+  }
+
+  void i16(int v) {
+    _scratch.setInt16(0, v, Endian.little);
+    _builder.add(Uint8List.fromList([_scratch.getUint8(0), _scratch.getUint8(1)]));
+  }
+
+  void u32(int v) {
+    _scratch.setUint32(0, v, Endian.little);
+    _builder.add(
+      Uint8List.fromList([
+        _scratch.getUint8(0),
+        _scratch.getUint8(1),
+        _scratch.getUint8(2),
+        _scratch.getUint8(3),
+      ]),
+    );
+  }
+
+  void i64(int v) {
+    _scratch.setInt64(0, v, Endian.little);
+    _builder.add(
+      Uint8List.fromList([
+        for (var i = 0; i < 8; i++) _scratch.getUint8(i),
+      ]),
+    );
+  }
+
+  void f32(double v) {
+    _scratch.setFloat32(0, v, Endian.little);
+    _builder.add(
+      Uint8List.fromList([
+        _scratch.getUint8(0),
+        _scratch.getUint8(1),
+        _scratch.getUint8(2),
+        _scratch.getUint8(3),
+      ]),
+    );
+  }
+
