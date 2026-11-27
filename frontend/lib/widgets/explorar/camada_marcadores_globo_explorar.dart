@@ -97,3 +97,93 @@ abstract final class CamadaMarcadoresGloboExplorar {
       return const [];
     }
 
+    return [
+      Positioned(
+        left: pt.x - 11,
+        top: pt.y - 11,
+        child: IgnorePointer(
+          child: Container(
+            key: const Key('marcador_localizacao_usuario'),
+            width: 22,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0x3838BDF8),
+              border: Border.all(color: const Color(0x5538BDF8)),
+            ),
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0284C7),
+                border: Border.all(color: Colors.white, width: 2.0),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
+  static List<Widget> _construirMarcadoresLod({
+    required Size tamanho,
+    required ControladorCameraGlobo controlador,
+    required List<MarcadorPicoGlobo> picos,
+    required List<PicoRelevoReferencia> referencias,
+    required String? picoSelecionadoId,
+    required double recuoSuperiorControles,
+    required void Function(MarcadorPicoGlobo pico, {double? lodExplicito})
+        aoSelecionarPico,
+  }) {
+    final limiteInferior = tamanho.height - controlador.alturaGavetaPx + 8.0;
+    final limiteSuperior = recuoSuperiorControles + 12.0;
+
+    if (controlador.altitudeCameraKm >= 1800.0) {
+      return _construirClustersPorUf(
+        tamanho: tamanho,
+        controlador: controlador,
+        picos: picos,
+        limiteSuperior: limiteSuperior,
+        limiteInferior: limiteInferior,
+        aoSelecionarPico: aoSelecionarPico,
+      );
+    }
+
+    final visiveis = <({MarcadorPicoGlobo pico, PontoProjetadoTela pt})>[];
+    final pesoTerreno =
+        ControladorCameraGlobo.smoothstep(1.35, 2.05, controlador.lod);
+    for (final p in picos) {
+      final elev = pesoTerreno > 0.01
+          ? math.max(
+                0.0,
+                GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+                  latitude: p.latitude,
+                  longitude: p.longitude,
+                  picosReferencia: referencias,
+                ),
+              ) *
+              pesoTerreno
+          : 0.0;
+      final pt = controlador.projetarCoordenada(
+        latitude: p.latitude,
+        longitude: p.longitude,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanho,
+      );
+      if (pt.visivel &&
+          pt.x > 16 &&
+          pt.x < tamanho.width - 16 &&
+          pt.y > limiteSuperior &&
+          pt.y < limiteInferior) {
+        visiveis.add((pico: p, pt: pt));
+      }
+    }
+
+    visiveis.sort((a, b) {
+      final prioA = a.pico.id == picoSelecionadoId ? 1 : 0;
+      final prioB = b.pico.id == picoSelecionadoId ? 1 : 0;
+      return prioA.compareTo(prioB);
+    });
+
