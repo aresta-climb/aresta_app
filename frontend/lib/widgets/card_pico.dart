@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../idioma/tradutor_app.dart';
 import '../view/view_models/card_croqui_view_model.dart';
 import '../theme/cores_app.dart';
+import 'folha_estimativa_viagem_pico.dart';
 import 'provedor_imagem_aresta.dart';
 
 /// Card interativo que exibe um resumo visual do pico (croqui) a partir de [CardCroquiViewModel] (Dumb UI).
@@ -59,12 +60,14 @@ class CragCard extends StatelessWidget {
     final String statsText = dados.textoEstatisticas;
     final bool isDownloaded = dados.salvoOffline;
     final String? distanceStr = dados.textoDistancia;
-    final String? tooltipDistancia = dados.tooltipDistancia;
+    final String? distanciaRotaKm = dados.distanciaRotaKm;
     final String? capaPath = dados.caminhoCapa;
     final String? checksumSha256 = dados.checksumSha256;
 
     Widget? badgeDistancia;
     if (distanceStr != null) {
+      final bool possuiDetalhesViagem =
+          distanciaRotaKm != null && distanciaRotaKm.isNotEmpty;
       final conteudoBadge = Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 10,
@@ -95,16 +98,30 @@ class CragCard extends StatelessWidget {
                 letterSpacing: 0.5,
               ),
             ),
+            if (possuiDetalhesViagem) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.info_outline_rounded,
+                color: Colors.white,
+                size: 13,
+              ),
+            ],
           ],
         ),
       );
-      badgeDistancia =
-          (tooltipDistancia != null && tooltipDistancia.isNotEmpty)
-              ? Tooltip(
-                  message: tooltipDistancia,
-                  child: conteudoBadge,
-                )
-              : conteudoBadge;
+      badgeDistancia = possuiDetalhesViagem
+          ? GestureDetector(
+              key: Key('badge_estimativa_viagem_$id'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => FolhaEstimativaViagemPico.exibir(
+                context,
+                tituloPico: nome,
+                tempoMedio: distanceStr,
+                distanciaEstradaKm: distanciaRotaKm,
+              ),
+              child: conteudoBadge,
+            )
+          : conteudoBadge;
     }
 
     return GestureDetector(

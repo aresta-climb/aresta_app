@@ -36,8 +36,8 @@ abstract class CardCroquiViewModel {
   /// Texto formatado de distância relativa ou estimativa de tempo do usuário (ex: '~40 min' ou '12.4 km'), se disponível.
   String? get textoDistancia;
 
-  /// Texto explicativo do tooltip da estimativa de tempo (ex: 'Estimativa sem trânsito: ~40 min (42.0 km)'), se disponível.
-  String? get tooltipDistancia;
+  /// Distância por estrada formatada em quilômetros (ex: '42.0 km') associada à estimativa de tempo, se disponível.
+  String? get distanciaRotaKm;
 
   /// Caminho opcional da imagem de capa local ou remota.
   String? get caminhoCapa;
@@ -73,8 +73,8 @@ abstract class CardCroquiViewModel {
         return caminhoMiniatura;
       case 'distance':
         return textoDistancia;
-      case 'tooltipDistancia':
-        return tooltipDistancia;
+      case 'distanciaRotaKm':
+        return distanciaRotaKm;
       case 'checksum':
         return checksumSha256;
       default:
@@ -94,7 +94,7 @@ abstract class CardCroquiViewModel {
     required String caminhoMiniatura,
     bool salvoOffline,
     String? textoDistancia,
-    String? tooltipDistancia,
+    String? distanciaRotaKm,
     String? caminhoCapa,
     String? checksumSha256,
   }) = _CardCroquiValores;
@@ -104,7 +104,7 @@ abstract class CardCroquiViewModel {
     ResumoCroqui metadados, {
     bool salvoOffline,
     String? textoDistancia,
-    String? tooltipDistancia,
+    String? distanciaRotaKm,
     bool estatisticasDetalhadas,
   }) = _CardCroquiMetadados;
 
@@ -112,7 +112,7 @@ abstract class CardCroquiViewModel {
   factory CardCroquiViewModel.deCroqui(
     Croqui croqui, {
     String? textoDistancia,
-    String? tooltipDistancia,
+    String? distanciaRotaKm,
   }) = _CardCroquiCroqui;
 
   /// Cria um [CardCroquiViewModel] com valores primitivos explícitos (útil para testes unitários).
@@ -125,7 +125,7 @@ abstract class CardCroquiViewModel {
     required String caminhoMiniatura,
     bool salvoOffline,
     String? textoDistancia,
-    String? tooltipDistancia,
+    String? distanciaRotaKm,
     String? caminhoCapa,
     String? checksumSha256,
   }) = _CardCroquiValores;
@@ -148,7 +148,7 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
   final String? textoDistancia;
 
   @override
-  final String? tooltipDistancia;
+  final String? distanciaRotaKm;
 
   final bool estatisticasDetalhadas;
 
@@ -156,7 +156,7 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
     this._metadados, {
     this.salvoOffline = false,
     this.textoDistancia,
-    this.tooltipDistancia,
+    this.distanciaRotaKm,
     this.estatisticasDetalhadas = false,
   }) : super._();
 
@@ -234,7 +234,7 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
       _metadados,
       salvoOffline: novoSalvoOffline,
       textoDistancia: textoDistancia,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
       estatisticasDetalhadas: estatisticasDetalhadas,
     );
   }
@@ -248,12 +248,12 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
   final String? textoDistancia;
 
   @override
-  final String? tooltipDistancia;
+  final String? distanciaRotaKm;
 
   _CardCroquiCroqui(
     this._croqui, {
     this.textoDistancia,
-    this.tooltipDistancia,
+    this.distanciaRotaKm,
   }) : super._();
 
   @override
@@ -365,7 +365,7 @@ class _CardCroquiValores extends CardCroquiViewModel {
   @override
   final String? textoDistancia;
   @override
-  final String? tooltipDistancia;
+  final String? distanciaRotaKm;
   @override
   final String? caminhoCapa;
   @override
@@ -380,7 +380,7 @@ class _CardCroquiValores extends CardCroquiViewModel {
     required this.caminhoMiniatura,
     this.salvoOffline = false,
     this.textoDistancia,
-    this.tooltipDistancia,
+    this.distanciaRotaKm,
     this.caminhoCapa,
     this.checksumSha256,
   }) : super._();
@@ -397,7 +397,7 @@ class _CardCroquiValores extends CardCroquiViewModel {
       caminhoMiniatura: caminhoMiniatura,
       salvoOffline: novoSalvoOffline,
       textoDistancia: textoDistancia,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
       caminhoCapa: caminhoCapa,
       checksumSha256: checksumSha256,
     );
@@ -449,7 +449,7 @@ class _CardCroquiMapa extends CardCroquiViewModel {
   String? get textoDistancia => _mapa['distance']?.toString();
 
   @override
-  String? get tooltipDistancia => _mapa['tooltipDistancia']?.toString();
+  String? get distanciaRotaKm => _mapa['distanciaRotaKm']?.toString();
 
   @override
   String? get caminhoCapa => _mapa['capaPath']?.toString();
@@ -463,7 +463,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
   dynamic metadados, {
   bool salvoOffline = false,
   String? textoDistancia,
-  String? tooltipDistancia,
+  String? distanciaRotaKm,
   bool estatisticasDetalhadas = false,
 }) {
   if (metadados is CardCroquiViewModel) return metadados;
@@ -472,7 +472,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
       metadados,
       salvoOffline: salvoOffline,
       textoDistancia: textoDistancia,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
       estatisticasDetalhadas: estatisticasDetalhadas,
     );
   }
@@ -480,7 +480,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
     return CardCroquiViewModel.deCroqui(
       metadados,
       textoDistancia: textoDistancia,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
     );
   }
   if (metadados is Map) {
@@ -499,7 +499,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
     caminhoMiniatura: '',
     salvoOffline: salvoOffline,
     textoDistancia: textoDistancia,
-    tooltipDistancia: tooltipDistancia,
+    distanciaRotaKm: distanciaRotaKm,
   );
 }
 
@@ -507,11 +507,11 @@ CardCroquiViewModel mapearMetadadosParaCard(
 CardCroquiViewModel mapearCroquiParaCard(
   Croqui croqui, {
   String? textoDistancia,
-  String? tooltipDistancia,
+  String? distanciaRotaKm,
 }) {
   return CardCroquiViewModel.deCroqui(
     croqui,
     textoDistancia: textoDistancia,
-    tooltipDistancia: tooltipDistancia,
+    distanciaRotaKm: distanciaRotaKm,
   );
 }

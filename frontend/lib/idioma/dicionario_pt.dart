@@ -225,8 +225,12 @@ const Map<ChaveTexto, String> dicionarioPortugues = {
   ChaveTexto.modSetoresMinusculo: 'setores',
   ChaveTexto.modSetoresCaixaAlta: 'SETORES',
   ChaveTexto.modDeTotal: '{qtd} de {total} {plural}',
-  ChaveTexto.modEstimativaSemTransito:
-      'Estimativa sem trânsito: {tempo} ({distancia})',
+  ChaveTexto.viagemSheetTitulo: 'Estimativa de viagem',
+  ChaveTexto.viagemSheetTempoMedioRotulo: 'Tempo médio (fluxo normal)',
+  ChaveTexto.viagemSheetDistanciaEstradaRotulo: 'Distância por estrada',
+  ChaveTexto.viagemSheetNotaExplicativa:
+      'Calculado offline pelas vias e limites do OpenStreetMap a partir da sua localização atual. Não considera trânsito em tempo real — em horários de pico o trajeto pode levar mais tempo.',
+  ChaveTexto.viagemSheetFecharBtn: 'Entendi',
   ChaveTexto.estiloAVista: 'À Vista',
   ChaveTexto.estiloFlash: 'Flash',
   ChaveTexto.estiloTrabalhado: 'Trabalhado',

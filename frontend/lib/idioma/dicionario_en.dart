@@ -221,8 +221,12 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.modSetoresMinusculo: 'sectors',
   ChaveTexto.modSetoresCaixaAlta: 'SECTORS',
   ChaveTexto.modDeTotal: '{qtd} of {total} {plural}',
-  ChaveTexto.modEstimativaSemTransito:
-      'Drive estimate without traffic: {tempo} ({distancia})',
+  ChaveTexto.viagemSheetTitulo: 'Travel estimate',
+  ChaveTexto.viagemSheetTempoMedioRotulo: 'Average time (normal flow)',
+  ChaveTexto.viagemSheetDistanciaEstradaRotulo: 'Road distance',
+  ChaveTexto.viagemSheetNotaExplicativa:
+      'Calculated offline using OpenStreetMap roads and speed limits from your current location. Live traffic is not included — peak hours may take longer.',
+  ChaveTexto.viagemSheetFecharBtn: 'Got it',
   ChaveTexto.estiloAVista: 'Onsight',
   ChaveTexto.estiloFlash: 'Flash',
   ChaveTexto.estiloTrabalhado: 'Redpoint',

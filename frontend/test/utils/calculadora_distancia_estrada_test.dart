@@ -179,58 +179,48 @@ void main() {
       expect(EstimativaViagemPico.arredondarMinutos(120), 120);
     });
 
-    test('formata badge e tooltip com tempo arredondado quando possui duracaoMinutos e apenas km quando não possui', () {
+    test('formata badge com tempo arredondado quando possui duracaoMinutos e distancia em km separada', () {
       const comMenosDeUmaHora = EstimativaViagemPico(
         distanciaMetros: 51400,
         duracaoMinutos: 38,
       );
       expect(comMenosDeUmaHora.possuiEstimativaTempo, isTrue);
       expect(comMenosDeUmaHora.formatarBadge(), '~40 min');
-      expect(
-        comMenosDeUmaHora.formatarTooltip(),
-        'Estimativa sem trânsito: ~40 min (51.4 km)',
-      );
+      expect(comMenosDeUmaHora.formatarDistanciaKm(), '51.4 km');
 
       const comMaisDeUmaHora = EstimativaViagemPico(
         distanciaMetros: 88200,
         duracaoMinutos: 74,
       );
       expect(comMaisDeUmaHora.formatarBadge(), '~1h 10min');
-      expect(
-        comMaisDeUmaHora.formatarTooltip(),
-        'Estimativa sem trânsito: ~1h 10min (88.2 km)',
-      );
+      expect(comMaisDeUmaHora.formatarDistanciaKm(), '88.2 km');
 
       const comHoraExata = EstimativaViagemPico(
         distanciaMetros: 150000,
         duracaoMinutos: 118,
       );
       expect(comHoraExata.formatarBadge(), '~2h');
-      expect(
-        comHoraExata.formatarTooltip(),
-        'Estimativa sem trânsito: ~2h (150.0 km)',
-      );
+      expect(comHoraExata.formatarDistanciaKm(), '150.0 km');
 
       const apenasDistancia = EstimativaViagemPico(
         distanciaMetros: 245600,
       );
       expect(apenasDistancia.possuiEstimativaTempo, isFalse);
       expect(apenasDistancia.formatarBadge(), '245.6 km');
-      expect(apenasDistancia.formatarTooltip(), isNull);
     });
   });
 
   group('CalculadoraDistanciaEstrada', () {
-    test('calcula tempo de acesso U -> K (30 km/h até 3 km e 50 km/h acima de 3 km) e escolhe o nó que minimiza o tempo total', () {
+    test('calcula tempo de acesso U -> K (24 km/h até 3 km e 40 km/h acima de 3 km) e escolhe o nó que minimiza o tempo total', () {
       // Testa diretamente o cálculo de tempo de acesso:
-      // 8000 m de estrada (3 km a 30 km/h = 6 min + 5 km a 50 km/h = 6 min -> 12 min)
+      // 7000 m de estrada (3 km a 24 km/h = 7.5 min + 4 km a 40 km/h = 6.0 min -> 13.5 min)
       expect(
-        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(8000.0),
-        closeTo(12.0, 1e-6),
+        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(7000.0),
+        closeTo(13.5, 1e-6),
       );
-      // 1500 m de estrada (1.5 km a 30 km/h = 3 min)
+      // 1200 m de estrada (1.2 km a 24 km/h = 3.0 min)
       expect(
-        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(1500.0),
+        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(1200.0),
         closeTo(3.0, 1e-6),
       );
 

@@ -189,6 +189,33 @@ void main() {
       expect(abriu, isTrue);
     });
 
+    testWidgets('chama onDownload ao tocar no card quando onOpen é nulo e exibe progresso de download ativo', (
+      WidgetTester tester,
+    ) async {
+      bool baixou = false;
+      final progresso = ValueNotifier<Map<String, double>>({'pico_dl': 0.45});
+      final crag = MetadadosIndice(id: 'pico_dl', nome: 'Pico Download');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Theme(
+            data: ThemeData(extensions: [AppColors.dark]),
+            child: Scaffold(
+              body: CragCard.deMetadados(
+                metadados: crag,
+                downloadingCrags: progresso,
+                onDownload: () => baixou = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('45%'), findsOneWidget);
+      await tester.tap(find.text('PICO DOWNLOAD'));
+      expect(baixou, isTrue);
+    });
+
     testWidgets('repassa checksumSha256Thumbnail de MetadadosIndice para o widget de fundo', (
       WidgetTester tester,
     ) async {
@@ -310,12 +337,13 @@ void main() {
       expect(find.text('5 setores • 40 escaladas'), findsOneWidget);
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.text('500m'), findsOneWidget);
-      expect(find.byType(Tooltip), findsNothing);
+      expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
     });
 
     testWidgets(
-      'exibe Tooltip explicativo sobre o badge de tempo quando tooltipDistancia está preenchido',
+      'exibe ícone informativo no badge de tempo e abre Mini Bottom Sheet ao tocar sem acionar abertura do croqui',
       (WidgetTester tester) async {
+        bool abriuCroqui = false;
         const viewModelComTempo = CardCroquiViewModel(
           id: 'pico_tempo',
           titulo: 'GRUTA DA LAPINHA',
@@ -323,8 +351,8 @@ void main() {
           textoEstatisticas: '6 setores • 90 escaladas',
           caminhoMiniatura: 'thumbnails/pico_tempo.webp',
           salvoOffline: false,
-          textoDistancia: '~40 min',
-          tooltipDistancia: 'Estimativa sem trânsito: ~40 min (42.0 km)',
+          textoDistancia: '~1h 10min',
+          distanciaRotaKm: '53.4 km',
         );
 
         await tester.pumpWidget(
@@ -335,21 +363,34 @@ void main() {
                 body: CragCard(
                   dados: viewModelComTempo,
                   downloadingCrags: ValueNotifier(const {}),
-                  onDownload: () {},
+                  onDownload: () => abriuCroqui = true,
+                  onOpen: () => abriuCroqui = true,
                 ),
               ),
             ),
           ),
         );
 
-        expect(find.text('~40 min'), findsOneWidget);
-        final tooltipFinder = find.byType(Tooltip);
-        expect(tooltipFinder, findsOneWidget);
-        final tooltipWidget = tester.widget<Tooltip>(tooltipFinder);
-        expect(
-          tooltipWidget.message,
-          equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+        expect(find.text('~1h 10min'), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline_rounded), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const Key('badge_estimativa_viagem_pico_tempo')),
         );
+        await tester.pumpAndSettle();
+
+        expect(abriuCroqui, isFalse);
+        expect(find.text('Estimativa de viagem'), findsOneWidget);
+        expect(find.text('53.4 km'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const Key('botao_fechar_folha_estimativa_viagem')),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('GRUTA DA LAPINHA'));
+        await tester.pump();
+        expect(abriuCroqui, isTrue);
       },
     );
 
@@ -579,6 +620,35 @@ void main() {
                   cragId: 'pico_inexistente',
                   checksumSha256: 'hash_inexistente',
                   larguraAlvo: 1200,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.broken_image), findsOneWidget);
+      });
+
+      testWidgets('trata bytes inválidos de imagem sem lançar exceção quando aoResolverProporcao está definido', (WidgetTester tester) async {
+        final picoDir = Directory('${tempDir.path}/downloads/pico_corrompido')
+          ..createSync(recursive: true);
+        File('${picoDir.path}/capa.webp').writeAsBytesSync(const <int>[1, 2, 3, 4]);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_corrompido',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_corrompido',
+                  aoResolverProporcao: (_) {},
                 ),
               ),
             ),

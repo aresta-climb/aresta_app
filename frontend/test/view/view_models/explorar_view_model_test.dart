@@ -301,8 +301,10 @@ void main() {
           equals(<String>['pico_rodovia_rapido', 'pico_serra_lento', 'pico_sem_malha_local']),
         );
         expect(viewModel.picosCards[0].textoDistancia, equals('~35 min'));
+        expect(viewModel.picosCards[0].distanciaRotaKm, isNotNull);
         expect(viewModel.picosCards[1].textoDistancia, equals('~1h 10min'));
-        expect(viewModel.picosCards[2].tooltipDistancia, isNull);
+        expect(viewModel.picosCards[1].distanciaRotaKm, isNotNull);
+        expect(viewModel.picosCards[2].distanciaRotaKm, isNull);
       },
     );
 
@@ -783,6 +785,11 @@ void main() {
           equals('c1'),
         );
         expect(viewModel.resolverAlvoDownload('br_mg_teste').id, equals('br_mg_teste'));
+        expect(viewModel.buscandoLocalizacao, isFalse);
+        expect(
+          ModalidadeExploracaoPico.values.map((m) => m.rotulo).toList(),
+          everyElement(isNotEmpty),
+        );
       },
     );
   });

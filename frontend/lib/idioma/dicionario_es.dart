@@ -223,8 +223,12 @@ const Map<ChaveTexto, String> dicionarioEspanhol = {
   ChaveTexto.modSetoresMinusculo: 'sectores',
   ChaveTexto.modSetoresCaixaAlta: 'SECTORES',
   ChaveTexto.modDeTotal: '{qtd} de {total} {plural}',
-  ChaveTexto.modEstimativaSemTransito:
-      'Estimación sin tráfico: {tempo} ({distancia})',
+  ChaveTexto.viagemSheetTitulo: 'Estimación de viaje',
+  ChaveTexto.viagemSheetTempoMedioRotulo: 'Tiempo medio (flujo normal)',
+  ChaveTexto.viagemSheetDistanciaEstradaRotulo: 'Distancia por carretera',
+  ChaveTexto.viagemSheetNotaExplicativa:
+      'Calculado sin conexión con las vías y límites de OpenStreetMap desde tu ubicación actual. No incluye tráfico en tiempo real — en horas punta puede tardar más.',
+  ChaveTexto.viagemSheetFecharBtn: 'Entendido',
   ChaveTexto.estiloAVista: 'A Vista',
   ChaveTexto.estiloFlash: 'Flash',
   ChaveTexto.estiloTrabalhado: 'Encadenado',

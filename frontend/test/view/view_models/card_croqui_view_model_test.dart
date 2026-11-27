@@ -26,27 +26,33 @@ void main() {
       expect(vm.caminhoMiniatura, equals('thumbnails/pico_1.webp'));
       expect(vm.salvoOffline, isFalse);
       expect(vm.textoDistancia, isNull);
-      expect(vm.tooltipDistancia, isNull);
+      expect(vm.distanciaRotaKm, isNull);
 
-      const vmComTooltip = CardCroquiViewModel(
+      const vmComTempo = CardCroquiViewModel(
         id: 'pico_2',
         titulo: 'PICO COM TEMPO',
         textoEstatisticas: '1 setor • 5 escaladas',
         caminhoMiniatura: 'thumbnails/pico_2.webp',
         textoDistancia: '~40 min',
-        tooltipDistancia: 'Estimativa sem trânsito: ~40 min (42.0 km)',
+        distanciaRotaKm: '42.0 km',
       );
+      expect(vmComTempo.distanciaRotaKm, equals('42.0 km'));
+      expect(vmComTempo['distanciaRotaKm'], equals('42.0 km'));
+      expect(vmComTempo.nome, equals('PICO COM TEMPO'));
+      expect(vmComTempo['id'], equals('pico_2'));
+      expect(vmComTempo['nome'], equals('PICO COM TEMPO'));
+      expect(vmComTempo['local'], isEmpty);
+      expect(vmComTempo['descricao'], isEmpty);
+      expect(vmComTempo['salvoOffline'], isFalse);
+      expect(vmComTempo['stats'], equals('1 setor • 5 escaladas'));
+      expect(vmComTempo['thumbnailUrl'], equals('thumbnails/pico_2.webp'));
+      expect(vmComTempo['distance'], equals('~40 min'));
+      expect(vmComTempo['checksum'], isNull);
+      expect(vmComTempo['chave_inexistente'], isNull);
+      expect(identical(vmComTempo.comSalvoOffline(false), vmComTempo), isTrue);
       expect(
-        vmComTooltip.tooltipDistancia,
-        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
-      );
-      expect(
-        vmComTooltip['tooltipDistancia'],
-        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
-      );
-      expect(
-        vmComTooltip.comSalvoOffline(true).tooltipDistancia,
-        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+        vmComTempo.comSalvoOffline(true).distanciaRotaKm,
+        equals('42.0 km'),
       );
     });
   });
@@ -98,11 +104,15 @@ void main() {
       final metadados = MetadadosIndice(
         id: 'pico_beta',
         nome: 'Pico Beta',
+        descricao: 'Descrição Beta',
         precomputados: PrecomputadosResumoCroqui(
           totalSetores: 3,
-          totalEscaladas: 15,
+          totalEscaladas: 18,
           totalBoulders: 10,
           totalEsportivas: 5,
+          totalMoveis: 1,
+          totalMultiplasEnfiadas: 1,
+          totalHighlines: 1,
         ),
       );
 
@@ -111,10 +121,86 @@ void main() {
         estatisticasDetalhadas: true,
       );
 
+      expect(vm.descricao, equals('Descrição Beta'));
+      expect(vm.caminhoCapa, isNull);
+      expect(identical(vm.comSalvoOffline(false), vm), isTrue);
+      expect(vm.comSalvoOffline(true).salvoOffline, isTrue);
       expect(
         vm.textoEstatisticas,
-        equals('3 setores • 15 escaladas (10 boulders, 5 esportivas)'),
+        equals(
+          '3 setores • 18 escaladas (10 boulders, 5 esportivas, 1 móveis, 1 múltiplas enfiadas, 1 highlines)',
+        ),
       );
+
+      final vmSemMod = mapearMetadadosParaCard(
+        MetadadosIndice(
+          id: 'pico_vazio_mod',
+          nome: 'Vazio',
+          precomputados: PrecomputadosResumoCroqui(totalSetores: 1, totalEscaladas: 2),
+        ),
+        estatisticasDetalhadas: true,
+      );
+      expect(vmSemMod.textoEstatisticas, equals('1 setores • 2 escaladas'));
+    });
+
+    test('mapeia a partir de CardCroquiViewModel existente, Croqui, Map, objeto conversível e fallback primitivo', () {
+      const jaVm = CardCroquiViewModel(
+        id: 'ja_vm',
+        titulo: 'JA VM',
+        textoEstatisticas: '1 • 1',
+        caminhoMiniatura: '',
+      );
+      expect(identical(mapearMetadadosParaCard(jaVm), jaVm), isTrue);
+
+      final deCroqui = mapearMetadadosParaCard(
+        Croqui(id: 'c_dir', descricao: 'Desc C', picos: [Pico()]),
+        textoDistancia: '~20 min',
+        distanciaRotaKm: '15.0 km',
+      );
+      expect(deCroqui.titulo, equals('SEM NOME'));
+      expect(deCroqui.descricao, equals('Desc C'));
+      expect(deCroqui.caminhoCapa, isNull);
+      expect(identical(deCroqui.comSalvoOffline(false), deCroqui), isTrue);
+      expect(deCroqui.distanciaRotaKm, equals('15.0 km'));
+
+      final deMapa = mapearMetadadosParaCard(<String, dynamic>{
+        'id': 'm_1',
+        'nome': 'Pico Mapa',
+        'local': 'MG',
+        'descricao': 'Desc Mapa',
+        'stats': '2 • 8',
+        'thumbnailUrl': 'thumb_m.webp',
+        'distance': '~30 min',
+        'distanciaRotaKm': '25.0 km',
+        'capaPath': 'capa_m.webp',
+        'checksum': 'sha_m',
+      });
+      expect(deMapa.id, equals('m_1'));
+      expect(deMapa.titulo, equals('PICO MAPA'));
+      expect(deMapa.localizacao, equals('MG'));
+      expect(deMapa.descricao, equals('Desc Mapa'));
+      expect(deMapa.textoEstatisticas, equals('2 • 8'));
+      expect(deMapa.caminhoMiniatura, equals('thumb_m.webp'));
+      expect(deMapa.textoDistancia, equals('~30 min'));
+      expect(deMapa.distanciaRotaKm, equals('25.0 km'));
+      expect(deMapa.caminhoCapa, equals('capa_m.webp'));
+      expect(deMapa.checksumSha256, equals('sha_m'));
+      expect(identical(deMapa.comSalvoOffline(false), deMapa), isTrue);
+      expect(deMapa.comSalvoOffline(true).salvoOffline, isTrue);
+
+      final deMapaPadrao = CardCroquiViewModel.deMapa(const <String, dynamic>{
+        'salvoOffline': true,
+      });
+      expect(deMapaPadrao.salvoOffline, isTrue);
+      expect(deMapaPadrao.textoEstatisticas, contains('0 setores'));
+      expect(deMapaPadrao.caminhoMiniatura, equals('thumbnails/.webp'));
+
+      final conversivel = _ObjetoComConversorCard();
+      expect(mapearMetadadosParaCard(conversivel).id, equals('conv_1'));
+
+      final fallback = mapearMetadadosParaCard(12345, textoDistancia: '10 km');
+      expect(fallback.id, equals('12345'));
+      expect(fallback.textoDistancia, equals('10 km'));
     });
   });
 
@@ -218,4 +304,13 @@ void main() {
       expect(vm.textoEstatisticas, equals('0 setores • 0 escaladas'));
     });
   });
+}
+
+class _ObjetoComConversorCard {
+  CardCroquiViewModel paraCardCroquiViewModel() => const CardCroquiViewModel(
+        id: 'conv_1',
+        titulo: 'CONVERTIDO',
+        textoEstatisticas: '',
+        caminhoMiniatura: '',
+      );
 }

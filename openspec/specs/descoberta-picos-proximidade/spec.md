@@ -68,9 +68,13 @@ O aplicativo DEVE (MUST) arredondar o tempo estimado de viagem para o múltiplo 
 - **WHEN** o tempo estimado total até um pico é de `74` minutos
 - **THEN** o tempo é arredondado para `70` minutos e o badge exibe `~1h 10min` (ou `~2h` quando o múltiplo fecha em hora exata como `120` minutos).
 
-### Requirement: Tooltip Explicativo de Estimativa Sem Trânsito com Tempo e Quilometragem
-O badge de proximidade nos cards de picos com estimativa de tempo DEVE (MUST) apresentar um `Tooltip` informando explicitamente que o valor é uma estimativa de direção sem trânsito acompanhada tanto do tempo arredondado quanto da distância estimada em quilômetros.
+### Requirement: Badge Clicável com Ícone Informativo e Mini Bottom Sheet Explicativo de Viagem
+Nos cards de picos que possuem estimativa de tempo pela malha local, o badge de proximidade DEVE (MUST) exibir um ícone informativo `ⓘ` ao lado do tempo arredondado e interceptar o toque simples (`onTap`) sem disparar a abertura ou download do croqui, abrindo um Mini Bottom Sheet explicativo contendo o título do pico, o tempo médio estimado em fluxo normal, a distância estimada por estrada em quilômetros e o aviso de que o cálculo é realizado offline pela malha do OpenStreetMap sem trânsito em tempo real.
 
-#### Scenario: Acionamento do tooltip em card com estimativa de tempo
-- **WHEN** o usuário mantém pressionado ou passa o cursor sobre o badge de tempo (`~40 min`) de um pico com `51400` metros de distância estimada
-- **THEN** o `Tooltip` exibe `"Estimativa sem trânsito: ~40 min (51.4 km)"`.
+#### Scenario: Toque simples no badge de tempo abre o Mini Bottom Sheet sem abrir o croqui
+- **WHEN** o usuário toca no badge de tempo (`~1h` com ícone `ⓘ`) de um card de pico com distância por estrada de `54.1 km`
+- **THEN** o callback de abertura/download do card NÃO é acionado e o aplicativo exibe um Mini Bottom Sheet apresentando o tempo médio estimado (`~1h`), a distância por estrada (`54.1 km`) e a explicação sobre o cálculo offline sem trânsito em tempo real.
+
+#### Scenario: Badge apenas com quilometragem não exibe ícone informativo nem intercepta abertura do card
+- **WHEN** o pico está fora da malha local de tempo e exibe apenas quilometragem no badge (ex.: `425.0 km`)
+- **THEN** o badge é renderizado sem o ícone `ⓘ` e tocar sobre o card ou sobre o badge executa normalmente a ação do card.

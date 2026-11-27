@@ -88,10 +88,10 @@ void main() {
       );
 
       expect(vm.distanciaFormatada, isEmpty);
-      expect(vm.tooltipDistancia, isNull);
+      expect(vm.distanciaRotaKm, isNull);
     });
 
-    test('formata badge de tempo arredondado e tooltip sem trânsito quando duracaoMinutos está presente', () {
+    test('formata badge de tempo arredondado e distanciaRotaKm quando duracaoMinutos está presente', () {
       const vmValores = PicoProximoViewModel(
         id: 'lapinha',
         nome: 'Gruta da Lapinha',
@@ -104,16 +104,10 @@ void main() {
 
       expect(vmValores.duracaoMinutos, equals(38));
       expect(vmValores.distanciaFormatada, equals('~40 min'));
-      expect(
-        vmValores.tooltipDistancia,
-        equals('Estimativa sem trânsito: ~40 min (42.3 km)'),
-      );
+      expect(vmValores.distanciaRotaKm, equals('42.3 km'));
       final cardValores = vmValores.paraCardCroquiViewModel();
       expect(cardValores.textoDistancia, equals('~40 min'));
-      expect(
-        cardValores.tooltipDistancia,
-        equals('Estimativa sem trânsito: ~40 min (42.3 km)'),
-      );
+      expect(cardValores.distanciaRotaKm, equals('42.3 km'));
 
       final metadados = ResumoCroqui(
         id: 'cipo',
@@ -130,16 +124,10 @@ void main() {
       expect(vmMetadados.duracaoMinutos, equals(74));
       expect(vmMetadados.checksumSha256, equals('sha256_cipo'));
       expect(vmMetadados.distanciaFormatada, equals('~1h 10min'));
-      expect(
-        vmMetadados.tooltipDistancia,
-        equals('Estimativa sem trânsito: ~1h 10min (98.4 km)'),
-      );
+      expect(vmMetadados.distanciaRotaKm, equals('98.4 km'));
       final cardMeta = vmMetadados.paraCardCroquiViewModel();
       expect(cardMeta.textoDistancia, equals('~1h 10min'));
-      expect(
-        cardMeta.tooltipDistancia,
-        equals('Estimativa sem trânsito: ~1h 10min (98.4 km)'),
-      );
+      expect(cardMeta.distanciaRotaKm, equals('98.4 km'));
     });
   });
 }

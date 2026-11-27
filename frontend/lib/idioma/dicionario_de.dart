@@ -224,8 +224,12 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.modSetoresMinusculo: 'Sektoren',
   ChaveTexto.modSetoresCaixaAlta: 'SEKTOREN',
   ChaveTexto.modDeTotal: '{qtd} von {total} {plural}',
-  ChaveTexto.modEstimativaSemTransito:
-      'Fahrzeit ohne Verkehr: {tempo} ({distancia})',
+  ChaveTexto.viagemSheetTitulo: 'Reisezeitschätzung',
+  ChaveTexto.viagemSheetTempoMedioRotulo: 'Durchschnittszeit (normaler Verkehr)',
+  ChaveTexto.viagemSheetDistanciaEstradaRotulo: 'Straßenentfernung',
+  ChaveTexto.viagemSheetNotaExplicativa:
+      'Offline anhand der Straßen und Tempolimits von OpenStreetMap ab deinem aktuellen Standort berechnet. Echtzeitverkehr ist nicht enthalten — zu Stoßzeiten kann es länger dauern.',
+  ChaveTexto.viagemSheetFecharBtn: 'Verstanden',
   ChaveTexto.estiloAVista: 'Onsight',
   ChaveTexto.estiloFlash: 'Flash',
   ChaveTexto.estiloTrabalhado: 'Rotpunkt',

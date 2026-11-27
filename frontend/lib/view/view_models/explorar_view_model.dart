@@ -509,7 +509,7 @@ class BrowseViewModel extends ChangeNotifier {
     return filtrados.map((m) {
       final prox = proximidadePorId[m.id];
       String textoDist = '';
-      String? tooltipDist;
+      String? distanciaRotaKm;
       if (prox != null) {
         if (prox.duracaoMinutos != null) {
           final estimativa = EstimativaViagemPico(
@@ -517,7 +517,7 @@ class BrowseViewModel extends ChangeNotifier {
             duracaoMinutos: prox.duracaoMinutos,
           );
           textoDist = estimativa.formatarBadge();
-          tooltipDist = estimativa.formatarTooltip();
+          distanciaRotaKm = estimativa.formatarDistanciaKm();
         } else {
           textoDist = formatarDistanciaKm(prox.distanciaKm);
         }
@@ -526,7 +526,7 @@ class BrowseViewModel extends ChangeNotifier {
         m,
         salvoOffline: estaBaixado(m.id),
         textoDistancia: textoDist.isNotEmpty ? textoDist : null,
-        tooltipDistancia: tooltipDist,
+        distanciaRotaKm: distanciaRotaKm,
       );
     }).toList();
   }

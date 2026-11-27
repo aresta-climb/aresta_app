@@ -70,15 +70,15 @@ abstract class PicoProximoViewModel {
     return formatarDistanciaKm(distanciaKm);
   }
 
-  /// Retorna o texto do tooltip explicativo quando há estimativa de tempo sem trânsito, ou `null` caso contrário.
-  String? get tooltipDistancia {
+  /// Retorna a distância por estrada formatada em km (ex: `'42.3 km'`) quando há estimativa de tempo, ou `null` caso contrário.
+  String? get distanciaRotaKm {
     if (duracaoMinutos == null || distanciaKm == null) {
       return null;
     }
     return EstimativaViagemPico(
       distanciaMetros: distanciaKm! * 1000.0,
       duracaoMinutos: duracaoMinutos,
-    ).formatarTooltip();
+    ).formatarDistanciaKm();
   }
 
   /// Converte o [PicoProximoViewModel] para o [CardCroquiViewModel] para exibição no [CragCard].
@@ -160,7 +160,7 @@ class _PicoProximoMetadados extends PicoProximoViewModel {
       _metadados,
       salvoOffline: estaBaixado,
       textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
     );
   }
 }
@@ -210,7 +210,7 @@ class _PicoProximoValores extends PicoProximoViewModel {
       caminhoMiniatura: caminhoMiniatura,
       salvoOffline: estaBaixado,
       textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
-      tooltipDistancia: tooltipDistancia,
+      distanciaRotaKm: distanciaRotaKm,
       textoEstatisticas:
           '$totalSetores ${tr(ChaveTexto.modSetoresMinusculo)} • $totalEscaladas ${tr(ChaveTexto.modViasMinusculo)}',
       checksumSha256: checksumSha256,

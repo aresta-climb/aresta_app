@@ -225,8 +225,12 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.modSetoresMinusculo: 'sectoren',
   ChaveTexto.modSetoresCaixaAlta: 'SECTOREN',
   ChaveTexto.modDeTotal: '{qtd} van {total} {plural}',
-  ChaveTexto.modEstimativaSemTransito:
-      'Reistijd zonder verkeer: {tempo} ({distancia})',
+  ChaveTexto.viagemSheetTitulo: 'Reistijdschatting',
+  ChaveTexto.viagemSheetTempoMedioRotulo: 'Gemiddelde tijd (normaal verkeer)',
+  ChaveTexto.viagemSheetDistanciaEstradaRotulo: 'Afstand over de weg',
+  ChaveTexto.viagemSheetNotaExplicativa:
+      'Offline berekend via OpenStreetMap-wegen en snelheidslimieten vanaf je huidige locatie. Live verkeer is niet inbegrepen — tijdens de spits kan de rit langer duren.',
+  ChaveTexto.viagemSheetFecharBtn: 'Begrepen',
   ChaveTexto.estiloAVista: 'Onsight',
   ChaveTexto.estiloFlash: 'Flash',
   ChaveTexto.estiloTrabalhado: 'Redpoint',

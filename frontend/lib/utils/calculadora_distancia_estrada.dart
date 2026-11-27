@@ -4,7 +4,6 @@
 import 'dart:math' as math;
 
 import 'package:geolocator/geolocator.dart';
-import '../idioma/tradutor_app.dart';
 
 /// Representa um nó compartilhado da malha viária do OpenStreetMap (`catalogo_nos_estrada`)
 /// contendo as distâncias rodoviárias pré-computadas em metros e durações em minutos até os croquis que o alcançam.
@@ -89,17 +88,6 @@ class EstimativaViagemPico {
   String formatarBadge() => duracaoMinutos != null
       ? formatarTempoArredondado()
       : formatarDistanciaKm();
-
-  /// Retorna o texto explicativo do `Tooltip` quando há estimativa de tempo, ou `null` caso contrário.
-  String? formatarTooltip() {
-    if (duracaoMinutos == null) {
-      return null;
-    }
-    return tr(ChaveTexto.modEstimativaSemTransito, {
-      'tempo': formatarTempoArredondado(),
-      'distancia': formatarDistanciaKm(),
-    });
-  }
 }
 
 /// Representa um portal de borda (`na_borda = 1`) na fronteira da malha de 180 km
@@ -345,12 +333,12 @@ class CalculadoraDistanciaEstrada {
 
   /// Calcula o tempo estimado de acesso inicial em minutos para percorrer [distanciaEstradaMetros]
   /// do usuário até o nó de entrada $K$ da malha:
-  /// - Primeiros `3 km` (`3000 m`) a `30 km/h` (saída urbana/local);
-  /// - Distância excedente acima de `3 km` a `50 km/h` (via coletora/acesso regional).
+  /// - Primeiros `3 km` (`3000 m`) a `24 km/h` (saída urbana/local com semáforos e cruzamentos);
+  /// - Distância excedente acima de `3 km` a `40 km/h` (via coletora/acesso regional).
   static double calcularTempoAcessoMinutos(double distanciaEstradaMetros) {
     final trechoUrbanoMetros = math.min(distanciaEstradaMetros, 3000.0);
     final trechoColetorMetros = math.max(0.0, distanciaEstradaMetros - 3000.0);
-    return (trechoUrbanoMetros / 30000.0 + trechoColetorMetros / 50000.0) *
+    return (trechoUrbanoMetros / 24000.0 + trechoColetorMetros / 40000.0) *
         60.0;
   }
 
