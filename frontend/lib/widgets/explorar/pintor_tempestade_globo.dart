@@ -356,3 +356,104 @@ abstract final class PintorTempestadeGlobo {
       }
     }
 
+    for (var k = 0; k < verticesAnimados.length; k++) {
+      final lonAnim = verticesAnimados[k].dx;
+      final latAnim = verticesAnimados[k].dy;
+      final dLon =
+          ((lonAnim - controlador.longitudeCentral + 540.0) % 360.0 + 360.0) %
+                  360.0 -
+              180.0;
+
+      final elev = sobreRelevo
+          ? math.max(
+                0.0,
+                GeradorRelevoLod.amostrarElevacaoMetros(
+                  latitude: latAnim,
+                  longitude: lonAnim,
+                  picosReferencia: picosReferencia,
+                ),
+              ) +
+              18.0
+          : 0.0;
+      final pt = controlador.projetarCoordenada(
+        latitude: latAnim,
+        longitude: lonAnim,
+        elevacaoMetros: elev,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!pt.visivel) {
+        if (pontosProjetados.length >= 3) segmentos.add(pontosProjetados);
+        pontosProjetados = <Offset>[];
+        continue;
+      }
+
+      final atual = Offset(pt.x, pt.y);
+      if (!controlador.modo3D &&
+          pontosProjetados.isNotEmpty &&
+          (dLon - dLonAnterior).abs() > 180.0) {
+        if (pontosProjetados.length >= 3) segmentos.add(pontosProjetados);
+        pontosProjetados = <Offset>[];
+      }
+      dLonAnterior = dLon;
+      pontosProjetados.add(atual);
+      if (atual.dx < minX) minX = atual.dx;
+      if (atual.dx > maxX) maxX = atual.dx;
+      if (atual.dy < minY) minY = atual.dy;
+      if (atual.dy > maxY) maxY = atual.dy;
+    }
+
+    if (pontosProjetados.length >= 3) segmentos.add(pontosProjetados);
+    if (segmentos.isEmpty) {
+      return (caminho: caminho, limites: Rect.zero, visivel: false);
+    }
+
+    for (final seg in segmentos) {
+      final meioInicial = Offset(
+        (seg.last.dx + seg.first.dx) * 0.5,
+        (seg.last.dy + seg.first.dy) * 0.5,
+      );
+      caminho.moveTo(meioInicial.dx, meioInicial.dy);
+      for (var i = 0; i < seg.length; i++) {
+        final pAtual = seg[i];
+        final pProx = seg[(i + 1) % seg.length];
+        final meio = Offset(
+          (pAtual.dx + pProx.dx) * 0.5,
+          (pAtual.dy + pProx.dy) * 0.5,
+        );
+        caminho.quadraticBezierTo(pAtual.dx, pAtual.dy, meio.dx, meio.dy);
+      }
+      caminho.close();
+    }
+
+    final limites = Rect.fromLTRB(minX, minY, maxX, maxY);
+    final naTela = limites.overlaps(
+      Rect.fromLTWH(0, 0, tamanhoTela.width, tamanhoTela.height),
+    );
+    return (caminho: caminho, limites: limites, visivel: naTela);
+  }
+
+  static Offset _estimarVetorVentoTela({
+    required BolhaChuvaRegional bolha,
+    required double uLon,
+    required double uLat,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+  }) {
+    final p0 = controlador.projetarCoordenada(
+      latitude: bolha.latitude,
+      longitude: bolha.longitude,
+      elevacaoMetros: 0.0,
+      tamanhoTela: tamanhoTela,
+    );
+    final p1 = controlador.projetarCoordenada(
+      latitude: (bolha.latitude + uLat * 0.45).clamp(-89.0, 89.0),
+      longitude: bolha.longitude + uLon * 0.45,
+      elevacaoMetros: 0.0,
+      tamanhoTela: tamanhoTela,
+    );
+    final dx = p1.x - p0.x;
+    final dy = p1.y - p0.y;
+    final invComp = 1.0 / math.max(1e-4, math.sqrt(dx * dx + dy * dy));
+    return Offset(dx * invComp, dy * invComp);
+  }
+
