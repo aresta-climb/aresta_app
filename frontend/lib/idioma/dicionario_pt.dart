@@ -745,3 +745,88 @@ const Map<ChaveTexto, String> dicionarioPortugues = {
   ChaveTexto.configIdiomaSubtitulo:
       'Altere instantaneamente o idioma de toda a interface do aplicativo.',
   ChaveTexto.configAparenciaTitulo: 'APARÊNCIA',
+  ChaveTexto.configAparenciaSub: 'Personalize o tema do aplicativo.',
+  ChaveTexto.configEscolherTemaManual: 'Escolher tema manualmente',
+  ChaveTexto.configTemaEscuro: 'ESCURO',
+  ChaveTexto.configPerfilCadernetaTitulo: 'PERFIL E CADERNETA',
+  ChaveTexto.configPerfilCadernetaSub:
+      'Exiba ou oculte seu perfil e o registro de cadenas nas vias sem apagar seus dados locais.',
+  ChaveTexto.configExibirPerfilSwitch: 'Exibir Perfil e Caderneta nas telas',
+  ChaveTexto.configConectarEditorTitulo: 'Conectar Editor',
+  ChaveTexto.configConectarEditorInstrucao:
+      'Digite o código de 8 caracteres gerado no Editor ou escaneie o QR Code.',
+  ChaveTexto.configConectarEditorHint: 'ex: k9x2-p83a ou URL completa',
+  ChaveTexto.configEscanearQrBtn: 'ESCANEAR QR CODE',
+  ChaveTexto.configComoFuncionaEditor:
+      'Como funciona o Editor Desktop? Saiba mais',
+  ChaveTexto.configConectarBtn: 'CONECTAR',
+  ChaveTexto.configModoExperimentalTitulo: 'MODO EXPERIMENTAL / PRÉVIA',
+  ChaveTexto.configModoExperimentalSub:
+      'Visualizando croquis sincronizados em tempo real com o Editor Desktop.',
+  ChaveTexto.configVoltarModoOficialBtn: 'VOLTAR PARA MODO OFICIAL',
+  ChaveTexto.configModoOficialTitulo: 'MODO OFICIAL',
+  ChaveTexto.configModoOficialSub:
+      'Conectado à base oficial do Aresta Climb. Você pode conectar ao Editor Desktop para testar novos croquis em tempo real.',
+  ChaveTexto.configConectarEditorPreviaBtn: 'CONECTAR AO EDITOR / PRÉVIA',
+  ChaveTexto.configComoFazerSaibaMais: 'Como fazer? Saiba mais',
+  ChaveTexto.configVoltandoOficialToast: 'Voltando ao repositório oficial...',
+  ChaveTexto.configReativandoExpToast:
+      'Reativando dados experimentais locais...',
+  ChaveTexto.configReativarExpBtn: 'REATIVAR MODO EXPERIMENTAL',
+  ChaveTexto.configApagarTudoTitulo: 'Apagar Tudo?',
+  ChaveTexto.configApagarTudoCorpo:
+      'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
+  ChaveTexto.configApagarTudoBtn: 'APAGAR TUDO',
+  ChaveTexto.configAmbienteExpLimpoToast: 'Ambiente experimental limpo.',
+  ChaveTexto.configLimparExpBtn: 'LIMPAR DADOS EXPERIMENTAIS',
+  ChaveTexto.configConectadoEditorToast: 'Conectado ao repositório editor!',
+  ChaveTexto.configErroIndiceStatus:
+      'Erro: Não foi possível acessar o índice (Status {status})',
+  ChaveTexto.configErroConexaoUrl: 'Erro de conexão: Verifique a URL',
+  ChaveTexto.qrTituloPagina: 'Escanear QR Code',
+  ChaveTexto.qrAponteCamera: 'Aponte a câmera para o QR Code\ndo repositório',
+  ChaveTexto.feedbackPerguntaTipo: 'Sobre o que é a sugestão?',
+  ChaveTexto.feedbackSobreCroqui: 'Sobre o Croqui',
+  ChaveTexto.feedbackSobreApp: 'Sobre o App',
+  ChaveTexto.feedbackHintDescricao: 'Descreva o problema ou sugestão...',
+  ChaveTexto.feedbackAvisoPublico:
+      'Feedback público. Nenhum dado pessoal é exposto.',
+  ChaveTexto.feedbackEnviarBtn: 'Enviar',
+  ChaveTexto.shareConfiraPico:
+      'Confira o croqui de {pico}{loc} no Aresta:\n{url}',
+  ChaveTexto.shareConfiraGrupo: 'Confira {grupo}, em {pico}, no Aresta:\n{url}',
+  ChaveTexto.shareConfiraSetor: 'Confira {setor}, em {pico}, no Aresta:\n{url}',
+  ChaveTexto.shareConfiraEscalada:
+      'Confira {via}{grau}{setor}, em {pico}, no Aresta:\n{url}',
+  ChaveTexto.gpsDesligadoUltimaConhecida:
+      'GPS desligado; centralizando na última localização conhecida.',
+  ChaveTexto.gpsAtiveAparelho:
+      'Ative o GPS do aparelho para centralizar na sua localização.',
+  ChaveTexto.gpsPermissaoNegada: 'Permissão de localização negada.',
+  ChaveTexto.gpsSinalIndisponivel:
+      'Não foi possível obter o sinal de GPS no momento.',
+  ChaveTexto.filtroSecaoFiltros: 'FILTROS',
+  ChaveTexto.filtroModalidadesTitulo: 'Modalidades',
+  ChaveTexto.setorNenhumaEscaladaFiltrosAtuais:
+      'Nenhuma escalada encontrada nos filtros atuais.',
+  ChaveTexto.modEsportivaMinusculo: 'esportiva',
+  ChaveTexto.modMovelMinusculo: 'móvel',
+  ChaveTexto.modBoulderMinusculo: 'boulder',
+  ChaveTexto.modMultienfiadaMinusculo: 'multienfiada',
+  ChaveTexto.modMultienfiadasMinusculo: 'multienfiadas',
+  ChaveTexto.modHighlineMinusculo: 'highline',
+  ChaveTexto.comumFecharCaixaAlta: 'FECHAR',
+  ChaveTexto.authValidacaoCodigo6Digitos:
+      'Informe o código numérico de 6 dígitos enviado por e-mail.',
+  ChaveTexto.authServicoIndisponivel:
+      'Serviço de autenticação indisponível no momento.',
+  ChaveTexto.configTestarObsolescenciaBtn: 'TESTAR ALERTA DE OBSOLESCÊNCIA',
+  ChaveTexto.configTestarBloqueioBtn: 'TESTAR TELA DE BLOQUEIO',
+  ChaveTexto.notifBaixandoPct: 'Baixando... {pct}%',
+  ChaveTexto.notifCroquiSalvoOffline: '✓ Croqui salvo para uso offline.',
+  ChaveTexto.notifFalhaBaixarCroqui:
+      'Falha ao baixar croqui. Verifique sua conexão.',
+  ChaveTexto.feedbackRecebidoObrigado:
+      'Feedback recebido! Muito obrigado por ajudar a melhorar o app.',
+  ChaveTexto.sistemaMigracaoTentarNovamente: 'Tentar Novamente',
+};
