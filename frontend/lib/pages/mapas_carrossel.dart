@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
@@ -192,7 +193,13 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                '${(_currentIndex + 1).toString().padLeft(2, '0')} de ${widget.mapas.length.toString().padLeft(2, '0')}',
+                context.tr(
+                  ChaveTexto.croquiPaginacaoDe,
+                  {
+                    'atual': (_currentIndex + 1).toString().padLeft(2, '0'),
+                    'total': widget.mapas.length.toString().padLeft(2, '0'),
+                  },
+                ),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

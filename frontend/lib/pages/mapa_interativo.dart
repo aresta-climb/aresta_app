@@ -10,6 +10,7 @@ import '../services/firebase/app_logger.dart';
 import '../services/repositorio_dataset.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../idioma/tradutor_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../utils/consulta_dataset.dart';
@@ -823,7 +824,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           _updateFeedbackNode();
         });
       },
-      actionLabel: 'Mais Info',
+      actionLabel: context.tr(ChaveTexto.croquiMaisInfo),
       onAction: () {
         bool isOriginal = false;
         if (widget.initialSelectedId != null &&
@@ -853,7 +854,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           );
         }
       },
-      secondaryActionLabel: escalada.mapas.isNotEmpty ? 'Ver mapas' : null,
+      secondaryActionLabel: escalada.mapas.isNotEmpty
+          ? context.tr(ChaveTexto.croquiVerMapas)
+          : null,
       onSecondaryAction: escalada.mapas.isNotEmpty
           ? () {
               TelemetryService.instance.logAcaoEscalada(
@@ -907,10 +910,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           _updateFeedbackNode();
         });
       },
-      actionLabel: 'Ir para Setor',
+      actionLabel: context.tr(ChaveTexto.croquiIrParaSetor),
       onAction: () => AppNav.toSetor(context, setor: setor),
       secondaryActionLabel: setor.mapas.isNotEmpty
-          ? 'Ver mapas'
+          ? context.tr(ChaveTexto.croquiVerMapas)
           : null,
       onSecondaryAction: setor.mapas.isNotEmpty
           ? () {
@@ -984,10 +987,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           _updateFeedbackNode();
         });
       },
-      actionLabel: 'Ir para Grupo',
+      actionLabel: context.tr(ChaveTexto.croquiIrParaGrupo),
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
       secondaryActionLabel: grupo.mapas.isNotEmpty
-          ? 'Ver mapas'
+          ? context.tr(ChaveTexto.croquiVerMapas)
           : null,
       onSecondaryAction: grupo.mapas.isNotEmpty
           ? () {
@@ -1538,7 +1541,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         foregroundColor: AppColors.brandColor,
                         mini: true,
                         onPressed: _recentralizarImagem,
-                        tooltip: 'Centralizar imagem',
+                        tooltip: context.tr(
+                          ChaveTexto.croquiCentralizarTooltip,
+                        ),
                         child: const Icon(Icons.my_location),
                       ),
                     ),
@@ -1641,9 +1646,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           corIcone: Colors.white,
           aoVoltar: () => AppNav.back(context),
         ),
-        title: const Text(
-          'Croqui Interativo',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          context.tr(ChaveTexto.croquiTituloPagina),
+          style: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [

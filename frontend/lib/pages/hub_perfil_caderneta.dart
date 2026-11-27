@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -69,9 +70,9 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
     );
     if (copiou && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ID público copiado!'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(tr(ChaveTexto.perfilIdCopiadoToast)),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -144,7 +145,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
                       BotaoVoltarComRetornoInicio(
                         key: const Key('btn_voltar_hub_perfil'),
                         corIcone: cores.chalkWhite,
-                        dica: 'Voltar',
+                        dica: context.tr(ChaveTexto.comumVoltar),
                         aoVoltar: () => AppNav.back(context),
                       ),
                       buildFeedbackButton(context, color: cores.chalkWhite),

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/view_models/login_view_model.dart';
@@ -115,7 +116,10 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: cores.deepBasalt,
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: _vm,
+          listenable: Listenable.merge([
+            _vm,
+            ControladorIdiomaApp.instancia.notificadorIdioma,
+          ]),
           builder: (context, _) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 12),
                         BotaoProvedorOAuthLogin(
                           key: const Key('btn_login_google'),
-                          rotulo: 'Continuar com o Google',
+                          rotulo: context.tr(ChaveTexto.authContinuarGoogle),
                           aoPressionar: _vm.carregando
                               ? null
                               : _executarLoginGoogle,
@@ -163,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 8),
                           BotaoProvedorOAuthLogin(
                             key: const Key('btn_login_apple'),
-                            rotulo: 'Continuar com a Apple',
+                            rotulo: context.tr(ChaveTexto.authContinuarApple),
                             aoPressionar: _vm.carregando
                                 ? null
                                 : _executarLoginApple,
@@ -175,8 +179,8 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ],
                         const SizedBox(height: 10),
-                        const DivisorSecaoLogin(
-                          texto: 'ou receba um código por e-mail',
+                        DivisorSecaoLogin(
+                          texto: context.tr(ChaveTexto.authOuCodigoEmail),
                         ),
                         const SizedBox(height: 10),
                         CartaoCodigoEmailLogin(
