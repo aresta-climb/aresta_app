@@ -176,3 +176,91 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     final assinaturaPicos =
         ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picosReferencia);
 
+    final existente = _curvasMemoizadas;
+    if (existente != null &&
+        existente.chaveBloco == bloco.chaveBloco &&
+        existente.nivelDetalhe == nivel &&
+        existente.versaoDadosElevacao == versao &&
+        _assinaturaPicosCurvas == assinaturaPicos) {
+      return existente;
+    }
+
+    final malhaAtual = _malha;
+    final extraido = ExtratorCurvasNivelMundo.extrairCurvasBloco(
+      janela: janela,
+      nivelDetalhe: nivel,
+      versaoDadosElevacao: versao,
+      picosReferencia: picosReferencia,
+      amostrarElevacaoMetros: (lat, lon) {
+        final ehTerra = malhaAtual?.contemPontoTerrestre(
+          latitude: lat,
+          longitude: lon,
+        );
+        return GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+          latitude: lat,
+          longitude: lon,
+          picosReferencia: picosReferencia,
+          ehTerraConfirmada: ehTerra,
+          amostradorElevacaoReal: amostrarElevacaoReal,
+        );
+      },
+    );
+
+    _curvasMemoizadas = extraido;
+    _assinaturaPicosCurvas = assinaturaPicos;
+    return extraido;
+  }
+
+  /// Atualiza a preferência de acessibilidade (`MediaQuery.disableAnimations`).
+  void atualizarPreferenciaAnimacoesAmbiente(bool ativas) {
+    _animacoesAmbienteAtivas = ativas;
+  }
+
+  /// Indica se a cena requer quadros contínuos de `Ticker` no instante atual.
+  bool precisaAnimarQuadro({
+    required ControladorCameraGlobo controlador,
+    required bool temFenomenoAoVivo,
+  }) {
+    final precisaSonar = _progressoSonar < 1.0;
+    final precisaLuzViaria = (_progressoLuzViaria - _alvoLuzViaria).abs() > 1e-4;
+    final precisaFenomenos = _animacoesAmbienteAtivas && temFenomenoAoVivo;
+    return controlador.temAnimacaoAtiva ||
+        precisaSonar ||
+        precisaLuzViaria ||
+        precisaFenomenos;
+  }
+
+  /// Sincroniza o gatilho bidirecional da luz viária e o timer esparso das estrelas de fundo.
+  void sincronizarEstadoCena({
+    required ControladorCameraGlobo controlador,
+    required bool tickerAtivo,
+  }) {
+    _atualizarGatilhoLuzViaria(controlador.lod);
+    final deveAnimarEstrelas = _animacoesAmbienteAtivas &&
+        controlador.modo3D &&
+        controlador.raioAparentePx < 760.0;
+    if (deveAnimarEstrelas) {
+      _timerEstrelasAmbiente ??= Timer.periodic(
+        const Duration(milliseconds: 150),
+        (_) {
+          if (!tickerAtivo && !_descartado) {
+            faseEstrelasSegundos.value =
+                (faseEstrelasSegundos.value + 0.15) % 36000.0;
+          }
+        },
+      );
+    } else {
+      _timerEstrelasAmbiente?.cancel();
+      _timerEstrelasAmbiente = null;
+    }
+  }
+
+  /// Avança um passo físico de simulação (`dtSegundos`) para câmera, luz viária, clima e sonar.
+  void avancarQuadro({
+    required double dtSegundos,
+    required ControladorCameraGlobo controlador,
+    required bool temFenomenoAoVivo,
+  }) {
+    controlador.avancarQuadroFisica(dtSegundos);
+    _atualizarGatilhoLuzViaria(controlador.lod);
+
