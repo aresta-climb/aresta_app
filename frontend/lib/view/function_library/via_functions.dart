@@ -488,8 +488,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                             setor: widget.setor,
                             grupo: widget.grupo,
                           ),
-                          if (_cadernetaViewModel.visivel &&
-                              resumoAscensao != null) ...[
+                          if (resumoAscensao != null) ...[
                             const SizedBox(height: 12),
                             InkWell(
                               onTap: () => _abrirRegistroCadena(context),
@@ -574,8 +573,7 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                                   _viewModel.complementoGrauOficial,
                               apresentacaoConsenso:
                                   _viewModel.apresentacaoConsenso,
-                              aoVotarGrau: _viewModel.exibirRecursosComunidade &&
-                                      _viewModel.possuiUid
+                              aoVotarGrau: _viewModel.possuiUid
                                   ? (delta) => _votarGrauDireto(context, delta)
                                   : null,
                               alertasAtivos: _viewModel.alertasAtivos,
@@ -606,6 +604,10 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                     ),
                     SecaoNotasComunidadeVia(
                       notas: _viewModel.notasComunidadeApresentacao,
+                      aoEditarNota: (nota) =>
+                          _abrirEdicaoComentario(context, nota),
+                      aoExcluirNota: (nota) =>
+                          _confirmarExclusaoComentario(context, nota),
                     ),
                     SecaoHistoricoEPixVia(
                       conquistadoresTexto: _viewModel.conquistadoresTexto,
@@ -619,7 +621,6 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
               ),
             ),
             BarraInferiorAcoesVia(
-              exibirBotaoCaderneta: _cadernetaViewModel.visivel,
               possuiCadena: _cadernetaViewModel.isCadena,
               rotuloBotaoCaderneta: _cadernetaViewModel.rotuloBotao,
               aoRegistrarCadena: () => _abrirRegistroCadena(context),
