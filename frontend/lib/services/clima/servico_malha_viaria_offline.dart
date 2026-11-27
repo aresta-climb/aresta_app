@@ -89,3 +89,89 @@ class ArmazenamentoMalhaViariaLocal {
       return lidoSeguranca;
     }
 
+    return null;
+  }
+
+  /// Lê diretamente a cópia única de segurança em disco quando existente.
+  Future<SnapshotMalhaViariaOffline?> lerCopiaSeguranca() async {
+    final dirBase = await _provedorDiretorioBase();
+    if (dirBase == null) return null;
+    return _tentarLerArquivo(File('$dirBase/$nomeArquivoSeguranca'));
+  }
+
+  static Future<SnapshotMalhaViariaOffline?> _tentarLerArquivo(
+    File arquivo,
+  ) async {
+    if (!arquivo.existsSync()) return null;
+    try {
+      final bruto = await arquivo.readAsString();
+      return await Isolate.run(() {
+        final decodificado = jsonDecode(bruto);
+        if (decodificado is! Map<String, dynamic>) return null;
+        return SnapshotMalhaViariaOffline.deMapa(decodificado);
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// Fronteira remota para sincronização incremental de `public.snapshots_malha_viaria_picos`.
+abstract interface class FonteRemotaMalhaViaria {
+  /// Consulta apenas o cabeçalho leve (`versao_hash`) para evitar download desnecessário em campo.
+  Future<String?> consultarVersaoRemota();
+
+  /// Baixa o snapshot completo de rodovias pavimentadas com fallback para `copia_seguranca`.
+  Future<SnapshotMalhaViariaOffline> buscarSnapshotRemoto();
+}
+
+/// Cliente PostgREST que lê `public.snapshots_malha_viaria_picos` (`atual` -> `copia_seguranca`).
+class ClienteMalhaViariaSupabase implements FonteRemotaMalhaViaria {
+  static const String nomeTabela = 'snapshots_malha_viaria_picos';
+
+  final String urlBaseSupabase;
+  final String chaveAnonima;
+  final ClienteHttpAresta _clienteHttp;
+  final Duration timeoutRequisicao;
+
+  ClienteMalhaViariaSupabase({
+    String? urlBaseSupabase,
+    String? chaveAnonima,
+    ClienteHttpAresta? clienteHttp,
+    this.timeoutRequisicao = const Duration(seconds: 6),
+  })  : urlBaseSupabase =
+            (urlBaseSupabase ?? NetworkConstants.kDefaultSupabaseUrl)
+                .replaceAll(RegExp(r'/+$'), ''),
+        chaveAnonima = chaveAnonima ?? NetworkConstants.kDefaultSupabaseAnonKey,
+        _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia;
+
+  Map<String, String> get _cabecalhos {
+    final headers = <String, String>{
+      'apikey': chaveAnonima,
+      'Accept': 'application/json',
+    };
+    if (chaveAnonima.startsWith('eyJ')) {
+      headers['Authorization'] = 'Bearer $chaveAnonima';
+    }
+    return headers;
+  }
+
+  @override
+  Future<String?> consultarVersaoRemota() async {
+    final meta = await _consultarComFallbackSlot(colunas: 'slot,versao_hash');
+    final versao = (meta['versao_hash'] as String?)?.trim() ?? '';
+    return versao.isEmpty ? null : versao;
+  }
+
+  @override
+  Future<SnapshotMalhaViariaOffline> buscarSnapshotRemoto() async {
+    final textoBruto = await _consultarTextoComFallbackSlot(
+      colunas: 'gerado_em,versao_hash,rodovias',
+    );
+    return Isolate.run(() {
+      final lista = jsonDecode(textoBruto) as List<dynamic>;
+      final primeiro = Map<String, dynamic>.from(lista.first as Map);
+      return SnapshotMalhaViariaOffline.deMapa(primeiro);
+    });
+  }
+
