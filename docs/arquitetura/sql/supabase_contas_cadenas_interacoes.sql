@@ -519,6 +519,43 @@ CREATE POLICY "fila_interacoes_insercao_autenticada" ON public.fila_interacoes
         )
     );
 
+-- Política 3: Somente o próprio autor autenticado pode editar seus comentários e alertas pendentes.
+CREATE POLICY "fila_interacoes_atualizacao_proprio_autor" ON public.fila_interacoes
+    FOR UPDATE
+    TO authenticated
+    USING (
+        status = 'PENDENTE'
+        AND tipo IN ('COMENTARIO', 'ALERTA_SEGURANCA')
+        AND EXISTS (
+            SELECT 1 FROM public.perfis p
+            WHERE p.user_id = auth.uid()
+              AND p.autor_id_publico = fila_interacoes.autor_id_publico
+        )
+    )
+    WITH CHECK (
+        status = 'PENDENTE'
+        AND tipo IN ('COMENTARIO', 'ALERTA_SEGURANCA')
+        AND EXISTS (
+            SELECT 1 FROM public.perfis p
+            WHERE p.user_id = auth.uid()
+              AND p.autor_id_publico = fila_interacoes.autor_id_publico
+        )
+    );
+
+-- Política 4: Somente o próprio autor autenticado pode excluir seus comentários e alertas pendentes.
+CREATE POLICY "fila_interacoes_exclusao_proprio_autor" ON public.fila_interacoes
+    FOR DELETE
+    TO authenticated
+    USING (
+        status = 'PENDENTE'
+        AND tipo IN ('COMENTARIO', 'ALERTA_SEGURANCA')
+        AND EXISTS (
+            SELECT 1 FROM public.perfis p
+            WHERE p.user_id = auth.uid()
+              AND p.autor_id_publico = fila_interacoes.autor_id_publico
+        )
+    );
+
 -- ============================================================================
 -- 5. PRIVILÉGIOS DE ACESSO POR ROLE (PRINCÍPIO DO MENOR PRIVILÉGIO)
 -- ============================================================================
@@ -530,12 +567,12 @@ REVOKE ALL ON public.cadenas FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.cadenas TO authenticated;
 
 -- Clientes anônimos possuem estritamente leitura pública dos alertas e consensos;
--- somente clientes autenticados podem enfileirar novas interações, e apenas service_role atualiza/purga.
+-- clientes autenticados podem inserir e editar/excluir apenas os próprios comentários/alertas sob RLS.
 REVOKE ALL ON public.fila_interacoes FROM anon;
 GRANT SELECT ON public.fila_interacoes TO anon;
 
-REVOKE UPDATE, DELETE, TRUNCATE ON public.fila_interacoes FROM authenticated;
-GRANT SELECT, INSERT ON public.fila_interacoes TO authenticated;
+REVOKE TRUNCATE ON public.fila_interacoes FROM authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.fila_interacoes TO authenticated;
 
 GRANT ALL ON public.perfis, public.cadenas, public.fila_interacoes TO service_role;
 
