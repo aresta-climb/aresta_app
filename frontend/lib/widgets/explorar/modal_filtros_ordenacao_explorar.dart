@@ -344,3 +344,74 @@ class ModalFiltrosOrdenacaoExplorar extends StatelessWidget {
                               colors.rustIron.withValues(alpha: 0.28),
                           backgroundColor: colors.deepBasalt,
                           checkmarkColor: colors.rustIron,
+                          side: BorderSide(
+                            color: viewModel.raioMaximoKm == 150.0
+                                ? colors.rustIron
+                                : Colors.white12,
+                          ),
+                          labelStyle: TextStyle(
+                            color: viewModel.raioMaximoKm == 150.0
+                                ? colors.chalkWhite
+                                : colors.ashGrey,
+                          ),
+                          onSelected: (v) =>
+                              viewModel.definirRaioMaximoKm(v ? 150.0 : null),
+                        ),
+                        FilterChip(
+                          key: const Key('filtro_salvos_offline'),
+                          selected: viewModel.apenasSalvosOffline,
+                          label: Text(
+                            context.tr(ChaveTexto.explorarSalvosOffline),
+                          ),
+                          selectedColor: colors.dryMoss.withValues(alpha: 0.30),
+                          backgroundColor: colors.deepBasalt,
+                          checkmarkColor: colors.dryMoss,
+                          side: BorderSide(
+                            color: viewModel.apenasSalvosOffline
+                                ? colors.dryMoss
+                                : Colors.white12,
+                          ),
+                          labelStyle: TextStyle(
+                            color: viewModel.apenasSalvosOffline
+                                ? colors.chalkWhite
+                                : colors.ashGrey,
+                          ),
+                          onSelected: viewModel.definirApenasSalvosOffline,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: ElevatedButton(
+                key: const Key('botao_aplicar_filtros_explorar'),
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.rustIron,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  context.tr(
+                    ChaveTexto.explorarVerNPicos,
+                    {'total': totalPicos},
+                  ),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
