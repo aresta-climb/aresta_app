@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'componentes_marcador_globo.dart';
@@ -68,23 +67,10 @@ abstract final class CamadaMarcadoresGloboExplorar {
   }) {
     final loc = localizacaoUsuario;
     if (loc == null) return const [];
-    final pesoTerreno =
-        ControladorCameraGlobo.smoothstep(1.35, 2.05, controlador.lod);
-    final elev = pesoTerreno > 0.01
-        ? math.max(
-              0.0,
-              GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                picosReferencia: referencias,
-              ),
-            ) *
-            pesoTerreno
-        : 0.0;
     final pt = controlador.projetarCoordenada(
       latitude: loc.latitude,
       longitude: loc.longitude,
-      elevacaoMetros: elev,
+      elevacaoMetros: 0.0,
       tamanhoTela: tamanho,
     );
     final limiteInferior = tamanho.height - controlador.alturaGavetaPx + 8.0;
@@ -152,24 +138,11 @@ abstract final class CamadaMarcadoresGloboExplorar {
     }
 
     final visiveis = <({MarcadorPicoGlobo pico, PontoProjetadoTela pt})>[];
-    final pesoTerreno =
-        ControladorCameraGlobo.smoothstep(1.35, 2.05, controlador.lod);
     for (final p in picos) {
-      final elev = pesoTerreno > 0.01
-          ? math.max(
-                0.0,
-                GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-                  latitude: p.latitude,
-                  longitude: p.longitude,
-                  picosReferencia: referencias,
-                ),
-              ) *
-              pesoTerreno
-          : 0.0;
       final pt = controlador.projetarCoordenada(
         latitude: p.latitude,
         longitude: p.longitude,
-        elevacaoMetros: elev,
+        elevacaoMetros: 0.0,
         tamanhoTela: tamanho,
       );
       if (pt.visivel &&
@@ -331,8 +304,6 @@ abstract final class CamadaMarcadoresGloboExplorar {
     final nivelMaximoVisivel = controlador.lod >= 3.25
         ? 3
         : (controlador.lod >= 2.35 ? 2 : 1);
-    final pesoTerreno =
-        ControladorCameraGlobo.smoothstep(1.35, 2.05, controlador.lod);
 
     final candidatos = <({
       String id,
@@ -349,20 +320,10 @@ abstract final class CamadaMarcadoresGloboExplorar {
         continue;
       }
 
-      final elev = math.max(
-            0.0,
-            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              picosReferencia: referencias,
-              ehTerraConfirmada: true,
-            ),
-          ) *
-          pesoTerreno;
       final pt = controlador.projetarCoordenada(
         latitude: loc.latitude,
         longitude: loc.longitude,
-        elevacaoMetros: elev,
+        elevacaoMetros: 0.0,
         tamanhoTela: tamanho,
       );
       if (!pt.visivel ||
@@ -390,20 +351,10 @@ abstract final class CamadaMarcadoresGloboExplorar {
       bool prioritario,
     })>[];
     for (final p in picos) {
-      final elevPico = math.max(
-            0.0,
-            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-              latitude: p.latitude,
-              longitude: p.longitude,
-              picosReferencia: referencias,
-              ehTerraConfirmada: true,
-            ),
-          ) *
-          pesoTerreno;
       final ptPico = controlador.projetarCoordenada(
         latitude: p.latitude,
         longitude: p.longitude,
-        elevacaoMetros: elevPico,
+        elevacaoMetros: 0.0,
         tamanhoTela: tamanho,
       );
       if (ptPico.visivel &&
