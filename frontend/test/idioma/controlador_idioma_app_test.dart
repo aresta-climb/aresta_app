@@ -65,3 +65,75 @@ void main() {
           'es',
         );
 
+        await controlador.definirIdioma(IdiomaApp.espanhol);
+        expect(notificacoes, 1);
+      },
+    );
+
+    test(
+      'cicla sequencialmente pelos cinco idiomas e restaura o padrão em memória sincronamente',
+      () async {
+        final controlador = ControladorIdiomaApp.criarIsolado();
+
+        expect(await controlador.ciclarProximoIdioma(), IdiomaApp.ingles);
+        expect(await controlador.ciclarProximoIdioma(), IdiomaApp.espanhol);
+        expect(await controlador.ciclarProximoIdioma(), IdiomaApp.alemao);
+        expect(await controlador.ciclarProximoIdioma(), IdiomaApp.holandes);
+        expect(await controlador.ciclarProximoIdioma(), IdiomaApp.portugues);
+
+        await controlador.definirIdioma(IdiomaApp.alemao);
+        expect(controlador.idiomaAtual, IdiomaApp.alemao);
+
+        controlador.restaurarPadraoEmMemoria();
+        expect(controlador.idiomaAtual, IdiomaApp.portugues);
+
+        // Idempotente quando já está em português
+        controlador.restaurarPadraoEmMemoria();
+        expect(controlador.idiomaAtual, IdiomaApp.portugues);
+      },
+    );
+
+    testWidgets(
+      'EscopoIdiomaApp reconstrói dependentes ao trocar idioma e recorre à instância global quando ausente da árvore',
+      (tester) async {
+        final controladorIsolado = ControladorIdiomaApp.criarIsolado();
+
+        await tester.pumpWidget(
+          EscopoIdiomaApp(
+            notificador: controladorIsolado.notificadorIdioma,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Builder(
+                builder: (context) {
+                  final idioma = EscopoIdiomaApp.observar(context);
+                  return Text('escopo:${idioma.regiaoIso}');
+                },
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('escopo:BR'), findsOneWidget);
+
+        await controladorIsolado.definirIdioma(IdiomaApp.holandes);
+        await tester.pump();
+        expect(find.text('escopo:NL'), findsOneWidget);
+
+        // Sem EscopoIdiomaApp na árvore, recorre à instância global
+        await ControladorIdiomaApp.instancia.definirIdioma(IdiomaApp.alemao);
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Builder(
+              builder: (context) {
+                final idioma = EscopoIdiomaApp.observar(context);
+                return Text('global:${idioma.regiaoIso}');
+              },
+            ),
+          ),
+        );
+        expect(find.text('global:DE'), findsOneWidget);
+      },
+    );
+  });
+}
