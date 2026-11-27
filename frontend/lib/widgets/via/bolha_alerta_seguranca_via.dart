@@ -1,10 +1,15 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/formulario_alerta_via_view_model.dart';
+import 'modais_edicao_interacao_via.dart';
+
+export 'modais_edicao_interacao_via.dart';
 
 /// Cor vermelha de alta visibilidade usada nas bolhas de alerta estilo Waze sobre rocha e cartões escuros.
 const Color _corVermelhoAlerta = Color(0xFFD93829);
@@ -66,13 +71,17 @@ class BolhaEmojiAlertaVia extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Alerta: ${alerta.categoria.rotulo}',
+      label: context.tr(
+        ChaveTexto.alertaPrefixoSemantics,
+        {'rotulo': alerta.categoria.rotulo},
+      ),
       child: GestureDetector(
         onTap: aoTocar,
         child: CustomPaint(
+          // ignore: prefer_const_constructors
           painter: _PintorBolhaChatVermelha(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 7, 11, 13),
+            padding: const EdgeInsets.fromLTRB(11, 7, 11, 14),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -88,6 +97,13 @@ class BolhaEmojiAlertaVia extends StatelessWidget {
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x66000000),
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -100,31 +116,76 @@ class BolhaEmojiAlertaVia extends StatelessWidget {
   }
 }
 
+/// Constrói a silhueta unificada de balão de fala (`PathOperation.union`) da bolha de alerta,
+/// fundindo corpo arredondado e cauda curva orgânica sem costura interna, com ponta exata em `(0.24 * w, h)`.
+Path construirCaminhoBolhaAlerta(Size size) {
+  const alturaCauda = 7.5;
+  final alturaCorpo = math.max(14.0, size.height - alturaCauda);
+  final raioCanto = math.min(13.0, alturaCorpo * 0.42);
+
+  final caminhoCorpo = Path()
+    ..addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, alturaCorpo),
+        Radius.circular(raioCanto),
+      ),
+    );
+
+  final pontaX = size.width * 0.24;
+  final pontaY = size.height;
+  final esqBaseX = (pontaX - 3.5).clamp(raioCanto * 0.55, size.width - 12.0);
+  final dirBaseX =
+      (pontaX + 11.5).clamp(esqBaseX + 6.0, size.width - raioCanto * 0.45);
+  final topoInsercaoY = alturaCorpo - 4.0;
+
+  final caminhoCauda = Path()
+    ..moveTo(esqBaseX, topoInsercaoY)
+    ..lineTo(esqBaseX, alturaCorpo - 0.5)
+    ..quadraticBezierTo(
+      esqBaseX + 0.4,
+      alturaCorpo + alturaCauda * 0.55,
+      pontaX,
+      pontaY,
+    )
+    ..quadraticBezierTo(
+      pontaX + 5.2,
+      alturaCorpo + alturaCauda * 0.42,
+      dirBaseX,
+      alturaCorpo - 0.5,
+    )
+    ..lineTo(dirBaseX, topoInsercaoY)
+    ..close();
+
+  return Path.combine(PathOperation.union, caminhoCorpo, caminhoCauda);
+}
+
 class _PintorBolhaChatVermelha extends CustomPainter {
   const _PintorBolhaChatVermelha();
 
   @override
   void paint(Canvas canvas, Size size) {
-    const alturaCauda = 6.0;
-    final alturaCorpo = size.height - alturaCauda;
-    final raio = alturaCorpo / 2;
+    const alturaCauda = 7.5;
+    final alturaCorpo = math.max(14.0, size.height - alturaCauda);
+    final caminho = construirCaminhoBolhaAlerta(size);
+    final retanguloTotal = Offset.zero & size;
 
-    final caminho = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, size.width, alturaCorpo),
-          Radius.circular(raio),
-        ),
-      )
-      ..moveTo(size.width * 0.34, alturaCorpo - 1)
-      ..lineTo(size.width * 0.24, size.height)
-      ..lineTo(size.width * 0.52, alturaCorpo - 1)
-      ..close();
-
-    canvas.drawShadow(caminho, Colors.black.withValues(alpha: 0.65), 6, true);
+    canvas.drawShadow(caminho, Colors.black.withValues(alpha: 0.72), 7.0, true);
+    canvas.drawPath(
+      caminho.shift(const Offset(0, 1.5)),
+      Paint()..color = Colors.black.withValues(alpha: 0.25),
+    );
 
     final preenchimento = Paint()
-      ..color = _corVermelhoAlerta
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFF44D3B),
+          Color(0xFFD93223),
+          Color(0xFFB91E12),
+        ],
+        stops: [0.0, 0.62, 1.0],
+      ).createShader(retanguloTotal)
       ..style = PaintingStyle.fill;
     canvas.drawPath(caminho, preenchimento);
 
