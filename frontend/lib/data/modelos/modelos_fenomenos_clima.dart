@@ -431,3 +431,60 @@ class BolhaIncendioRegional {
       throw const FormatException('BolhaIncendioRegional inválida.');
     }
 
+    final nucleos = <List<PontoContornoGeo>>[];
+    if (nucleosBrutos is List) {
+      for (final anelBruto in nucleosBrutos) {
+        if (anelBruto is List && anelBruto.length >= 3) {
+          nucleos.add(
+            anelBruto
+                .map((p) => PontoContornoGeo.deLista(p as List<dynamic>))
+                .toList(growable: false),
+          );
+        }
+      }
+    }
+
+    return BolhaIncendioRegional(
+      id: id,
+      latitude: lat.toDouble(),
+      longitude: lon.toDouble(),
+      potenciaFrpMw: frp.toDouble(),
+      totalFocos: focos.round(),
+      ventoRumoGraus: (rumo.toDouble() % 360.0 + 360.0) % 360.0,
+      ventoVelocidadeKmh: velKmh.toDouble(),
+      fonteSatelite: fonte is String && fonte.isNotEmpty
+          ? fonte
+          : 'INPE_BDQUEIMADAS_NASA_VIIRS_MODIS',
+      contornoExterno: contornoBruto
+          .map((p) => PontoContornoGeo.deLista(p as List<dynamic>))
+          .toList(growable: false),
+      nucleosIntensos: List<List<PontoContornoGeo>>.unmodifiable(nucleos),
+    );
+  }
+
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'id': id,
+        'lat': latitude,
+        'lon': longitude,
+        'potencia_frp_mw': potenciaFrpMw,
+        'total_focos': totalFocos,
+        'vento_rumo_graus': ventoRumoGraus,
+        'vento_kmh': ventoVelocidadeKmh,
+        'fonte_satelite': fonteSatelite,
+        'contorno_externo':
+            contornoExterno.map((p) => p.paraLista()).toList(growable: false),
+        if (nucleosIntensos.isNotEmpty)
+          'nucleos_intensos': nucleosIntensos
+              .map(
+                (anel) => anel.map((p) => p.paraLista()).toList(growable: false),
+              )
+              .toList(growable: false),
+      };
+}
+
+/// Incêndio florestal ativo validado para pintura termal e pluma de fumaça sobre o geoide/mapa.
+class BolhaIncendioAtivaRenderizavel {
+  final BolhaIncendioRegional incendio;
+
+  const BolhaIncendioAtivaRenderizavel({required this.incendio});
+}
