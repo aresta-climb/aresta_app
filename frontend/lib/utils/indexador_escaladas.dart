@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import 'extrator_detalhes_tecnicos_via.dart';
 import '../view/function_library/via_functions.dart';
 
 /// Representa um item enriquecido do índice de escaladas, contendo a escalada
@@ -35,12 +36,13 @@ class ItemIndiceEscalada {
   /// Valor numérico do grau para ordenação.
   int get grauValor => getGrauValue(escalada);
 
-  /// Modalidade da escalada, padronizada em português (ex: "Esportiva", "Boulder", "Multienfiada").
-  String get modalidade {
-    final mod = getModalidadeEscalada(escalada);
-    if (mod == 'Multipitch') return 'Multienfiada';
-    return mod;
-  }
+  /// Chave canônica da modalidade em português para filtros e abas (ex: "Esportiva", "Boulder", "Multienfiada").
+  String get modalidade =>
+      ExtratorDetalhesTecnicosVia.extrairChaveModalidade(escalada);
+
+  /// Rótulo localizado da modalidade pronto para exibição visual no idioma ativo.
+  String get modalidadeExibicao =>
+      ExtratorDetalhesTecnicosVia.traduzirRotuloModalidade(modalidade);
 
   /// String de proteções no formato X+Y.
   String get protecoes => getProtecoesString(escalada);

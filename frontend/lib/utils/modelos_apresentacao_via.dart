@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../data/modelos/interacao_via.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/arvore_navegacao.dart';
 import 'calculadora_delta_grau.dart';
 import 'consulta_dataset.dart';
@@ -121,8 +122,17 @@ class ItemMidiaBetaVia {
 /// Modelo imutável de apresentação de um beta público da comunidade pronto para Dumb UI.
 @immutable
 class NotaComunidadeApresentacao {
+  /// Identificador único do comentário (`id`) para operações de edição/exclusão pelo autor.
+  final String uid;
+
   /// Cabeçalho pré-formatado contendo autor e data (`'Mariana • 19/11/2026'`).
   final String cabecalhoAutorData;
+
+  /// Iniciais em caixa alta do autor usadas como fallback do avatar circular (`'MS'`, `'C'`).
+  final String iniciaisAutor;
+
+  /// URL pública (`http`/`https`) ou Data URI (`data:image/...`) da foto de perfil do autor.
+  final String? autorAvatarUrl;
 
   /// Rótulo opcional do estilo esportivo (`'FLASH ★'`, `'À VISTA ★'`, etc.).
   final String? rotuloEstilo;
@@ -130,12 +140,37 @@ class NotaComunidadeApresentacao {
   /// Corpo textual do beta público.
   final String texto;
 
+  /// Indica se esta nota pertence ao escalador atualmente autenticado (habilitando Editar/Excluir).
+  final bool pertenceAoUsuarioAtual;
+
   /// Cria uma instância constante de [NotaComunidadeApresentacao].
   const NotaComunidadeApresentacao({
+    this.uid = '',
     required this.cabecalhoAutorData,
+    this.iniciaisAutor = 'EA',
+    this.autorAvatarUrl,
     this.rotuloEstilo,
     required this.texto,
+    this.pertenceAoUsuarioAtual = false,
   });
+
+  /// Extrai até duas iniciais em caixa alta a partir do nome público do escalador.
+  static String extrairIniciais(String nomeBruto) {
+    final partes = nomeBruto
+        .split('•')
+        .first
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList(growable: false);
+    if (partes.isEmpty) return '?';
+    final primeira = String.fromCharCode(partes.first.runes.first);
+    if (partes.length == 1) {
+      return primeira.toUpperCase();
+    }
+    final ultima = String.fromCharCode(partes.last.runes.first);
+    return '$primeira$ultima'.toUpperCase();
+  }
 }
 
 /// Modelo imutável de uma faixa individual (`-2` a `+2`) do gráfico de consenso para Dumb UI.
@@ -239,18 +274,17 @@ class ApresentacaoConsensoGrauVia {
     this.pilulasVoto = const [],
   });
 
-  /// Cria o estado inicial constante sem votos para vias ainda não avaliadas.
-  const ApresentacaoConsensoGrauVia.semVotos()
-    : possuiVotos = false,
-      grauSugerido = null,
-      subtituloTendencia = 'Registre sua ascensão para avaliar',
-      tituloDistribuicao = '',
-      votosSuaves = 0,
-      votosJustos = 0,
-      votosDuros = 0,
-      deltaVotoUsuario = null,
-      faixasDistribuicao = const [],
-      pilulasVoto = const [];
+  /// Cria o estado inicial sem votos localizado para vias ainda não avaliadas.
+  factory ApresentacaoConsensoGrauVia.semVotos() => ApresentacaoConsensoGrauVia(
+    possuiVotos: false,
+    grauSugerido: null,
+    subtituloTendencia: tr(ChaveTexto.viaRegistreParaAvaliar),
+    tituloDistribuicao: '',
+    votosSuaves: 0,
+    votosJustos: 0,
+    votosDuros: 0,
+    faixasDistribuicao: const [],
+  );
 
   /// Constrói a apresentação completa (gráfico + 5 pílulas de voto) a partir de [ConsensoGrauVia].
   factory ApresentacaoConsensoGrauVia.deConsenso(
@@ -274,7 +308,7 @@ class ApresentacaoConsensoGrauVia {
       return ApresentacaoConsensoGrauVia(
         possuiVotos: false,
         grauSugerido: null,
-        subtituloTendencia: 'Registre sua ascensão para avaliar',
+        subtituloTendencia: tr(ChaveTexto.viaRegistreParaAvaliar),
         tituloDistribuicao: '',
         votosSuaves: 0,
         votosJustos: 0,
@@ -328,8 +362,11 @@ class ApresentacaoConsensoGrauVia {
       possuiVotos: true,
       grauSugerido: consenso.grauSugerido,
       subtituloTendencia:
-          consenso.resumoTendencia ?? '${consenso.totalVotos} avaliações',
-      tituloDistribuicao: 'DISTRIBUIÇÃO DE VOTOS (${consenso.totalVotos})',
+          consenso.resumoTendencia ??
+          tr(ChaveTexto.viaNAvaliacoes, {'n': '${consenso.totalVotos}'}),
+      tituloDistribuicao: tr(ChaveTexto.viaDistribuicaoVotos, {
+        'n': '${consenso.totalVotos}',
+      }),
       votosSuaves: votosSuaves,
       votosJustos: votosJustos,
       votosDuros: votosDuros,
@@ -345,7 +382,9 @@ class ApresentacaoConsensoGrauVia {
     required bool ehBoulder,
     required int? deltaVotoUsuario,
   }) {
-    final textoDelta = delta == 0 ? 'Justo' : (delta > 0 ? '+$delta' : '$delta');
+    final textoDelta = delta == 0
+        ? tr(ChaveTexto.viaGrauJustoCurto)
+        : (delta > 0 ? '+$delta' : '$delta');
     final codigo = deslocarCodigoGrau(
       codigoGrauOficial,
       delta,
@@ -373,7 +412,7 @@ class ApresentacaoConsensoGrauVia {
     );
     final grau = formatarGrauPorCodigo(codigo, ehBoulder: ehBoulder);
     if (grau != null) return '$grau ($textoDelta)';
-    return delta == 0 ? 'Justo (0)' : textoDelta;
+    return delta == 0 ? '${tr(ChaveTexto.viaGrauJustoCurto)} (0)' : textoDelta;
   }
 }
 
