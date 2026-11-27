@@ -266,3 +266,91 @@ export async function coletarTempestadesAoVivoContornosOpenMeteo(
       }
     }
 
+    // Suavização preservadora de picos (não apaga células convectivas isoladas!)
+    const matrizSuave: number[][] = Array.from({ length: R }, () =>
+      new Array<number>(C).fill(0),
+    );
+    for (let r = 1; r < R - 1; r++) {
+      for (let c = 1; c < C - 1; c++) {
+        const mediaVizinhos =
+          (campoFino[r][c].mmHora * 4 +
+            (campoFino[r - 1][c].mmHora +
+              campoFino[r + 1][c].mmHora +
+              campoFino[r][c - 1].mmHora +
+              campoFino[r][c + 1].mmHora) *
+              1.5 +
+            (campoFino[r - 1][c - 1].mmHora +
+              campoFino[r - 1][c + 1].mmHora +
+              campoFino[r + 1][c - 1].mmHora +
+              campoFino[r + 1][c + 1].mmHora) *
+              0.5) /
+          12;
+        matrizSuave[r][c] = Math.max(
+          campoFino[r][c].mmHora * 0.94,
+          mediaVizinhos,
+        );
+      }
+    }
+
+    const contornosExternos = extrairContornosMarchingSquares(
+      matrizSuave,
+      latsGrade,
+      lonsGrade,
+      LIMIAR_FRENTE_AO_VIVO_MM_H,
+    );
+    const contornosNucleos = [
+      ...extrairContornosMarchingSquares(
+        matrizSuave,
+        latsGrade,
+        lonsGrade,
+        LIMIAR_NUCLEO_FORTE_MM_H,
+      ),
+      ...extrairContornosMarchingSquares(
+        matrizSuave,
+        latsGrade,
+        lonsGrade,
+        LIMIAR_NUCLEO_EXTREMO_MM_H,
+      ),
+    ];
+
+    for (const anelBruto of contornosExternos) {
+      const areaAbs = Math.abs(calcularAreaAssinada(anelBruto));
+      if (areaAbs < 0.0016) continue;
+
+      const iteracoesChaikin = areaAbs < 0.08 || areaAbs >= 0.75 ? 1 : 2;
+      const orcamentoVertices =
+        areaAbs >= 0.75 ? 76 : areaAbs >= 0.08 ? 40 : 20;
+      const contornoSuave = simplificarAnelUniforme(
+        suavizarChaikin(anelBruto, iteracoesChaikin),
+        orcamentoVertices,
+      );
+      if (contornoSuave.length < 3) continue;
+
+      let minLonAnel = Infinity,
+        maxLonAnel = -Infinity,
+        minLatAnel = Infinity,
+        maxLatAnel = -Infinity;
+      for (const pt of contornoSuave) {
+        if (pt[0] < minLonAnel) minLonAnel = pt[0];
+        if (pt[0] > maxLonAnel) maxLonAnel = pt[0];
+        if (pt[1] < minLatAnel) minLatAnel = pt[1];
+        if (pt[1] > maxLatAnel) maxLatAnel = pt[1];
+      }
+
+      const rIni = Math.max(
+        1,
+        Math.floor((minLatAnel - regiao.minLat) / passoLat),
+      );
+      const rFim = Math.min(
+        rowsInt,
+        Math.ceil((maxLatAnel - regiao.minLat) / passoLat) + 2,
+      );
+      const cIni = Math.max(
+        1,
+        Math.floor((minLonAnel - regiao.minLon) / passoLon),
+      );
+      const cFim = Math.min(
+        colsInt,
+        Math.ceil((maxLonAnel - regiao.minLon) / passoLon) + 2,
+      );
+
