@@ -25,6 +25,7 @@ import 'package:frontend/pages/hub_perfil_caderneta.dart';
 import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/pages/login.dart';
 import 'package:frontend/pages/sobre_time.dart';
+import 'package:frontend/pages/estatisticas_clima.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -116,6 +117,16 @@ void main() {
       );
 
       expect(widget, isA<SobreTimePage>());
+    });
+
+    testWidgets('resolve EstatisticasClimaNode para PaginaEstatisticasClima', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const EstatisticasClimaNode(BrowseNode(HomeNode())),
+        datasetRepo: repo,
+        syncService: syncService,
+      );
+
+      expect(widget, isA<PaginaEstatisticasClima>());
     });
 
     testWidgets('resolve LoginNode para LoginPage', (tester) async {

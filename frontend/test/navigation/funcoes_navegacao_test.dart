@@ -815,5 +815,54 @@ void main() {
         expect(treeController.currentNode, isA<HomeNode>());
       },
     );
+
+    testWidgets(
+      'AppNav.toEstatisticasClima empilha EstatisticasClimaNode de forma idempotente e suporta fallback imperativo',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              child: const Scaffold(body: Text('HostEstat')),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final ctx = tester.element(find.text('HostEstat'));
+        final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
+
+        AppNav.toEstatisticasClima(ctx);
+        expect(controller.currentNode, isA<EstatisticasClimaNode>());
+        final primeiroNo = controller.currentNode;
+
+        // Chamada repetida permanece idempotente no mesmo nó
+        AppNav.toEstatisticasClima(ctx);
+        expect(identical(controller.currentNode, primeiroNo), isTrue);
+
+        // Fallback sem TreeNavigationWrapper (ex.: diálogo/widget isolado) empilha PaginaEstatisticasClima no Navigator
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Builder(
+              builder: (isolatedCtx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => AppNav.toEstatisticasClima(isolatedCtx),
+                  child: const Text('Abrir Estat Isolado'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Abrir Estat Isolado'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('pagina_estatisticas_clima')), findsOneWidget);
+      },
+    );
   });
 }

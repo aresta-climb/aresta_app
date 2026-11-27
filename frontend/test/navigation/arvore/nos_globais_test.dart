@@ -79,6 +79,22 @@ void main() {
       expect(copiado.parent, same(outroPai));
     });
 
+    test('EstatisticasClimaNode possui metadados e comportamento de cópia de ancestral', () {
+      const home = HomeNode();
+      const browse = BrowseNode(home);
+      const estat = EstatisticasClimaNode(browse);
+
+      expect(estat.parent, same(browse));
+      expect(estat.rotuloAmigavel, 'Estatísticas do Clima');
+      expect(estat.obterCaminhoCurto(), 'Início -> Explorar -> Estatísticas do Clima');
+      expect(estat.toString(), 'EstatisticasClimaNode');
+
+      const outroPai = HomeNode();
+      final copiado = estat.copyWithMergedAncestor(const EstatisticasClimaNode(outroPai));
+      expect(copiado, isA<EstatisticasClimaNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
     test('MeusCroquisNode possui metadados e comportamento de cópia de ancestral', () {
       const home = HomeNode();
       final meusCroquis = MeusCroquisNode(home);
