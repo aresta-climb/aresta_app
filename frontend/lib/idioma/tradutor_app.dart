@@ -65,3 +65,65 @@ abstract final class TradutorApp {
     final dia = int.tryParse(partes[2])?.toString() ?? partes[2];
     final alvo = idioma ?? ControladorIdiomaApp.instancia.idiomaAtual;
 
+    const mesesPt = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+    ];
+    const mesesEn = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const mesesEs = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    const mesesDe = [
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    ];
+    const mesesNl = [
+      'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+      'juli', 'augustus', 'september', 'oktober', 'november', 'december',
+    ];
+
+    switch (alvo) {
+      case IdiomaApp.portugues:
+        return '$dia de ${mesesPt[mesIdx]} de $ano';
+      case IdiomaApp.ingles:
+        return '${mesesEn[mesIdx]} $dia, $ano';
+      case IdiomaApp.espanhol:
+        return '$dia de ${mesesEs[mesIdx]} de $ano';
+      case IdiomaApp.alemao:
+        return '$dia. ${mesesDe[mesIdx]} $ano';
+      case IdiomaApp.holandes:
+        return '$dia ${mesesNl[mesIdx]} $ano';
+    }
+  }
+}
+
+/// Atalho global enxuto para ViewModels, modelos e funções utilitárias sem [BuildContext].
+String tr(
+  ChaveTexto chave, [
+  Map<String, Object?> parametros = const {},
+]) =>
+    TradutorApp.texto(chave, parametros: parametros);
+
+/// Extensão reativa em [BuildContext] que inscreve automaticamente o widget em [EscopoIdiomaApp]
+/// e traduz chaves de interface na reconstrução imediata após troca de idioma.
+extension ExtensaoIdiomaContexto on BuildContext {
+  /// Idioma ativo observado reativamente neste [BuildContext].
+  IdiomaApp get idiomaApp => EscopoIdiomaApp.observar(this);
+
+  /// Traduz [chave] observando reativamente o idioma ativo na árvore de widgets.
+  String tr(
+    ChaveTexto chave, [
+    Map<String, Object?> parametros = const {},
+  ]) {
+    final idiomaAtivo = EscopoIdiomaApp.observar(this);
+    return TradutorApp.texto(
+      chave,
+      idioma: idiomaAtivo,
+      parametros: parametros,
+    );
+  }
+}
