@@ -12,8 +12,6 @@ import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/hub_perfil_caderneta.dart';
 import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -108,14 +106,10 @@ void main() {
     testWidgets('ao tocar em Minha caderneta, navega para CadernetaNode na árvore de navegação', (tester) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
       RepositorioCadernetaLocal.instancia = repositorio;
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
-        ConfiguracaoRecursos.redefinirParaTestes();
-        ControladorInteracoesUsuario.redefinirParaTestes();
       });
 
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());

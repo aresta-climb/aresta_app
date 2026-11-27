@@ -8,8 +8,6 @@ import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/login.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -25,8 +23,6 @@ void main() {
   late ServicoAutenticacaoFake servicoFake;
 
   setUp(() async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    ControladorInteracoesUsuario.redefinirParaTestes();
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
@@ -37,8 +33,6 @@ void main() {
   });
 
   tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
   });
 
@@ -235,11 +229,7 @@ void main() {
       expect(treeController.currentNode, isA<PerfilNode>());
     });
 
-    testWidgets('botão voltar desempilha a LoginPage, gerencia ViewModel interno e preserva feature flag perfilHabilitado inativa por padrão', (tester) async {
-      // Confirma que fora do override de teste, a flag perfilHabilitado segue inativa por padrão
-      ConfiguracaoRecursos.redefinirParaTestes();
-      expect(ConfiguracaoRecursos.perfilHabilitado, isFalse);
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    testWidgets('botão voltar desempilha a LoginPage e gerencia ViewModel interno', (tester) async {
 
       await tester.pumpWidget(
         MaterialApp(
