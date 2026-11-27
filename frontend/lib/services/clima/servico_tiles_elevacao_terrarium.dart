@@ -179,3 +179,102 @@ class ServicoTilesElevacaoTerrarium extends ChangeNotifier {
     }
   }
 
+  Future<void> _buscarEDecodificarTile({
+    required int zoom,
+    required int x,
+    required int y,
+    required int chave,
+  }) async {
+    try {
+      final png = await _fonteRemota.baixarPngTile(zoom: zoom, x: x, y: y);
+      if (_descartado || png == null) {
+        _falhasRecentes.add(chave);
+        return;
+      }
+      final rgba = await _decodificadorRgba(png);
+      if (_descartado) return;
+      final tile = TileElevacaoTerrarium.deRgba256(
+        zoom: zoom,
+        x: x,
+        y: y,
+        rgba: rgba,
+      );
+      _inserirNoLru(chave, tile);
+      _versaoDados++;
+      notifyListeners();
+    } catch (_) {
+      _falhasRecentes.add(chave);
+    } finally {
+      _emVoo.remove(chave);
+    }
+  }
+
+  void _inserirNoLru(int chave, TileElevacaoTerrarium tile) {
+    _cacheLru.remove(chave);
+    _cacheLru[chave] = tile;
+    while (_cacheLru.length > limiteCacheTiles) {
+      _cacheLru.remove(_cacheLru.keys.first);
+    }
+  }
+
+  /// Registra diretamente um tile já decodificado em memória (útil em pré-carga ou testes).
+  void registrarTileEmMemoria(TileElevacaoTerrarium tile) {
+    _inserirNoLru(tile.chave, tile);
+    _versaoDados++;
+    if (!_descartado) notifyListeners();
+  }
+
+  /// Amostra sincronamente em `O(1)` a melhor elevação SRTM disponível (`z=12 -> z=10 -> z=8 -> offline`).
+  double? amostrarElevacaoReal({
+    required double latitude,
+    required double longitude,
+  }) {
+    const niveisZoom = <int>[12, 10, 8];
+    for (final z in niveisZoom) {
+      final proj = TileElevacaoTerrarium.projetarWebMercator(
+        latitude: latitude,
+        longitude: longitude,
+        zoom: z,
+      );
+      final chave =
+          TileElevacaoTerrarium.calcularChave(z, proj.tileX, proj.tileY);
+      final tile = _cacheLru[chave];
+      if (tile != null) {
+        return tile.amostrarLocal(proj.localX, proj.localY);
+      }
+    }
+    return _gradeRegionalOffline?.amostrarBilinear(latitude, longitude);
+  }
+
+  /// Decodifica um PNG `256x256` em buffer RGBA bruto utilizando o codec nativo C++ do Flutter.
+  static Future<Uint8List> decodificarPngParaRgba256(Uint8List pngBytes) async {
+    final codec = await ui.instantiateImageCodec(
+      pngBytes,
+      targetWidth: TileElevacaoTerrarium.dimensao,
+      targetHeight: TileElevacaoTerrarium.dimensao,
+    );
+    try {
+      final quadro = await codec.getNextFrame();
+      try {
+        final byteData = await quadro.image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
+        if (byteData == null) {
+          throw const FormatException('Falha ao extrair RGBA do tile PNG.');
+        }
+        return byteData.buffer.asUint8List();
+      } finally {
+        quadro.image.dispose();
+      }
+    } finally {
+      codec.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    _cacheLru.clear();
+    super.dispose();
+  }
+}
