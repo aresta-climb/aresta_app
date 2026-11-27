@@ -39,7 +39,14 @@ class PintorPlanetaGlobo extends CustomPainter {
   final double progressoSonar;
   final double progressoLuzViaria;
 
-  const PintorPlanetaGlobo({
+  final bool _modo3DCamera;
+  final double _latCamera;
+  final double _lonCamera;
+  final double _lodCamera;
+  final double _alturaGavetaCamera;
+  final double _elevacaoRefCamera;
+
+  PintorPlanetaGlobo({
     required this.controlador,
     required this.malha,
     this.redeViaria,
@@ -50,7 +57,12 @@ class PintorPlanetaGlobo extends CustomPainter {
     required this.sonarPico,
     required this.progressoSonar,
     this.progressoLuzViaria = 1.0,
-  });
+  })  : _modo3DCamera = controlador.modo3D,
+        _latCamera = controlador.latitudeCentral,
+        _lonCamera = controlador.longitudeCentral,
+        _lodCamera = controlador.lod,
+        _alturaGavetaCamera = controlador.alturaGavetaPx,
+        _elevacaoRefCamera = controlador.elevacaoReferenciaCameraMetros;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -521,5 +533,22 @@ class PintorPlanetaGlobo extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant PintorPlanetaGlobo oldDelegate) => true;
+  bool shouldRepaint(covariant PintorPlanetaGlobo oldDelegate) {
+    final sonarAtivo = progressoSonar < 1.0 ? sonarPico?.id : null;
+    final sonarAntigo =
+        oldDelegate.progressoSonar < 1.0 ? oldDelegate.sonarPico?.id : null;
+    return _modo3DCamera != oldDelegate._modo3DCamera ||
+        _latCamera != oldDelegate._latCamera ||
+        _lonCamera != oldDelegate._lonCamera ||
+        _lodCamera != oldDelegate._lodCamera ||
+        _alturaGavetaCamera != oldDelegate._alturaGavetaCamera ||
+        _elevacaoRefCamera != oldDelegate._elevacaoRefCamera ||
+        !identical(malha, oldDelegate.malha) ||
+        !identical(redeViaria, oldDelegate.redeViaria) ||
+        !identical(curvasMundo, oldDelegate.curvasMundo) ||
+        !identical(texturaNasa, oldDelegate.texturaNasa) ||
+        sonarAtivo != sonarAntigo ||
+        (sonarAtivo != null && progressoSonar != oldDelegate.progressoSonar) ||
+        progressoLuzViaria != oldDelegate.progressoLuzViaria;
+  }
 }

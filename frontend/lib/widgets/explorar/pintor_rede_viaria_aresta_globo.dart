@@ -283,20 +283,20 @@ abstract final class PintorRedeViariaArestaGlobo {
 
     final lod = controlador.lod;
     final espessuraNuc =
-        1.25 + 1.05 * ControladorCameraGlobo.smoothstep(2.20, 4.15, lod);
+        1.05 + 0.85 * ControladorCameraGlobo.smoothstep(2.20, 4.15, lod);
     if (lod >= 2.35) {
       canvas.drawPath(
         caminhoAceso,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = espessuraNuc * 2.15
+          ..strokeWidth = espessuraNuc * 2.10
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..color = Color.fromRGBO(
             8,
             11,
             17,
-            (0.76 * fatorModoViario).clamp(0.0, 1.0),
+            (0.68 * fatorModoViario).clamp(0.0, 1.0),
           ),
       );
     }
@@ -304,13 +304,12 @@ abstract final class PintorRedeViariaArestaGlobo {
       caminhoAceso,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraNuc * 2.45
+        ..strokeWidth = espessuraNuc * 2.15
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..color = corLaranjaAresta.withValues(
-          alpha: (0.34 * fatorModoViario).clamp(0.0, 1.0),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+          alpha: (0.16 * fatorModoViario).clamp(0.0, 1.0),
+        ),
     );
     canvas.drawPath(
       caminhoAceso,
@@ -319,35 +318,34 @@ abstract final class PintorRedeViariaArestaGlobo {
         ..strokeWidth = espessuraNuc
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..color = corBrilhoViasAresta.withValues(
-          alpha: (0.92 * fatorModoViario).clamp(0.0, 1.0),
+        ..color = corLaranjaAresta.withValues(
+          alpha: (0.72 * fatorModoViario).clamp(0.0, 1.0),
         ),
     );
     canvas.drawPath(
       caminhoAceso,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraNuc * 0.42
+        ..strokeWidth = espessuraNuc * 0.38
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..color = corFilamentoQuente.withValues(
-          alpha: (0.86 * fatorModoViario).clamp(0.0, 1.0),
+          alpha: (0.54 * fatorModoViario).clamp(0.0, 1.0),
         ),
     );
 
     if (progressoLuz < 1.0 && pontasOnda.isNotEmpty) {
       final pincelHaloPonta = Paint()
         ..color = corBrilhoViasAresta.withValues(
-          alpha: (0.78 * fatorModoViario).clamp(0.0, 1.0),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+          alpha: (0.28 * fatorModoViario).clamp(0.0, 1.0),
+        );
       final pincelCentroPonta = Paint()
         ..color = corFilamentoQuente.withValues(
-          alpha: (0.98 * fatorModoViario).clamp(0.0, 1.0),
+          alpha: (0.86 * fatorModoViario).clamp(0.0, 1.0),
         );
       for (final p in pontasOnda) {
-        canvas.drawCircle(p, 4.8, pincelHaloPonta);
-        canvas.drawCircle(p, 2.0, pincelCentroPonta);
+        canvas.drawCircle(p, 4.2, pincelHaloPonta);
+        canvas.drawCircle(p, 1.8, pincelCentroPonta);
       }
     }
   }
@@ -438,13 +436,12 @@ abstract final class PintorRedeViariaArestaGlobo {
       if (pulsoChegada > 0.04) {
         canvas.drawCircle(
           pos,
-          raioNoUrbano * 2.4,
+          raioNoUrbano * 2.1,
           Paint()
             ..color = corBrilhoViasAresta.withValues(
               alpha:
-                  (0.55 * pulsoChegada * opacidadeLuzLaranja).clamp(0.0, 1.0),
-            )
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.5),
+                  (0.24 * pulsoChegada * opacidadeLuzLaranja).clamp(0.0, 1.0),
+            ),
         );
       }
       canvas.drawCircle(
@@ -452,7 +449,7 @@ abstract final class PintorRedeViariaArestaGlobo {
         raioNoUrbano,
         Paint()
           ..color = corFilamentoQuente.withValues(
-            alpha: (0.92 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+            alpha: (0.86 * opacidadeLuzLaranja).clamp(0.0, 1.0),
           ),
       );
     }
@@ -462,23 +459,22 @@ abstract final class PintorRedeViariaArestaGlobo {
         caminhoContornosCidades,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0
+          ..strokeWidth = 2.35
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..color = corLaranjaAresta.withValues(
-            alpha: (0.42 * opacidadeLuzLaranja).clamp(0.0, 1.0),
-          )
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.2),
+            alpha: (0.18 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+          ),
       );
       canvas.drawPath(
         caminhoContornosCidades,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.20
+          ..strokeWidth = 1.05
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..color = corBrilhoViasAresta.withValues(
-            alpha: (0.88 * opacidadeLuzLaranja).clamp(0.0, 1.0),
+          ..color = corLaranjaAresta.withValues(
+            alpha: (0.64 * opacidadeLuzLaranja).clamp(0.0, 1.0),
           ),
       );
     }
