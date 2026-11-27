@@ -167,3 +167,93 @@ abstract final class ConstrutorRedeViariaAresta {
         }
       }
 
+      final distChegadaPico = distKm[melhorNo] + menorGapKm;
+      if (distChegadaPico > maiorDistTotalKm) {
+        maiorDistTotalKm = distChegadaPico;
+      }
+      // Apenas trilha curta de estacionamento -> base da pedra (<= 2,2 km), sem retas longas irreais!
+      if (menorGapKm > 0.12 && menorGapKm <= 2.2) {
+        ramaisCurtoAcesso.add((
+          de: nos[melhorNo],
+          para: alvo,
+          dIni: distKm[melhorNo],
+          dFim: distChegadaPico,
+        ));
+      }
+
+      var cursor = melhorNo;
+      while (cursor >= 0) {
+        nosCorredor.add(cursor);
+        final p = pai[cursor];
+        if (p < 0) break;
+        if (!arestaPaiVirtual[cursor] ||
+            _distanciaKm(nos[p], nos[cursor]) <= 2.2) {
+          arestasAtivas[p * totalNos + cursor] = (u: p, v: cursor);
+        }
+        cursor = p;
+      }
+    }
+
+    double normalizarTempo(double dKm) {
+      final frac = (dKm / maiorDistTotalKm).clamp(0.0, 1.0);
+      return math.pow(frac, 0.58).toDouble();
+    }
+
+    final filhosNaArvore = <int, List<int>>{};
+    final grauEntrada = <int, int>{};
+    for (final ar in arestasAtivas.values) {
+      (filhosNaArvore[ar.u] ??= <int>[]).add(ar.v);
+      grauEntrada[ar.v] = (grauEntrada[ar.v] ?? 0) + 1;
+    }
+
+    final trechos = <TrechoPropagacaoViaria>[];
+    for (final entrada in filhosNaArvore.entries) {
+      final u = entrada.key;
+      final ehRaizCadeia =
+          (grauEntrada[u] ?? 0) != 1 || (filhosNaArvore[u]?.length ?? 0) != 1;
+      if (!ehRaizCadeia) continue;
+
+      for (final primeiroFilho in entrada.value) {
+        final polilinha = <Offset>[nos[u], nos[primeiroFilho]];
+        var atual = primeiroFilho;
+        while ((filhosNaArvore[atual]?.length ?? 0) == 1 &&
+            (grauEntrada[atual] ?? 0) == 1) {
+          final prox = filhosNaArvore[atual]!.first;
+          polilinha.add(nos[prox]);
+          atual = prox;
+        }
+        final tIni = normalizarTempo(distKm[u]);
+        final tFim = math.max(tIni + 0.025, normalizarTempo(distKm[atual]));
+        trechos.add(
+          TrechoPropagacaoViaria(
+            verticesLonLat: polilinha,
+            tempoInicio: tIni,
+            tempoFim: tFim.clamp(0.0, 1.0),
+          ),
+        );
+      }
+    }
+
+    for (final ramal in ramaisCurtoAcesso) {
+      final tIni = normalizarTempo(ramal.dIni);
+      final tFim = math.max(tIni + 0.020, normalizarTempo(ramal.dFim));
+      trechos.add(
+        TrechoPropagacaoViaria(
+          verticesLonLat: <Offset>[ramal.de, ramal.para],
+          tempoInicio: tIni,
+          tempoFim: tFim.clamp(0.0, 1.0),
+        ),
+      );
+    }
+    trechos.sort((a, b) => a.tempoInicio.compareTo(b.tempoInicio));
+
+    final cidades = _classificarCidades(
+      localidades: localidades,
+      rodovias: rodoviasNormalizadas,
+      nos: nos,
+      distKm: distKm,
+      nosCorredor: nosCorredor,
+      picos: picos,
+      normalizarTempo: normalizarTempo,
+    );
+
