@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -24,6 +25,7 @@ import '../../widgets/explorar/malha_relevo_lod.dart';
 class CenaGloboExplorarViewModel extends ChangeNotifier {
   static const double duracaoIdaLuzViariaSegundos = 1.60;
   static const double duracaoVoltaLuzViariaSegundos = 1.35;
+  static const int limiteCacheTilesCurvas = 36;
 
   final Future<MalhaGeograficaGlobo> Function() _carregarMalha;
   final Future<ui.Image> Function() _carregarTextura;
@@ -36,8 +38,10 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   int _assinaturaPicosMemoizada = -1;
   RedeViariaArestaGlobo? _redeViariaMemoizada;
 
+  final LinkedHashMap<int, List<CurvaNivelMundo>> _cacheTilesCurvas =
+      LinkedHashMap<int, List<CurvaNivelMundo>>();
   ConjuntoCurvasNivelMundo? _curvasMemoizadas;
-  int _assinaturaPicosCurvas = -1;
+  int _chaveConjuntoCurvasMemoizado = 0;
 
   String? _sonarPicoId;
   String? _sonarBolhaId;
@@ -145,16 +149,11 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Amostra sincronamente em `O(1)` a altitude SRTM real interpolada suavemente entre níveis Terrarium.
-  double? amostrarElevacaoReal(
-    double latitude,
-    double longitude, {
-    double? lod,
-  }) =>
+  /// Amostra sincronamente em `O(1)` a altitude SRTM real (100% invariante ao zoom da câmera).
+  double? amostrarElevacaoReal(double latitude, double longitude) =>
       _servicoElevacao.amostrarElevacaoReal(
         latitude: latitude,
         longitude: longitude,
-        lod: lod,
       );
 
   /// Obtém em `O(1)` a [RedeViariaArestaGlobo] memoizada nesta instância para a malha e picos atuais.
@@ -211,26 +210,87 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     );
 
     final nivel = ExtratorCurvasNivelMundo.resolverNivelDetalhe(lod);
-    final bloco = ExtratorCurvasNivelMundo.calcularGradeBlocoMundo(
-      janela: janela,
-      nivelDetalhe: nivel,
-    );
     final versao = _servicoElevacao.versaoDados;
     final assinaturaPicos =
         ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picosReferencia);
 
+    final tilesMacro = ExtratorCurvasNivelMundo.listarTilesVisiveis(
+      janela: janela,
+      camadaFina: false,
+    );
+    final incluirFinos = lod >= 3.18;
+    final tilesFinos = incluirFinos
+        ? ExtratorCurvasNivelMundo.listarTilesVisiveis(
+            janela: janela,
+            camadaFina: true,
+          )
+        : const <({int tx, int ty})>[];
+
+    var chaveConjunto = Object.hash(incluirFinos, versao, assinaturaPicos);
+    for (final t in tilesMacro) {
+      chaveConjunto = Object.hash(chaveConjunto, t.tx, t.ty);
+    }
+    for (final t in tilesFinos) {
+      chaveConjunto = Object.hash(chaveConjunto, 100000 + t.tx, 100000 + t.ty);
+    }
+
     final existente = _curvasMemoizadas;
-    if (existente != null &&
-        existente.chaveBloco == bloco.chaveBloco &&
-        existente.nivelDetalhe == nivel &&
-        existente.versaoDadosElevacao == versao &&
-        _assinaturaPicosCurvas == assinaturaPicos) {
+    if (existente != null && _chaveConjuntoCurvasMemoizado == chaveConjunto) {
       return existente;
     }
 
     final malhaAtual = _malha;
-    final extraido = ExtratorCurvasNivelMundo.extrairCurvasBloco(
-      janela: janela,
+    double amostrarTerrenoFixo(double lat, double lon) {
+      final ehTerra = malhaAtual?.contemPontoTerrestre(
+        latitude: lat,
+        longitude: lon,
+      );
+      return GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+        latitude: lat,
+        longitude: lon,
+        picosReferencia: picosReferencia,
+        ehTerraConfirmada: ehTerra,
+        amostradorElevacaoReal: amostrarElevacaoReal,
+      );
+    }
+
+    List<CurvaNivelMundo> obterTileCacheado(int tx, int ty, bool fina) {
+      final k = ExtratorCurvasNivelMundo.calcularChaveTileMundo(
+        camadaFina: fina,
+        tx: tx,
+        ty: ty,
+        versaoDadosElevacao: versao,
+        assinaturaPicos: assinaturaPicos,
+      );
+      final hit = _cacheTilesCurvas.remove(k);
+      if (hit != null) {
+        _cacheTilesCurvas[k] = hit;
+        return hit;
+      }
+      final geradas = ExtratorCurvasNivelMundo.extrairTileCanonicoMundo(
+        tx: tx,
+        ty: ty,
+        camadaFina: fina,
+        amostrarElevacaoMetros: amostrarTerrenoFixo,
+        picosReferencia: picosReferencia,
+      );
+      _cacheTilesCurvas[k] = geradas;
+      while (_cacheTilesCurvas.length > limiteCacheTilesCurvas) {
+        _cacheTilesCurvas.remove(_cacheTilesCurvas.keys.first);
+      }
+      return geradas;
+    }
+
+    final reunidas = <CurvaNivelMundo>[];
+    for (final t in tilesMacro) {
+      reunidas.addAll(obterTileCacheado(t.tx, t.ty, false));
+    }
+    for (final t in tilesFinos) {
+      reunidas.addAll(obterTileCacheado(t.tx, t.ty, true));
+    }
+
+    final lote = ConjuntoCurvasNivelMundo(
+      chaveBloco: chaveConjunto,
       nivelDetalhe: nivel,
       versaoDadosElevacao: versao,
       picosReferencia: picosReferencia,
