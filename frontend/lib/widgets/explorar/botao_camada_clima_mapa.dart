@@ -178,3 +178,55 @@ class DialogoAvisoPrecisaoClima extends StatelessWidget {
                   child: TextButton(
                     key: const Key('botao_cancelar_aviso_clima'),
                     onPressed: () => Navigator.of(context).pop(false),
+                    style: TextButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      tr(ChaveTexto.comumCancelar),
+                      style: TextStyle(
+                        color: cores.ashGrey,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botão em cápsula posicionado na seção `Mapa` da aba `Explorar` para ligar ou desligar
+/// opcionalmente as bolhas de chuva e incêndio (iniciando sempre desligado ao abrir a página).
+class BotaoCamadaClimaMapa extends StatelessWidget {
+  /// Indica se a camada opcional de chuva/fogo está ativa no mapa.
+  final bool ativo;
+
+  /// Callback acionado quando o usuário ativa (após confirmar o aviso) ou desativa a camada.
+  final ValueChanged<bool> aoAlterarAtivo;
+
+  const BotaoCamadaClimaMapa({
+    super.key,
+    required this.ativo,
+    required this.aoAlterarAtivo,
+  });
+
+  Future<void> _aoTocar(BuildContext context) async {
+    if (ativo) {
+      aoAlterarAtivo(false);
+      return;
+    }
+    final confirmado = await exibirDialogoAvisoPrecisaoClima(context);
+    if (confirmado) {
+      aoAlterarAtivo(true);
+    }
+  }
+
