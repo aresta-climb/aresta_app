@@ -268,3 +268,92 @@ void main() {
           faseSegundos: 0.2,
         );
 
+        // Quando a camera olha para o hemisferio oposto no globo 3D, faz culling limpo (0 desenhadas)
+        ctrl.alternarModo3D();
+        final ctrlOposto = ControladorCameraGlobo(
+          latitudeInicial: 35.0,
+          longitudeInicial: 138.0,
+          lodInicial: 0.25,
+        );
+        addTearDown(ctrlOposto.dispose);
+
+        final gravadorOposto = ui.PictureRecorder();
+        final desenhadasOposto = PintorTempestadeGlobo.desenharTempestades(
+          canvas: ui.Canvas(gravadorOposto),
+          tamanhoTela: const ui.Size(220, 220),
+          controlador: ctrlOposto,
+          bolhasAtivas: bolhas,
+          picosReferencia: const [],
+          faseSegundos: 0.3,
+        );
+        gravadorOposto.endRecording().dispose();
+        expect(desenhadasOposto, equals(0));
+      },
+    );
+
+    test(
+      'pinta rastro passado da trajetoria da tempestade a barlavento e mantem bolhas pequenas translúcidas sem saturar de listras',
+      () async {
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -21.2,
+          longitudeInicial: -44.8,
+          lodInicial: 0.45,
+        );
+        addTearDown(ctrl.dispose);
+
+        const tempestadeComRastro = BolhaAtivaRenderizavel(
+          bolha: BolhaChuvaRegional(
+            id: 'frente_com_rastro',
+            latitude: -20.0,
+            longitude: -43.5,
+            intensidadeMmHora: 6.0,
+            ventoRumoGraus: 45.0, // move para NE -> veio de SW (-22.2, -45.7)
+            ventoVelocidadeKmh: 28.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -44.2, latitude: -20.7),
+              PontoContornoGeo(longitude: -42.8, latitude: -20.7),
+              PontoContornoGeo(longitude: -42.8, latitude: -19.3),
+              PontoContornoGeo(longitude: -44.2, latitude: -19.3),
+            ],
+            rastrosPassados: [
+              RastroPassadoTempestade(
+                horasAtras: 6,
+                contorno: [
+                  PontoContornoGeo(longitude: -46.4, latitude: -22.9),
+                  PontoContornoGeo(longitude: -45.0, latitude: -22.9),
+                  PontoContornoGeo(longitude: -45.0, latitude: -21.5),
+                  PontoContornoGeo(longitude: -46.4, latitude: -21.5),
+                ],
+              ),
+              RastroPassadoTempestade(
+                horasAtras: 3,
+                contorno: [
+                  PontoContornoGeo(longitude: -45.3, latitude: -21.8),
+                  PontoContornoGeo(longitude: -43.9, latitude: -21.8),
+                  PontoContornoGeo(longitude: -43.9, latitude: -20.4),
+                  PontoContornoGeo(longitude: -45.3, latitude: -20.4),
+                ],
+              ),
+            ],
+          ),
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+        );
+
+        const celulaMinuscula = BolhaAtivaRenderizavel(
+          bolha: BolhaChuvaRegional(
+            id: 'micro_celula',
+            latitude: -18.0,
+            longitude: -41.0,
+            intensidadeMmHora: 5.5,
+            ventoRumoGraus: 30.0,
+            ventoVelocidadeKmh: 18.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -41.18, latitude: -18.18),
+              PontoContornoGeo(longitude: -40.82, latitude: -18.18),
+              PontoContornoGeo(longitude: -40.82, latitude: -17.82),
+              PontoContornoGeo(longitude: -41.18, latitude: -17.82),
+            ],
+          ),
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+        );
+
