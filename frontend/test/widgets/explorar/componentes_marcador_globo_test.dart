@@ -91,3 +91,77 @@ void main() {
       );
       expect(picoSeco.paraReferenciaRelevo().altitudePicoMetros, equals(1250));
 
+      const ponto = PontoProjetadoTela(
+        x: 180,
+        y: 220,
+        profundidade: 10,
+        visivel: true,
+      );
+      var toquesCompactos = 0;
+      var toquesExpandidos = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 600,
+              child: Stack(
+                children: [
+                  BolhaCompactaPicoGlobo(
+                    pico: picoSeco,
+                    ponto: ponto,
+                    aoTocar: () => toquesCompactos++,
+                  ),
+                  BolhaCompactaPicoGlobo(
+                    pico: picoMolhado,
+                    ponto: const PontoProjetadoTela(
+                      x: 80,
+                      y: 120,
+                      profundidade: 10,
+                      visivel: true,
+                    ),
+                    aoTocar: () => toquesCompactos++,
+                  ),
+                  PilulaExpandidaPicoGlobo(
+                    pico: picoSeco,
+                    ponto: const PontoProjetadoTela(
+                      x: 200,
+                      y: 340,
+                      profundidade: 10,
+                      visivel: true,
+                    ),
+                    tamanhoTela: const Size(400, 600),
+                    lodAtual: 1.2,
+                    aoTocar: () => toquesExpandidos++,
+                  ),
+                  PilulaExpandidaPicoGlobo(
+                    pico: picoMolhado,
+                    ponto: const PontoProjetadoTela(
+                      x: 200,
+                      y: 460,
+                      profundidade: 10,
+                      visivel: true,
+                    ),
+                    tamanhoTela: const Size(400, 600),
+                    lodAtual: 2.5,
+                    aoTocar: () => toquesExpandidos++,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(IconeMarcaAresta), findsNWidgets(4));
+      expect(find.textContaining('1430'), findsOneWidget);
+      expect(find.textContaining('1250'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('ponto_aresta_p_seco')));
+      await tester.tap(find.byKey(const Key('pilula_lupa_p_molhado')));
+      expect(toquesCompactos, equals(1));
+      expect(toquesExpandidos, equals(1));
+    });
+  });
+}
