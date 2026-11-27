@@ -38,6 +38,8 @@ void main() {
 
       String? viaTocada;
       AlertaContribuidoCaderneta? resolvido;
+      AlertaContribuidoCaderneta? editado;
+      AlertaContribuidoCaderneta? excluido;
 
       final criadoAtivo = AlertaContribuidoCaderneta(
         alerta: AlertaSegurancaVia.criar(
@@ -87,6 +89,8 @@ void main() {
                 formatarData: (_) => '20/11/2026',
                 aoTocarVia: (uid) => viaTocada = uid,
                 aoResolverAlerta: (item) => resolvido = item,
+                aoEditarAlerta: (item) => editado = item,
+                aoExcluirAlerta: (item) => excluido = item,
               ),
             ),
           ),
@@ -116,6 +120,28 @@ void main() {
         find.byKey(const Key('btn_resolver_meu_alerta_alertaConf0002')),
         findsNothing,
       );
+      expect(
+        find.byKey(const Key('btn_editar_meu_alerta_alertaConf0002')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('btn_excluir_meu_alerta_alertaConf0002')),
+        findsNothing,
+      );
+
+      final btnEditar = find.byKey(
+        const Key('btn_editar_meu_alerta_alertaCriado01'),
+      );
+      await tester.ensureVisible(btnEditar);
+      await tester.tap(btnEditar);
+      expect(editado?.alerta.uid, 'alertaCriado01');
+
+      final btnExcluir = find.byKey(
+        const Key('btn_excluir_meu_alerta_alertaCriado01'),
+      );
+      await tester.ensureVisible(btnExcluir);
+      await tester.tap(btnExcluir);
+      expect(excluido?.alerta.uid, 'alertaCriado01');
     },
   );
 }
