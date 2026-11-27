@@ -53,8 +53,8 @@ abstract final class PintorRedeViariaArestaGlobo {
       tamanhoTela: size,
       fatorMargem: 1.08,
     );
-    // Passo fixo em espaço do mundo (0,0080°) para que nenhuma curva rodoviária mude de formato ao dar zoom!
-    const passoSubdivisaoGraus = 0.0080;
+    // Subdivisão leve (0,020°) apenas para curvatura esférica e recorte nas bordas — zero alocação extra!
+    const passoSubdivisaoGraus = 0.020;
 
     // 1. Malha rodoviária hierárquica em 3 níveis progressivos sem pop abrupto
     final escudosRodovia = <({Offset pos, String codigo})>[];
@@ -545,12 +545,8 @@ abstract final class PintorRedeViariaArestaGlobo {
     required ControladorCameraGlobo controlador,
     ValueChanged<Offset>? aoAmostrarPontoCentral,
   }) {
-    // Suavização Chaikin leve em coordenadas FIXAS do mundo ANTES do recorte/subdivisão,
-    // garantindo que o traçado das rodovias seja 100% invariante ao zoom!
-    final verticesSuavesMundo =
-        GeometriaClippingMapa.suavizarCantosPolilinhaMundo(verticesLonLat);
     final cadeiasVisiveis = GeometriaClippingMapa.subdividirERecortarPolilinha(
-      verticesLonLat: verticesSuavesMundo,
+      verticesLonLat: verticesLonLat,
       janela: janelaVisivel,
       passoMaxGraus: passoSubdivisaoGraus,
     );
