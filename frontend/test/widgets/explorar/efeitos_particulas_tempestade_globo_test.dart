@@ -90,3 +90,49 @@ void main() {
           fatorVel: 1.3,
           corCrista: paleta.bandaVento,
         );
+        EfeitosParticulasTempestadeGlobo.desenharCelulasNuvemTempestade(
+          canvas: canvas,
+          bolha: bolha,
+          menorLadoMundoPx: 160.0,
+          uLon: 0.7,
+          uLat: -0.7,
+          faseSegundos: faseClarao,
+          fatorVel: 1.3,
+          tamanhoTela: tela,
+          controlador: ctrl,
+          picosReferencia: const [],
+          sobreRelevo: nivel.peso >= 3,
+          nivel: nivel,
+          corNuvem: paleta.nucleo,
+        );
+        EfeitosParticulasTempestadeGlobo.desenharEmblemaNuvemChuva(
+          canvas: canvas,
+          centro: limites.center,
+          escalaPx: 11.0,
+          faseSegundos: 1.2,
+          nivel: nivel,
+          corBorda: paleta.tracoChuva,
+        );
+        EfeitosParticulasTempestadeGlobo.desenharPingoPatterChuva(
+          canvas: canvas,
+          bolha: bolha,
+          nivel: nivel,
+          pxPorGrau: 320.0,
+          menorLadoMundoPx: nivel == NivelIntensidadeChuva.fraca ? 10.0 : 120.0,
+          tamanhoTela: tela,
+          controlador: ctrl,
+          picosReferencia: const [
+            PicoRelevoReferencia(
+              id: 'p1',
+              latitude: -20.0,
+              longitude: -44.0,
+              altitudeBaseMetros: 850,
+              altitudePicoMetros: 1320,
+            ),
+          ],
+          sobreRelevo: nivel.peso >= 3,
+          faseSegundos: 0.4 + nivel.peso * 0.25,
+          corGota: paleta.tracoChuva,
+        );
+      }
+
