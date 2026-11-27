@@ -943,7 +943,9 @@ Widget buildEditorCard({
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'TESTAR TELA DE BLOQUEIO',
+                                    context.tr(
+                                      ChaveTexto.configTestarBloqueioBtn,
+                                    ),
                                     style: TextStyle(
                                       color: Colors.red.shade900.withValues(
                                         alpha: 0.8,
@@ -999,9 +1001,9 @@ Widget buildThemeSelectionCard(BuildContext context) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'APARÊNCIA',
-                      style: TextStyle(
+                    Text(
+                      context.tr(ChaveTexto.configAparenciaTitulo),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
@@ -1010,7 +1012,7 @@ Widget buildThemeSelectionCard(BuildContext context) {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Personalize o tema do aplicativo.',
+                      context.tr(ChaveTexto.configAparenciaSub),
                       style: TextStyle(
                         color: context.colors.ashGrey,
                         fontSize: 12,
@@ -1031,12 +1033,14 @@ Widget buildThemeSelectionCard(BuildContext context) {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Escolher tema manualmente',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          context.tr(ChaveTexto.configEscolherTemaManual),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Switch(
@@ -1059,23 +1063,10 @@ Widget buildThemeSelectionCard(BuildContext context) {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        /* Expanded(
-                          child: buildThemeOption(
-                            context: context,
-                            title: 'CLARO',
-                            icon: Icons.light_mode,
-                            isSelected: currentMode == ThemeMode.light,
-                            onTap: () {
-                              TelemetryService.instance.logAcaoConfiguracoes('tema_claro');
-                              ThemeController().setThemeMode(ThemeMode.light);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12), */
                         Expanded(
                           child: buildThemeOption(
                             context: context,
-                            title: 'ESCURO',
+                            title: context.tr(ChaveTexto.configTemaEscuro),
                             icon: Icons.dark_mode,
                             isSelected: currentMode == ThemeMode.dark,
                             onTap: () {
@@ -1179,7 +1170,9 @@ Widget buildVersaoBetaFooter(BuildContext context) {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
-              'Aresta Climb v$versao (Beta Aberto)',
+              context.tr(ChaveTexto.sistemaRodapeVersaoBeta, {
+                'versao': versao,
+              }),
               style: TextStyle(
                 color: context.colors.ashGrey,
                 fontSize: 13,
@@ -1190,19 +1183,6 @@ Widget buildVersaoBetaFooter(BuildContext context) {
         ),
       );
     },
-  );
-}
-
-/// Constrói o cartão de configuração (Dumb UI) para exibir ou ocultar os elementos
-/// interativos de Perfil e Caderneta Esportiva delegando ao [CartaoPreferenciaCaderneta].
-Widget construirCartaoInteracoesCaderneta(
-  BuildContext context, {
-  required ValueListenable<bool> interacoesAtivasListenable,
-  required ValueChanged<bool> aoAlternar,
-}) {
-  return CartaoPreferenciaCaderneta(
-    interacoesAtivasListenable: interacoesAtivasListenable,
-    aoAlternar: aoAlternar,
   );
 }
 
