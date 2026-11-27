@@ -85,3 +85,85 @@ class SecaoSlidersGrauExplorar extends StatelessWidget {
       padrao: opcoesVia.length - 1,
     );
 
+    final idxMinBld = indiceParaValorGrauExplorar(
+      opcoesBld,
+      viewModel.minGrauBoulder,
+      padrao: 0,
+    );
+    final idxMaxBld = indiceParaValorGrauExplorar(
+      opcoesBld,
+      viewModel.maxGrauBoulder,
+      padrao: opcoesBld.length - 1,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              context.tr(ChaveTexto.explorarViasBrasileiro),
+              style: TextStyle(
+                color: colors.chalkWhite,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '${opcoesVia[idxMinVia].rotulo} – ${opcoesVia[idxMaxVia].rotulo}',
+              style: TextStyle(
+                color: viewModel.temFiltroGrauVia
+                    ? colors.rustIron
+                    : colors.ashGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: colors.rustIron,
+            inactiveTrackColor: Colors.white12,
+            thumbColor: colors.chalkWhite,
+            overlayColor: colors.rustIron.withValues(alpha: 0.16),
+          ),
+          child: RangeSlider(
+            values: RangeValues(idxMinVia.toDouble(), idxMaxVia.toDouble()),
+            min: 0,
+            max: (opcoesVia.length - 1).toDouble(),
+            divisions: opcoesVia.length - 1,
+            onChanged: (valores) {
+              final iMin = valores.start.round();
+              final iMax = valores.end.round();
+              viewModel.definirFaixaGrauVia(
+                iMin <= 0 ? null : opcoesVia[iMin].valor,
+                iMax >= opcoesVia.length - 1 ? null : opcoesVia[iMax].valor,
+              );
+            },
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              context.tr(ChaveTexto.explorarBoulderEscalaV),
+              style: TextStyle(
+                color: colors.chalkWhite,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '${opcoesBld[idxMinBld].rotulo} – ${opcoesBld[idxMaxBld].rotulo}',
+              style: TextStyle(
+                color: viewModel.temFiltroGrauBoulder
+                    ? colors.rustIron
+                    : colors.ashGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
