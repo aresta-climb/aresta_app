@@ -14,8 +14,6 @@ import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/widgets/app_bar_home_aresta.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/autenticacao/servico_autenticacao_fake.dart';
@@ -24,6 +22,10 @@ import '../mocks/mock_telemetria.dart';
 void main() {
   setUpAll(() {
     TelemetryService.instance = MockTelemetryService();
+  });
+
+  tearDown(() {
+    ServicoAutenticacaoLocal.redefinirParaTestes();
   });
 
   Widget criarAppTeste({
@@ -41,11 +43,8 @@ void main() {
   }
 
   testWidgets(
-    'ArestaHomeAppBar renderiza botão de configurações por padrão quando perfilHabilitado é false e alterna para botão de perfil quando habilitado',
+    'ArestaHomeAppBar renderiza marca, MicroBadgeBeta, sincronização e botão de perfil sempre ativo',
     (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-      ControladorInteracoesUsuario.redefinirParaTestes();
-
       await tester.pumpWidget(
         criarAppTeste(
           child: const ArestaHomeAppBar(),
@@ -56,17 +55,6 @@ void main() {
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
       expect(find.byType(MicroBadgeBeta), findsOneWidget);
       expect(find.byIcon(Icons.sync), findsOneWidget);
-      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
-
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: const ArestaHomeAppBar(),
-        ),
-      );
-      await tester.pump();
-
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsNothing);
 
@@ -76,14 +64,16 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar aciona callback onSync ao tocar no botão de sincronização',
+    'ArestaHomeAppBar aciona callbacks customizados onSync e onProfile',
     (tester) async {
-      bool sincronizado = false;
+      var sincronizado = false;
+      var abriuPerfil = false;
 
       await tester.pumpWidget(
         criarAppTeste(
           child: ArestaHomeAppBar(
             onSync: () => sincronizado = true,
+            onProfile: () => abriuPerfil = true,
           ),
         ),
       );
@@ -91,70 +81,10 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.sync));
       await tester.pump();
-
       expect(sincronizado, isTrue);
-    },
-  );
 
-  tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
-    ServicoAutenticacaoLocal.redefinirParaTestes();
-  });
-
-  testWidgets(
-    'ArestaHomeAppBar exibe botão de configurações quando exibirBotaoPerfil é false e botão de perfil quando exibirBotaoPerfil é true',
-    (tester) async {
-      bool abriuConfiguracoes = false;
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: ArestaHomeAppBar(
-            exibirBotaoPerfil: false,
-            onSettings: () => abriuConfiguracoes = true,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pump();
-      expect(abriuConfiguracoes, isTrue);
-
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: const ArestaHomeAppBar(exibirBotaoPerfil: true),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
-      expect(find.byIcon(Icons.settings), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil',
-    (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
-      bool abriuPerfil = false;
-
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: ArestaHomeAppBar(
-            onProfile: () => abriuPerfil = true,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       await tester.tap(find.byKey(const Key('btn_home_perfil')));
       await tester.pump();
-
       expect(abriuPerfil, isTrue);
     },
   );
