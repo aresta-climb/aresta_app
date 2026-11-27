@@ -407,58 +407,69 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   @override
+  Future<void> editarComentario({
+    required String escaladaUid,
+    required String comentarioUid,
+    required String novoTexto,
+  }) async {
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
+    final perfil = _repositorioCaderneta.obterPerfil();
+    _dadosPorEscalada[uidVia] = obterDadosEscalada(uidVia).comComentarioEditado(
+      comentarioUid: comentarioUid,
+      autorIdPublico: perfil.autorIdPublico,
+      novoTexto: novoTexto,
+    );
+    _versaoNotifier.value++;
+    if (validarUid(uidVia) && validarUid(perfil.autorIdPublico)) {
+      final mut = MutacaoFilaInteracao.editarComentario(
+        alvoUid: comentarioUid,
+        escaladaUid: uidVia,
+        autorIdPublico: perfil.autorIdPublico,
+        novoTexto: novoTexto,
+      );
+      await _despachante.registrarMutacao(_clienteFila, mut);
+    }
+  }
+
+  @override
+  Future<void> excluirComentario({
+    required String escaladaUid,
+    required String comentarioUid,
+  }) async {
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
+    final perfil = _repositorioCaderneta.obterPerfil();
+    _dadosPorEscalada[uidVia] = obterDadosEscalada(uidVia).semComentarioDoAutor(
+      comentarioUid: comentarioUid,
+      autorIdPublico: perfil.autorIdPublico,
+    );
+    _versaoNotifier.value++;
+    if (validarUid(uidVia) && validarUid(perfil.autorIdPublico)) {
+      final mut = MutacaoFilaInteracao.excluirComentario(
+        alvoUid: comentarioUid,
+        escaladaUid: uidVia,
+        autorIdPublico: perfil.autorIdPublico,
+      );
+      await _despachante.registrarMutacao(_clienteFila, mut);
+    }
+  }
+
+  @override
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
     required CategoriaAlertaSeguranca categoria,
     String? detalhe,
   }) async {
-    final uidVia = escaladaUid.trim();
-    if (uidVia.isEmpty) {
-      throw ArgumentError.value(
-        escaladaUid,
-        'escaladaUid',
-        'O identificador da escalada não pode ser vazio ao reportar um alerta.',
-      );
-    }
-
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
     final perfil = _repositorioCaderneta.obterPerfil();
-    final atual = obterDadosEscalada(uidVia);
-    final alertas = List<AlertaSegurancaVia>.from(atual.alertasAtivos);
-    final indiceExistente = alertas.indexWhere((a) => a.categoria == categoria);
-
-    final AlertaSegurancaVia resultado;
-    var jaContribuira = false;
-    if (indiceExistente >= 0) {
-      final anterior = alertas[indiceExistente];
-      jaContribuira = anterior.jaConfirmadoPor(perfil.autorIdPublico);
-      final detalheLimpo = detalhe?.trim();
-      resultado = anterior.copyWith(
-        confirmacoesAtivas: jaContribuira
-            ? anterior.confirmacoesAtivas
-            : anterior.confirmacoesAtivas + 1,
-        confirmadoresUids: {
-          ...anterior.confirmadoresUids,
-          perfil.autorIdPublico,
-        },
-        detalhe: (detalheLimpo != null && detalheLimpo.isNotEmpty)
-            ? detalheLimpo
-            : anterior.detalhe,
-      );
-      alertas[indiceExistente] = resultado;
-    } else {
-      resultado = AlertaSegurancaVia.criar(
-        escaladaUid: uidVia,
-        categoria: categoria,
-        detalhe: detalhe,
-        autorIdPublico: perfil.autorIdPublico,
-        autorNomePublico: perfil.autorNomePublico,
-      );
-      alertas.insert(0, resultado);
-    }
-
-    _dadosPorEscalada[uidVia] = atual.copyWith(
-      alertasAtivos: List.unmodifiable(alertas),
-    );
+    final (atualizado, resultado, jaContribuira) = obterDadosEscalada(uidVia)
+        .comAlertaReportado(
+          escaladaUid: uidVia,
+          categoria: categoria,
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          detalhe: detalhe,
+        );
+    _dadosPorEscalada[uidVia] = atualizado;
     if (!jaContribuira &&
         validarUid(uidVia) &&
         validarUid(perfil.autorIdPublico) &&
