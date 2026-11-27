@@ -224,6 +224,82 @@ void main() {
       ),
       throwsArgumentError,
     );
+    await expectLater(
+      () => repo.editarComentario(
+        escaladaUid: ' ',
+        comentarioUid: 'id',
+        novoTexto: 'ok',
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => repo.excluirComentario(escaladaUid: ' ', comentarioUid: 'id'),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => repo.editarAlerta(
+        escaladaUid: ' ',
+        alertaUid: 'id',
+        novaCategoria: CategoriaAlertaSeguranca.fauna,
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => repo.excluirAlerta(escaladaUid: ' ', alertaUid: 'id'),
+      throwsArgumentError,
+    );
+  });
+
+  test('edita e exclui comentários e alertas próprios online, offline e na reabertura a frio da Caderneta', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+    await repoCaderneta.inicializar();
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana',
+        fotoUrl: 'https://cdn.aresta.cc/avatars/mariana.webp',
+        userId: 'uuid-mariana',
+        accessToken: 'jwt-mariana',
+      ),
+    );
+    final clienteFake = ClienteFilaInteracoesFake();
+    final repo = RepositorioInteracoesViaMemoria(
+      repositorioCaderneta: repoCaderneta,
+      clienteFila: clienteFake,
+      preferencias: prefs,
+    );
+
+    await repo.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 0,
+      comentarioPublico: 'Texto original',
+    );
+    final comentarioUid =
+        repo.obterDadosEscalada('x8siJek3FiG3aB').comentarios.single.uid;
+
+    await repo.editarComentario(
+      escaladaUid: 'x8siJek3FiG3aB',
+      comentarioUid: comentarioUid,
+      novoTexto: 'Texto atualizado pela autora',
+    );
+    expect(
+      repo.obterDadosEscalada('x8siJek3FiG3aB').comentarios.single.texto,
+      'Texto atualizado pela autora',
+    );
+    expect(
+      clienteFake.itensInseridos
+          .firstWhere((i) => i.id == comentarioUid)
+          .textoComentario,
+      'Texto atualizado pela autora',
+    );
+
+    // Outro escalador não pode editar nem excluir comentário alheio
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'd4Ml0Q2y5Wx9No',
+        autorNomePublico: 'Pedro',
   });
 
   test('sincroniza com ClienteFilaInteracoes, enfileira offline sem sinal e reenvia quando online', () async {
