@@ -184,3 +184,80 @@ BEGIN
         RAISE EXCEPTION 'altimetria_por_pico inválido ou vazio: rotação abortada para preservar cópia de segurança';
     END IF;
 
+    INSERT INTO public.snapshots_altimetria_picos (
+        slot,
+        gerado_em,
+        altimetria_por_pico,
+        atualizado_em
+    )
+    SELECT
+        'copia_seguranca',
+        gerado_em,
+        altimetria_por_pico,
+        now()
+    FROM public.snapshots_altimetria_picos
+    WHERE slot = 'atual'
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        altimetria_por_pico = EXCLUDED.altimetria_por_pico,
+        atualizado_em = now();
+
+    INSERT INTO public.snapshots_altimetria_picos (
+        slot,
+        gerado_em,
+        altimetria_por_pico,
+        atualizado_em
+    )
+    VALUES (
+        'atual',
+        p_gerado_em,
+        p_altimetria_por_pico,
+        now()
+    )
+    ON CONFLICT (slot) DO UPDATE SET
+        gerado_em = EXCLUDED.gerado_em,
+        altimetria_por_pico = EXCLUDED.altimetria_por_pico,
+        atualizado_em = now();
+
+    INSERT INTO public.snapshots_altimetria_picos (
+        slot,
+        gerado_em,
+        altimetria_por_pico,
+        atualizado_em
+    )
+    VALUES (
+        'copia_seguranca',
+        p_gerado_em,
+        p_altimetria_por_pico,
+        now()
+    )
+    ON CONFLICT (slot) DO NOTHING;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.rotacionar_estado_clima_picos(TIMESTAMPTZ, JSONB, JSONB, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.rotacionar_snapshot_altimetria_picos(TIMESTAMPTZ, JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.rotacionar_estado_clima_picos(TIMESTAMPTZ, JSONB, JSONB, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.rotacionar_snapshot_altimetria_picos(TIMESTAMPTZ, JSONB) TO service_role;
+
+-- ============================================================================
+-- 4. REFERÊNCIA DE AGENDAMENTO PG_CRON (A CADA 3 HORAS) PARA A EDGE FUNCTION
+-- Requer extensões pg_cron e pg_net habilitadas no projeto Supabase e segredo
+-- 'service_role_key' configurado no Vault caso acionado diretamente via SQL.
+-- ============================================================================
+-- SELECT cron.schedule(
+--     'sincronizar-clima-altimetria-picos-3h',
+--     '0 */3 * * *',
+--     $$
+--     SELECT net.http_post(
+--         url := 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co/functions/v1/sincronizar-clima-picos',
+--         headers := jsonb_build_object(
+--             'Content-Type', 'application/json',
+--             'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true)
+--         ),
+--         body := '{}'::jsonb
+--     );
+--     $$
+-- );
+
+COMMIT;
