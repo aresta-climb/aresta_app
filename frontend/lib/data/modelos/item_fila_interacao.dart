@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
 import 'interacao_via.dart';
@@ -61,6 +62,9 @@ class ItemFilaInteracao {
   /// Apelido público exibido junto à contribuição.
   final String autorNomePublico;
 
+  /// URL pública opcional da foto de perfil do autor quando disponível.
+  final String? autorAvatarUrl;
+
   /// NanoID 14c da escalada alvo.
   final String escaladaUid;
 
@@ -95,6 +99,7 @@ class ItemFilaInteracao {
     required this.id,
     required this.autorIdPublico,
     required this.autorNomePublico,
+    this.autorAvatarUrl,
     required this.escaladaUid,
     required this.tipo,
     this.categoriaAlerta,
@@ -145,6 +150,7 @@ class ItemFilaInteracao {
     String? id,
     required String autorIdPublico,
     required String autorNomePublico,
+    String? autorAvatarUrl,
     required String escaladaUid,
     required String textoComentario,
     TipoAscensao? tipoAscensao,
@@ -161,9 +167,10 @@ class ItemFilaInteracao {
       );
     }
     return ItemFilaInteracao._(
-      id: id ?? gerarUid(),
+      id: id ?? const Uuid().v4(),
       autorIdPublico: autorIdPublico,
       autorNomePublico: _normalizarNome(autorNomePublico),
+      autorAvatarUrl: _normalizarAvatar(autorAvatarUrl),
       escaladaUid: escaladaUid,
       tipo: TipoFilaInteracao.comentario,
       textoComentario: limpo,
@@ -247,6 +254,7 @@ class ItemFilaInteracao {
       id: (idBruto != null && idBruto.isNotEmpty) ? idBruto : gerarUid(),
       autorIdPublico: json['autor_id_publico'] as String,
       autorNomePublico: _normalizarNome(json['autor_nome_publico'] as String?),
+      autorAvatarUrl: _normalizarAvatar(json['autor_avatar_url'] as String?),
       escaladaUid: json['escalada_uid'] as String,
       tipo: tipo,
       categoriaAlerta: catTexto != null
@@ -267,11 +275,19 @@ class ItemFilaInteracao {
   }
 
   /// Converte para o payload exato aceito por `INSERT INTO public.fila_interacoes`.
-  Map<String, dynamic> toJson({bool incluirId = true}) {
+  ///
+  /// Quando [incluirAvatarLocal] é `true` (cache offline em disco), preserva `autor_avatar_url`
+  /// sem enviá-lo em inserções PostgREST que não exijam a coluna no schema remoto.
+  Map<String, dynamic> toJson({
+    bool incluirId = true,
+    bool incluirAvatarLocal = false,
+  }) {
     return <String, dynamic>{
       if (incluirId) 'id': id,
       'autor_id_publico': autorIdPublico,
       'autor_nome_publico': autorNomePublico,
+      if (incluirAvatarLocal && autorAvatarUrl != null)
+        'autor_avatar_url': autorAvatarUrl,
       'escalada_uid': escaladaUid,
       'tipo': tipo.codigoBanco,
       if (categoriaAlerta != null)
@@ -287,6 +303,14 @@ class ItemFilaInteracao {
     };
   }
 
+  /// Verifica se [valor] segue o formato padrão UUID (`8-4-4-4-12` hexadecimal) aceito pelo PostgreSQL.
+  static bool ehUuidValido(String valor) =>
+      _padraoUuid.hasMatch(valor.trim());
+
+  static final RegExp _padraoUuid = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   /// Retorna uma cópia de [ItemFilaInteracao] reconciliando [autorIdPublico] e [autorNomePublico]
   /// com a identidade canônica registrada em `public.perfis`.
   ItemFilaInteracao comAutor({
@@ -298,6 +322,7 @@ class ItemFilaInteracao {
       id: id,
       autorIdPublico: autorIdPublico,
       autorNomePublico: _normalizarNome(autorNomePublico),
+      autorAvatarUrl: autorAvatarUrl,
       escaladaUid: escaladaUid,
       tipo: tipo,
       categoriaAlerta: categoriaAlerta,
@@ -309,6 +334,73 @@ class ItemFilaInteracao {
       textoComentario: textoComentario,
       criadoEm: criadoEm,
     );
+  }
+
+  /// Retorna uma cópia atualizando o texto de um `COMENTARIO` com validação Fail-Fast.
+  ItemFilaInteracao comTextoComentario(String novoTexto) {
+    final limpo = novoTexto.trim();
+    if (limpo.isEmpty || limpo.length > ComentarioComunidadeVia.limiteCaracteres) {
+      throw ArgumentError.value(
+        novoTexto,
+        'novoTexto',
+        'O comentário deve ter entre 1 e ${ComentarioComunidadeVia.limiteCaracteres} caracteres.',
+      );
+    }
+    return ItemFilaInteracao._(
+      id: id,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: autorNomePublico,
+      autorAvatarUrl: autorAvatarUrl,
+      escaladaUid: escaladaUid,
+      tipo: tipo,
+      categoriaAlerta: categoriaAlerta,
+      alertaAlvoUid: alertaAlvoUid,
+      alertaAtivo: alertaAtivo,
+      grauSugerido: grauSugerido,
+      deltaGrau: deltaGrau,
+      tipoAscensao: tipoAscensao,
+      textoComentario: limpo,
+      criadoEm: criadoEm,
+    );
+  }
+
+  /// Retorna uma cópia atualizando categoria e detalhe opcional de um `ALERTA_SEGURANCA`.
+  ItemFilaInteracao comEdicaoAlerta({
+    required CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+  }) {
+    final detalheLimpo = detalhe?.trim();
+    if (detalheLimpo != null &&
+        detalheLimpo.length > AlertaSegurancaVia.limiteCaracteresDetalhe) {
+      throw ArgumentError.value(
+        detalheLimpo.length,
+        'detalhe',
+        'O detalhe do alerta deve ter no máximo ${AlertaSegurancaVia.limiteCaracteresDetalhe} caracteres.',
+      );
+    }
+    return ItemFilaInteracao._(
+      id: id,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: autorNomePublico,
+      autorAvatarUrl: autorAvatarUrl,
+      escaladaUid: escaladaUid,
+      tipo: tipo,
+      categoriaAlerta: categoria,
+      alertaAlvoUid: alertaAlvoUid,
+      alertaAtivo: alertaAtivo,
+      grauSugerido: grauSugerido,
+      deltaGrau: deltaGrau,
+      tipoAscensao: tipoAscensao,
+      textoComentario: (detalheLimpo != null && detalheLimpo.isNotEmpty)
+          ? detalheLimpo
+          : null,
+      criadoEm: criadoEm,
+    );
+  }
+
+  static String? _normalizarAvatar(String? bruto) {
+    final limpo = bruto?.trim();
+    return (limpo != null && limpo.isNotEmpty) ? limpo : null;
   }
 
   static void _exigirUidValido(String valor, String campo) {
@@ -336,6 +428,7 @@ DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
   Iterable<ItemFilaInteracao> itens, {
   int? codigoGrauOficial,
   required bool ehBoulder,
+  Map<String, String> avataresPorAutor = const {},
 }) {
   final ordenados = itens.toList()
     ..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
@@ -356,9 +449,11 @@ DadosComunidadeVia consolidarItensFilaEmDadosComunidade(
           comentarios.insert(
             0,
             ComentarioComunidadeVia(
-              uid: validarUid(item.id) ? item.id : gerarUid(),
+              uid: item.id.trim(),
               autorIdPublico: item.autorIdPublico,
               autorNomePublico: item.autorNomePublico,
+              autorAvatarUrl:
+                  item.autorAvatarUrl ?? avataresPorAutor[item.autorIdPublico],
               criadoEm: item.criadoEm,
               estiloAscensao: item.tipoAscensao,
               texto: texto,
