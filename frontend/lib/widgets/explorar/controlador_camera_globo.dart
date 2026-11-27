@@ -8,27 +8,6 @@ import 'geometria_geoide_globo.dart';
 
 export 'geometria_geoide_globo.dart';
 
-class _AnimacaoVooParabolico {
-  final double latInicial;
-  final double lonInicial;
-  final double lodInicial;
-  final double latFinal;
-  final double deltaLonCurto;
-  final double lodFinal;
-  final double recuoArco;
-  double progresso = 0.0;
-
-  _AnimacaoVooParabolico({
-    required this.latInicial,
-    required this.lonInicial,
-    required this.lodInicial,
-    required this.latFinal,
-    required this.deltaLonCurto,
-    required this.lodFinal,
-    required this.recuoArco,
-  });
-}
-
 /// Controlador matemático e cinemático da câmera unificada `3D / 2D` em 4 LODs contínuos.
 ///
 /// Concentra toda a projeção esférica-perspectiva, inclinação progressiva de horizonte,
@@ -57,7 +36,7 @@ class ControladorCameraGlobo extends ChangeNotifier {
   bool _teveMultiToqueNoGesto = false;
   double _velLon = 0.0;
   double _velLat = 0.0;
-  _AnimacaoVooParabolico? _vooAtivo;
+  TrajetoriaVooParabolico? _vooAtivo;
 
   ControladorCameraGlobo({
     double latitudeInicial = -19.5,
@@ -99,38 +78,26 @@ class ControladorCameraGlobo extends ChangeNotifier {
   double distanciaCameraObjetoKm({
     required double latitude,
     required double longitude,
-  }) {
-    final dLatKm = (latitude - _latitudeCentral) * 111.32;
-    final dLonGraus =
-        ((longitude - _longitudeCentral + 540.0) % 360.0) - 180.0;
-    final dLonKm = dLonGraus * math.cos(latitude * _grausParaRad) * 111.32;
-    final hKm = altitudeCameraKm;
-    return math.sqrt(dLatKm * dLatKm + dLonKm * dLonKm + hKm * hKm);
-  }
+  }) =>
+      GeometriaGeoideGlobo.calcularDistanciaCameraObjetoKm(
+        latitude: latitude,
+        longitude: longitude,
+        latitudeCentral: _latitudeCentral,
+        longitudeCentral: _longitudeCentral,
+        altitudeCameraKm: altitudeCameraKm,
+      );
 
   /// Nível de detalhe progressivo (`0.0 .. 3.0`) calculado individualmente para um objeto pela distância à câmera.
   double nivelDetalheObjeto({
     required double latitude,
     required double longitude,
-  }) {
-    final distKm = distanciaCameraObjetoKm(
-      latitude: latitude,
-      longitude: longitude,
-    );
-    if (distKm < 12.0) {
-      return 3.8 + (12.0 - distKm) / 12.0 * 0.85;
-    }
-    if (distKm < 65.0) {
-      return 3.0 + (65.0 - distKm) / (65.0 - 12.0) * 0.8;
-    }
-    if (distKm < 280.0) {
-      return 2.0 + (280.0 - distKm) / (280.0 - 65.0);
-    }
-    if (distKm < 1800.0) {
-      return 1.0 + (1800.0 - distKm) / (1800.0 - 280.0);
-    }
-    return (1.0 - (distKm - 1800.0) / 4500.0).clamp(0.0, 0.99);
-  }
+  }) =>
+      GeometriaGeoideGlobo.calcularNivelDetalheObjeto(
+        distKm: distanciaCameraObjetoKm(
+          latitude: latitude,
+          longitude: longitude,
+        ),
+      );
 
   /// Índice discreto de nível de detalhe (`0` Globo, `1` Região, `2` Serra/Vale, `3` Maciço 3D).
   int get indiceLod {
@@ -320,8 +287,43 @@ class ControladorCameraGlobo extends ChangeNotifier {
         escalaDepois,
       );
     } else {
+      final ancorarFoco3D = _lod >= 1.15;
+      final ancora3D = ancorarFoco3D
+          ? GeometriaGeoideGlobo.resolverCoordenadaAproximada3D(
+              pontoTela: pontoFocalTela,
+              tamanhoTela: tamanhoTela,
+              latitudeCentral: _latitudeCentral,
+              longitudeCentral: _longitudeCentral,
+              lod: _lod,
+              raioAparentePx: raioAparentePx,
+              centroVerticalOpticoPx: calcularCentroVerticalOptico(tamanhoTela),
+              elevacaoReferenciaCameraMetros: _elevacaoReferenciaCameraMetros,
+            )
+          : null;
       final deltaLod = math.log(fatorEscala) / math.log(7.6);
       _lod = (_lod + deltaLod).clamp(lodMinimo, lodMaximo);
+      if (ancora3D != null) {
+        final grausPorPx = (1.0 / raioAparentePx) / _grausParaRad;
+        final cosTilt =
+            math.max(0.50, math.cos(smoothstep(1.50, 2.75, _lod) * 0.66));
+        for (var iter = 0; iter < 2; iter++) {
+          final proj = projetarCoordenada(
+            latitude: ancora3D.lat,
+            longitude: ancora3D.lon,
+            elevacaoMetros: 0.0,
+            tamanhoTela: tamanhoTela,
+          );
+          if (!proj.visivel) break;
+          final cosLat =
+              math.max(0.25, math.cos(_latitudeCentral * _grausParaRad));
+          _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+            _longitudeCentral + ((proj.x - pontoFocalTela.dx) * grausPorPx) / cosLat,
+          );
+          _latitudeCentral = (_latitudeCentral -
+                  ((proj.y - pontoFocalTela.dy) / cosTilt) * grausPorPx)
+              .clamp(-68.0, 68.0);
+        }
+      }
     }
     notifyListeners();
   }
@@ -411,7 +413,7 @@ class ControladorCameraGlobo extends ChangeNotifier {
           _limitarLatitude2D(destinoLat, _ultimoTamanhoTela, cy, escDestino);
     }
 
-    _vooAtivo = _AnimacaoVooParabolico(
+    _vooAtivo = TrajetoriaVooParabolico(
       latInicial: _latitudeCentral,
       lonInicial: _longitudeCentral,
       lodInicial: _lod,
