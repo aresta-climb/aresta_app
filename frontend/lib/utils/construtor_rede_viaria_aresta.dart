@@ -84,3 +84,86 @@ abstract final class ConstrutorRedeViariaAresta {
       );
     }
 
+    // Ponte curta (<= 2,2 km) apenas entre pontas de segmentos rodoviários adjacentes (trevos/viadutos)
+    for (final u in pontasPolilinhas) {
+      final pu = nos[u];
+      for (var v = 0; v < nos.length; v++) {
+        if (u == v) continue;
+        final pv = nos[v];
+        if ((pu.dx - pv.dx).abs() > 0.022 || (pu.dy - pv.dy).abs() > 0.022) {
+          continue;
+        }
+        final d = _distanciaKm(pu, pv);
+        if (d <= 2.2) {
+          adj[u].add((vizinho: v, pesoKm: d * 1.15, virtual: true));
+          adj[v].add((vizinho: u, pesoKm: d * 1.15, virtual: true));
+        }
+      }
+    }
+
+    const centroBh = Offset(
+      RedeViariaArestaGlobo.longitudeCentroBeloHorizonte,
+      RedeViariaArestaGlobo.latitudeCentroBeloHorizonte,
+    );
+    var origemBh = 0;
+    var menorDistBh = double.infinity;
+    for (var i = 0; i < nos.length; i++) {
+      final d = _distanciaKm(nos[i], centroBh);
+      if (d < menorDistBh) {
+        menorDistBh = d;
+        origemBh = i;
+      }
+    }
+
+    final totalNos = nos.length;
+    final distKm = List<double>.filled(totalNos, double.infinity);
+    final pai = List<int>.filled(totalNos, -1);
+    final arestaPaiVirtual = List<bool>.filled(totalNos, false);
+    distKm[origemBh] = 0.0;
+
+    final fila = _FilaPrioridadeMinima()..inserir(origemBh, 0.0);
+    while (!fila.estaVazia) {
+      final atual = fila.removerMinimo();
+      if (atual.custo > distKm[atual.no] + 1e-6) continue;
+      for (final ar in adj[atual.no]) {
+        final novoCusto = atual.custo + ar.pesoKm;
+        if (novoCusto + 1e-6 < distKm[ar.vizinho]) {
+          distKm[ar.vizinho] = novoCusto;
+          pai[ar.vizinho] = atual.no;
+          arestaPaiVirtual[ar.vizinho] = ar.virtual;
+          fila.inserir(ar.vizinho, novoCusto);
+        }
+      }
+    }
+
+    final arestasAtivas = <int, ({int u, int v})>{};
+    final nosCorredor = <int>{origemBh};
+    final ramaisCurtoAcesso =
+        <({Offset de, Offset para, double dIni, double dFim})>[];
+    var maiorDistTotalKm = 18.0;
+
+    // Destaca também as vias arteriais reais dentro da mancha central de BH (<= 11 km)
+    for (var u = 0; u < totalNos; u++) {
+      if (!distKm[u].isFinite || distKm[u] > 11.0) continue;
+      final p = pai[u];
+      if (p >= 0 && !arestaPaiVirtual[u]) {
+        arestasAtivas[p * totalNos + u] = (u: p, v: u);
+        nosCorredor
+          ..add(p)
+          ..add(u);
+      }
+    }
+
+    for (final pico in picos) {
+      final alvo = Offset(pico.longitude, pico.latitude);
+      var melhorNo = origemBh;
+      var menorGapKm = _distanciaKm(nos[origemBh], alvo);
+      for (var i = 0; i < totalNos; i++) {
+        if (!distKm[i].isFinite) continue;
+        final d = _distanciaKm(nos[i], alvo);
+        if (d < menorGapKm) {
+          menorGapKm = d;
+          melhorNo = i;
+        }
+      }
+
