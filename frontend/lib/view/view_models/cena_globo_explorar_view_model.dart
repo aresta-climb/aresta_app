@@ -293,26 +293,11 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
       chaveBloco: chaveConjunto,
       nivelDetalhe: nivel,
       versaoDadosElevacao: versao,
-      picosReferencia: picosReferencia,
-      amostrarElevacaoMetros: (lat, lon) {
-        final ehTerra = malhaAtual?.contemPontoTerrestre(
-          latitude: lat,
-          longitude: lon,
-        );
-        return GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-          latitude: lat,
-          longitude: lon,
-          picosReferencia: picosReferencia,
-          ehTerraConfirmada: ehTerra,
-          amostradorElevacaoReal: (la, lo) =>
-              amostrarElevacaoReal(la, lo, lod: lod),
-        );
-      },
+      curvas: List<CurvaNivelMundo>.unmodifiable(reunidas),
     );
-
-    _curvasMemoizadas = extraido;
-    _assinaturaPicosCurvas = assinaturaPicos;
-    return extraido;
+    _curvasMemoizadas = lote;
+    _chaveConjuntoCurvasMemoizado = chaveConjunto;
+    return lote;
   }
 
   /// Atualiza a preferência de acessibilidade (`MediaQuery.disableAnimations`).
