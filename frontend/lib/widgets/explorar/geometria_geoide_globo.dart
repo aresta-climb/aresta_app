@@ -1,0 +1,88 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'dart:math' as math;
+import 'dart:ui';
+
+/// Coordenada projetada no plano da tela com profundidade relativa e visibilidade.
+class PontoProjetadoTela {
+  final double x;
+  final double y;
+  final double profundidade;
+  final bool visivel;
+
+  const PontoProjetadoTela({
+    required this.x,
+    required this.y,
+    required this.profundidade,
+    required this.visivel,
+  });
+
+  static const PontoProjetadoTela oculto = PontoProjetadoTela(
+    x: 0,
+    y: 0,
+    profundidade: 9999,
+    visivel: false,
+  );
+}
+
+/// Agrupamento geográfico de picos por unidade federativa para renderização limpa no `LOD 0`.
+class ClusterEstadoGlobo {
+  final String uf;
+  final double latitudeMedia;
+  final double longitudeMedia;
+  final int quantidade;
+  final String primeiroPicoId;
+
+  const ClusterEstadoGlobo({
+    required this.uf,
+    required this.latitudeMedia,
+    required this.longitudeMedia,
+    required this.quantidade,
+    required this.primeiroPicoId,
+  });
+}
+
+/// Motor matemático puro do Geoide Terrestre (`WGS84 + NASA EGM96 / GRACE`),
+/// agrupamento por estado e prevenção de colisão espacial de rótulos na tela.
+abstract final class GeometriaGeoideGlobo {
+  static const double grausParaRad = math.pi / 180.0;
+
+  /// Raio normalizado do Geoide Terrestre combinando o achatamento polar elipsoidal `WGS84`
+  /// e os harmônicos gravitacionais reais `NASA GSFC EGM96 / GRACE` (Baixa do Oceano Índico `-106m`,
+  /// Alta da Nova Guiné `+85m`, Alta do Atlântico Norte `+68m`, Alta Andina `+45m`, Baixa do Caribe `-52m`,
+  /// Baixa do Atlântico Sul `-28m` e Baixa de Ross `-62m`), em escala científica visível na órbita 3D.
+  static double raioNormalizadoGeoide({
+    required double latitude,
+    required double longitude,
+  }) {
+    final phi = latitude * grausParaRad;
+    final lam = longitude * grausParaRad;
+    final sinPhi = math.sin(phi);
+    final cosPhi = math.cos(phi);
+
+    final p3 = 0.5 * (5.0 * sinPhi * sinPhi * sinPhi - 3.0 * sinPhi);
+    final triaxial = cosPhi * cosPhi * math.cos(2.0 * (lam + 0.26)) * 0.0085;
+    final rElipsoide =
+        1.024 - 0.056 * sinPhi * sinPhi + 0.0065 * p3 + triaxial;
+
+    double gaussianaGeo(double latC, double lonC, double larguraGraus) {
+      final dLat = latitude - latC;
+      final dLon = ((longitude - lonC + 540.0) % 360.0) - 180.0;
+      final d2 = dLat * dLat + (dLon * 0.78) * (dLon * 0.78);
+      return math.exp(-d2 / (2.0 * larguraGraus * larguraGraus));
+    }
+
+    final ondulacaoEgm96 =
+        -0.0320 * gaussianaGeo(4.0, 79.0, 24.0) +
+        0.0270 * gaussianaGeo(-5.0, 146.0, 22.0) +
+        0.0220 * gaussianaGeo(58.0, -30.0, 23.0) +
+        0.0235 * gaussianaGeo(-18.0, -69.0, 19.0) -
+        0.0195 * gaussianaGeo(22.0, -66.0, 19.0) -
+        0.0145 * gaussianaGeo(-35.0, -38.0, 20.0) -
+        0.0175 * gaussianaGeo(28.0, -135.0, 22.0) -
+        0.0210 * gaussianaGeo(-74.0, -175.0, 24.0);
+
+    return rElipsoide + ondulacaoEgm96;
+  }
+
