@@ -94,7 +94,7 @@ abstract final class PintorTerrenoVetoresGlobo {
         final pt = controlador.projetarCoordenada(
           latitude: lat,
           longitude: lon,
-          elevacaoMetros: math.max(0.0, el) * opacidadeBase,
+          elevacaoMetros: 0.0,
           tamanhoTela: size,
           estenderBordaHorizonte: true,
         );
