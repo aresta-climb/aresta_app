@@ -531,3 +531,94 @@ abstract final class GeradorMalhaGeograficaOffline {
     var tipoCor = 0;
     final idatBuffer = BytesBuilder(copy: false);
 
+    while (offset + 8 <= bytesPng.length) {
+      final tam = lerUint32(offset);
+      final tipo = String.fromCharCodes(bytesPng.sublist(offset + 4, offset + 8));
+      final dadosIni = offset + 8;
+      if (dadosIni + tam + 4 > bytesPng.length) break;
+
+      if (tipo == 'IHDR') {
+        largura = lerUint32(dadosIni);
+        altura = lerUint32(dadosIni + 4);
+        final bits = bytesPng[dadosIni + 8];
+        tipoCor = bytesPng[dadosIni + 9];
+        if (bits != 8 || (tipoCor != 2 && tipoCor != 6)) {
+          throw FormatException(
+            'Formato PNG Terrarium não suportado (bits=$bits, cor=$tipoCor).',
+          );
+        }
+      } else if (tipo == 'IDAT') {
+        idatBuffer.add(bytesPng.sublist(dadosIni, dadosIni + tam));
+      } else if (tipo == 'IEND') {
+        break;
+      }
+      offset = dadosIni + tam + 4;
+    }
+
+    if (largura != 256 || altura != 256) {
+      throw FormatException('Dimensão inesperada de tile ($largura x $altura).');
+    }
+
+    final bpp = tipoCor == 6 ? 4 : 3;
+    final stride = largura * bpp;
+    final descomprimido = zlib.decode(idatBuffer.takeBytes());
+    if (descomprimido.length < altura * (1 + stride)) {
+      throw const FormatException('Dados IDAT truncados em tile Terrarium.');
+    }
+
+    final linhaAtual = List<int>.filled(stride, 0);
+    final linhaAnterior = List<int>.filled(stride, 0);
+    final elevacoes = List<double>.filled(largura * altura, 0.0);
+
+    int paeth(int a, int b, int c) {
+      final p = a + b - c;
+      final pa = (p - a).abs();
+      final pb = (p - b).abs();
+      final pc = (p - c).abs();
+      if (pa <= pb && pa <= pc) return a;
+      if (pb <= pc) return b;
+      return c;
+    }
+
+    var src = 0;
+    for (var y = 0; y < altura; y++) {
+      final filtro = descomprimido[src++];
+      for (var i = 0; i < stride; i++) {
+        final bruto = descomprimido[src++];
+        final esq = i >= bpp ? linhaAtual[i - bpp] : 0;
+        final cima = linhaAnterior[i];
+        final diag = i >= bpp ? linhaAnterior[i - bpp] : 0;
+        int rec;
+        switch (filtro) {
+          case 0:
+            rec = bruto;
+          case 1:
+            rec = (bruto + esq) & 0xFF;
+          case 2:
+            rec = (bruto + cima) & 0xFF;
+          case 3:
+            rec = (bruto + ((esq + cima) >> 1)) & 0xFF;
+          case 4:
+            rec = (bruto + paeth(esq, cima, diag)) & 0xFF;
+          default:
+            throw FormatException('Filtro PNG desconhecido: $filtro');
+        }
+        linhaAtual[i] = rec;
+      }
+
+      for (var x = 0; x < largura; x++) {
+        final baseIdx = x * bpp;
+        final r = linhaAtual[baseIdx];
+        final g = linhaAtual[baseIdx + 1];
+        final b = linhaAtual[baseIdx + 2];
+        elevacoes[y * largura + x] = (r * 256.0 + g + b / 256.0) - 32768.0;
+      }
+
+      for (var i = 0; i < stride; i++) {
+        linhaAnterior[i] = linhaAtual[i];
+      }
+    }
+
+    return elevacoes;
+  }
+
