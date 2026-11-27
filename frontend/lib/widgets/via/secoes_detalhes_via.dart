@@ -394,7 +394,10 @@ class SecaoHistoricoEPixVia extends StatelessWidget {
                     valor: dataAbertura!,
                   ),
                 if (dataManutencao != null)
-                  _LinhaHistorico(rotulo: 'MANUTENÇÃO', valor: dataManutencao!),
+                  _LinhaHistorico(
+                    rotulo: context.tr(ChaveTexto.viaManutencao),
+                    valor: dataManutencao!,
+                  ),
               ],
             ),
           ),
@@ -421,7 +424,10 @@ class SecaoHistoricoEPixVia extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Apoie a Manutenção (Copiar Pix: $chavePixManutencao)',
+                      context.tr(
+                        ChaveTexto.viaApoieManutencaoPix,
+                        {'chave': chavePixManutencao},
+                      ),
                       style: TextStyle(
                         color: cores.chalkWhite,
                         fontWeight: FontWeight.bold,
@@ -436,63 +442,6 @@ class SecaoHistoricoEPixVia extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _TituloSecaoVia extends StatelessWidget {
-  final String titulo;
-
-  const _TituloSecaoVia({required this.titulo});
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = context.colors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: TextStyle(
-            color: cores.beastHide,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          height: 2,
-          width: 36,
-          color: cores.beastHide.withValues(alpha: 0.5),
-        ),
-      ],
-    );
-  }
-}
-
-class _PilulaDetalheCurto extends StatelessWidget {
-  final String texto;
-
-  const _PilulaDetalheCurto({required this.texto});
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: cores.deepBasalt,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cores.graniteEdge),
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(
-          color: cores.beastHide,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
   }
 }
