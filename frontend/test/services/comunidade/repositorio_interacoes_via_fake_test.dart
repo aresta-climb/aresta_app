@@ -88,8 +88,99 @@ void main() {
     expect(fake.obterDeltaVotoUsuario('x8siJek3FiG3aB'), 1);
     expect(fake.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.totalVotos, 6);
     expect(fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios, hasLength(1));
+    final comUid =
+        fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios.single.uid;
+    await fake.editarComentario(
+      escaladaUid: 'x8siJek3FiG3aB',
+      comentarioUid: comUid,
+      novoTexto: 'Crux técnico na reglete!',
+    );
+    expect(
+      fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios.single.texto,
+      'Crux técnico na reglete!',
+    );
+    await fake.excluirComentario(
+      escaladaUid: 'x8siJek3FiG3aB',
+      comentarioUid: comUid,
+    );
+    expect(fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios, isEmpty);
+
+    // Editar e excluir alerta tanto em via já carregada quanto apenas semeada em Meus Alertas
+    final alertaCaderneta = AlertaSegurancaVia.criar(
+      escaladaUid: 'viaApenasCaderneta',
+      categoria: CategoriaAlertaSeguranca.fauna,
+      detalhe: 'Vespas',
+      autorIdPublico: fake.autorIdSimulado,
+      autorNomePublico: 'Escalador Teste',
+    );
+    fake.semearMeusAlertas([
+      AlertaContribuidoCaderneta(
+        alerta: alertaCaderneta,
+        papel: PapelContribuicaoAlerta.criadoPorMim,
+        ativo: true,
+        ultimaInteracaoEm: alertaCaderneta.criadoEm,
+      ),
+    ]);
+    final editadoCad = await fake.editarAlerta(
+      escaladaUid: 'viaApenasCaderneta',
+      alertaUid: alertaCaderneta.uid,
+      novaCategoria: CategoriaAlertaSeguranca.rochaAgarraInstavel,
+      detalhe: 'Laca solta',
+    );
+    expect(editadoCad.categoria, CategoriaAlertaSeguranca.rochaAgarraInstavel);
+    expect(fake.obterMeusAlertasContribuidos().single.alerta.detalhe, 'Laca solta');
+
+    final outroAlertaCad = AlertaSegurancaVia.criar(
+      escaladaUid: 'viaOutraCaderneta',
+      categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+      autorIdPublico: fake.autorIdSimulado,
+      autorNomePublico: 'Escalador Teste',
+    );
+    fake.semearMeusAlertas([
+      AlertaContribuidoCaderneta(
+        alerta: outroAlertaCad,
+        papel: PapelContribuicaoAlerta.criadoPorMim,
+        ativo: true,
+        ultimaInteracaoEm: outroAlertaCad.criadoEm,
+      ),
+    ]);
+    await fake.excluirAlerta(
+      escaladaUid: 'viaOutraCaderneta',
+      alertaUid: outroAlertaCad.uid,
+    );
+    expect(fake.obterMeusAlertasContribuidos(), isEmpty);
 
     fake.erroSimulado = StateError('Falha determinística de rede');
+    await expectLater(
+      () => fake.editarComentario(
+        escaladaUid: 'x8siJek3FiG3aB',
+        comentarioUid: comUid,
+        novoTexto: 'X',
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.excluirComentario(
+        escaladaUid: 'x8siJek3FiG3aB',
+        comentarioUid: comUid,
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.editarAlerta(
+        escaladaUid: 'x8siJek3FiG3aB',
+        alertaUid: alerta.uid,
+        novaCategoria: CategoriaAlertaSeguranca.fauna,
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.excluirAlerta(
+        escaladaUid: 'x8siJek3FiG3aB',
+        alertaUid: alerta.uid,
+      ),
+      throwsStateError,
+    );
     await expectLater(
       () => fake.sincronizarEscalada('x8siJek3FiG3aB'),
       throwsStateError,
