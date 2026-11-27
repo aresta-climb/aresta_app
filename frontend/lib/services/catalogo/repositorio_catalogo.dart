@@ -10,6 +10,9 @@ import 'package:sqflite/sqflite.dart';
 import '../../aresta_api/openapi/generated/dart/catalogo.dart';
 import '../../aresta_api/sql/generated/dart/catalogo_sql.dart';
 import '../../utils/calculadora_distancia_estrada.dart';
+import 'perfil_grau_pico.dart';
+
+export 'perfil_grau_pico.dart';
 
 /// Modelo enriquecido de uma entidade do catálogo SQLite (`catalogo_aresta`)
 /// combinada via `LEFT JOIN` com os nomes do setor pai, grupo pai e metadados do croqui.
@@ -198,6 +201,18 @@ class RepositorioCatalogo {
       d.duracao_minutos
     FROM catalogo_distancias_estrada d
     LEFT JOIN catalogo_croquis c ON c.croqui_uid = d.croqui_uid
+  ''';
+
+  /// Query estática para agregação rápida dos graus por croqui na aba `Explorar`.
+  static const String _sqlListarGrausEscaladas = '''
+    SELECT
+      e.croqui_uid,
+      c.id_slug,
+      e.escalada_grau,
+      e.escalada_tipo
+    FROM catalogo_aresta e
+    LEFT JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
+    WHERE e.tipo = 'escalada' AND e.escalada_grau IS NOT NULL
   ''';
 
   final Future<String> Function() _provedorCaminhoBanco;
@@ -678,6 +693,67 @@ class RepositorioCatalogo {
         nos: nos,
         portaisPorCroqui: portaisPorCroqui,
       );
+    });
+  }
+
+  /// Agrega offline todos os graus de vias e boulders do `catalogo.db` por `id_slug` e `croqui_uid`,
+  /// viabilizando filtragem nacional por dificuldade na aba `Explorar` sem abrir cada `.binarypb`.
+  Future<Map<String, PerfilGrauPico>> carregarPerfisGrauPorCroqui() {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return const <String, PerfilGrauPico>{};
+      }
+      final db = await _obterBanco();
+      final linhas = await db.rawQuery(_sqlListarGrausEscaladas);
+
+      final viasPorUid = <String, Map<int, int>>{};
+      final bouldersPorUid = <String, Map<int, int>>{};
+      final slugPorUid = <String, String>{};
+
+      for (final linha in linhas) {
+        final croquiUid = (linha['croqui_uid'] as String?) ?? '';
+        if (croquiUid.isEmpty) continue;
+        final idSlug = linha['id_slug'] as String?;
+        if (idSlug != null && idSlug.isNotEmpty) {
+          slugPorUid[croquiUid] = idSlug;
+        }
+        final grauTxt = linha['escalada_grau'] as String?;
+        final tipoEscalada =
+            ((linha['escalada_tipo'] as String?) ?? '').toLowerCase();
+
+        if (tipoEscalada == 'boulder') {
+          final pesoBld = PerfilGrauPico.converterGrauBoulderParaPeso(grauTxt);
+          if (pesoBld != null) {
+            final mapa = bouldersPorUid.putIfAbsent(croquiUid, () => <int, int>{});
+            mapa[pesoBld] = (mapa[pesoBld] ?? 0) + 1;
+          }
+        } else if (tipoEscalada != 'highline') {
+          final pesoVia = PerfilGrauPico.converterGrauViaParaPeso(grauTxt);
+          if (pesoVia != null) {
+            final mapa = viasPorUid.putIfAbsent(croquiUid, () => <int, int>{});
+            mapa[pesoVia] = (mapa[pesoVia] ?? 0) + 1;
+          }
+        }
+      }
+
+      final resultado = <String, PerfilGrauPico>{};
+      final todosUids = <String>{...viasPorUid.keys, ...bouldersPorUid.keys};
+      for (final uid in todosUids) {
+        final perfil = PerfilGrauPico(
+          contagemPorPesoVia: Map<int, int>.unmodifiable(
+            viasPorUid[uid] ?? const <int, int>{},
+          ),
+          contagemPorPesoBoulder: Map<int, int>.unmodifiable(
+            bouldersPorUid[uid] ?? const <int, int>{},
+          ),
+        );
+        resultado[uid] = perfil;
+        final slug = slugPorUid[uid];
+        if (slug != null) {
+          resultado[slug] = perfil;
+        }
+      }
+      return resultado;
     });
   }
 
