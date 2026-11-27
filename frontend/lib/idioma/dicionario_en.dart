@@ -641,3 +641,93 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.cadNenhumaAscensaoModalidade:
       'No ascents logged in this discipline yet.',
   ChaveTexto.cadHistoricoContagem: 'Ascent History ({n})',
+  ChaveTexto.cadMeusAlertasContagem: 'My Rock Hazards ({n})',
+  ChaveTexto.cadNenhumaAscensaoAinda: 'No ascents logged yet',
+  ChaveTexto.cadNenhumaAscensaoSub:
+      'Your sends logged on route pages will show up here.',
+  ChaveTexto.cadEditarAscensaoTooltip: 'Edit ascent',
+  ChaveTexto.cadExcluirAscensaoTooltip: 'Delete ascent',
+  ChaveTexto.cadExcluirAscensaoTitulo: 'Delete Ascent?',
+  ChaveTexto.cadExcluirAscensaoCorpo:
+      'This will permanently remove this ascent from your logbook.',
+  ChaveTexto.cadEstiloEsportivoLabel: 'Climbing Style',
+  ChaveTexto.cadTentativasPegasLabel: 'Attempts / Burns',
+  ChaveTexto.cadDataAscensaoLabel: 'Ascent Date',
+  ChaveTexto.cadNotasPrivadasLabel: 'Private Notes (Crux / Beta)',
+  ChaveTexto.cadNotasPrivadasHint:
+      'e.g. Left heel hook at 3rd bolt crux, bring a long runner...',
+  ChaveTexto.cadCadenaSalvaToast: 'Send saved to logbook!',
+  ChaveTexto.cadTentativaSalvaToast: 'Attempt saved to logbook!',
+  ChaveTexto.cadContribuicaoPublica: 'PUBLIC CONTRIBUTION',
+  ChaveTexto.cadPercepcaoGrau: 'How did the grade feel?',
+  ChaveTexto.cadBetaOpcionalLabel: 'Community Beta (optional)',
+  ChaveTexto.cadBetaOpcionalHint:
+      'e.g. Extend draw #3; good sequence out left at the crux.',
+  ChaveTexto.cadConecteParaContribuir:
+      'Sign in on the Profile tab to share grade votes and public beta with the community guide.',
+  ChaveTexto.cadEditarModalTitulo: 'Edit Ascent',
+  ChaveTexto.cadRegistrarModalTitulo: 'Log Ascent',
+  ChaveTexto.cadSalvarEContribuir: 'Save Send & Share Beta',
+  ChaveTexto.cadSalvarNaCaderneta: 'Save to Logbook',
+  ChaveTexto.cadEncadenadaEm: 'Sent on {data} ({estilo})',
+  ChaveTexto.cadTentativaEm: 'Attempt on {data}',
+  ChaveTexto.cadNovaAscensaoBtn: 'Log New Ascent / Attempt',
+  ChaveTexto.cadRegistrarCadenaBtn: 'Log Send / Attempt',
+  ChaveTexto.comunidadeHeader: 'MEDIA, SUPPORT & COMMUNITY',
+  ChaveTexto.comunidadeSobreTimeTitulo: 'ABOUT THE TEAM',
+  ChaveTexto.comunidadeSobreTimeSub:
+      'Meet the developers and contributors behind Aresta.',
+  ChaveTexto.comunidadeWhatsappTitulo: 'WHATSAPP GROUP',
+  ChaveTexto.comunidadeWhatsappSub:
+      'Join to ask questions, share ideas, and get Aresta updates.',
+  ChaveTexto.comunidadeInstagramTitulo: 'OFFICIAL INSTAGRAM',
+  ChaveTexto.comunidadeInstagramSub:
+      'Follow the latest crag releases, updates, and behind-the-scenes.',
+  ChaveTexto.comunidadeLinkedinTitulo: 'PROJECT LINKEDIN',
+  ChaveTexto.comunidadeLinkedinSub:
+      'Follow news, milestones, and institutional updates from Aresta.',
+  ChaveTexto.comunidadeDiscordTitulo: 'DEVELOPER DISCORD',
+  ChaveTexto.comunidadeDiscordSub:
+      'Chat with the team, follow the code, and help shape Aresta.',
+  ChaveTexto.comunidadeGithubTitulo: 'ARESTA GITHUB',
+  ChaveTexto.comunidadeGithubSub: 'Browse our open-source GitHub repositories.',
+  ChaveTexto.comunidadeTermosTitulo: 'Terms of Use & Privacy',
+  ChaveTexto.comunidadeTermosSub:
+      'Outdoor risk assumption and offline-first privacy guidelines.',
+  ChaveTexto.comunidadeRodapeVersao: 'Aresta Climb v{versao} • Open Beta',
+  ChaveTexto.comunidadeIniciativaLivre:
+      'An independent initiative for free outdoor climbing.',
+  ChaveTexto.comunidadeTermosModalHeader: 'TERMS & PRIVACY',
+  ChaveTexto.comunidadePoliticaModalHeader: 'PRIVACY POLICY',
+  ChaveTexto.timeConhecaSubtitulo: 'MEET THE PEOPLE BEHIND ARESTA',
+  ChaveTexto.timeOpenSourceTitulo: 'ARESTA IS OPEN SOURCE',
+  ChaveTexto.timeOpenSourceCorpo:
+      'Want to contribute? Hop into our Discord and send us a message!',
+  ChaveTexto.timeCargoDesigner: 'Designer',
+  ChaveTexto.timeCargoProduto: 'Product / Marketing',
+  ChaveTexto.timeCargoProdutoQuebra: 'Product/\nMarketing',
+  ChaveTexto.timeCargoBackend: 'Backend',
+  ChaveTexto.timeCargoFrontend: 'Frontend',
+  ChaveTexto.legalTermosTitulo: 'Terms of Use',
+  ChaveTexto.legalPoliticaTitulo: 'Privacy Policy',
+  ChaveTexto.legalErroTermos:
+      'Error loading terms. Please try again later.',
+  ChaveTexto.legalErroPolitica: 'Error loading privacy policy.',
+  ChaveTexto.legalBannerAtualizacao:
+      '🌟 We updated our legal documents. Please review and confirm your acceptance.',
+  ChaveTexto.legalDataAtualizacao: 'Updated on: {data}',
+  ChaveTexto.legalAceitoEm: 'Accepted on {data} at {hora}',
+  ChaveTexto.legalConcordoCheckbox:
+      'I have read and agree to the Terms of Use and Privacy Policy.',
+  ChaveTexto.legalAceitarContinuar: 'Accept Terms & Continue',
+  ChaveTexto.configTitulo: 'Settings',
+  ChaveTexto.configIdiomaTitulo: 'LANGUAGE',
+  ChaveTexto.configIdiomaSubtitulo:
+      'Instantly switch the display language across the entire app.',
+  ChaveTexto.configAparenciaTitulo: 'APPEARANCE',
+  ChaveTexto.configAparenciaSub: 'Customize the app theme.',
+  ChaveTexto.configEscolherTemaManual: 'Choose theme manually',
+  ChaveTexto.configTemaEscuro: 'DARK',
+  ChaveTexto.configPerfilCadernetaTitulo: 'PROFILE & LOGBOOK',
+  ChaveTexto.configPerfilCadernetaSub:
+      'Show or hide your profile and ascent logging on routes without erasing local data.',
