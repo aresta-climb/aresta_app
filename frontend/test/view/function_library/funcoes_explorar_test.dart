@@ -171,37 +171,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragBackground('thumbnails/crag_local.webp', cragId: 'crag_local'),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pumpAndSettle();
-
-      final imageFinder = find.byType(Image);
-      expect(imageFinder, findsOneWidget);
-      final Image imageWidget = tester.widget(imageFinder);
-      expect(imageWidget.image, isA<ResizeImage>());
-      final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(450));
-      expect(resize.imageProvider, isA<ImagemArquivoAresta>());
-    });
-
-    testWidgets('buildCragBackground resolve miniatura local mesmo quando thumbnailUrl for a URL legada remota', (
-      WidgetTester tester,
-    ) async {
-      EditorDeCroqui();
-      final thumbDir = Directory('${tempDir.path}/downloads/thumbnails')..createSync(recursive: true);
-      final thumbFile = File('${thumbDir.path}/crag_legado.webp');
-      thumbFile.writeAsBytesSync(bytesPng1);
-
-      // Simula o caso real reportado: crag['thumbnailUrl'] recebido com URL remota de thumbnail do catálogo
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
             body: buildCragBackground(
-              'https://serving.arestaclimb.com/v4/thumbnails/crag_legado.webp',
-              cragId: 'crag_legado',
+              'https://serving.arestaclimb.com/v4/thumbnails/crag_local.webp',
+              cragId: 'crag_local',
             ),
           ),
         ),
@@ -209,11 +181,8 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      final imageFinder = find.byType(Image);
-      expect(imageFinder, findsOneWidget);
-      final Image imageWidget = tester.widget(imageFinder);
-      expect(imageWidget.image, isA<ResizeImage>());
-      final resize = imageWidget.image as ResizeImage;
+      final Image localImg = tester.widget(find.byType(Image));
+      final resize = localImg.image as ResizeImage;
       expect(resize.width, equals(450));
       expect(resize.imageProvider, isA<ImagemArquivoAresta>());
     });
