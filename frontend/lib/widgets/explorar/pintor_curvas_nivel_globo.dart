@@ -9,16 +9,13 @@ import '../../utils/geometria_clipping_mapa.dart';
 import 'controlador_camera_globo.dart';
 import 'malha_relevo_lod.dart';
 
-/// Renderizador cartográfico puramente declarativo (Dumb UI) de isolinhas topográficas sólidas
-/// e enxutas ancoradas em coordenadas fixas do mundo (`ConjuntoCurvasNivelMundo`).
-///
-/// Prioriza poucas linhas contínuas, nítidas e legíveis (sem micro-curvas ruidosas, sem desfoque
-/// artificial e sem anéis decorativos sobrepostos aos picos).
+/// Renderizador cartográfico declarativo (Dumb UI) de isolinhas aditivas (`400m -> +200m -> +100m -> +50m`)
+/// travadas diretamente sobre a superfície do Geoide (Opção A — zero deformação ou paralaxe no zoom).
 abstract final class PintorCurvasNivelGlobo {
   static const Color _corCobreEscarpasAresta = Color(0xFFE88D5A);
 
-  /// Projeta e desenha sobre [canvas] o conjunto de isolinhas do mundo [curvasMundo] (ou extrai
-  /// sob demanda caso omitido em testes isolados), preservando rótulos de cota fixos no terreno.
+  /// Projeta e desenha sobre [canvas] a hierarquia aditiva de isolinhas [curvasMundo],
+  /// revelando progressivamente subdivisões mais finas sem alterar as curvas já visíveis.
   static void desenharCurvasETopografiaProxima({
     required Canvas canvas,
     required Size size,
@@ -31,9 +28,16 @@ abstract final class PintorCurvasNivelGlobo {
     double? Function(double latitude, double longitude)? amostradorElevacaoReal,
   }) {
     final lod = controlador.lod;
-    final pesoCurvas = ControladorCameraGlobo.smoothstep(1.92, 2.55, lod) *
+    final alfaGeracao0 = ControladorCameraGlobo.smoothstep(1.92, 2.42, lod) *
         opacidadeTerreno.clamp(0.0, 1.0);
-    if (pesoCurvas <= 0.02) return;
+    if (alfaGeracao0 <= 0.02) return;
+
+    final alfaGeracao1 = ControladorCameraGlobo.smoothstep(2.55, 3.05, lod) *
+        opacidadeTerreno.clamp(0.0, 1.0);
+    final alfaGeracao2 = ControladorCameraGlobo.smoothstep(3.25, 3.75, lod) *
+        opacidadeTerreno.clamp(0.0, 1.0);
+    final alfaGeracao3 = ControladorCameraGlobo.smoothstep(3.90, 4.35, lod) *
+        opacidadeTerreno.clamp(0.0, 1.0);
 
     final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
       modo3D: controlador.modo3D,
@@ -67,24 +71,25 @@ abstract final class PintorCurvasNivelGlobo {
           },
         );
 
-    final caminhoSecundarias = Path();
-    final caminhoMestras = Path();
+    final caminhosGeracao = <Path>[Path(), Path(), Path(), Path()];
+    final temGeracao = <bool>[false, false, false, false];
     final caminhoEscarpasAresta = Path();
-    var temSecundaria = false;
-    var temMestra = false;
     var temEscarpa = false;
 
     final rotulosCotas = <({Offset pos, int metros, bool escarpa})>[];
-    final exibirRotulosCota = lod >= 2.72;
+    final exibirRotulos400 = lod >= 2.55;
+    final exibirRotulos200 = lod >= 3.35;
     final margemTelaX = size.width * 0.35;
     final margemTelaY = size.height * 0.35;
 
     for (final curva in conjunto.curvas) {
-      final elevProj = curva.cotaMetros.toDouble() * opacidadeTerreno;
-      final destino = curva.ehEscarpaPico
-          ? caminhoEscarpasAresta
-          : (curva.ehMestra ? caminhoMestras : caminhoSecundarias);
+      final g = curva.geracaoDetalhe.clamp(0, 3);
+      if (g == 1 && alfaGeracao1 <= 0.02) continue;
+      if (g == 2 && alfaGeracao2 <= 0.02) continue;
+      if (g == 3 && alfaGeracao3 <= 0.02) continue;
 
+      final destino =
+          curva.ehEscarpaPico ? caminhoEscarpasAresta : caminhosGeracao[g];
       final subTraco = <Offset>[];
       var segmentosVisiveis = 0;
 
@@ -104,7 +109,7 @@ abstract final class PintorCurvasNivelGlobo {
         final pt = controlador.projetarCoordenada(
           latitude: v.dy,
           longitude: v.dx,
-          elevacaoMetros: elevProj + 2.0,
+          elevacaoMetros: 0.0,
           tamanhoTela: size,
         );
         if (!pt.visivel ||
@@ -122,22 +127,22 @@ abstract final class PintorCurvasNivelGlobo {
       if (segmentosVisiveis > 0) {
         if (curva.ehEscarpaPico) {
           temEscarpa = true;
-        } else if (curva.ehMestra) {
-          temMestra = true;
         } else {
-          temSecundaria = true;
+          temGeracao[g] = true;
         }
       }
 
+      final podeRotular =
+          (g == 0 && exibirRotulos400) || (g == 1 && exibirRotulos200);
       final ancora = curva.ancoraRotuloLonLat;
-      if (exibirRotulosCota &&
+      if (podeRotular &&
           ancora != null &&
           rotulosCotas.length < 4 &&
           janela.contemPonto(ancora.dx, ancora.dy)) {
         final ptRotulo = controlador.projetarCoordenada(
           latitude: ancora.dy,
           longitude: ancora.dx,
-          elevacaoMetros: elevProj + 3.0,
+          elevacaoMetros: 0.0,
           tamanhoTela: size,
         );
         if (ptRotulo.visivel &&
@@ -161,30 +166,48 @@ abstract final class PintorCurvasNivelGlobo {
     }
 
     final ganhoMono = 0.65 + 0.35 * fatorMonocromatico;
-    if (temSecundaria) {
+
+    // Desenha da subdivisão mais fina (50m) para a mestra (400m) mantendo hierarquia sólida
+    if (temGeracao[3] && alfaGeracao3 > 0.02) {
       canvas.drawPath(
-        caminhoSecundarias,
+        caminhosGeracao[3],
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = lod >= 3.4 ? 1.15 : 0.95
+          ..strokeWidth = 0.85
+          ..color = Color.fromRGBO(
+            148,
+            165,
+            186,
+            (0.28 * alfaGeracao3 * ganhoMono).clamp(0.0, 1.0),
+          ),
+      );
+    }
+    if (temGeracao[2] && alfaGeracao2 > 0.02) {
+      canvas.drawPath(
+        caminhosGeracao[2],
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = 1.05
           ..color = Color.fromRGBO(
             168,
             184,
             204,
-            (0.42 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
+            (0.40 * alfaGeracao2 * ganhoMono).clamp(0.0, 1.0),
           ),
       );
     }
-    if (temMestra) {
+    if (temGeracao[1] && alfaGeracao1 > 0.02) {
       canvas.drawPath(
-        caminhoMestras,
+        caminhosGeracao[1],
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = lod >= 3.4 ? 1.65 : 1.35
+          ..strokeWidth = 1.30
           ..color = Color.fromRGBO(
             226,
             234,
