@@ -337,3 +337,54 @@ abstract final class PintorCurvasNivelGlobo {
     }
   }
 
+  static void _desenharEtiquetasCotaMestra({
+    required Canvas canvas,
+    required List<({Offset pos, int metros})> rotulos,
+    required double opacidade,
+  }) {
+    if (opacidade <= 0.04) return;
+    final pincelFundo = Paint()
+      ..color = Color.fromRGBO(11, 15, 22, (0.82 * opacidade).clamp(0.0, 1.0));
+    final pincelBorda = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.75
+      ..color =
+          Color.fromRGBO(148, 163, 184, (0.36 * opacidade).clamp(0.0, 1.0));
+
+    for (final item in rotulos) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: '${item.metros} m',
+          style: TextStyle(
+            color: Color.fromRGBO(
+              226,
+              232,
+              240,
+              (0.88 * opacidade).clamp(0.0, 1.0),
+            ),
+            fontSize: 8.6,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: item.pos,
+          width: tp.width + 8.0,
+          height: tp.height + 3.0,
+        ),
+        const Radius.circular(4.0),
+      );
+      canvas.drawRRect(rect, pincelFundo);
+      canvas.drawRRect(rect, pincelBorda);
+      tp.paint(
+        canvas,
+        Offset(item.pos.dx - tp.width * 0.5, item.pos.dy - tp.height * 0.5),
+      );
+      tp.dispose();
+    }
+  }
+}
