@@ -180,3 +180,87 @@ abstract final class EstudoEstatisticoClimaAresta {
       probabilidadeAcumuladaPhi: 0.9949,
       caudaDireitaP: 0.0051,
       chaveInterpretacao: ChaveTexto.estatClimaZNotaTeste83,
+      destacar: true,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 3.09,
+      probabilidadeAcumuladaPhi: 0.9990,
+      caudaDireitaP: 0.0010,
+      chaveInterpretacao: ChaveTexto.estatClimaZNota999,
+    ),
+    LinhaTabelaPadraoZ(
+      escoreZ: 3.49,
+      probabilidadeAcumuladaPhi: 0.9998,
+      caudaDireitaP: 0.0002,
+      chaveInterpretacao: ChaveTexto.estatClimaZNotaFimTabela,
+      destacar: true,
+    ),
+  ];
+
+  /// As 3 fontes meteorológicas, de radar e monitoramento ambiental utilizadas pelo Aresta.
+  static const List<FonteDadosClimaMapa> fontesMeteorologicas = [
+    FonteDadosClimaMapa(
+      id: 'open_meteo',
+      nome: 'Open-Meteo',
+      resolucaoEspacial: '9–25 km / 1h',
+      categoria: CategoriaFonteClimaMapa.meteorologiaRadar,
+      chaveDescricao: ChaveTexto.estatClimaFonteOpenMeteoDesc,
+    ),
+    FonteDadosClimaMapa(
+      id: 'rainviewer',
+      nome: 'RainViewer',
+      resolucaoEspacial: '~2 km / 10min',
+      categoria: CategoriaFonteClimaMapa.meteorologiaRadar,
+      chaveDescricao: ChaveTexto.estatClimaFonteRainViewerDesc,
+    ),
+    FonteDadosClimaMapa(
+      id: 'inpe_bdqueimadas',
+      nome: 'INPE BDQueimadas',
+      resolucaoEspacial: '375m–1km / diário',
+      categoria: CategoriaFonteClimaMapa.meteorologiaRadar,
+      chaveDescricao: ChaveTexto.estatClimaFonteInpeDesc,
+    ),
+  ];
+
+  /// Os 3 recursos públicos de missões orbitais da NASA integrados ao globo e radar.
+  static const List<FonteDadosClimaMapa> fontesMissoesNasa = [
+    FonteDadosClimaMapa(
+      id: 'nasa_firms',
+      nome: 'NASA FIRMS (VIIRS 375m / MODIS)',
+      resolucaoEspacial: '375 m / ~12h',
+      categoria: CategoriaFonteClimaMapa.missaoPublicaNasa,
+      chaveDescricao: ChaveTexto.estatClimaFonteFirmsDesc,
+    ),
+    FonteDadosClimaMapa(
+      id: 'nasa_srtm',
+      nome: 'NASA SRTM (30m)',
+      resolucaoEspacial: '30 m (DEM)',
+      categoria: CategoriaFonteClimaMapa.missaoPublicaNasa,
+      chaveDescricao: ChaveTexto.estatClimaFonteSrtmDesc,
+    ),
+    FonteDadosClimaMapa(
+      id: 'nasa_blue_marble',
+      nome: 'NASA Blue Marble',
+      resolucaoEspacial: '500 m (Global)',
+      categoria: CategoriaFonteClimaMapa.missaoPublicaNasa,
+      chaveDescricao: ChaveTexto.estatClimaFonteBlueMarbleDesc,
+    ),
+  ];
+
+  /// Aproximação polinomial de Abramowitz & Stegun (`7.1.26`, erro `< 1,5e-7`) para a CDF Normal Padrão `Φ(z)`.
+  static double aproximarPhiNormalPadrao(double z) {
+    final absX = z.abs() / math.sqrt2;
+    const p = 0.3275911;
+    const a1 = 0.254829592;
+    const a2 = -0.284496736;
+    const a3 = 1.421413741;
+    const a4 = -1.453152027;
+    const a5 = 1.061405429;
+
+    final t = 1.0 / (1.0 + p * absX);
+    final poly = (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t;
+    final erf = 1.0 - poly * math.exp(-absX * absX);
+    final sinal = z < 0.0 ? -1.0 : 1.0;
+    return 0.5 * (1.0 + sinal * erf);
+  }
+}
