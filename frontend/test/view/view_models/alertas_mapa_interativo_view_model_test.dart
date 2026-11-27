@@ -4,8 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/utils/consulta_dataset.dart';
 import 'package:frontend/view/view_models/alertas_mapa_interativo_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,14 +15,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-    ControladorInteracoesUsuario.redefinirParaTestes();
     repoFake = RepositorioInteracoesViaFake();
-  });
-
-  tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-    ControladorInteracoesUsuario.redefinirParaTestes();
   });
 
   test(
@@ -192,7 +184,35 @@ void main() {
         vm.obterAlertasDaEscalada(uidFarao).single.confirmacoesAtivas,
         2,
       );
+
+      // Edição e exclusão de alerta criado pelo próprio autor no mapa
+      final meuAlertaMapa = await repoFake.reportarAlerta(
+        escaladaUid: uidFarao,
+        categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+        detalhe: 'Chapeleta 1 solta',
+      );
+      expect(
+        await vm.editarAlerta(
+          uidFarao,
+          meuAlertaMapa.uid,
+          CategoriaAlertaSeguranca.rochaAgarraInstavel,
+          detalhe: 'Bloco na entrada',
+        ),
+        isTrue,
+      );
+      vm.iniciarResolucaoAlertaComDesfazer(uidFarao, meuAlertaMapa.uid);
+      expect(await vm.excluirAlerta(uidFarao, meuAlertaMapa.uid), isTrue);
+
       repoFake.erroSimulado = StateError('Erro de confirmação');
+      expect(
+        await vm.editarAlerta(
+          uidFarao,
+          'alertaAbelha01',
+          CategoriaAlertaSeguranca.fauna,
+        ),
+        isFalse,
+      );
+      expect(await vm.excluirAlerta(uidFarao, 'alertaAbelha01'), isFalse);
       expect(
         await vm.confirmarAlerta(
           uidFarao,
@@ -319,12 +339,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       repoFake.erroSimulado = null;
       expect(vm.bolhasNoMapa, hasLength(5));
-
-      // Quando perfilHabilitado é false, oculta todas as bolhas e alertas
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-      expect(vm.bolhasNoMapa, isEmpty);
-      expect(vm.obterAlertasDoSetor(setor2Andar), isEmpty);
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      expect(vm.obterAlertasDoSetor(setor2Andar), hasLength(1));
 
       // Resolução definitiva por expiração e por dispose
       vm.iniciarResolucaoAlertaComDesfazer(uidSetorVia, 'alertaBloco002');
@@ -335,6 +350,14 @@ void main() {
       vm.dispose();
       await Future<void>.delayed(Duration.zero);
       expect(repoFake.obterDadosEscalada(uidGrupoVia).alertasAtivos, isEmpty);
+
+      RepositorioInteracoesViaMemoria.instancia = repoFake;
+      addTearDown(RepositorioInteracoesViaMemoria.redefinirParaTestes);
+      final vmPadrao = AlertasMapaInterativoViewModel(
+        mapa: Mapa(),
+        referenciasResolvidas: const {},
+      );
+      vmPadrao.dispose();
     },
   );
 }
