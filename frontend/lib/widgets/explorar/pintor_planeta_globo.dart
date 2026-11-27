@@ -265,3 +265,94 @@ class PintorPlanetaGlobo extends CustomPainter {
       );
     }
 
+    final alfaUf = ControladorCameraGlobo.smoothstep(0.32, 0.82, lod) *
+        (1.0 - ControladorCameraGlobo.smoothstep(2.45, 3.25, lod));
+    if (alfaUf > 0.02) {
+      final corUf = Color.fromRGBO(241, 245, 249, 0.32 * alfaUf);
+      for (final uf in dadosMalha.estados) {
+        PintorTerrenoVetoresGlobo.desenharPoligonoGeo(
+          canvas: canvas,
+          size: size,
+          controlador: controlador,
+          verticesLonLat: uf.verticesLonLat,
+          borda: corUf,
+          espessuraBorda: 0.9,
+        );
+      }
+    }
+  }
+
+  void _desenharOndaSonarSelecao(Canvas canvas, Size size, double lod) {
+    final alvoSonar = sonarPico;
+    if (alvoSonar == null || progressoSonar >= 1.0) return;
+    final elev = lod > 1.35
+        ? math.max(
+            0.0,
+            GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
+              latitude: alvoSonar.latitude,
+              longitude: alvoSonar.longitude,
+              picosReferencia: picosReferencia,
+              amostradorElevacaoReal: amostradorElevacaoReal,
+            ),
+          )
+        : 0.0;
+    final pt = controlador.projetarCoordenada(
+      latitude: alvoSonar.latitude,
+      longitude: alvoSonar.longitude,
+      elevacaoMetros: elev,
+      tamanhoTela: size,
+    );
+    if (!pt.visivel) return;
+    final raio = 8.0 + progressoSonar * 34.0;
+    final opacidade = ((1.0 - progressoSonar) * 0.85).clamp(0.0, 1.0);
+    canvas.drawCircle(
+      Offset(pt.x, pt.y),
+      raio,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..color = Color.fromRGBO(226, 125, 96, opacidade),
+    );
+  }
+
+  void _desenharLimbAtmosfericoGeoide(
+    Canvas canvas,
+    Path silhuetaGeoide,
+    Offset centroGlobo,
+    double rPx,
+  ) {
+    final rectEsfera = Rect.fromCircle(center: centroGlobo, radius: rPx * 1.03);
+    canvas.drawPath(
+      silhuetaGeoide,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [
+            Color(0x0038BDF8),
+            Color(0x1638BDF8),
+            Color(0x547DD3FC),
+          ],
+          stops: [0.76, 0.91, 1.0],
+        ).createShader(rectEsfera),
+    );
+    canvas.drawPath(
+      silhuetaGeoide,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.25
+        ..color = const Color(0x68BAE6FD),
+    );
+  }
+
+  void _desenharEsferaTexturizadaNasa(
+    Canvas canvas,
+    Size size,
+    ui.Image imagem,
+    double opacidade,
+    double fatorMonocromatico,
+  ) {
+    const cols = 54;
+    const rows = 32;
+    final rPx = controlador.raioAparentePx;
+    final lat0 = controlador.latitudeCentral;
+    final lon0 = controlador.longitudeCentral;
+
