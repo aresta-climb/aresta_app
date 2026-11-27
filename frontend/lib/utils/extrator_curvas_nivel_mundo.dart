@@ -27,17 +27,18 @@ abstract final class ExtratorCurvasNivelMundo {
 
   /// Passo angular fixo no mundo (em graus) correspondente a cada [nivelDetalhe].
   static double passoGradePorNivel(int nivelDetalhe) => switch (nivelDetalhe) {
-        2 => 0.0025, // ~275 m (paredes, vales e maciços em zoom próximo)
-        1 => 0.0080, // ~880 m (escala sub-regional / municipal)
-        _ => 0.0250, // ~2,7 km (escala regional)
+        2 => 0.0035, // ~385 m (maciços e vales amplos sem ruído sub-grade)
+        1 => 0.0100, // ~1,1 km (escala sub-regional / municipal)
+        _ => 0.0280, // ~3,1 km (escala regional)
       };
 
-  /// Intervalo vertical entre curvas secundárias (em metros) para cada [nivelDetalhe].
+  /// Intervalo vertical limpo entre linhas de contorno (em metros) para cada [nivelDetalhe],
+  /// priorizando poucas linhas sólidas e informativas em vez de micro-curvas poluídas.
   static double intervaloCotaMenorPorNivel(int nivelDetalhe) =>
       switch (nivelDetalhe) {
-        2 => 25.0, // Secundárias a cada 25 m, mestras a cada 100 m
-        1 => 50.0, // Secundárias a cada 50 m, mestras a cada 200 m
-        _ => 100.0, // Secundárias a cada 100 m, mestras a cada 400 m
+        2 => 100.0, // Zoom próximo: cotas redondas a cada 100 m (mestras a cada 200 m)
+        1 => 150.0, // Escala municipal: cotas a cada 150 m (mestras a cada 300 m)
+        _ => 250.0, // Escala regional: cotas a cada 250 m (mestras a cada 500 m)
       };
 
   /// Calcula o bloco quantizado do mundo que cobre integralmente [janela] (incluindo o sul próximo
@@ -111,25 +112,30 @@ abstract final class ExtratorCurvasNivelMundo {
     final rows = bloco.jMax - bloco.jMin;
     final passo = bloco.passoGraus;
     final cotaPasso = intervaloCotaMenorPorNivel(nivelDetalhe);
-    const multiploMestra = 4;
+    const multiploMestra = 2;
 
     final nVertsX = cols + 1;
-    final elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
-    var zGlobalMin = double.infinity;
-    var zGlobalMax = double.negativeInfinity;
-
+    var elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
     for (var r = 0; r <= rows; r++) {
       final lat = (bloco.jMin + r) * passo;
       for (var c = 0; c <= cols; c++) {
         final lon = (bloco.iMin + c) * passo;
-        final z = amostrarElevacaoMetros(lat, lon);
-        elevs[r * nVertsX + c] = z;
-        if (z < zGlobalMin) zGlobalMin = z;
-        if (z > zGlobalMax) zGlobalMax = z;
+        elevs[r * nVertsX + c] = amostrarElevacaoMetros(lat, lon);
       }
     }
 
-    if (!zGlobalMax.isFinite || zGlobalMax < 25.0 || (zGlobalMax - zGlobalMin) < cotaPasso * 0.5) {
+    // Filtro espacial Gaussiano separável [1, 2, 1]/4 (2 passadas) para eliminar serrilhados e
+    // micro-bolhas de dossel/pedreira do SRTM, preservando apenas cristas e vales estruturais.
+    elevs = _suavizarGradeGaussiana(elevs, rows: rows, cols: cols, passadas: 2);
+
+    var zGlobalMin = double.infinity;
+    var zGlobalMax = double.negativeInfinity;
+    for (final z in elevs) {
+      if (z < zGlobalMin) zGlobalMin = z;
+      if (z > zGlobalMax) zGlobalMax = z;
+    }
+
+    if (!zGlobalMax.isFinite || zGlobalMax < 25.0) {
       return ConjuntoCurvasNivelMundo(
         chaveBloco: bloco.chaveBloco,
         nivelDetalhe: nivelDetalhe,
@@ -149,8 +155,9 @@ abstract final class ExtratorCurvasNivelMundo {
       );
     }
 
-    final saltoNiveis = math.max(1, ((kFim - kIni + 1) / 22).ceil());
-    final raioPicoGraus = nivelDetalhe == 2 ? 0.028 : (nivelDetalhe == 1 ? 0.045 : 0.085);
+    // Limita estritamente a no máximo 6 níveis verticais limpos e sólidos na tela
+    final saltoNiveis = math.max(1, ((kFim - kIni + 1) / 6).ceil());
+    final raioPicoGraus = nivelDetalhe == 2 ? 0.032 : (nivelDetalhe == 1 ? 0.050 : 0.090);
     final raioPicoGraus2 = raioPicoGraus * raioPicoGraus;
     final curvas = <CurvaNivelMundo>[];
 
@@ -351,22 +358,63 @@ abstract final class ExtratorCurvasNivelMundo {
         for (var t = tras.length - 1; t >= 0; t--) tras[t],
         ...frente,
       ];
-      if (cadeia.length >= 3) {
-        final fechado =
-            (cadeia.first - cadeia.last).distanceSquared < (passoGraus * 0.08) * (passoGraus * 0.08);
+      final fechado = cadeia.length >= 4 &&
+          (cadeia.first - cadeia.last).distanceSquared <
+              (passoGraus * 0.08) * (passoGraus * 0.08);
+      // Descarta fragmentos curtos e micro-anéis isolados de topo de morro para manter visual limpo
+      final minVerticesBrutos = fechado ? 9 : 6;
+      if (cadeia.length >= minVerticesBrutos) {
         resultado.add(_suavizarChaikin(cadeia, fechado: fechado));
       }
     }
     return resultado;
   }
 
-  /// Aplica 2 iterações de corte de cantos *Chaikin* para gerar curvas topográficas orgânicas sem quinas.
+  static List<double> _suavizarGradeGaussiana(
+    List<double> entrada, {
+    required int rows,
+    required int cols,
+    required int passadas,
+  }) {
+    final nVertsX = cols + 1;
+    var atual = entrada;
+    for (var p = 0; p < passadas; p++) {
+      final horiz = List<double>.filled(atual.length, 0.0);
+      for (var r = 0; r <= rows; r++) {
+        final base = r * nVertsX;
+        for (var c = 0; c <= cols; c++) {
+          final cEsq = c > 0 ? c - 1 : 0;
+          final cDir = c < cols ? c + 1 : cols;
+          horiz[base + c] =
+              (atual[base + cEsq] + 2.0 * atual[base + c] + atual[base + cDir]) *
+                  0.25;
+        }
+      }
+      final vert = List<double>.filled(atual.length, 0.0);
+      for (var r = 0; r <= rows; r++) {
+        final rSul = r > 0 ? r - 1 : 0;
+        final rNorte = r < rows ? r + 1 : rows;
+        final bSul = rSul * nVertsX;
+        final bCen = r * nVertsX;
+        final bNor = rNorte * nVertsX;
+        for (var c = 0; c <= cols; c++) {
+          vert[bCen + c] =
+              (horiz[bSul + c] + 2.0 * horiz[bCen + c] + horiz[bNor + c]) *
+                  0.25;
+        }
+      }
+      atual = vert;
+    }
+    return atual;
+  }
+
+  /// Aplica 3 iterações de corte de cantos *Chaikin* para gerar curvas topográficas contínuas sem quinas.
   static List<Offset> _suavizarChaikin(
     List<Offset> pontos, {
     required bool fechado,
   }) {
     var atual = pontos;
-    for (var iter = 0; iter < 2; iter++) {
+    for (var iter = 0; iter < 3; iter++) {
       if (atual.length < 3) break;
       final prox = <Offset>[];
       if (fechado) {
