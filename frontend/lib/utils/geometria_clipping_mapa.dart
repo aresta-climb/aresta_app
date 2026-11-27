@@ -88,3 +88,89 @@ abstract final class GeometriaClippingMapa {
     );
   }
 
+  /// Recorta um anel fechado `(longitude, latitude)` contra [janela] via Sutherland-Hodgman,
+  /// impedindo que grandes polígonos de chuva/incêndio gerem cordas falsas ao dar zoom profundo.
+  static List<Offset> recortarPoligonoNoRetangulo({
+    required List<Offset> anelLonLat,
+    required JanelaGeograficaVisivel janela,
+  }) {
+    if (anelLonLat.length < 3) return const [];
+
+    var atual = anelLonLat;
+    atual = _recortarSemiplano(
+      atual,
+      dentro: (p) => p.dx >= janela.minLon,
+      intersecao: (a, b) => Offset(
+        janela.minLon,
+        a.dy + (b.dy - a.dy) * ((janela.minLon - a.dx) / (b.dx - a.dx)),
+      ),
+    );
+    if (atual.length < 3) return const [];
+
+    atual = _recortarSemiplano(
+      atual,
+      dentro: (p) => p.dx <= janela.maxLon,
+      intersecao: (a, b) => Offset(
+        janela.maxLon,
+        a.dy + (b.dy - a.dy) * ((janela.maxLon - a.dx) / (b.dx - a.dx)),
+      ),
+    );
+    if (atual.length < 3) return const [];
+
+    atual = _recortarSemiplano(
+      atual,
+      dentro: (p) => p.dy >= janela.minLat,
+      intersecao: (a, b) => Offset(
+        a.dx + (b.dx - a.dx) * ((janela.minLat - a.dy) / (b.dy - a.dy)),
+        janela.minLat,
+      ),
+    );
+    if (atual.length < 3) return const [];
+
+    atual = _recortarSemiplano(
+      atual,
+      dentro: (p) => p.dy <= janela.maxLat,
+      intersecao: (a, b) => Offset(
+        a.dx + (b.dx - a.dx) * ((janela.maxLat - a.dy) / (b.dy - a.dy)),
+        janela.maxLat,
+      ),
+    );
+    return atual.length >= 3 ? atual : const [];
+  }
+
+  /// Subdivide segmentos longos de polilinhas rodoviárias e recorta-as suavemente à [janela],
+  /// garantindo que nenhuma rodovia desapareça quando seus vértices originais saírem da tela no zoom máximo.
+  static List<List<Offset>> subdividirERecortarPolilinha({
+    required List<Offset> verticesLonLat,
+    required JanelaGeograficaVisivel janela,
+    required double passoMaxGraus,
+  }) {
+    if (verticesLonLat.length < 2) return const [];
+
+    final passoSeguro = math.max(0.0004, passoMaxGraus);
+    final cadeias = <List<Offset>>[];
+    var atual = <Offset>[];
+
+    void descarregar() {
+      if (atual.length >= 2) {
+        cadeias.add(atual);
+      }
+      atual = <Offset>[];
+    }
+
+    bool pontoNaJanela(Offset p) =>
+        p.dx >= janela.minLon &&
+        p.dx <= janela.maxLon &&
+        p.dy >= janela.minLat &&
+        p.dy <= janela.maxLat;
+
+    for (var i = 0; i < verticesLonLat.length - 1; i++) {
+      final a = verticesLonLat[i];
+      final b = verticesLonLat[i + 1];
+
+      // Salto real do antimeridiano (±180°) em espaço geográfico, nunca em pixels de tela
+      if ((b.dx - a.dx).abs() > 150.0) {
+        descarregar();
+        continue;
+      }
+
