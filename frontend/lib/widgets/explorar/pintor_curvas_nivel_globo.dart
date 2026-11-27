@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../data/modelos/modelos_relevo_topografico.dart';
@@ -10,9 +9,11 @@ import '../../utils/geometria_clipping_mapa.dart';
 import 'controlador_camera_globo.dart';
 import 'malha_relevo_lod.dart';
 
-/// Renderizador cartográfico puramente declarativo (Dumb UI) de isolinhas topográficas suaves
-/// ancoradas em coordenadas fixas do mundo (`ConjuntoCurvasNivelMundo`), eliminando qualquer
-/// deformação ou movimento aparente das curvas quando a câmera faz pan, rotação ou zoom.
+/// Renderizador cartográfico puramente declarativo (Dumb UI) de isolinhas topográficas sólidas
+/// e enxutas ancoradas em coordenadas fixas do mundo (`ConjuntoCurvasNivelMundo`).
+///
+/// Prioriza poucas linhas contínuas, nítidas e legíveis (sem micro-curvas ruidosas, sem desfoque
+/// artificial e sem anéis decorativos sobrepostos aos picos).
 abstract final class PintorCurvasNivelGlobo {
   static const Color _corCobreEscarpasAresta = Color(0xFFE88D5A);
 
@@ -73,8 +74,8 @@ abstract final class PintorCurvasNivelGlobo {
     var temMestra = false;
     var temEscarpa = false;
 
-    final rotulosCotas = <({Offset pos, int metros})>[];
-    final exibirRotulosCota = lod >= 2.75;
+    final rotulosCotas = <({Offset pos, int metros, bool escarpa})>[];
+    final exibirRotulosCota = lod >= 2.72;
     final margemTelaX = size.width * 0.35;
     final margemTelaY = size.height * 0.35;
 
@@ -84,11 +85,20 @@ abstract final class PintorCurvasNivelGlobo {
           ? caminhoEscarpasAresta
           : (curva.ehMestra ? caminhoMestras : caminhoSecundarias);
 
-      var iniciado = false;
+      final subTraco = <Offset>[];
       var segmentosVisiveis = 0;
+
+      void descarregarSubTraco() {
+        if (subTraco.length >= 2) {
+          _adicionarSplineSuaveAoPath(destino, subTraco);
+          segmentosVisiveis += subTraco.length - 1;
+        }
+        subTraco.clear();
+      }
+
       for (final v in curva.verticesLonLat) {
         if (!janela.contemPonto(v.dx, v.dy)) {
-          iniciado = false;
+          descarregarSubTraco();
           continue;
         }
         final pt = controlador.projetarCoordenada(
@@ -102,17 +112,12 @@ abstract final class PintorCurvasNivelGlobo {
             pt.x > size.width + margemTelaX ||
             pt.y < -margemTelaY ||
             pt.y > size.height + margemTelaY) {
-          iniciado = false;
+          descarregarSubTraco();
           continue;
         }
-        if (!iniciado) {
-          destino.moveTo(pt.x, pt.y);
-          iniciado = true;
-        } else {
-          destino.lineTo(pt.x, pt.y);
-          segmentosVisiveis++;
-        }
+        subTraco.add(Offset(pt.x, pt.y));
       }
+      descarregarSubTraco();
 
       if (segmentosVisiveis > 0) {
         if (curva.ehEscarpaPico) {
@@ -127,7 +132,7 @@ abstract final class PintorCurvasNivelGlobo {
       final ancora = curva.ancoraRotuloLonLat;
       if (exibirRotulosCota &&
           ancora != null &&
-          rotulosCotas.length < 5 &&
+          rotulosCotas.length < 4 &&
           janela.contemPonto(ancora.dx, ancora.dy)) {
         final ptRotulo = controlador.projetarCoordenada(
           latitude: ancora.dy,
@@ -136,22 +141,26 @@ abstract final class PintorCurvasNivelGlobo {
           tamanhoTela: size,
         );
         if (ptRotulo.visivel &&
-            ptRotulo.x > 54.0 &&
-            ptRotulo.x < size.width - 54.0 &&
-            ptRotulo.y > 96.0 &&
-            ptRotulo.y < size.height - controlador.alturaGavetaPx - 28.0) {
+            ptRotulo.x > 56.0 &&
+            ptRotulo.x < size.width - 56.0 &&
+            ptRotulo.y > 98.0 &&
+            ptRotulo.y < size.height - controlador.alturaGavetaPx - 30.0) {
           final pos = Offset(ptRotulo.x, ptRotulo.y);
           final semColisao = rotulosCotas.every(
-            (r) => (r.pos - pos).distanceSquared > 145.0 * 145.0,
+            (r) => (r.pos - pos).distanceSquared > 175.0 * 175.0,
           );
           if (semColisao) {
-            rotulosCotas.add((pos: pos, metros: curva.cotaMetros));
+            rotulosCotas.add((
+              pos: pos,
+              metros: curva.cotaMetros,
+              escarpa: curva.ehEscarpaPico,
+            ));
           }
         }
       }
     }
 
-    final ganhoMono = 0.58 + 0.42 * fatorMonocromatico;
+    final ganhoMono = 0.65 + 0.35 * fatorMonocromatico;
     if (temSecundaria) {
       canvas.drawPath(
         caminhoSecundarias,
@@ -159,12 +168,12 @@ abstract final class PintorCurvasNivelGlobo {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = lod >= 3.4 ? 0.72 : 0.56
+          ..strokeWidth = lod >= 3.4 ? 1.15 : 0.95
           ..color = Color.fromRGBO(
-            186,
-            198,
-            214,
-            (0.22 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
+            168,
+            184,
+            204,
+            (0.42 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
           ),
       );
     }
@@ -175,12 +184,12 @@ abstract final class PintorCurvasNivelGlobo {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = lod >= 3.4 ? 1.18 : 0.94
+          ..strokeWidth = lod >= 3.4 ? 1.65 : 1.35
           ..color = Color.fromRGBO(
             226,
             234,
-            245,
-            (0.44 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
+            246,
+            (0.72 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
           ),
       );
     }
@@ -191,34 +200,10 @@ abstract final class PintorCurvasNivelGlobo {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = 2.2
+          ..strokeWidth = lod >= 3.4 ? 1.80 : 1.50
           ..color = _corCobreEscarpasAresta.withValues(
-            alpha: (0.28 * pesoCurvas).clamp(0.0, 1.0),
-          )
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
-      );
-      canvas.drawPath(
-        caminhoEscarpasAresta,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFFFCBA4).withValues(
-            alpha: (0.66 * pesoCurvas).clamp(0.0, 1.0),
+            alpha: (0.82 * pesoCurvas).clamp(0.0, 1.0),
           ),
-      );
-    }
-
-    if (lod >= 2.85) {
-      _desenharAneisTopograficosMacicos(
-        canvas: canvas,
-        size: size,
-        controlador: controlador,
-        picosReferencia: picosReferencia,
-        opacidadeTerreno: opacidadeTerreno,
-        pesoCurvas: pesoCurvas,
-        amostradorElevacaoReal: amostradorElevacaoReal,
       );
     }
 
@@ -227,7 +212,7 @@ abstract final class PintorCurvasNivelGlobo {
         canvas: canvas,
         rotulos: rotulosCotas,
         opacidade:
-            (pesoCurvas * ControladorCameraGlobo.smoothstep(2.75, 3.30, lod))
+            (pesoCurvas * ControladorCameraGlobo.smoothstep(2.72, 3.25, lod))
                 .clamp(0.0, 1.0),
       );
     }
