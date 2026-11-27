@@ -86,3 +86,87 @@ void main() {
       expect(combinada.gradeDemMetros, equals([800, 900, 1000, 1200]));
       expect(combinada.altitudePontoMetros, equals(950));
 
+      expect(novaSemGrade.preservandoGradeSeAusente(null), same(novaSemGrade));
+      expect(
+        novaSemGrade.preservandoGradeSeAusente(
+          const CotaAltimetricaPico(
+            altitudeBaseMetros: 800,
+            altitudePicoMetros: 900,
+          ),
+        ),
+        same(novaSemGrade),
+      );
+      expect(
+        anteriorComGrade.preservandoGradeSeAusente(novaSemGrade),
+        same(anteriorComGrade),
+      );
+    });
+
+    test('rejeita cotas ou grades DEM fora das invariantes físicas', () {
+      expect(
+        () => CotaAltimetricaPico.deMapa({
+          'altitude_base_m': 1200,
+          'altitude_pico_m': 900,
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => CotaAltimetricaPico.deMapa({
+          'altitude_base_m': 800,
+          'altitude_pico_m': 900,
+          'grade_dem_m': [800, 900],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => CotaAltimetricaPico.deMapa({
+          'altitude_base_m': 800,
+          'altitude_pico_m': 900,
+          'dimensao_grade': 3,
+          'grade_dem_m': [800, 820, 850, 900],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => CotaAltimetricaPico.deMapa({
+          'altitude_base_m': 800,
+          'altitude_pico_m': 900,
+          'raio_grade_graus': 0,
+          'grade_dem_m': [800, 820, 850, 900],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => CotaAltimetricaPico.deMapa({
+          'altitude_base_m': 800,
+          'altitude_pico_m': 900,
+          'grade_dem_m': [800, 'invalido', 850, 900],
+        }),
+        throwsFormatException,
+      );
+    });
+  });
+
+  group('EstadoUmidadePico e SnapshotClimaAltimetria', () {
+    test('formata data curta apenas quando há umidade ativa com data conhecida', () {
+      const seco = EstadoUmidadePico.seco();
+      expect(seco.dataChuvaFormatadaCurta, isNull);
+      expect(seco.diasDesdeChuva, equals(0));
+
+      const umidoSemData = EstadoUmidadePico(
+        nivel: NivelUmidadePico.possivelmenteUmido,
+        diasParaSecar: 2,
+        diasDesdeChuva: 2,
+      );
+      expect(umidoSemData.dataChuvaFormatadaCurta, isNull);
+
+      final umidoComData = EstadoUmidadePico(
+        nivel: NivelUmidadePico.possivelmenteUmido,
+        diasParaSecar: 4,
+        diasDesdeChuva: 0,
+        dataUltimaChuva: DateTime.utc(2026, 9, 5),
+        milimetrosEvento: 22.0,
+      );
+      expect(umidoComData.dataChuvaFormatadaCurta, equals('05/09'));
+    });
+
