@@ -168,3 +168,71 @@ class CartaoCondicaoHidricaPico extends StatelessWidget {
   /// Margem externa opcional do cartão.
   final EdgeInsetsGeometry? margem;
 
+  /// Cria uma instância de [CartaoCondicaoHidricaPico].
+  const CartaoCondicaoHidricaPico({
+    super.key,
+    required this.umidade,
+    this.margem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    context.idiomaApp;
+    final nivel = umidade.nivel;
+    final estaUmido = nivel.estaUmido;
+    final corDestaque = PaletaUmidadePico.corDestaque(nivel);
+    final corTexto = PaletaUmidadePico.corTexto(nivel);
+    final diasRestantes = umidade.diasParaSecar.clamp(
+      0,
+      PaletaUmidadePico.totalDiasJanelaConservadora,
+    );
+
+    return Container(
+      width: double.infinity,
+      margin: margem,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: PaletaUmidadePico.corFundo(nivel),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: PaletaUmidadePico.corBorda(nivel),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: corDestaque.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  PaletaUmidadePico.icone(nivel),
+                  size: 16,
+                  color: corDestaque,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  PaletaUmidadePico.formatarResumo(umidade),
+                  style: TextStyle(
+                    color: corTexto,
+                    fontSize: 12.8,
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+              if (estaUmido) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
