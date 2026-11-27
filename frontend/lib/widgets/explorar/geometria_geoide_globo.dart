@@ -182,3 +182,70 @@ abstract final class GeometriaGeoideGlobo {
         .toList();
   }
 
+  /// Seleciona os identificadores cujos rótulos textuais não se sobrepõem, priorizando âncoras marcadas.
+  static Set<String> selecionarIdsSemColisaoRotulos(
+    List<({String id, String nome, Offset posicao, bool prioritario})>
+    candidatos, {
+    double alturaCaixa = 26.0,
+  }) {
+    final ordenados = List.of(candidatos)
+      ..sort((a, b) => (b.prioritario ? 1 : 0) - (a.prioritario ? 1 : 0));
+
+    final caixasAceitas = <({double x, double y, double largura})>[];
+    final aprovados = <String>{};
+
+    for (final item in ordenados) {
+      final largura = item.nome.length * 6.4 + 30.0;
+      final colide = caixasAceitas.any(
+        (c) =>
+            (c.x - item.posicao.dx).abs() < (c.largura + largura) * 0.52 &&
+            (c.y - item.posicao.dy).abs() < alturaCaixa,
+      );
+      if (!colide) {
+        aprovados.add(item.id);
+        caixasAceitas.add((
+          x: item.posicao.dx,
+          y: item.posicao.dy,
+          largura: largura,
+        ));
+      }
+    }
+    return aprovados;
+  }
+
+  /// Interpolação Hermite cúbica suave `smoothstep(e0, e1, x)`.
+  static double smoothstep(double borda0, double borda1, double x) {
+    final t = ((x - borda0) / (borda1 - borda0)).clamp(0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
+  }
+
+  /// Normaliza qualquer ângulo longitudinal para o intervalo canônico `[-180, +180)`.
+  static double normalizarLongitude(double lon) {
+    var normalizada = (lon + 180.0) % 360.0;
+    if (normalizada < 0) normalizada += 360.0;
+    return normalizada - 180.0;
+  }
+
+  /// Projeta uma coordenada esférica `(latitude, longitude, elevacaoMetros)` sobre o Geoide 3D com inclinação perspectiva.
+  static PontoProjetadoTela projetarCoordenada3D({
+    required double latitude,
+    required double longitude,
+    required double elevacaoMetros,
+    required double latitudeCentral,
+    required double longitudeCentral,
+    required double lod,
+    required double raioAparentePx,
+    required double centroVerticalOpticoPx,
+    required double elevacaoReferenciaCameraMetros,
+    required Size tamanhoTela,
+    bool estenderBordaHorizonte = false,
+  }) {
+    final cosPhi0 = math.cos(latitudeCentral * grausParaRad);
+    final sinPhi0 = math.sin(latitudeCentral * grausParaRad);
+    final phi = latitude * grausParaRad;
+    final dLam = (longitude - longitudeCentral) * grausParaRad;
+    final cosPhi = math.cos(phi);
+    final sinPhi = math.sin(phi);
+    final cosDLam = math.cos(dLam);
+    final sinDLam = math.sin(dLam);
+
