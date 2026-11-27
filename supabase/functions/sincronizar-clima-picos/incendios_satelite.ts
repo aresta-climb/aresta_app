@@ -188,3 +188,90 @@ export async function coletarIncendiosFlorestaisContornos(
       ),
     ];
 
+    for (const anelBruto of contornosExternos) {
+      if (Math.abs(calcularAreaAssinada(anelBruto)) <= 0.00018) continue;
+      const contornoSuave = simplificarAnelUniforme(
+        suavizarChaikin(anelBruto, 2),
+        36,
+      );
+      if (contornoSuave.length < 3) continue;
+
+      let somaFrp = 0;
+      let somaLat = 0;
+      let somaLon = 0;
+      let contagemFocos = 0;
+      for (const f of grupo) {
+        if (pontoEmPoligono(f.lon, f.lat, contornoSuave)) {
+          contagemFocos++;
+          somaFrp += f.frpMw;
+          somaLat += f.lat * f.frpMw;
+          somaLon += f.lon * f.frpMw;
+        }
+      }
+      if (contagemFocos === 0 || somaFrp <= 0) continue;
+
+      const latCentro = arredondar(somaLat / somaFrp, 4);
+      const lonCentro = arredondar(somaLon / somaFrp, 4);
+      if (pontoSobChuvaAtiva(lonCentro, latCentro, bolhasChuvaAtivas)) continue;
+
+      const nucleosInternos: ParLonLat[][] = [];
+      for (const nucBruto of contornosNucleos) {
+        if (Math.abs(calcularAreaAssinada(nucBruto)) <= 0.00008) continue;
+        const cNuc = calcularCentroideAnel(nucBruto);
+        if (!pontoEmPoligono(cNuc[0], cNuc[1], contornoSuave)) continue;
+        const nucSuave = simplificarAnelUniforme(
+          suavizarChaikin(nucBruto, 2),
+          24,
+        );
+        if (nucSuave.length >= 3) nucleosInternos.push(nucSuave);
+      }
+
+      candidatos.push({
+        contornoSuave,
+        nucleosInternos,
+        latCentro,
+        lonCentro,
+        potenciaTotalMw: arredondar(somaFrp, 1),
+        totalFocosInternos: contagemFocos,
+      });
+    }
+  }
+
+  if (candidatos.length === 0) return [];
+
+  const condicoesAtuais =
+    await consultarCondicoesAtuaisCentroidesIncendioOpenMeteo(
+      candidatos.map((c) => ({ lat: c.latCentro, lon: c.lonCentro })),
+    );
+
+  const todasBolhasFogo: BolhaIncendioJson[] = [];
+  let contadorFogo = 1;
+  for (let idx = 0; idx < candidatos.length; idx++) {
+    const cand = candidatos[idx];
+    const cond = condicoesAtuais[idx] ?? {
+      rumoGraus: 270,
+      velKmh: 14,
+      precipMmH: 0,
+    };
+    if (cond.precipMmH >= 0.15) continue;
+
+    const bolhaFogo: BolhaIncendioJson = {
+      id: `incendio_${contadorFogo++}`,
+      lat: cand.latCentro,
+      lon: cand.lonCentro,
+      potencia_frp_mw: cand.potenciaTotalMw,
+      total_focos: cand.totalFocosInternos,
+      vento_rumo_graus: arredondar(cond.rumoGraus, 1),
+      vento_kmh: arredondar(Math.max(5, cond.velKmh), 1),
+      fonte_satelite: fontePrimaria,
+      contorno_externo: cand.contornoSuave,
+    };
+    if (cand.nucleosInternos.length > 0) {
+      bolhaFogo.nucleos_intensos = cand.nucleosInternos;
+    }
+    todasBolhasFogo.push(bolhaFogo);
+  }
+
+  return todasBolhasFogo;
+}
+
