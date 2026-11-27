@@ -167,3 +167,91 @@ class SecaoSlidersGrauExplorar extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: colors.rustIron,
+            inactiveTrackColor: Colors.white12,
+            thumbColor: colors.chalkWhite,
+            overlayColor: colors.rustIron.withValues(alpha: 0.16),
+          ),
+          child: RangeSlider(
+            values: RangeValues(idxMinBld.toDouble(), idxMaxBld.toDouble()),
+            min: 0,
+            max: (opcoesBld.length - 1).toDouble(),
+            divisions: opcoesBld.length - 1,
+            onChanged: (valores) {
+              final iMin = valores.start.round();
+              final iMax = valores.end.round();
+              viewModel.definirFaixaGrauBoulder(
+                iMin <= 0 ? null : opcoesBld[iMin].valor,
+                iMax >= opcoesBld.length - 1 ? null : opcoesBld[iMax].valor,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Painel modal declarativo de `Filtros e Ordenação` da aba `Explorar` (Dumb UI).
+class ModalFiltrosOrdenacaoExplorar extends StatelessWidget {
+  final BrowseViewModel viewModel;
+
+  const ModalFiltrosOrdenacaoExplorar({super.key, required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final totalPicos = viewModel.picosFiltrados.length;
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.86,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      context.tr(ChaveTexto.explorarFiltrosOrdenacao),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.chalkWhite,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const Key('botao_limpar_todos_filtros'),
+                    onPressed: viewModel.limparTodosFiltros,
+                    child: Text(
+                      context.tr(ChaveTexto.comumLimpar),
+                      style: TextStyle(
+                        color: colors.rustIron,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
