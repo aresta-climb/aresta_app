@@ -81,3 +81,90 @@ abstract final class PaletaUmidadePico {
     );
   }
 
+  /// Formata o aviso conservador completo: `"Possivelmente úmido (4 dias) - chuva próxima ..."`.
+  static String formatarResumo(EstadoUmidadePico umidade) {
+    if (!umidade.nivel.estaUmido) {
+      return tr(ChaveTexto.climaRochaSecaSemChuva);
+    }
+    final cabecalho =
+        '${umidade.nivel.rotulo} (${formatarContagemDias(umidade.diasParaSecar)})';
+    final detalheChuva = formatarDetalheChuvaProxima(umidade);
+    if (detalheChuva == null) {
+      return cabecalho;
+    }
+    return '$cabecalho - $detalheChuva';
+  }
+}
+
+/// Tarja declarativa compacta (Dumb UI) de condição hídrica exibida nos cards da gaveta `Explorar`.
+class TarjaUmidadePico extends StatelessWidget {
+  /// Estado conservador calculado de umidade do pico.
+  final EstadoUmidadePico umidade;
+
+  /// Quando `true`, renderiza também o estado conservador seco.
+  final bool exibirQuandoSeco;
+
+  /// Margem externa opcional da tarja.
+  final EdgeInsetsGeometry? margem;
+
+  /// Cria uma instância de [TarjaUmidadePico].
+  const TarjaUmidadePico({
+    super.key,
+    required this.umidade,
+    this.exibirQuandoSeco = false,
+    this.margem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    context.idiomaApp;
+    final nivel = umidade.nivel;
+    if (!nivel.estaUmido && !exibirQuandoSeco) {
+      return const SizedBox.shrink();
+    }
+
+    final corTexto = PaletaUmidadePico.corTexto(nivel);
+    final corDestaque = PaletaUmidadePico.corDestaque(nivel);
+
+    return Container(
+      width: double.infinity,
+      margin: margem,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: PaletaUmidadePico.corFundo(nivel),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: PaletaUmidadePico.corBorda(nivel)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            PaletaUmidadePico.icone(nivel),
+            size: 15,
+            color: corDestaque,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              PaletaUmidadePico.formatarResumo(umidade),
+              style: TextStyle(
+                color: corTexto,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cartão expandido (Dumb UI) para a `PicoDetailsPage`, apresentando o contador conservador
+/// de 4 dias reiniciado a cada chuva regional próxima e a nota explícita de estimativa.
+class CartaoCondicaoHidricaPico extends StatelessWidget {
+  /// Estado conservador vigente do pico.
+  final EstadoUmidadePico umidade;
+
+  /// Margem externa opcional do cartão.
+  final EdgeInsetsGeometry? margem;
+
