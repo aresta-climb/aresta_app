@@ -182,3 +182,97 @@ abstract final class PintorTerrenoVetoresGlobo {
       }
     }
 
+    final quads = <({double prof, int i00, int i10, int i11, int i01})>[];
+    for (var j = 0; j < rows; j++) {
+      for (var i = 0; i < cols; i++) {
+        final i00 = j * (cols + 1) + i;
+        final i10 = i00 + 1;
+        final i01 = i00 + (cols + 1);
+        final i11 = i01 + 1;
+        if (!visiveis[i00] ||
+            !visiveis[i10] ||
+            !visiveis[i01] ||
+            !visiveis[i11]) {
+          continue;
+        }
+        final alfaMax = math.max(
+          math.max(cores[i00].a, cores[i10].a),
+          math.max(cores[i01].a, cores[i11].a),
+        );
+        if (alfaMax < 0.02) continue;
+
+        final profMedia = (profundidades[i00] +
+                profundidades[i10] +
+                profundidades[i11] +
+                profundidades[i01]) *
+            0.25;
+        quads.add((prof: profMedia, i00: i00, i10: i10, i11: i11, i01: i01));
+      }
+    }
+
+    if (quads.isNotEmpty) {
+      quads.sort((a, b) => b.prof.compareTo(a.prof));
+      final indices = <int>[];
+      for (final q in quads) {
+        indices
+          ..add(q.i00)
+          ..add(q.i10)
+          ..add(q.i11)
+          ..add(q.i00)
+          ..add(q.i11)
+          ..add(q.i01);
+      }
+
+      canvas.drawVertices(
+        ui.Vertices(
+          ui.VertexMode.triangles,
+          posicoes,
+          colors: cores,
+          indices: indices,
+        ),
+        BlendMode.srcOver,
+        Paint(),
+      );
+    }
+
+    // Projeta isolinhas topográficas suaves ancoradas em coordenadas fixas do mundo
+    PintorCurvasNivelGlobo.desenharCurvasETopografiaProxima(
+      canvas: canvas,
+      size: size,
+      controlador: controlador,
+      picosReferencia: picosReferencia,
+      opacidadeTerreno: opacidadeBase,
+      fatorMonocromatico: fatorMonocromatico,
+      curvasMundo: curvasMundo,
+      dadosMalha: dadosMalha,
+      amostradorElevacaoReal: amostradorElevacaoReal,
+    );
+  }
+
+  static ({double r, double g, double b}) _corHipsometricaRocha(
+    double el,
+    double declive,
+    double fatorMonocromatico,
+  ) {
+    double tr, tg, tb;
+    if (el < 650.0) {
+      final t = (el / 650.0).clamp(0.0, 1.0);
+      tr = 42.0 + 26.0 * t;
+      tg = 74.0 + 28.0 * t;
+      tb = 52.0 + 14.0 * t;
+    } else if (el < 1050.0) {
+      final t = ((el - 650.0) / 400.0).clamp(0.0, 1.0);
+      tr = 68.0 + 48.0 * t;
+      tg = 102.0 + 28.0 * t;
+      tb = 66.0 + 20.0 * t;
+    } else if (el < 1450.0) {
+      final t = ((el - 1050.0) / 400.0).clamp(0.0, 1.0);
+      tr = 116.0 + 48.0 * t;
+      tg = 130.0 + 26.0 * t;
+      tb = 86.0 + 36.0 * t;
+    } else {
+      tr = 176.0;
+      tg = 166.0;
+      tb = 148.0;
+    }
+
