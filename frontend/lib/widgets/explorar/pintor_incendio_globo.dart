@@ -276,3 +276,96 @@ abstract final class PintorIncendioGlobo {
       }
       canvas.restore();
 
+      // 4. Borda viva graduada por severidade (com contorno duplo incandescente no nível extremo)
+      final espessuraBorda = (0.85 + 0.25 * severidade.peso) *
+          (menorLadoMundoPx < 20.0 ? 0.80 : 1.0);
+      if (severidade == NivelSeveridadeIncendio.extremo &&
+          menorLadoMundoPx >= 18.0) {
+        canvas.drawPath(
+          caminhoSeco,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = espessuraBorda + 1.5
+            ..color = paleta.haloTermal
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2),
+        );
+      }
+      canvas.drawPath(
+        caminhoSeco,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = espessuraBorda
+          ..color = paleta.bordaViva,
+      );
+
+      // 5. Emblema vetorial animado ancorado estritamente à coordenada geográfica real do incêndio
+      if (ptCentroFogo.visivel && menorLadoMundoPx >= 13.0) {
+        EfeitosParticulasIncendioGlobo.desenharEmblemaChamaViva(
+          canvas: canvas,
+          centro: centroMundoFogo,
+          escalaPx: (menorLadoMundoPx * (0.19 + 0.02 * severidade.peso))
+              .clamp(6.0, 14.5),
+          faseSegundos: faseSegundos,
+          inclinacaoVentoX: (dirVentoTela.dx * 0.28).clamp(-0.32, 0.32),
+          severidade: severidade,
+          opacidade: atenuacaoLod,
+        );
+      }
+    }
+
+    if (mascaraLivreDeChuva != null) {
+      canvas.restore();
+    }
+
+    return desenhados;
+  }
+
+  static ({Path caminho, Rect limites, bool visivel}) _projetarAnel({
+    required List<PontoContornoGeo> anel,
+    required Size tamanhoTela,
+    required ControladorCameraGlobo controlador,
+    required List<PicoRelevoReferencia> picosReferencia,
+    required bool sobreRelevo,
+    required double faseSegundos,
+    required double uLon,
+    required double uLat,
+    required double amplitudeCintilacaoGraus,
+  }) {
+    final pts = <Offset>[];
+    var minX = double.infinity, maxX = -double.infinity;
+    var minY = double.infinity, maxY = -double.infinity;
+
+    var vertices = <Offset>[];
+    for (var i = 0; i < anel.length; i++) {
+      final v = anel[i];
+      final cintilacao = amplitudeCintilacaoGraus > 0.0
+          ? math.sin(faseSegundos * 2.6 + i * 1.15) * amplitudeCintilacaoGraus
+          : 0.0;
+      vertices.add(
+        Offset(
+          v.longitude + uLon * cintilacao,
+          (v.latitude + uLat * cintilacao).clamp(-89.5, 89.5),
+        ),
+      );
+    }
+
+    if (controlador.modo3D && controlador.lod >= 1.65) {
+      final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
+        modo3D: true,
+        latitudeCentral: controlador.latitudeCentral,
+        longitudeCentral: controlador.longitudeCentral,
+        lod: controlador.lod,
+        raioAparentePx: controlador.raioAparentePx,
+        escala2D: 1.0,
+        tamanhoTela: tamanhoTela,
+        fatorMargem: 1.06,
+      );
+      vertices = GeometriaClippingMapa.recortarPoligonoNoRetangulo(
+        anelLonLat: vertices,
+        janela: janela,
+      );
+      if (vertices.length < 3) {
+        return (caminho: Path(), limites: Rect.zero, visivel: false);
+      }
+    }
+
