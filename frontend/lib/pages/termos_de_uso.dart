@@ -309,45 +309,64 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: widget.showAcceptButton
-          ? null
-          : AppBar(
-              title: const Text(
-                'Termos de Uso',
-                style: TextStyle(fontSize: 16),
-              ),
-              leading: BotaoVoltarComRetornoInicio(
-                aoVoltar: () => Navigator.pop(context),
-              ),
-              actions: [buildFeedbackButton(context)],
-            ),
-      body: SafeArea(
-        child: _termsMarkdown == null
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildUpdateBanner(),
-                    _buildAcceptedBanner(),
-                    MarkdownBody(
-                      data: _termsMarkdown!,
-                      onTapLink: _onTapLink,
-                      styleSheet: _getSharedMarkdownStyle(),
-                    ),
-                    const SizedBox(height: 16),
-                    if (widget.showAcceptButton)
-                      Column(
-                        children: [
-                          CheckboxListTile(
-                            title: const Text(
-                              'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        final termsTexto = _loadFailed
+            ? context.tr(ChaveTexto.legalErroTermos)
+            : _termsMarkdown;
+        return Scaffold(
+          appBar: widget.showAcceptButton
+              ? null
+              : AppBar(
+                  title: Text(
+                    context.tr(ChaveTexto.legalTermosTitulo),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  leading: BotaoVoltarComRetornoInicio(
+                    aoVoltar: () => Navigator.pop(context),
+                  ),
+                  actions: [buildFeedbackButton(context)],
+                ),
+          body: SafeArea(
+            child: termsTexto == null
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildUpdateBanner(context),
+                        _buildAcceptedBanner(context),
+                        MarkdownBody(
+                          data: termsTexto,
+                          onTapLink: _onTapLink,
+                          styleSheet: _getSharedMarkdownStyle(),
+                        ),
+                        const SizedBox(height: 16),
+                        if (widget.showAcceptButton)
+                          Column(
+                            children: [
+                              CheckboxListTile(
+                                title: Text(
+                                  context.tr(ChaveTexto.legalConcordoCheckbox),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                value: _isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _isChecked = value ?? false;
+                                  });
+                                },
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: AppColors.brandColor,
+                                checkColor: Colors.white,
                               ),
                             ),
                             value: _isChecked,
