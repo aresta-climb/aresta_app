@@ -93,3 +93,88 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
+  Widget _construirCartaoHeroi85(
+    BuildContext context,
+    AppColors cores,
+    ({double inferior, double superior}) ic95,
+  ) {
+    final infPct = (ic95.inferior * 100.0).toStringAsFixed(1);
+    final supPct = (ic95.superior * 100.0).toStringAsFixed(1);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cores.rustIron.withValues(alpha: 0.45), width: 1.2),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '~${EstudoEstatisticoClimaAresta.taxaReferenciaExibidaPercentual}%',
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              color: cores.rustIron,
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '95% Z-CI: [$infPct% – $supPct%]  •  N = 5.133',
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              color: cores.chalkWhite,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            context.tr(ChaveTexto.estatClimaSubtituloHeroi),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.45),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirSecaoComposicao(
+    BuildContext context,
+    AppColors cores,
+    MatrizContingenciaClima matriz,
+  ) {
+    return _CartaoSecaoEstatistica(
+      titulo: context.tr(ChaveTexto.estatClimaSecaoComposicaoTitulo),
+      cores: cores,
+      filho: Column(
+        children: [
+          _LinhaBarraMetrica(
+            rotulo: context.tr(ChaveTexto.estatClimaComposicaoChuvaMapa),
+            valorFormatado: '${(matriz.taxaDeteccaoPod * 100).toStringAsFixed(1)}%',
+            fator: matriz.taxaDeteccaoPod,
+            cores: cores,
+          ),
+          const SizedBox(height: 12),
+          _LinhaBarraMetrica(
+            rotulo: context.tr(ChaveTexto.estatClimaComposicaoUmidade4d),
+            valorFormatado:
+                '${(EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias * 100).toStringAsFixed(1)}%',
+            fator: EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias,
+            cores: cores,
+          ),
+          const SizedBox(height: 12),
+          _LinhaBarraMetrica(
+            rotulo: context.tr(ChaveTexto.estatClimaComposicaoIncendioNasa),
+            valorFormatado:
+                '${(EstudoEstatisticoClimaAresta.taxaDeteccaoIncendioViirsNasa * 100).toStringAsFixed(1)}%',
+            fator: EstudoEstatisticoClimaAresta.taxaDeteccaoIncendioViirsNasa,
+            cores: cores,
+          ),
+        ],
+      ),
+    );
+  }
+
