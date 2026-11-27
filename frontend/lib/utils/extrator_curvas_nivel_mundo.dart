@@ -20,19 +20,18 @@ abstract final class ExtratorCurvasNivelMundo {
   static const double _grausParaRad = math.pi / 180.0;
   static const double _raioKernelGaussianoGraus = 0.0065;
 
-  /// Tamanho fixo e passo angular fixo (50 células exatas) dos tiles macro (`400 m` e `200 m`).
-  static const double tamanhoTileMacroGraus = 0.45;
-  static const double passoMacroGraus = 0.0090;
+  /// Tamanho fixo e passo angular fixo (32 células exatas) dos tiles macro (`400 m` e `200 m`).
+  static const double tamanhoTileMacroGraus = 0.48;
+  static const double passoMacroGraus = 0.0150;
 
-  /// Tamanho fixo e passo angular fixo (50 células exatas) dos tiles finos (`100 m` e `50 m`).
-  static const double tamanhoTileFinoGraus = 0.15;
-  static const double passoFinoGraus = 0.0030;
+  /// Tamanho fixo e passo angular fixo (32 células exatas) dos tiles finos (`100 m` aditivos).
+  static const double tamanhoTileFinoGraus = 0.16;
+  static const double passoFinoGraus = 0.0050;
 
-  /// Determina a geração diádica máxima (`0` = 400m, `1` = 200m, `2` = 100m, `3` = 50m) visível em [lod].
+  /// Determina a geração diádica máxima (`0` = 400m, `1` = 200m, `2` = 100m) visível em [lod].
   static int resolverNivelDetalhe(double lod) {
-    if (lod >= 3.90) return 3;
-    if (lod >= 3.25) return 2;
-    if (lod >= 2.55) return 1;
+    if (lod >= 3.55) return 2;
+    if (lod >= 3.05) return 1;
     return 0;
   }
 
@@ -63,7 +62,7 @@ abstract final class ExtratorCurvasNivelMundo {
     required bool camadaFina,
   }) {
     final tam = camadaFina ? tamanhoTileFinoGraus : tamanhoTileMacroGraus;
-    final limiteEixo = camadaFina ? 4 : 5;
+    const limiteEixo = 2;
 
     final latCentro = (janela.minLat + janela.maxLat) * 0.5;
     final lonCentro = (janela.minLon + janela.maxLon) * 0.5;
@@ -119,7 +118,7 @@ abstract final class ExtratorCurvasNivelMundo {
   }) {
     final tam = camadaFina ? tamanhoTileFinoGraus : tamanhoTileMacroGraus;
     final passo = camadaFina ? passoFinoGraus : passoMacroGraus;
-    const celulas = 50;
+    const celulas = 32;
     const nVertsX = celulas + 1;
 
     final lonBase = tx * tam;
@@ -128,7 +127,7 @@ abstract final class ExtratorCurvasNivelMundo {
     var zMin = double.infinity;
     var zMax = double.negativeInfinity;
 
-    // Filtro Gaussiano isotrópico 3x3 em raio físico fixo (0,0065° no mundo — 100% invariante ao zoom!)
+    // Núcleo em cruz de 5 pontos em raio físico fixo (0,0065° no mundo — leve < 0,2 ms/tile e invariante ao zoom!)
     const r = _raioKernelGaussianoGraus;
     for (var j = 0; j <= celulas; j++) {
       final lat = latBase + j * passo;
@@ -139,14 +138,7 @@ abstract final class ExtratorCurvasNivelMundo {
         final zS = amostrarElevacaoMetros(lat - r, lon);
         final zL = amostrarElevacaoMetros(lat, lon + r);
         final zO = amostrarElevacaoMetros(lat, lon - r);
-        final zNE = amostrarElevacaoMetros(lat + r, lon + r);
-        final zNO = amostrarElevacaoMetros(lat + r, lon - r);
-        final zSE = amostrarElevacaoMetros(lat - r, lon + r);
-        final zSO = amostrarElevacaoMetros(lat - r, lon - r);
-        final z = (4.0 * zC +
-                2.0 * (zN + zS + zL + zO) +
-                (zNE + zNO + zSE + zSO)) *
-            0.0625;
+        final z = (4.0 * zC + zN + zS + zL + zO) * 0.125;
         elevs[j * nVertsX + i] = z;
         if (z < zMin) zMin = z;
         if (z > zMax) zMax = z;
@@ -155,7 +147,8 @@ abstract final class ExtratorCurvasNivelMundo {
 
     if (!zMax.isFinite || zMax < 25.0) return const [];
 
-    final cotaPasso = camadaFina ? 50.0 : 200.0;
+    // Mantém poucas linhas sólidas (400 m -> +200 m -> +100 m), sem sobrecarregar com curvas de 50 m
+    final cotaPasso = camadaFina ? 100.0 : 200.0;
     final kIni = math.max(1, (zMin / cotaPasso).ceil());
     final kFim = (zMax / cotaPasso).floor();
     if (kFim < kIni) return const [];
@@ -419,39 +412,35 @@ abstract final class ExtratorCurvasNivelMundo {
     return resultado;
   }
 
-  /// Aplica 2 passadas de Chaikin (`0,75 / 0,25`) mantendo extremidades de borda de tile fixas.
+  /// Aplica 1 passada Chaikin (`0,75 / 0,25`) mantendo contagem leve de vértices e extremidades de borda fixas.
   static List<Offset> _suavizarChaikinDuplo(
     List<Offset> pontos, {
     required bool fechado,
   }) {
     if (pontos.length < 3) return List<Offset>.unmodifiable(pontos);
-    var atual = pontos;
-    for (var p = 0; p < 2; p++) {
-      final prox = <Offset>[];
-      if (fechado) {
-        final m = atual.length - 1;
-        for (var i = 0; i < m; i++) {
-          final a = atual[i];
-          final b = atual[(i + 1) % m];
-          prox
-            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
-            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
-        }
-        if (prox.isNotEmpty) prox.add(prox.first);
-      } else {
-        prox.add(atual.first);
-        for (var i = 0; i < atual.length - 1; i++) {
-          final a = atual[i];
-          final b = atual[i + 1];
-          prox
-            ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
-            ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
-        }
-        prox.add(atual.last);
+    final prox = <Offset>[];
+    if (fechado) {
+      final m = pontos.length - 1;
+      for (var i = 0; i < m; i++) {
+        final a = pontos[i];
+        final b = pontos[(i + 1) % m];
+        prox
+          ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+          ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
       }
-      atual = prox;
+      if (prox.isNotEmpty) prox.add(prox.first);
+    } else {
+      prox.add(pontos.first);
+      for (var i = 0; i < pontos.length - 1; i++) {
+        final a = pontos[i];
+        final b = pontos[i + 1];
+        prox
+          ..add(Offset(a.dx * 0.75 + b.dx * 0.25, a.dy * 0.75 + b.dy * 0.25))
+          ..add(Offset(a.dx * 0.25 + b.dx * 0.75, a.dy * 0.25 + b.dy * 0.75));
+      }
+      prox.add(pontos.last);
     }
-    return List<Offset>.unmodifiable(atual);
+    return List<Offset>.unmodifiable(prox);
   }
 
   /// Escolhe um vértice canônico em espaço do mundo (extremo norte da curva) para ancorar o rótulo.

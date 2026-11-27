@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../data/modelos/modelos_rede_viaria_aresta.dart';
+import 'geometria_clipping_mapa.dart';
 
 /// Construtor funcional puro e sem estado (stateless) da árvore de caminhos mínimos rodoviários reais
 /// (`OpenStreetMap`) entre o centro de Belo Horizonte e cada nó de pico Aresta, operando em `O(N log N)`
@@ -26,7 +27,8 @@ abstract final class ConstrutorRedeViariaAresta {
             ehPrincipal: r.ehPrincipal,
             nivelViario: r.nivelViario,
             codigo: _limparCodigoEscudoRodovia(r.codigo),
-            verticesLonLat: r.verticesLonLat,
+            verticesLonLat:
+                GeometriaClippingMapa.suavizarCantosPolilinhaMundo(r.verticesLonLat),
           ),
         )
         .toList(growable: false);
