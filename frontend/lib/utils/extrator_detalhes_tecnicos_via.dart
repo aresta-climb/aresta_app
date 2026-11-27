@@ -158,61 +158,20 @@ abstract final class ExtratorDetalhesTecnicosVia {
       case Escalada_Tipo.viaMultiplasEnfiadas:
         final v = escalada.viaMultiplasEnfiadas;
         if (v.numeroEnfiadas > 0) {
-          itens.add(
-            AtributoTecnicoVia(
-              icone: TipoIconeAtributoVia.enfiadas,
-              rotulo: 'ENFIADAS',
-              valor: '${v.numeroEnfiadas}',
-            ),
-          );
+          itens.add(AtributoTecnicoVia(icone: TipoIconeAtributoVia.enfiadas, rotulo: tr(ChaveTexto.viaSpecEnfiadas), valor: '${v.numeroEnfiadas}'));
         }
-        _adicionarMetros(
-          itens,
-          TipoIconeAtributoVia.extensao,
-          'COMPRIMENTO',
-          v.comprimentoTotal,
-        );
-        _adicionarMetros(
-          itens,
-          TipoIconeAtributoVia.distancia,
-          'MAIOR ENFIADA',
-          v.comprimentoMaiorEnfiada,
-        );
-        _adicionarProtecoes(
-          itens,
-          v.quantidadeCosturasIntermediarias,
-          v.quantidadeEquipamentosParada,
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.duracao,
-          'DURAÇÃO',
-          _formatarEnumCodigo(v.duracao.name),
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.exposicao,
-          'EXPOSIÇÃO',
-          _formatarEnumCodigo(v.exposicao.name),
-        );
-        _adicionarSePreenchido(
-          itens,
-          TipoIconeAtributoVia.modalidade,
-          'TIPO',
-          _formatarEnumSimples(v.tipoViaMultiplasEnfiadas.name),
-        );
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, tr(ChaveTexto.viaSpecComprimento), v.comprimentoTotal);
+        _adicionarMetros(itens, TipoIconeAtributoVia.distancia, tr(ChaveTexto.viaSpecMaiorEnfiada), v.comprimentoMaiorEnfiada);
+        _adicionarProtecoes(itens, v.quantidadeCosturasIntermediarias, v.quantidadeEquipamentosParada);
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.duracao, tr(ChaveTexto.viaSpecDuracao), _formatarEnumCodigo(v.duracao.name));
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.exposicao, tr(ChaveTexto.viaSpecExposicao), _formatarEnumCodigo(v.exposicao.name));
+        _adicionarSePreenchido(itens, TipoIconeAtributoVia.modalidade, tr(ChaveTexto.viaSpecTipo), _formatarEnumSimples(v.tipoViaMultiplasEnfiadas.name));
       case Escalada_Tipo.highline:
         final v = escalada.highline;
-        _adicionarMetros(itens, TipoIconeAtributoVia.distancia, 'DISTÂNCIA', v.distancia);
-        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'ALTURA', v.altura);
+        _adicionarMetros(itens, TipoIconeAtributoVia.distancia, tr(ChaveTexto.viaSpecDistancia), v.distancia);
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, tr(ChaveTexto.viaSpecAltura), v.altura);
         if (v.exposicao > 0) {
-          itens.add(
-            AtributoTecnicoVia(
-              icone: TipoIconeAtributoVia.exposicao,
-              rotulo: 'EXPOSIÇÃO',
-              valor: '${v.exposicao}',
-            ),
-          );
+          itens.add(AtributoTecnicoVia(icone: TipoIconeAtributoVia.exposicao, rotulo: tr(ChaveTexto.viaSpecExposicao), valor: '${v.exposicao}'));
         }
       case Escalada_Tipo.notSet:
         break;
@@ -223,36 +182,22 @@ abstract final class ExtratorDetalhesTecnicosVia {
   /// Extrai as seções textuais e recomendações de equipamento da [escalada].
   static List<SecaoTextoVia> extrairSecoesTexto(Escalada escalada) {
     final secoes = <SecaoTextoVia>[];
+    final descTitulo = tr(ChaveTexto.viaSecaoDescricao);
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
-        _adicionarTexto(secoes, 'Descrição', escalada.viaEsportiva.descricao, true);
+        _adicionarTexto(secoes, descTitulo, escalada.viaEsportiva.descricao, true);
       case Escalada_Tipo.viaMovel:
-        _adicionarTexto(secoes, 'Descrição', escalada.viaMovel.descricao, true);
-        _adicionarTexto(secoes, 'Peças Móveis', escalada.viaMovel.protecoesMoveis, false);
+        _adicionarTexto(secoes, descTitulo, escalada.viaMovel.descricao, true);
+        _adicionarTexto(secoes, tr(ChaveTexto.viaSecaoPecasMoveis), escalada.viaMovel.protecoesMoveis, false);
       case Escalada_Tipo.boulder:
-        _adicionarTexto(secoes, 'Descrição', escalada.boulder.descricao, true);
+        _adicionarTexto(secoes, descTitulo, escalada.boulder.descricao, true);
       case Escalada_Tipo.viaMultiplasEnfiadas:
-        _adicionarTexto(
-          secoes,
-          'Descrição',
-          escalada.viaMultiplasEnfiadas.descricao,
-          true,
-        );
-        _adicionarTexto(
-          secoes,
-          'Rack & Equipamento',
-          escalada.viaMultiplasEnfiadas.equipamentoRecomendado,
-          false,
-        );
+        _adicionarTexto(secoes, descTitulo, escalada.viaMultiplasEnfiadas.descricao, true);
+        _adicionarTexto(secoes, tr(ChaveTexto.viaSecaoRackEquipamento), escalada.viaMultiplasEnfiadas.equipamentoRecomendado, false);
       case Escalada_Tipo.highline:
-        _adicionarTexto(secoes, 'Descrição do Acesso', escalada.highline.descricaoAcesso, true);
-        _adicionarTexto(
-          secoes,
-          'Descrição da Ancoragem',
-          escalada.highline.descricaoAncoragem,
-          true,
-        );
-        _adicionarTexto(secoes, 'Descrição', escalada.highline.descricao, true);
+        _adicionarTexto(secoes, tr(ChaveTexto.viaSecaoDescricaoAcesso), escalada.highline.descricaoAcesso, true);
+        _adicionarTexto(secoes, tr(ChaveTexto.viaSecaoDescricaoAncoragem), escalada.highline.descricaoAncoragem, true);
+        _adicionarTexto(secoes, descTitulo, escalada.highline.descricao, true);
       case Escalada_Tipo.notSet:
         break;
     }
@@ -270,7 +215,8 @@ abstract final class ExtratorDetalhesTecnicosVia {
       final enf = brutas[i];
       final numero = i + 1;
       final nome = obterNomeEscalada(enf, padrao: '').trim();
-      final titulo = nome.isNotEmpty ? 'Enfiada $numero • $nome' : 'Enfiada $numero';
+      final prefixoEnf = tr(ChaveTexto.viaEnfiadaNumero, {'n': '$numero'});
+      final titulo = nome.isNotEmpty ? '$prefixoEnf • $nome' : prefixoEnf;
       final grau = obterTextoGrauEscalada(enf);
       resultado.add(
         ResumoEnfiadaVia(
@@ -302,7 +248,9 @@ abstract final class ExtratorDetalhesTecnicosVia {
       final tituloLimpo = beta.titulo.trim();
       itens.add(
         ItemMidiaBetaVia(
-          titulo: tituloLimpo.isNotEmpty ? tituloLimpo : 'Beta em $origem',
+          titulo: tituloLimpo.isNotEmpty
+              ? tituloLimpo
+              : tr(ChaveTexto.viaBetaEmOrigem, {'origem': origem}),
           url: url,
           origemRotulo: origem,
         ),
@@ -313,7 +261,7 @@ abstract final class ExtratorDetalhesTecnicosVia {
     if (urlDireta != null && urlsVistas.add(urlDireta)) {
       itens.add(
         ItemMidiaBetaVia(
-          titulo: 'Assistir Vídeo Beta',
+          titulo: tr(ChaveTexto.viaAssistirVideoBeta),
           url: urlDireta,
           origemRotulo: 'Vídeo',
         ),
