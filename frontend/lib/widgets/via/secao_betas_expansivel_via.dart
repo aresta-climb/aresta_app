@@ -85,3 +85,95 @@ class PilulaDetalheCurtoVia extends StatelessWidget {
   }
 }
 
+/// Avatar circular compacto exibido ao lado do nome do escalador nos betas da comunidade,
+/// resolvendo fotos em memória/rede e caindo graciosamente para as iniciais em caso de ausência ou falha.
+class AvatarAutorComunidadeVia extends StatefulWidget {
+  /// URL pública ou Data URI opcional da foto de perfil.
+  final String? avatarUrl;
+
+  /// Iniciais pré-computadas do autor (`'EU'`, `'CL'`).
+  final String iniciais;
+
+  /// Cria uma instância de [AvatarAutorComunidadeVia].
+  const AvatarAutorComunidadeVia({
+    super.key,
+    this.avatarUrl,
+    required this.iniciais,
+  });
+
+  @override
+  State<AvatarAutorComunidadeVia> createState() =>
+      _AvatarAutorComunidadeViaState();
+}
+
+class _AvatarAutorComunidadeViaState extends State<AvatarAutorComunidadeVia> {
+  bool _falhouCarregamento = false;
+
+  @override
+  void didUpdateWidget(covariant AvatarAutorComunidadeVia oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.avatarUrl != widget.avatarUrl) {
+      _falhouCarregamento = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    final provedor = _falhouCarregamento
+        ? null
+        : construirProvedorAvatarPerfil(widget.avatarUrl);
+
+    return Container(
+      width: 28,
+      height: 28,
+      padding: const EdgeInsets.all(1.5),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: cores.rustIron.withValues(alpha: 0.65),
+          width: 1.2,
+        ),
+      ),
+      child: CircleAvatar(
+        radius: 12,
+        backgroundColor: cores.caveShadow,
+        backgroundImage: provedor,
+        onBackgroundImageError: provedor != null
+            ? (_, _) {
+                if (mounted) {
+                  setState(() => _falhouCarregamento = true);
+                }
+              }
+            : null,
+        child: provedor == null
+            ? Text(
+                widget.iniciais,
+                maxLines: 1,
+                style: TextStyle(
+                  color: cores.chalkWhite,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+}
+
+/// Cartão expansível (fechado por padrão) para mídias e betas comunitários, evitando spoilers
+/// indesejados para quem busca escalar à vista e mantendo o padrão visual de `HISTÓRICO & CONQUISTA`.
+class _CartaoSecaoExpansivelVia extends StatefulWidget {
+  final Key chaveCabecalho;
+  final IconData icone;
+  final String tituloCaixaAlta;
+  final List<Widget> filhosExpandidos;
+
+  const _CartaoSecaoExpansivelVia({
+    required this.chaveCabecalho,
+    required this.icone,
+    required this.tituloCaixaAlta,
+    required this.filhosExpandidos,
+  });
+
