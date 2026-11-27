@@ -4,6 +4,7 @@
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../view/function_library/comunidade_functions.dart';
 import '../../view/function_library/markdown_offline.dart';
@@ -56,49 +57,56 @@ class ExplorarLocalPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final urlMaps = resolverUrlGoogleMapsPico(pico);
 
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      appBar: buildCommonAppBar(
-        context,
-        'EXPLORAR O LOCAL',
-        subtitle: pico.nome,
-        backgroundColor: context.colors.deepBasalt,
-        foregroundColor: context.colors.chalkWhite,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          children: [
-            if (categories.capa.isNotEmpty) ...[
-              OfflineMarkdown(
-                data: categories.capa.first.destino.secaoTextual.conteudo,
-                cragId: cragId,
-              ),
-              const SizedBox(height: 24),
-            ],
-            if (categories.introducao.isNotEmpty)
-              ...categories.introducao.map(
-                (b) => PicoMenuCard(
-                  title: b.texto,
-                  subtitle: 'Apresentação geral e introdução ao local.',
-                  icon: Icons.info_outline,
-                  iconColor: context.colors.ashGrey,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.fishBone,
-                  onTap: () => _pushTextNode(
-                    context,
-                    b.texto,
-                    b.destino.secaoTextual.conteudo,
-                    icon: Icons.info_outline,
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: ControladorIdiomaApp.instancia.notificadorIdioma,
+      builder: (context, _, _) {
+        final tituloSobre = context.tr(ChaveTexto.picoSubSobreLocal);
+        final subSobre = context.tr(ChaveTexto.picoSubSobreLocalSubtitulo);
+        final tituloChegar = context.tr(ChaveTexto.picoSubComoChegar);
+
+        return Scaffold(
+          backgroundColor: context.colors.deepBasalt,
+          appBar: buildCommonAppBar(
+            context,
+            context.tr(ChaveTexto.picoSubExplorarTitulo),
+            subtitle: pico.nome,
+            backgroundColor: context.colors.deepBasalt,
+            foregroundColor: context.colors.chalkWhite,
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              children: [
+                if (categories.capa.isNotEmpty) ...[
+                  OfflineMarkdown(
+                    data: categories.capa.first.destino.secaoTextual.conteudo,
+                    cragId: cragId,
                   ),
-                ),
-              ),
+                  const SizedBox(height: 24),
+                ],
+                if (categories.introducao.isNotEmpty)
+                  ...categories.introducao.map(
+                    (b) => PicoMenuCard(
+                      title: b.texto,
+                      subtitle: context.tr(ChaveTexto.picoSubIntroSubtitulo),
+                      icon: Icons.info_outline,
+                      iconColor: context.colors.ashGrey,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.fishBone,
+                      onTap: () => _pushTextNode(
+                        context,
+                        b.texto,
+                        b.destino.secaoTextual.conteudo,
+                        icon: Icons.info_outline,
+                      ),
+                    ),
+                  ),
 
             if (categories.sobre.isNotEmpty)
               PicoMenuCard(
