@@ -253,54 +253,60 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vm)));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('Pico Teste baixado'), findsOneWidget);
-  });
+    expect(find.text('PEDRA GRANDE'), findsOneWidget);
+    expect(find.text('PÃO DE AÇÚCAR'), findsOneWidget);
 
-  testWidgets('BrowsePage shows error SnackBar when download fails', (
-    WidgetTester tester,
-  ) async {
-    mockRepo.activeDataset.value = TopoDataset(
-      availablePicos: [
-        {'id': 'pico_1', 'nome': 'Pico Teste', 'url': 'fake.url'},
-      ],
-      downloadedPicos: [],
+    // Alerta conservador de chuva próxima aparece apenas para Pedra Grande
+    expect(find.byKey(const Key('alerta_umidade_br_mg_igarape')), findsOneWidget);
+    expect(find.byKey(const Key('alerta_umidade_br_rj_urca')), findsNothing);
+
+    // Botão opcional de Clima e Fogo no Mapa inicia desligado e exige confirmação de ~75% de precisão
+    expect(vm.radarClimaMapaAtivo, isFalse);
+    expect(find.byKey(const Key('camada_atmosfera_clima_globo')), findsNothing);
+    await tester.tap(find.byKey(const Key('botao_camada_clima_mapa')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dialogo_aviso_precisao_clima')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('botao_confirmar_aviso_clima')));
+    await tester.pump();
+    expect(vm.radarClimaMapaAtivo, isTrue);
+    expect(find.byKey(const Key('camada_atmosfera_clima_globo')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('botao_camada_clima_mapa')));
+    await tester.pumpAndSettle();
+    expect(vm.radarClimaMapaAtivo, isFalse);
+    expect(find.byKey(const Key('camada_atmosfera_clima_globo')), findsNothing);
+
+    // Toque no botao de foco no globo no card dispara voo parabolico
+    await tester.tap(find.byKey(const Key('botao_ver_no_globo_br_mg_igarape')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 45));
+    }
+    expect(vm.picoSelecionadoId, equals('br_mg_igarape'));
+
+    // Toque em card nao baixado tenta abrir diretamente no modo exploracao online (sem auto-download)
+    mockSync.downloadCragCalled = false;
+    await tester.ensureVisible(find.text('PÃO DE AÇÚCAR'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PÃO DE AÇÚCAR'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(mockSync.downloadCragCalled, isFalse);
+    expect(
+      find.textContaining('ainda não está salvo offline'),
+      findsOneWidget,
     );
-    mockRepo.indiceData.value = Indice()
-      ..croquis.add(
-        ResumoCroqui()
-          ..id = 'pico_1'
-          ..nome = 'Pico Teste',
-      );
-
-    mockSync.mockResult = false;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(tester.element(find.byType(BrowsePage)))
+        .clearSnackBars();
     await tester.pumpAndSettle();
 
-    // Aciona download do pico
-    final browse = tester.widget<BrowsePage>(find.byType(BrowsePage));
-    final element = tester.element(find.byType(BrowsePage));
-    browse.handleDownload(element, {'id': 'pico_1', 'nome': 'Pico Teste'});
-
-    // Wait for the async function to finish and SnackBar to appear
+    // Pesquisa filtra lista e marcadores do globo
+    await tester.enterText(find.byType(TextField), 'Pedra');
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('Falha ao baixar Pico Teste'), findsOneWidget);
-  });
+    expect(find.text('PEDRA GRANDE'), findsOneWidget);
+    expect(find.text('PÃO DE AÇÚCAR'), findsNothing);
 
   testWidgets('BrowsePage filters list based on search query', (
     WidgetTester tester,
