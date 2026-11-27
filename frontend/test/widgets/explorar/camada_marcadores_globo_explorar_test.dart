@@ -91,3 +91,63 @@ void main() {
     ),
   ];
 
+  final referenciasTeste =
+      picosTeste.map((p) => p.paraReferenciaRelevo()).toList();
+  final redeTeste = ConstrutorRedeViariaAresta.construir(
+    rodovias: malhaTeste.rodoviasProximas,
+    localidades: malhaTeste.localidadesProximas,
+    picos: referenciasTeste,
+  );
+
+  group('CamadaMarcadoresGloboExplorar', () {
+    testWidgets('agrupa picos por UF sem sobreposição em órbita distante e dispara seleção com LOD explícito', (
+      tester,
+    ) async {
+      final ctrlOrbital = ControladorCameraGlobo(
+        latitudeInicial: -20.0,
+        longitudeInicial: -44.0,
+        lodInicial: 0.15,
+      );
+      addTearDown(ctrlOrbital.dispose);
+
+      MarcadorPicoGlobo? clicado;
+      double? lodRecebido;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => SizedBox(
+                width: 400,
+                height: 800,
+                child: Stack(
+                  children: CamadaMarcadoresGloboExplorar.construirCamadas(
+                    context: ctx,
+                    tamanho: const Size(400, 800),
+                    controlador: ctrlOrbital,
+                    redeViaria: redeTeste,
+                    picos: picosTeste,
+                    referenciasRelevo: referenciasTeste,
+                    picoSelecionadoId: null,
+                    localizacaoUsuario: null,
+                    recuoSuperiorControles: 62.0,
+                    aoSelecionarPico: (p, {lodExplicito}) {
+                      clicado = p;
+                      lodRecebido = lodExplicito;
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('cluster_uf_MG')), findsOneWidget);
+      expect(find.byKey(const Key('cluster_uf_RJ')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('cluster_uf_MG')));
+      expect(clicado?.id, equals('p_mg'));
+      expect(lodRecebido, closeTo(1.18, 1e-4));
+    });
+
