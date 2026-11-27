@@ -7,13 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import 'package:frontend/view/view_models/configuracoes_view_model.dart';
 
@@ -86,6 +85,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final versaoFinder = find.text('Aresta Climb v1.2.3 (Beta Aberto)');
+    await tester.scrollUntilVisible(versaoFinder, 150);
+    await tester.pumpAndSettle();
     expect(versaoFinder, findsOneWidget);
 
     await tester.tap(versaoFinder);
@@ -128,15 +129,8 @@ void main() {
   );
 
   testWidgets(
-    'SettingsPage oculta cartão PERFIL E CADERNETA quando perfilHabilitado é false e permite alternar preferência quando habilitado',
+    'SettingsPage não exibe interruptor booleano manual de Perfil e Caderneta',
     (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-      ControladorInteracoesUsuario.redefinirParaTestes();
-      addTearDown(() {
-        ConfiguracaoRecursos.redefinirParaTestes();
-        ControladorInteracoesUsuario.redefinirParaTestes();
-      });
-
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppColors.dark]),
@@ -155,30 +149,43 @@ void main() {
         find.byKey(const Key('switch_interacoes_caderneta')),
         findsNothing,
       );
+    },
+  );
 
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+  testWidgets(
+    'SettingsPage exibe CartaoPreferenciaIdioma e traduz a página inteira ao tocar nos chips de idioma',
+    (tester) async {
+      addTearDown(ControladorIdiomaApp.instancia.restaurarPadraoEmMemoria);
+
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(extensions: const [AppColors.dark]),
-          home: SettingsPage(
-            viewModel: SettingsViewModel(
-              datasetRepo: mockRepo,
-              editorDeCroqui: mockEditor,
+        EscopoIdiomaApp(
+          notificador: ControladorIdiomaApp.instancia.notificadorIdioma,
+          child: MaterialApp(
+            theme: ThemeData(extensions: const [AppColors.dark]),
+            home: SettingsPage(
+              viewModel: SettingsViewModel(
+                datasetRepo: mockRepo,
+                editorDeCroqui: mockEditor,
+              ),
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('PERFIL E CADERNETA'), findsOneWidget);
-      final switchFinder = find.byKey(const Key('switch_interacoes_caderneta'));
-      expect(switchFinder, findsOneWidget);
-      expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isTrue);
+      expect(
+        find.byKey(const Key('cartao_preferencia_idioma')),
+        findsOneWidget,
+      );
+      expect(find.text('Configurações'), findsOneWidget);
 
-      await tester.tap(switchFinder);
+      await tester.tap(find.byKey(const Key('chip_config_idioma_es')));
       await tester.pumpAndSettle();
+      expect(find.text('Ajustes'), findsOneWidget);
 
-      expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isFalse);
+      await tester.tap(find.byKey(const Key('chip_config_idioma_nl')));
+      await tester.pumpAndSettle();
+      expect(find.text('Instellingen'), findsOneWidget);
     },
   );
 }
