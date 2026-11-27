@@ -262,9 +262,9 @@ abstract final class PintorCurvasNivelGlobo {
               249,
               (0.94 * opacidade).clamp(0.0, 1.0),
             ),
-            fontSize: 8.6,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+            fontSize: 9.2,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.25,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -273,13 +273,19 @@ abstract final class PintorCurvasNivelGlobo {
       final rect = RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: item.pos,
-          width: tp.width + 8.0,
-          height: tp.height + 3.0,
+          width: tp.width + 10.0,
+          height: tp.height + 4.0,
         ),
-        const Radius.circular(4.0),
+        const Radius.circular(5.0),
       );
       canvas.drawRRect(rect, pincelFundo);
-      canvas.drawRRect(rect, pincelBorda);
+      canvas.drawRRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.95
+          ..color = corBorda,
+      );
       tp.paint(
         canvas,
         Offset(item.pos.dx - tp.width * 0.5, item.pos.dy - tp.height * 0.5),
