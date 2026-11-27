@@ -279,4 +279,91 @@ void main() {
             message: 'JWT expirado',
           ),
         );
+      await despachante.drenar(clienteFake);
+      expect(despachante.mutacoesPendentes, isEmpty);
+      expect(
+        clienteFake.itensInseridos
+            .firstWhere((i) => i.id == comRemoto.id)
+            .textoComentario,
+        'Versão 2',
+      );
+
+      // Exercita 409 inicial, 401+409 na retentativa, 403+500 na retentativa, 500 inicial, 401+offline na retentativa e offline inicial
+      clienteFake.filaErrosInsercao.add(
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 409, message: 'Dup'),
+      );
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: comRemoto.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      expect(despachante.mutacoesPendentes, isEmpty);
+
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 401, message: '401'),
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 409, message: '409'),
+      ]);
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.excluirAlerta(
+          alvoUid: 'alertaRem00001',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      expect(despachante.mutacoesPendentes, isEmpty);
+
+      // 403 + 500 retém na fila; depois drena excluirComentario + excluirAlerta com sucesso
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 403, message: 'RLS'),
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 500, message: '500'),
+      ]);
+      await despachante.registrarMutacao(
+        clienteFake,
+        MutacaoFilaInteracao.excluirComentario(
+          alvoUid: comRemoto.id,
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      expect(despachante.mutacoesPendentes, hasLength(1));
+
+      // 500 inicial seguido de SocketException na próxima mutação
+      await despachante.registrarMutacao(
+        null,
+        MutacaoFilaInteracao.excluirAlerta(
+          alvoUid: 'alertaRem00001',
+          escaladaUid: 'x8siJek3FiG3aB',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        ),
+      );
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 500, message: '500'),
+        const SocketException('Sem rede'),
+      ]);
+      await despachante.drenar(clienteFake);
+      expect(despachante.mutacoesPendentes, hasLength(2));
+
+      // 401 seguido de SocketException na retentativa preserva itens subsequentes
+      clienteFake.filaErrosInsercao.addAll([
+        const ExcecaoHttpFilaInteracoes(codigoStatusHttp: 401, message: '401'),
+        const SocketException('Queda na retentativa'),
+      ]);
+      await despachante.drenar(clienteFake);
+      expect(despachante.mutacoesPendentes, hasLength(2));
+
+      // Offline direto preserva ambos, e quando online drena excluirComentario + excluirAlerta!
+      clienteFake.erroSimulado = const SocketException('Sem sinal');
+      await despachante.drenar(clienteFake);
+      expect(despachante.mutacoesPendentes, hasLength(2));
+
+      clienteFake.erroSimulado = null;
+      await despachante.drenar(clienteFake);
+      expect(despachante.mutacoesPendentes, isEmpty);
+      expect(clienteFake.itensInseridos, isEmpty);
+    },
+  );
 }
