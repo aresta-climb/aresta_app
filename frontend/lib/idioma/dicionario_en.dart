@@ -282,3 +282,93 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.climaIncendioAtivo: 'Active wildfire',
   ChaveTexto.climaIncendioSevero: 'Severe wildfire',
 
+  // Meus Croquis e Modais Offline
+  ChaveTexto.meusCroquisTitulo: 'MY TOPOS',
+  ChaveTexto.meusCroquisSubtitulo: 'OFFLINE STORAGE',
+  ChaveTexto.meusCroquisVazio: 'No topos saved offline yet.',
+  ChaveTexto.meusCroquisAbrirOffline: 'OPEN OFFLINE',
+  ChaveTexto.meusCroquisErroAbrir: 'Error opening offline guide.',
+  ChaveTexto.meusCroquisExcluirTitulo: 'Delete?',
+  ChaveTexto.meusCroquisExcluirPergunta: 'Delete the offline guide for {nome}?',
+  ChaveTexto.meusCroquisExcluidoToast: 'Guide deleted.',
+  ChaveTexto.meusCroquisErroExcluirToast: 'Error deleting guide.',
+  ChaveTexto.meusCroquisGuiaRemovidoToast:
+      'Guide removed from offline storage.',
+  ChaveTexto.offlineSalvarComTamanho: 'Save Offline ({tamanho})',
+  ChaveTexto.offlineSalvarSemTamanho: 'Save Offline',
+  ChaveTexto.offlineModoOnlineTitulo: 'ONLINE MODE',
+  ChaveTexto.offlineModoOnlineDesc:
+      'You are browsing online. Save the complete guide to use without cell signal at the crag.',
+  ChaveTexto.offlineBaixandoPct: 'DOWNLOADING ({pct}%)...',
+  ChaveTexto.offlineSalvarParaPedraTitulo: 'SAVE FOR THE CRAG?',
+  ChaveTexto.offlineSalvarParaPedraCorpo:
+      'Remember: there is often no cell service at the cliff. To view {nome} topos and grades offline, save the guide first.',
+  ChaveTexto.offlineSairSemSalvar: 'Leave Without Saving',
+  ChaveTexto.offlineSemConexaoTitulo: 'YOU ARE OFFLINE',
+  ChaveTexto.offlineSemConexaoCorpo:
+      'This content belongs to {nome}, which is not saved offline on your device yet. Reconnect to the internet and try again.',
+  ChaveTexto.offlineAindaSemConexao:
+      'Still offline. Check your connection and try again.',
+  ChaveTexto.offlineTentandoConectar: 'Reconnecting...',
+
+  // Página do Pico, Subpáginas, Setor, Grupo, Filtros de Índice e Croqui Interativo
+  ChaveTexto.picoCompartilharTooltip: 'Share crag',
+  ChaveTexto.picoExcluirGuiaTooltip: 'Delete offline guide',
+  ChaveTexto.picoBuscarBoulderTooltip: 'Search boulder',
+  ChaveTexto.picoBuscarViaTooltip: 'Search route',
+  ChaveTexto.picoCardSetoresTitulo: 'Sectors & Climbs',
+  ChaveTexto.picoCardSetoresSubtitulo:
+      'Browse sectors, routes, and boulders with filters and interactive maps',
+  ChaveTexto.picoCardExplorarTitulo: 'Explore Area',
+  ChaveTexto.picoCardExplorarSubtitulo:
+      'Approach directions, overview maps, weather, and local details.',
+  ChaveTexto.picoCardRegrasTitulo: 'Rules & Ethics',
+  ChaveTexto.picoCardRegrasSubtitulo:
+      'Environmental guidelines, safety essentials, and local access ethics.',
+  ChaveTexto.picoCardComunidadeTitulo: 'Community',
+  ChaveTexto.picoCardComunidadeSubtitulo:
+      'Social channels, WhatsApp group, sponsors, and local businesses.',
+  ChaveTexto.picoCardCreditosSubtitulo:
+      'Meet the authors, contributors, and acknowledgments.',
+  ChaveTexto.picoVoltarMapaSetor: 'Back to Sector Map',
+  ChaveTexto.picoCroquiPor: 'Topo by {autores}',
+  ChaveTexto.picoInfoLocal: 'Area Information',
+  ChaveTexto.picoCampoNome: 'Name',
+  ChaveTexto.picoCampoEstado: 'State',
+  ChaveTexto.picoMaisInfoSecao: 'More Information',
+  ChaveTexto.picoMapasGerais: 'Overview Maps',
+  ChaveTexto.picoNenhumElemento: 'No items available.',
+  ChaveTexto.picoBuscarBoulderHint: 'Search boulder (e.g. V4) or sector...',
+  ChaveTexto.picoBuscarEscaladaHint: 'Search climb (e.g. 7a) or sector...',
+  ChaveTexto.picoDificuldadePrefixo: 'Grade: {grau}',
+  ChaveTexto.picoUltimaAtualizacaoNaoInformada: 'Last updated: Unknown',
+  ChaveTexto.picoUltimaAtualizacaoHoje: 'Last updated: Today at {hora}',
+  ChaveTexto.picoUltimaAtualizacaoOntem: 'Last updated: Yesterday at {hora}',
+  ChaveTexto.picoUltimaAtualizacaoData: 'Last updated: {data} at {hora}',
+  ChaveTexto.picoSubExplorarTitulo: 'EXPLORE THE AREA',
+  ChaveTexto.picoSubIntroSubtitulo: 'General overview and introduction.',
+  ChaveTexto.picoSubSobreLocal: 'About the crag',
+  ChaveTexto.picoSubSobreLocalSubtitulo:
+      'Crag history, pioneering first ascents, and local geology.',
+  ChaveTexto.picoSubComoChegar: 'How to get there',
+  ChaveTexto.picoSubComoChegarSubtitulo:
+      'Approach directions and navigation to the cliff base.',
+  ChaveTexto.picoSubAbrirMaps: 'Open in Google Maps',
+  ChaveTexto.picoSubAbrirMapsSubtitulo:
+      'View location and get driving directions to the crag.',
+  ChaveTexto.picoSubExtrasSubtitulo: 'Additional area information.',
+  ChaveTexto.picoSubComunidadeTitulo: 'COMMUNITY',
+  ChaveTexto.picoSubInformacoes: 'Information',
+  ChaveTexto.picoSubAssociacaoLocal: 'Local Climbing Association',
+  ChaveTexto.picoSubParceiros: 'Partners',
+  ChaveTexto.picoSubComercioLocal: 'Local Businesses',
+  ChaveTexto.picoSubApoieTitulo: 'SUPPORT THE CRAG',
+  ChaveTexto.picoSubDoacaoPix: 'Donate via Pix',
+  ChaveTexto.picoSubDoacaoPixSubtitulo:
+      'Help fund stainless-steel bolts and anchors.\nPix key: {chave}',
+  ChaveTexto.picoSubPixCopiadoToast: 'Pix key copied to clipboard!',
+  ChaveTexto.picoSubProdutos: 'Crag Gear & Merch',
+  ChaveTexto.picoSubPatrocinador: 'Become a Sponsor',
+  ChaveTexto.picoSubPatrocinadorSubtitulo:
+      'Partner your brand ethically and sustainably with outdoor climbing.',
+  ChaveTexto.picoSubEnviarInfo: 'Submit Information',
