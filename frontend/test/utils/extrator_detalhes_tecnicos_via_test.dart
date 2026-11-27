@@ -6,7 +6,9 @@ import 'package:frontend/aresta_api/proto/generated/beta.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/utils/extrator_detalhes_tecnicos_via.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test(
@@ -156,18 +158,28 @@ void main() {
         'Justo (0)',
       );
 
-      final notas = ExtratorDetalhesTecnicosVia.formatarNotasComunidade([
-        ComentarioComunidadeVia(
-          uid: 'c1Kq2L1x9Y7zWq',
-          autorIdPublico: 'a1Lk9P1x4Vw8Mn',
-          autorNomePublico: 'Carlos',
-          criadoEm: DateTime.utc(2026, 9, 5),
-          estiloAscensao: TipoAscensao.flash,
-          texto: 'Ótima linha!',
-        ),
-      ]);
-      expect(notas.single.cabecalhoAutorData, 'Carlos • 05/09/2026');
+      final notas = ExtratorDetalhesTecnicosVia.formatarNotasComunidade(
+        [
+          ComentarioComunidadeVia(
+            uid: 'c1Kq2L1x9Y7zWq',
+            autorIdPublico: 'a1Lk9P1x4Vw8Mn',
+            autorNomePublico: 'Carlos Lagartixa',
+            autorAvatarUrl: 'https://cdn.aresta.cc/avatars/carlos.webp',
+            criadoEm: DateTime.utc(2026, 9, 5),
+            estiloAscensao: TipoAscensao.flash,
+            texto: 'Ótima linha!',
+          ),
+        ],
+        autorIdUsuarioAutenticado: 'a1Lk9P1x4Vw8Mn',
+      );
+      expect(notas.single.uid, 'c1Kq2L1x9Y7zWq');
+      expect(notas.single.pertenceAoUsuarioAtual, isTrue);
+      expect(notas.single.cabecalhoAutorData, 'Carlos Lagartixa • 05/09/2026');
+      expect(notas.single.iniciaisAutor, 'CL');
+      expect(notas.single.autorAvatarUrl, 'https://cdn.aresta.cc/avatars/carlos.webp');
       expect(notas.single.rotuloEstilo, 'FLASH ★');
+      expect(NotaComunidadeApresentacao.extrairIniciais('Carlos'), 'C');
+      expect(NotaComunidadeApresentacao.extrairIniciais('   '), '?');
 
       // Resolução de EstadoCroquiVia por nome (sem uid) com mapa próprio e pico
       final viaSemUidComMapa = Escalada(
