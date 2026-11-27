@@ -365,3 +365,76 @@ abstract final class PintorTerrenoVetoresGlobo {
       );
     }
 
+    var idxLon = 0;
+    for (var lon = lonIni; lon <= lonFim; lon += passoGraus, idxLon++) {
+      final path = Path();
+      var ativo = false;
+      for (var k = 0; k <= 16; k++) {
+        final lat = latIni + (latFim - latIni) * (k / 16.0);
+        if (!dadosMalha.contemPontoTerrestre(latitude: lat, longitude: lon)) {
+          ativo = false;
+          continue;
+        }
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lon,
+          elevacaoMetros: 0.0,
+          tamanhoTela: size,
+        );
+        if (!pt.visivel) {
+          ativo = false;
+          continue;
+        }
+        if (!ativo) {
+          path.moveTo(pt.x, pt.y);
+          ativo = true;
+        } else {
+          path.lineTo(pt.x, pt.y);
+        }
+      }
+      canvas.drawPath(
+        path,
+        idxLon % 5 == 0 ? pincelLinhaPrincipal : pincelLinhaSecundaria,
+      );
+    }
+  }
+
+  /// Desenha os meridianos e paralelos esféricos sutis no `LOD 0` orbital.
+  static void desenharGradeEsferica({
+    required Canvas canvas,
+    required Size size,
+    required ControladorCameraGlobo controlador,
+    required double alfaGrade,
+  }) {
+    final paintGrade = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..color = Color.fromRGBO(186, 230, 253, 0.11 * alfaGrade);
+    final limiteSaltoX = size.width * 0.45;
+
+    for (var lat = -75.0; lat <= 75.0; lat += 15.0) {
+      final path = Path();
+      var ativo = false;
+      var antX = 0.0;
+      for (var lon = -180.0; lon <= 180.0; lon += 6.0) {
+        final pt = controlador.projetarCoordenada(
+          latitude: lat,
+          longitude: lon,
+          elevacaoMetros: 0,
+          tamanhoTela: size,
+        );
+        if (!pt.visivel) {
+          ativo = false;
+          continue;
+        }
+        if (!ativo || (pt.x - antX).abs() > limiteSaltoX) {
+          path.moveTo(pt.x, pt.y);
+          ativo = true;
+        } else {
+          path.lineTo(pt.x, pt.y);
+        }
+        antX = pt.x;
+      }
+      canvas.drawPath(path, paintGrade);
+    }
+
