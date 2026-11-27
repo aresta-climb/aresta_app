@@ -231,25 +231,22 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       final combinados = _ordenarComMutacoesDaVia(uidVia, [
         ...remotos,
         ..._despachante.itensPendentes.where((i) => i.escaladaUid == uidVia),
-      ]..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
-
-      final mapaVotos = <String, ({int? deltaGrau, int? grauSugerido})>{};
-      for (final item in combinados) {
-        if (item.tipo == TipoFilaInteracao.votoGrau) {
-          mapaVotos[item.autorIdPublico] = (
-            deltaGrau: item.deltaGrau,
-            grauSugerido: item.grauSugerido,
-          );
-        }
-      }
-      _votosLocaisPorAutor[uidVia] = mapaVotos;
-      _atualizarCacheAlertasDaVia(uidVia, combinados);
-      await _persistirCacheAlertasUsuario();
-
+      ]);
+      _votosLocaisPorAutor[uidVia] = {
+        for (final i in combinados)
+          if (i.tipo == TipoFilaInteracao.votoGrau)
+            i.autorIdPublico: (
+              deltaGrau: i.deltaGrau,
+              grauSugerido: i.grauSugerido,
+            ),
+      };
+      _armazenamentoFila.atualizarEventosDaVia(uidVia, combinados);
+      await _armazenamentoFila.persistirMemoriaAlertas();
       _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
         combinados,
         codigoGrauOficial: codigoGrauOficial,
         ehBoulder: ehBoulder,
+        avataresPorAutor: _mapaAvatarPerfilLocal(),
       );
       _versaoNotifier.value++;
     } catch (e, stackTrace) {
@@ -282,32 +279,30 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       final porVia = <String, List<ItemFilaInteracao>>{
         for (final uid in uidsValidos) uid: <ItemFilaInteracao>[],
       };
-      for (final item in remotos) {
-        porVia[item.escaladaUid]?.add(item);
+      for (final i in remotos) {
+        porVia[i.escaladaUid]?.add(i);
       }
-      for (final pendente in _despachante.itensPendentes) {
-        porVia[pendente.escaladaUid]?.add(pendente);
+      for (final p in _despachante.itensPendentes) {
+        porVia[p.escaladaUid]?.add(p);
       }
-
-      for (final entrada in porVia.entries) {
-        final uid = entrada.key;
-        final itens = entrada.value
-          ..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
-        _atualizarCacheAlertasDaVia(uid, itens);
-        final consolidado = consolidarItensFilaEmDadosComunidade(
+      for (final e in porVia.entries) {
+        final itens = _ordenarComMutacoesDaVia(e.key, e.value);
+        _armazenamentoFila.atualizarEventosDaVia(e.key, itens);
+        final cons = consolidarItensFilaEmDadosComunidade(
           itens,
           ehBoulder: false,
+          avataresPorAutor: _mapaAvatarPerfilLocal(),
         );
-        final anterior = _dadosPorEscalada[uid];
-        _dadosPorEscalada[uid] = DadosComunidadeVia(
-          consensoGrau: anterior != null && anterior.consensoGrau.possuiVotos
-              ? anterior.consensoGrau
-              : consolidado.consensoGrau,
-          alertasAtivos: consolidado.alertasAtivos,
-          comentarios: consolidado.comentarios,
+        final ant = _dadosPorEscalada[e.key];
+        _dadosPorEscalada[e.key] = DadosComunidadeVia(
+          consensoGrau: ant != null && ant.consensoGrau.possuiVotos
+              ? ant.consensoGrau
+              : cons.consensoGrau,
+          alertasAtivos: cons.alertasAtivos,
+          comentarios: cons.comentarios,
         );
       }
-      await _persistirCacheAlertasUsuario();
+      await _armazenamentoFila.persistirMemoriaAlertas();
       _versaoNotifier.value++;
     } catch (e, stackTrace) {
       DespachanteFilaInteracoes.registrarFalhaRede(
@@ -317,6 +312,14 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       );
     }
   }
+
+  List<ItemFilaInteracao> _ordenarComMutacoesDaVia(
+    String uidVia,
+    Iterable<ItemFilaInteracao> eventos,
+  ) => aplicarMutacoesSobreItens(
+    eventos,
+    _despachante.mutacoesPendentes.where((m) => m.escaladaUid == uidVia),
+  )..sort((a, b) => a.criadoEm.compareTo(b.criadoEm));
 
   @override
   Future<void> registrarAvaliacaoAscensao({
@@ -328,20 +331,9 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     TipoAscensao? estiloAscensao,
     String? comentarioPublico,
   }) async {
-    final uidVia = escaladaUid.trim();
-    if (uidVia.isEmpty) {
-      throw ArgumentError.value(
-        escaladaUid,
-        'escaladaUid',
-        'O identificador da escalada não pode ser vazio ao registrar avaliação.',
-      );
-    }
+    final uidVia = _exigirEscaladaUidNaoVazio(escaladaUid);
     if (deltaGrau < -2 || deltaGrau > 2) {
-      throw ArgumentError.value(
-        deltaGrau,
-        'deltaGrau',
-        'O delta de grau deve estar entre -2 e +2.',
-      );
+      throw ArgumentError.value(deltaGrau, 'deltaGrau', 'Esperado -2..+2.');
     }
 
     final perfil = _repositorioCaderneta.obterPerfil();
@@ -353,11 +345,10 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     final votosPorAutor =
         Map<String, ({int? deltaGrau, int? grauSugerido})>.from(
           _votosLocaisPorAutor[uidVia] ?? const {},
+        )..[perfil.autorIdPublico] = (
+          deltaGrau: deltaGrau,
+          grauSugerido: codEfetivo,
         );
-    votosPorAutor[perfil.autorIdPublico] = (
-      deltaGrau: deltaGrau,
-      grauSugerido: codEfetivo,
-    );
     _votosLocaisPorAutor[uidVia] = votosPorAutor;
 
     final comentarios = List<ComentarioComunidadeVia>.from(atual.comentarios);
@@ -365,9 +356,10 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     ComentarioComunidadeVia? novoComentario;
     if (textoLimpo != null && textoLimpo.isNotEmpty) {
       novoComentario = ComentarioComunidadeVia(
-        uid: gerarUid(),
+        uid: const Uuid().v4(),
         autorIdPublico: perfil.autorIdPublico,
         autorNomePublico: perfil.autorNomePublico,
+        autorAvatarUrl: perfil.fotoUrl,
         criadoEm: DateTime.now().toUtc(),
         estiloAscensao: estiloAscensao,
         texto: textoLimpo,
@@ -404,6 +396,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
             id: novoComentario.uid,
             autorIdPublico: perfil.autorIdPublico,
             autorNomePublico: perfil.autorNomePublico,
+            autorAvatarUrl: perfil.fotoUrl,
             escaladaUid: uidVia,
             textoComentario: novoComentario.texto,
             tipoAscensao: estiloAscensao,
