@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 import '../utils/filtro_grau_escalada.dart';
 
@@ -95,7 +96,7 @@ class BarraOrdenacaoExploracao extends StatelessWidget {
       children: [
         _buildCard(
           context: context,
-          label: 'PADRÃO',
+          label: context.tr(ChaveTexto.filtroPadrao),
           icon: Icons.grid_view_rounded,
           isActive: ordenacaoAtual == TipoOrdenacaoExploracao.padrao,
           onTap: () => onOrdenacaoChanged(TipoOrdenacaoExploracao.padrao),
@@ -103,7 +104,7 @@ class BarraOrdenacaoExploracao extends StatelessWidget {
         const SizedBox(width: 6),
         _buildCard(
           context: context,
-          label: 'GRAU',
+          label: context.tr(ChaveTexto.filtroGrau),
           icon: Icons.trending_up,
           isActive: ordenacaoAtual == TipoOrdenacaoExploracao.grau,
           onTap: () => onOrdenacaoChanged(TipoOrdenacaoExploracao.grau),
@@ -111,7 +112,7 @@ class BarraOrdenacaoExploracao extends StatelessWidget {
         const SizedBox(width: 6),
         _buildCard(
           context: context,
-          label: 'ALFABÉTICO',
+          label: context.tr(ChaveTexto.filtroAlfabetico),
           icon: Icons.sort_by_alpha,
           isActive: ordenacaoAtual == TipoOrdenacaoExploracao.alfabetico,
           onTap: () => onOrdenacaoChanged(TipoOrdenacaoExploracao.alfabetico),

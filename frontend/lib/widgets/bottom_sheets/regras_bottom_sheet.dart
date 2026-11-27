@@ -1,8 +1,9 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../view/function_library/markdown_offline.dart';
 import '../../theme/cores_app.dart';
 
@@ -50,12 +51,14 @@ class RegrasBottomSheet extends StatelessWidget {
                   color: context.colors.dryMoss,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'REGRAS E RECOMENDAÇÕES',
-                  style: TextStyle(
-                    color: context.colors.fishBone,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                Expanded(
+                  child: Text(
+                    context.tr(ChaveTexto.picoRegrasTitulo),
+                    style: TextStyle(
+                      color: context.colors.fishBone,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ],
@@ -70,7 +73,7 @@ class RegrasBottomSheet extends StatelessWidget {
                   children: [
                     if (regrasBotoes.isEmpty)
                       Text(
-                        'Nenhuma regra específica cadastrada para este local. Por favor, siga as normas de conduta ética e ambiental padrão.',
+                        context.tr(ChaveTexto.picoRegrasVazio),
                         style: TextStyle(
                           color: context.colors.fishBone.withValues(alpha: 0.8),
                         ),
@@ -108,9 +111,9 @@ class RegrasBottomSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'VOLTAR',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: Text(
+                  context.tr(ChaveTexto.comumVoltar).toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),

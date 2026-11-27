@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../idioma/tradutor_app.dart';
 import '../../services/catalogo/repositorio_catalogo.dart';
 import '../../theme/cores_app.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -145,7 +146,7 @@ class _ModalCroquiSemConexaoState extends State<ModalCroquiSemConexao> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'VOCÊ ESTÁ SEM CONEXÃO',
+                          context.tr(ChaveTexto.offlineSemConexaoTitulo),
                           style: TextStyle(
                             color: context.colors.chalkWhite,
                             fontWeight: FontWeight.w900,
@@ -193,7 +194,10 @@ class _ModalCroquiSemConexaoState extends State<ModalCroquiSemConexao> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Este conteúdo faz parte do croqui $nomeCroqui, que ainda não está salvo offline no seu aparelho. Quando voltar a ter conexão com a internet, tente novamente para abri-lo.',
+              context.tr(
+                ChaveTexto.offlineSemConexaoCorpo,
+                {'nome': nomeCroqui},
+              ),
               style: TextStyle(
                 color: context.colors.ashGrey,
                 fontSize: 14,
@@ -203,7 +207,7 @@ class _ModalCroquiSemConexaoState extends State<ModalCroquiSemConexao> {
             if (_falhaAoTentarNovamente) ...[
               const SizedBox(height: 12),
               Text(
-                'Ainda sem conexão com a internet. Verifique sua rede e tente novamente.',
+                context.tr(ChaveTexto.offlineAindaSemConexao),
                 style: const TextStyle(
                   color: Color(0xFFC05244),
                   fontSize: 13,
@@ -232,8 +236,8 @@ class _ModalCroquiSemConexaoState extends State<ModalCroquiSemConexao> {
                       ),
                 label: Text(
                   _tentandoConectar
-                      ? 'Tentando conectar...'
-                      : 'Tentar novamente',
+                      ? context.tr(ChaveTexto.offlineTentandoConectar)
+                      : context.tr(ChaveTexto.comumTentarNovamente),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -257,7 +261,7 @@ class _ModalCroquiSemConexaoState extends State<ModalCroquiSemConexao> {
                     ? null
                     : () => Navigator.of(context).pop(false),
                 child: Text(
-                  'Fechar',
+                  context.tr(ChaveTexto.comumFechar),
                   style: TextStyle(
                     color: context.colors.ashGrey,
                     fontWeight: FontWeight.bold,
