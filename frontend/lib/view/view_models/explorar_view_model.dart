@@ -396,65 +396,36 @@ class BrowseViewModel extends ChangeNotifier {
         ? _obterProximidadePorId(todosPicos)
         : const <String, PicoProximo>{};
 
-    if (_termoBusca.isEmpty) {
-      resultado = todosPicos.toList();
-    } else {
-      final fuse = Fuzzy<MetadadosIndice>(
-        todosPicos,
-        options: FuzzyOptions(
-          keys: [
-            WeightedKey(
-              name: 'nome',
-              getter: (MetadadosIndice c) => normalizeSearchString(c.nome),
-              weight: 1.0,
-            ),
-            WeightedKey(
-              name: 'local',
-              getter: (MetadadosIndice c) =>
-                  normalizeSearchString(c.localizacaoFormatada),
-              weight: 0.5,
-            ),
-          ],
-          threshold: 0.4,
-        ),
-      );
-
-      final queryNormalizada = normalizeSearchString(_termoBusca);
-      resultado = fuse.search(queryNormalizada).map((r) => r.item).toList();
-    }
-
-    if (_ordem == OrdemOrdenacaoPico.proximidade) {
-      if (_userLat != null && _userLon != null) {
-        final proximidadePorId = _obterProximidadePorId(todosPicos);
-        final comCoordenadas = resultado
-            .where((m) => proximidadePorId.containsKey(m.id))
-            .toList()
-          ..sort(
-            (a, b) => compararPicosPorProximidade(
-              proximidadePorId[a.id]!,
-              proximidadePorId[b.id]!,
-            ),
-          );
-        final semCoordenadas = resultado
-            .where((m) => !proximidadePorId.containsKey(m.id))
-            .toList()
-          ..sort((a, b) => a.nome.compareTo(b.nome));
-        resultado = [...comCoordenadas, ...semCoordenadas];
-      } else {
-        resultado.sort((a, b) => a.nome.compareTo(b.nome));
+    final filtrados = FiltradorCatalogoExplorar.filtrarPorBuscaDifusa(
+      todosPicos,
+      _termoBusca,
+    ).where((m) {
+      if (!FiltradorCatalogoExplorar.atendeModalidades(m, _modalidadesAtivas)) {
+        return false;
       }
-    } else if (_ordem == OrdemOrdenacaoPico.alfabetico) {
-      resultado.sort((a, b) => a.nome.compareTo(b.nome));
-    } else if (_ordem == OrdemOrdenacaoPico.escaladas) {
-      resultado.sort((a, b) {
-        final viasA = a.precomputados.totalEscaladas;
-        final viasB = b.precomputados.totalEscaladas;
-        final cmp = viasB.compareTo(viasA);
-        return cmp != 0 ? cmp : a.nome.compareTo(b.nome);
-      });
-    }
+      if (!FiltradorCatalogoExplorar.atendeFaixasGrau(
+        metadados: m,
+        perfisGrauPorPico: _perfisGrauPorPico,
+        minGrauVia: _minGrauVia,
+        maxGrauVia: _maxGrauVia,
+        minGrauBoulder: _minGrauBoulder,
+        maxGrauBoulder: _maxGrauBoulder,
+      )) {
+        return false;
+      }
+      if (_apenasSalvosOffline && !estaBaixado(m.id)) return false;
+      if (_raioMaximoKm != null && proximidadePorId.isNotEmpty) {
+        final prox = proximidadePorId[m.id];
+        if (prox == null || prox.distanciaKm > _raioMaximoKm!) return false;
+      }
+      return true;
+    }).toList();
 
-    return resultado;
+    return FiltradorCatalogoExplorar.ordenarPicosFiltrados(
+      itens: filtrados,
+      ordem: _ordem,
+      proximidadePorId: proximidadePorId,
+    );
   }
 
   /// Lista dos picos filtrados mapeados diretamente para [CardCroquiViewModel] (Dumb UI).
