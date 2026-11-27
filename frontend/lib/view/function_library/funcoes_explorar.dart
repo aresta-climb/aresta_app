@@ -129,99 +129,17 @@ Widget buildCragListItem(
   );
 }
 
-void showDownloadBottomSheet(
-  BuildContext context,
-  dynamic crag,
-  VoidCallback onDownload,
-  ValueListenable<Map<String, double>> downloadingCrags, {
-  VoidCallback? onOpen,
-  bool isDownloaded = false,
+/// Calcula a opacidade contínua (`0.0 .. 1.0`) do fundo da barra superior conforme a gaveta sobe para modo Lista.
+double calcularOpacidadeFundoBarraTopo({
+  required double alturaGavetaPx,
+  required double alturaTelaPx,
 }) {
-  final CardCroquiViewModel pico = _normalizarCards([crag]).first;
-  final String localFormatado = pico.localizacao;
+  return ((alturaGavetaPx / math.max(1.0, alturaTelaPx) - 0.72) / 0.16)
+      .clamp(0.0, 1.0);
+}
 
-  showModalBottomSheet(
-    context: context,
-    useRootNavigator: true,
-    backgroundColor: context.colors.deepBasalt,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (BuildContext bottomSheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Bottom sheet handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: context.colors.graniteEdge,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                pico.nome.isNotEmpty ? pico.nome : 'Pico',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                localFormatado.isNotEmpty ? localFormatado : 'Local Desconhecido',
-                style: TextStyle(color: context.colors.ashGrey, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              if (pico.descricao.isNotEmpty) ...[
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Text(
-                      pico.descricao,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-              ValueListenableBuilder<Map<String, double>>(
-                valueListenable: downloadingCrags,
-                builder: (context, downloadingMap, child) {
-                  final progress = downloadingMap[pico.id];
-                  final isDownloading = progress != null;
-
-                  if (isDownloading) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: context.colors.darkPine,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'BAIXANDO...',
-                            style: TextStyle(
-                              color: context.colors.dryMoss,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                              letterSpacing: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
+/// Calcula o nível mínimo de zoom ao centralizar na coordenada GPS do usuário.
+double calcularLodFocoLocalizacaoUsuario(double lodAtual) =>
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24.0,
