@@ -105,61 +105,8 @@ class _BrowsePageState extends State<BrowsePage> {
     }
     _controladorCamera.iniciarVooParabolico(
       destinoLat: destino.latitude,
-                  ),
-                ),
-                Divider(color: context.colors.graniteEdge),
-                _buildSortOption(
-                  context,
-                  'Mais próximos',
-                  OrdemOrdenacaoPico.proximidade,
-                ),
-                _buildSortOption(
-                  context,
-                  'Alfabético (A-Z)',
-                  OrdemOrdenacaoPico.alfabetico,
-                ),
-                _buildSortOption(
-                  context,
-                  'Mais escaladas',
-                  OrdemOrdenacaoPico.escaladas,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSortOption(
-    BuildContext context,
-    String title,
-    OrdemOrdenacaoPico order,
-  ) {
-    final isSelected = widget.viewModel.ordem == order;
-    return InkWell(
-      onTap: () {
-        widget.viewModel.alterarOrdem(order);
-        Navigator.pop(context);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? context.colors.rustIron : Colors.white,
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            if (isSelected)
-              Icon(Icons.check, color: context.colors.rustIron, size: 20),
-          ],
-        ),
-      ),
+      destinoLon: destino.longitude,
+      destinoLod: destino.destinoLod,
     );
   }
 
@@ -169,6 +116,7 @@ class _BrowsePageState extends State<BrowsePage> {
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
+        bottom: false,
         child: ListenableBuilder(
           listenable: viewModel,
           builder: (context, _) {
