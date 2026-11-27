@@ -444,3 +444,90 @@ abstract final class GeradorMalhaGeograficaOffline {
         final fx = lx - x0;
         final fy = ly - y0;
 
+        final e00 = gradeTile[y0 * 256 + x0];
+        final e10 = gradeTile[y0 * 256 + x1];
+        final e01 = gradeTile[y1 * 256 + x0];
+        final e11 = gradeTile[y1 * 256 + x1];
+        final topo = e00 + (e10 - e00) * fx;
+        final base = e01 + (e11 - e01) * fx;
+        return topo + (base - topo) * fy;
+      }
+
+      final mapaPicos = <String, Map<String, dynamic>>{};
+      for (final p in picos) {
+        final gradeInt = <int>[];
+        for (var j = 0; j < n; j++) {
+          final v = -1.0 + (2.0 * j) / (n - 1);
+          final lat = p.lat + v * span;
+          for (var i = 0; i < n; i++) {
+            final u = -1.0 + (2.0 * i) / (n - 1);
+            final lon = p.lon + u * span;
+            final cota = await amostrarSrtm30m(lat, lon);
+            gradeInt.add(cota.round());
+          }
+        }
+
+        // Varredura fina de 35m em raio de ~600m (cume/parede) e ~1.2km (base/vale)
+        var minBase = 99999;
+        var maxMacico = -99999;
+        for (var sj = -8; sj <= 8; sj++) {
+          final dLat = sj * 0.0014; // ~155m por passo -> ±1.24 km
+          for (var si = -8; si <= 8; si++) {
+            final dLon = si * 0.0014;
+            final dist = math.sqrt(dLat * dLat + dLon * dLon);
+            if (dist > 0.0115) continue;
+            final v = (await amostrarSrtm30m(p.lat + dLat, p.lon + dLon)).round();
+            if (v < minBase) minBase = v;
+            if (dist <= 0.0055 && v > maxMacico) {
+              maxMacico = v;
+            }
+          }
+        }
+
+        final cotaExataPino = (await amostrarSrtm30m(p.lat, p.lon)).round();
+        if (cotaExataPino > maxMacico) maxMacico = cotaExataPino;
+        if (cotaExataPino < minBase) minBase = cotaExataPino;
+
+        mapaPicos[p.id] = <String, dynamic>{
+          'altitude_ponto_m': cotaExataPino,
+          'altitude_base_m': minBase,
+          'altitude_pico_m': math.max(minBase, maxMacico),
+          'dimensao_grade': n,
+          'raio_grade_graus': span,
+          'grade_dem_m': gradeInt,
+        };
+      }
+
+      return <String, dynamic>{
+        'versao': '2026.11-nasa-srtm30m-terrarium-real',
+        'fonte': 'NASA SRTM 30m / NASADEM (AWS Open Data Terrarium Tiles z=12)',
+        'picos': mapaPicos,
+      };
+    } finally {
+      cliente.close(force: true);
+    }
+  }
+
+  /// Decodifica um tile PNG `256x256` (RGB ou RGBA 8-bit) codificado em formato Terrarium
+  /// (`elevacao_m = R * 256 + G + B / 256 - 32768`) usando apenas `dart:io` (`zlib`).
+  static List<double> decodificarPngTerrarium256(List<int> bytesPng) {
+    if (bytesPng.length < 33 ||
+        bytesPng[0] != 0x89 ||
+        bytesPng[1] != 0x50 ||
+        bytesPng[2] != 0x4E ||
+        bytesPng[3] != 0x47) {
+      throw const FormatException('Assinatura PNG inválida em tile Terrarium.');
+    }
+
+    int lerUint32(int pos) =>
+        (bytesPng[pos] << 24) |
+        (bytesPng[pos + 1] << 16) |
+        (bytesPng[pos + 2] << 8) |
+        bytesPng[pos + 3];
+
+    var offset = 8;
+    var largura = 0;
+    var altura = 0;
+    var tipoCor = 0;
+    final idatBuffer = BytesBuilder(copy: false);
+
