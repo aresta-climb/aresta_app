@@ -704,3 +704,100 @@ abstract final class GeradorMalhaGeograficaOffline {
     return saida;
   }
 
+  static List<List<List<double>>> _extrairAneisGeoJson(
+    Map<String, dynamic> geoJson,
+  ) {
+    final tipo = geoJson['type'];
+    if (tipo == 'FeatureCollection') {
+      final aneis = <List<List<double>>>[];
+      for (final f in (geoJson['features'] as List<dynamic>)) {
+        final geom = (f as Map<String, dynamic>)['geometry'];
+        if (geom is Map<String, dynamic>) {
+          aneis.addAll(_extrairAneisDeGeometria(geom));
+        }
+      }
+      return aneis;
+    }
+    if (tipo == 'Feature') {
+      return _extrairAneisDeGeometria(
+        geoJson['geometry'] as Map<String, dynamic>,
+      );
+    }
+    return _extrairAneisDeGeometria(geoJson);
+  }
+
+  static List<List<List<double>>> _extrairAneisDeGeometria(
+    Map<String, dynamic> geom,
+  ) {
+    final tipo = geom['type'];
+    final coords = geom['coordinates'] as List<dynamic>;
+    final aneis = <List<List<double>>>[];
+    if (tipo == 'Polygon') {
+      if (coords.isNotEmpty) {
+        aneis.add(_converterAnelBruto(coords.first as List<dynamic>));
+      }
+    } else if (tipo == 'MultiPolygon') {
+      for (final pol in coords) {
+        final anelLista = pol as List<dynamic>;
+        if (anelLista.isNotEmpty) {
+          aneis.add(_converterAnelBruto(anelLista.first as List<dynamic>));
+        }
+      }
+    }
+    return aneis;
+  }
+
+  static List<List<double>> _converterAnelBruto(List<dynamic> bruto) {
+    return bruto
+        .map((c) {
+          final par = c as List<dynamic>;
+          return <double>[
+            (par[0] as num).toDouble(),
+            (par[1] as num).toDouble(),
+          ];
+        })
+        .toList(growable: false);
+  }
+
+  static List<List<double>> _arredondarVertices(
+    List<List<double>> vertices, {
+    required int casas,
+  }) {
+    final fator = math.pow(10, casas).toDouble();
+    return vertices
+        .map(
+          (v) => <double>[
+            (v[0] * fator).round() / fator,
+            (v[1] * fator).round() / fator,
+          ],
+        )
+        .toList(growable: false);
+  }
+
+  static Future<String> _getTextoHttp(HttpClient cliente, String url) async {
+    final bytes = await _getBytesHttp(cliente, url);
+    return utf8.decode(bytes);
+  }
+
+  static Future<List<int>> _getBytesHttp(HttpClient cliente, String url) async {
+    for (var tentativa = 1; tentativa <= 4; tentativa++) {
+      final req = await cliente.getUrl(Uri.parse(url));
+      req.headers.set(HttpHeaders.userAgentHeader, 'ArestaClimbOfflineTool/1.0');
+      final resp = await req.close();
+      if (resp.statusCode == 200) {
+        final builder = BytesBuilder(copy: false);
+        await for (final chunk in resp) {
+          builder.add(chunk);
+        }
+        return builder.takeBytes();
+      }
+      await resp.drain<void>();
+      if ((resp.statusCode == 429 || resp.statusCode >= 500) && tentativa < 4) {
+        await Future<void>.delayed(Duration(milliseconds: 1600 * tentativa));
+        continue;
+      }
+      throw HttpException('HTTP ${resp.statusCode} em $url');
+    }
+    throw HttpException('Falha após retentativas em $url');
+  }
+
