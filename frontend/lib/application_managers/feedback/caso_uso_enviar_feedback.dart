@@ -8,12 +8,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
-import '../../../data/modelos/tipo_feedback.dart';
-import '../../../main.dart';
-import '../../../services/firebase/telemetria.dart';
-import '../../../services/feedback/feedback_metadata_collector.dart';
-import '../../../services/feedback/feedback_queue_service.dart';
-import '../../../theme/cores_app.dart';
+import '../../data/modelos/tipo_feedback.dart';
+import '../../idioma/tradutor_app.dart';
+import '../../main.dart';
+import '../../services/firebase/telemetria.dart';
+import '../../services/feedback/feedback_metadata_collector.dart';
+import '../../services/feedback/feedback_queue_service.dart';
+import '../../theme/cores_app.dart';
 
 class SubmitFeedbackUseCase {
   static final ValueNotifier<bool> isFeedbackOpen = ValueNotifier<bool>(false);
@@ -80,9 +81,7 @@ class SubmitFeedbackUseCase {
     if (contextoAtivo != null && contextoAtivo.mounted) {
       ScaffoldMessenger.of(contextoAtivo).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Feedback recebido! Muito obrigado por ajudar a melhorar o app.',
-          ),
+          content: Text(tr(ChaveTexto.feedbackRecebidoObrigado)),
           backgroundColor: AppColors.light.beastHide,
         ),
       );
