@@ -27,7 +27,7 @@ void main() {
   tearDown(ServicoTilesElevacaoTerrarium.redefinirParaTestes);
 
   group('ServicoTilesElevacaoTerrarium e ClienteTilesTerrariumAws', () {
-    test('carrega grade regional SRTM offline real (Uberlândia e BH), baixa tiles Terrarium sob demanda e aplica LRU', () async {
+    test('carrega grade regional SRTM offline real, mantém zoom canônico invariante ao LOD e aplica LRU', () async {
       final fake = FonteTilesElevacaoFake(altitudePadraoMetros: 1280);
       final servico = ServicoTilesElevacaoTerrarium(fonteRemota: fake);
       addTearDown(servico.dispose);
@@ -38,7 +38,6 @@ void main() {
       expect(servico.inicializado, isTrue);
       expect(servico.gradeRegionalOffline, isNotNull);
 
-      // Uberlândia (-18.9186, -48.2772) possui cota real de chapada (~800..920 m) na grade SRTM offline!
       final cotaUberlandia = servico.amostrarElevacaoReal(
         latitude: -18.9186,
         longitude: -48.2772,
@@ -46,9 +45,19 @@ void main() {
       expect(cotaUberlandia, isNotNull);
       expect(cotaUberlandia, inInclusiveRange(720.0, 960.0));
 
-      expect(ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(2.1), equals(8));
-      expect(ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(3.0), equals(10));
-      expect(ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(4.0), equals(12));
+      // Zoom canônico único (z=9) em todos os LODs impede trocas/saltos de DEM ao aproximar o zoom
+      expect(
+        ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(2.1),
+        equals(ServicoTilesElevacaoTerrarium.zoomCanonicoTerrarium),
+      );
+      expect(
+        ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(3.0),
+        equals(ServicoTilesElevacaoTerrarium.zoomCanonicoTerrarium),
+      );
+      expect(
+        ServicoTilesElevacaoTerrarium.escolherZoomTerrarium(4.0),
+        equals(ServicoTilesElevacaoTerrarium.zoomCanonicoTerrarium),
+      );
 
       // Abaixo de LOD 1.85 não requisita tiles
       servico.solicitarTilesVisiveis(
@@ -60,13 +69,13 @@ void main() {
       );
       expect(fake.totalChamadas, equals(0));
 
-      // Em LOD 3.8 requisita tiles z=12 e atualiza a cota local quando chegam
+      // Em LOD >= 1.85 requisita tiles z=9 e mantém a mesma cota exata em qualquer zoom subsequente
       servico.solicitarTilesVisiveis(
         minLat: -19.93,
         maxLat: -19.91,
         minLon: -43.95,
         maxLon: -43.93,
-        lod: 3.8,
+        lod: 2.2,
       );
       await Future<void>.delayed(const Duration(milliseconds: 120));
       expect(servico.totalTilesEmCache, greaterThan(0));
@@ -75,72 +84,22 @@ void main() {
         closeTo(1280.0, 2.0),
       );
 
-      // Interpola suavemente entre grade base, z=10 e z=12 conforme o LOD contínuo (zero saltos abruptos)
-      servico.solicitarTilesVisiveis(
-        minLat: -19.93,
-        maxLat: -19.91,
-        minLon: -43.95,
-        maxLon: -43.93,
-        lod: 2.2,
-      );
-      servico.solicitarTilesVisiveis(
-        minLat: -19.93,
-        maxLat: -19.91,
-        minLon: -43.95,
-        maxLon: -43.93,
-        lod: 3.0,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      expect(
-        servico.amostrarElevacaoReal(
-          latitude: -19.92,
-          longitude: -43.94,
-          lod: 2.20,
-        ),
-        closeTo(1280.0, 2.0),
-      );
-      expect(
-        servico.amostrarElevacaoReal(
-          latitude: -19.92,
-          longitude: -43.94,
-          lod: 2.85,
-        ),
-        closeTo(1280.0, 2.0),
-      );
-      expect(
-        servico.amostrarElevacaoReal(
-          latitude: -19.92,
-          longitude: -43.94,
-          lod: 3.70,
-        ),
-        closeTo(1280.0, 2.0),
-      );
-      expect(
-        servico.amostrarElevacaoReal(
-          latitude: -19.92,
-          longitude: -43.94,
-          lod: 4.20,
-        ),
-        closeTo(1280.0, 2.0),
-      );
-
-      // Nova solicitação para os mesmos tiles usa cache sem refazer download
       final chamadasAntes = fake.totalChamadas;
       servico.solicitarTilesVisiveis(
         minLat: -19.93,
         maxLat: -19.91,
         minLon: -43.95,
         maxLon: -43.93,
-        lod: 3.8,
+        lod: 4.1,
       );
       expect(fake.totalChamadas, equals(chamadasAntes));
 
-      // Evicção LRU acima de 48 tiles
+      // Evicção LRU acima de limiteCacheTiles (64)
       final rgbaDummy = Uint8List(256 * 256 * 4);
-      for (var x = 0; x < 55; x++) {
+      for (var x = 0; x < 72; x++) {
         servico.registrarTileEmMemoria(
           TileElevacaoTerrarium.deRgba256(
-            zoom: 8,
+            zoom: 9,
             x: x,
             y: 100,
             rgba: rgbaDummy,
@@ -161,17 +120,17 @@ void main() {
       addTearDown(srvFalho.dispose);
       await srvFalho.inicializar();
       srvFalho.solicitarTilesVisiveis(
-        minLat: -22.0,
-        maxLat: -18.0,
-        minLon: -46.0,
-        maxLon: -41.0,
+        minLat: -25.0,
+        maxLat: -15.0,
+        minLon: -50.0,
+        maxLon: -40.0,
         lod: 2.2,
       );
       await Future<void>.delayed(const Duration(milliseconds: 60));
       fakeFalho.simularFalhaRede = true;
       srvFalho.solicitarTilesVisiveis(
-        minLat: -15.0,
-        maxLat: -14.0,
+        minLat: -14.0,
+        maxLat: -13.0,
         minLon: -45.0,
         maxLon: -44.0,
         lod: 2.2,
@@ -201,15 +160,15 @@ void main() {
         clienteHttp: ClienteHttpAresta.paraTestes(http.Client()),
       );
 
-      final recebido = await cliente.baixarPngTile(zoom: 8, x: 93, y: 143);
+      final recebido = await cliente.baixarPngTile(zoom: 9, x: 186, y: 286);
       expect(recebido, isNotNull);
       expect(recebido!.length, equals(pngValido.length));
 
       statusCode = 404;
-      expect(await cliente.baixarPngTile(zoom: 8, x: 93, y: 143), isNull);
+      expect(await cliente.baixarPngTile(zoom: 9, x: 186, y: 286), isNull);
 
       await servidor.close(force: true);
-      expect(await cliente.baixarPngTile(zoom: 8, x: 93, y: 143), isNull);
+      expect(await cliente.baixarPngTile(zoom: 9, x: 186, y: 286), isNull);
     });
   });
 }
