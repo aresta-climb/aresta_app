@@ -174,3 +174,82 @@ class ControladorCameraGlobo extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Atualiza o nível contínuo de zoom (`lod`), puxando suavemente o centro apenas se o alvo já estiver próximo.
+  void definirLod(
+    double novoLod, {
+    double? latAlvoSuave,
+    double? lonAlvoSuave,
+  }) {
+    _vooAtivo = null;
+    final proximo = novoLod.clamp(lodMinimo, lodMaximo);
+    if (proximo > _lod &&
+        proximo > 1.25 &&
+        latAlvoSuave != null &&
+        lonAlvoSuave != null &&
+        (latAlvoSuave - _latitudeCentral).abs() < 0.85 &&
+        (((lonAlvoSuave - _longitudeCentral + 540.0) % 360.0) - 180.0).abs() <
+            0.85) {
+      final puxada = smoothstep(1.25, 2.7, proximo) * 0.08;
+      _latitudeCentral =
+          _lerp(_latitudeCentral, latAlvoSuave, puxada).clamp(-68.0, 68.0);
+      _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+        _lerp(_longitudeCentral, lonAlvoSuave, puxada),
+      );
+    }
+    _lod = proximo;
+    if (!_modo3D) {
+      _latitudeCentral =
+          _limitarLatitude2D(_latitudeCentral, _ultimoTamanhoTela);
+    }
+    notifyListeners();
+  }
+
+  /// Marca o início de um gesto contínuo de toque na superfície, inibindo inércia parasita sob o dedo.
+  void iniciarInteracaoManual() {
+    _interagindoManual = true;
+    _teveMultiToqueNoGesto = false;
+    _vooAtivo = null;
+    _velLon = 0.0;
+    _velLat = 0.0;
+  }
+
+  /// Processa simultaneamente translação (`dxPx`, `dyPx`) e mudança incremental de escala (`fatorEscala`).
+  void aplicarGestoContinuo({
+    required double dxPx,
+    required double dyPx,
+    required double fatorEscala,
+    required Offset pontoFocalTela,
+    required int contagemPonteiros,
+    required Size tamanhoTela,
+  }) {
+    _ultimoTamanhoTela = tamanhoTela;
+    if (contagemPonteiros >= 2) {
+      _teveMultiToqueNoGesto = true;
+    }
+    if (dxPx.abs() > 0.001 || dyPx.abs() > 0.001) {
+      _aplicarDeslocamentoPonteiro(
+        dxPx: dxPx,
+        dyPx: dyPx,
+        tamanhoTela: tamanhoTela,
+        gravarVelocidade: false,
+      );
+    }
+    if ((fatorEscala - 1.0).abs() >= 1e-4) {
+      aplicarZoomFocal(
+        fatorEscala: fatorEscala,
+        pontoFocalTela: pontoFocalTela,
+        tamanhoTela: tamanhoTela,
+      );
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// Finaliza o gesto manual e converte a velocidade física de soltura (quando 1 dedo) em inércia suave.
+  void encerrarInteracaoManual({
+    required Size tamanhoTela,
+    Offset velocidadePixelsPorSegundo = Offset.zero,
+  }) {
+    _ultimoTamanhoTela = tamanhoTela;
+    _interagindoManual = false;
+
