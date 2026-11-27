@@ -82,3 +82,91 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
         final totalAtivos = vm.totalFiltrosAtivos;
         final chipsAtivos = _construirChipsAtivos(context, vm);
 
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xDF141920),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search_rounded,
+                            color: colors.ashGrey,
+                            size: 19,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _controladorTexto,
+                              onChanged: vm.alterarTermoBusca,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13.5,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                hintText: context.tr(
+                                  ChaveTexto.explorarBuscaHint,
+                                ),
+                                hintStyle: TextStyle(
+                                  color: colors.ashGrey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (vm.termoBusca.isNotEmpty)
+                            InkWell(
+                              key: const Key('botao_limpar_busca_explorar'),
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                _controladorTexto.clear();
+                                vm.alterarTermoBusca('');
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 17,
+                                  color: colors.ashGrey,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Material(
+                        color: totalAtivos > 0
+                            ? colors.rustIron.withValues(alpha: 0.22)
+                            : const Color(0xDF141920),
+                        borderRadius: BorderRadius.circular(22),
+                        child: InkWell(
+                          key: const Key('botao_abrir_filtros_explorar'),
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: () => exibirModalFiltrosOrdenacaoExplorar(
+                            context: context,
+                            viewModel: vm,
+                          ),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
