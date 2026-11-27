@@ -81,6 +81,7 @@ class MalhaGeograficaGlobo {
   final List<PoligonoGeografico> estados;
   final List<LocalidadeRegionalMapa> localidadesProximas;
   final List<RodoviaRegionalMapa> rodoviasProximas;
+  final String versaoMalhaViaria;
 
   const MalhaGeograficaGlobo({
     required this.continentes,
@@ -88,7 +89,22 @@ class MalhaGeograficaGlobo {
     required this.estados,
     this.localidadesProximas = const [],
     this.rodoviasProximas = const [],
+    this.versaoMalhaViaria = '',
   });
+
+  /// Retorna uma nova instância imutável substituindo as rodovias pela cópia offline sincronizada.
+  MalhaGeograficaGlobo comRodoviasAtualizadas(
+    List<RodoviaRegionalMapa> novasRodovias, {
+    String? versaoMalhaViaria,
+  }) =>
+      MalhaGeograficaGlobo(
+        continentes: continentes,
+        brasil: brasil,
+        estados: estados,
+        localidadesProximas: localidadesProximas,
+        rodoviasProximas: novasRodovias,
+        versaoMalhaViaria: versaoMalhaViaria ?? this.versaoMalhaViaria,
+      );
 
   /// Carrega e decodifica a malha geográfica em `Isolate.run`, mantendo cache em RAM.
   static Future<MalhaGeograficaGlobo> carregarDoAssetBundle({
@@ -151,16 +167,9 @@ class MalhaGeograficaGlobo {
 
     final listaRodovias =
         ((raiz['rodovias_proximas'] as List<dynamic>?) ?? const [])
-            .map((item) {
-              final m = item as Map<String, dynamic>;
-              return RodoviaRegionalMapa(
-                ehPrincipal: (m['classe'] as String?) == 'principal',
-                codigo: (m['codigo'] as String?) ?? '',
-                verticesLonLat:
-                    _converterListaVertices(m['poligono'] as List<dynamic>),
-              );
-            })
+            .map((item) => RodoviaRegionalMapa.deMapa(item as Map<String, dynamic>))
             .toList(growable: false);
+    final versaoViaria = (raiz['versao_malha_viaria'] as String?) ?? '';
 
     return MalhaGeograficaGlobo(
       continentes: listaCont,
@@ -168,6 +177,7 @@ class MalhaGeograficaGlobo {
       estados: listaEstados,
       localidadesProximas: listaLocalidades,
       rodoviasProximas: listaRodovias,
+      versaoMalhaViaria: versaoViaria,
     );
   }
 
