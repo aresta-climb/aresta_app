@@ -307,7 +307,38 @@ void main() {
         );
         expect(ptBaseClose.visivel, isTrue);
         expect(ptTopoClose.visivel, isTrue);
-        expect(ptTopoClose.y, lessThan(ptBaseClose.y - 40.0));
+        // Opção A: superfície travada no geoide (zero deslocamento vertical/paralaxe por altitude)
+        expect(ptTopoClose.x, closeTo(ptBaseClose.x, 1e-6));
+        expect(ptTopoClose.y, closeTo(ptBaseClose.y, 1e-6));
+
+        // Zoom focal 3D mantém o ponto geográfico ancorado sob o gesto de pinça
+        final ctrlPinch3d = ControladorCameraGlobo(
+          latitudeInicial: -19.92,
+          longitudeInicial: -43.94,
+          lodInicial: 2.4,
+          modo3DInicial: true,
+        );
+        addTearDown(ctrlPinch3d.dispose);
+        const telaPinch = Size(400, 800);
+        final ptAlvoAntes = ctrlPinch3d.projetarCoordenada(
+          latitude: -19.86,
+          longitude: -43.88,
+          elevacaoMetros: 0.0,
+          tamanhoTela: telaPinch,
+        );
+        final foco3d = Offset(ptAlvoAntes.x, ptAlvoAntes.y);
+        ctrlPinch3d.aplicarZoomFocal(
+          fatorEscala: 1.45,
+          pontoFocalTela: foco3d,
+          tamanhoTela: telaPinch,
+        );
+        final ptAlvoDepois = ctrlPinch3d.projetarCoordenada(
+          latitude: -19.86,
+          longitude: -43.88,
+          elevacaoMetros: 0.0,
+          tamanhoTela: telaPinch,
+        );
+        expect((Offset(ptAlvoDepois.x, ptAlvoDepois.y) - foco3d).distance, lessThan(6.0));
         expect(
           ctrlCloseUp.nivelDetalheObjeto(latitude: -20.07, longitude: -44.32),
           greaterThan(3.8),

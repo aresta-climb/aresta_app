@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/modelos_clima_pico.dart';
+import 'package:frontend/services/clima/servico_malha_viaria_offline.dart';
 import 'package:frontend/services/clima/servico_tiles_elevacao_terrarium.dart';
 import 'package:frontend/view/view_models/cena_globo_explorar_view_model.dart';
 import 'package:frontend/widgets/explorar/componentes_marcador_globo.dart';
@@ -13,6 +15,21 @@ import 'package:frontend/widgets/explorar/controlador_camera_globo.dart';
 import 'package:frontend/widgets/explorar/malha_relevo_lod.dart';
 
 import '../../fakes/fonte_tiles_elevacao_fake.dart';
+
+class _FonteMalhaViariaDeterministica implements FonteRemotaMalhaViaria {
+  String? versaoRemota;
+  SnapshotMalhaViariaOffline? snapshotRemoto;
+
+  @override
+  Future<String?> consultarVersaoRemota() async => versaoRemota;
+
+  @override
+  Future<SnapshotMalhaViariaOffline> buscarSnapshotRemoto() async {
+    final snap = snapshotRemoto;
+    if (snap == null) throw const HttpException('Sem snapshot');
+    return snap;
+  }
+}
 
 Future<ui.Image> _criarImagem1x1() async {
   final pixels = Uint8List.fromList([30, 80, 140, 255]);
@@ -82,11 +99,23 @@ void main() {
       );
       addTearDown(servicoTiles.dispose);
 
+      final tempViario = await Directory.systemTemp.createTemp('cena_vm_viario_');
+      addTearDown(() => tempViario.delete(recursive: true));
+      final fonteViaria = _FonteMalhaViariaDeterministica();
+      final servicoViario = ServicoMalhaViariaOffline(
+        armazenamento: ArmazenamentoMalhaViariaLocal(
+          provedorDiretorioBase: () async => tempViario.path,
+        ),
+        fonteRemota: fonteViaria,
+      );
+      addTearDown(servicoViario.dispose);
+
       final vm = CenaGloboExplorarViewModel(
         lodInicialCamera: 2.0,
         carregarMalha: () => completerMalha.future,
         carregarTextura: () => completerTextura.future,
         servicoElevacao: servicoTiles,
+        servicoMalhaViaria: servicoViario,
       );
       addTearDown(vm.dispose);
 
@@ -119,6 +148,27 @@ void main() {
 
       final redeOutraLista = vm.obterRedeViaria(const []);
       expect(redeOutraLista, isNot(same(rede1)));
+
+      // Quando o serviço offline-first sincroniza nova versão viária no Supabase, atualiza a malha reativamente
+      fonteViaria.versaoRemota = 'osm-v2-atualizada';
+      fonteViaria.snapshotRemoto = SnapshotMalhaViariaOffline(
+        geradoEm: DateTime.utc(2026, 11, 27, 16, 0),
+        versaoHash: 'osm-v2-atualizada',
+        rodovias: [
+          RodoviaRegionalMapa.comLimites(
+            ehPrincipal: true,
+            nivelViario: 1,
+            codigo: 'BR-040',
+            verticesLonLat: const [
+              ui.Offset(-43.9386, -19.9191),
+              ui.Offset(-43.8000, -20.2000),
+            ],
+          ),
+        ],
+      );
+      expect(await servicoViario.sincronizarSeDisponivel(forcar: true), isTrue);
+      expect(vm.malha?.versaoMalhaViaria, equals('osm-v2-atualizada'));
+      expect(vm.malha?.rodoviasProximas.single.codigo, equals('BR-040'));
 
       // Memoização O(1) das curvas de nível em coordenadas fixas do mundo durante o movimento da câmera
       final ctrlCurvas = ControladorCameraGlobo(
@@ -157,6 +207,7 @@ void main() {
         lodInicialCamera: 0.2,
         carregarMalha: () => completerLento.future,
         carregarTextura: () async => img,
+        servicoMalhaViaria: servicoViario,
       );
       final futuroCancelado = vmDescartado.inicializarAssetsSeNecessario();
       vmDescartado.dispose();
