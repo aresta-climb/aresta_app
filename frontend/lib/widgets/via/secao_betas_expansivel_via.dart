@@ -263,3 +263,95 @@ class SecaoBetasMidiaVia extends StatelessWidget {
     if (midias.isEmpty) return const SizedBox.shrink();
     final cores = context.colors;
 
+    return _CartaoSecaoExpansivelVia(
+      chaveCabecalho: const Key('cabecalho_betas_midia_via'),
+      icone: Icons.play_circle_outline_rounded,
+      tituloCaixaAlta: context.tr(
+        ChaveTexto.viaVideosBetasContagem,
+        {'n': midias.length},
+      ),
+      filhosExpandidos: [
+        for (var i = 0; i < midias.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: i == midias.length - 1 ? 0 : 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => aoAbrirMidia(midias[i].url),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cores.deepBasalt,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cores.graniteEdge),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: cores.rustIron,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            midias[i].titulo,
+                            style: TextStyle(
+                              color: cores.chalkWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            midias[i].origemRotulo,
+                            style: TextStyle(
+                              color: cores.ashGrey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 17,
+                      color: cores.ashGrey,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Feed recolhível (Dumb UI) de betas públicos da comunidade com foto de perfil do autor,
+/// iniciando fechado por padrão para proteger tentativas à vista e expondo edição/exclusão ao autor.
+class SecaoNotasComunidadeVia extends StatelessWidget {
+  /// Notas públicas pré-formatadas para exibição direta.
+  final List<NotaComunidadeApresentacao> notas;
+
+  /// Callback opcional acionado quando o próprio autor toca para editar seu comentário.
+  final ValueChanged<NotaComunidadeApresentacao>? aoEditarNota;
+
+  /// Callback opcional acionado quando o próprio autor toca para excluir seu comentário.
+  final ValueChanged<NotaComunidadeApresentacao>? aoExcluirNota;
+
+  /// Cria uma instância de [SecaoNotasComunidadeVia].
+  const SecaoNotasComunidadeVia({
+    super.key,
+    required this.notas,
+    this.aoEditarNota,
+    this.aoExcluirNota,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (notas.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
