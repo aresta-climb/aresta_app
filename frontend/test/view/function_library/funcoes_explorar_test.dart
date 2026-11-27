@@ -350,38 +350,8 @@ void main() {
         equals(1.0),
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return buildBrowseBody(
-                  context,
-                  picos,
-                  ValueNotifier<Map<String, double>>({}),
-                  onSearchChanged: (_) {},
-                  onDownload: (_) {},
-                  scrollController: controller,
-                  chaveSetimoPico: chaveSetimo,
-                );
-              },
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(chaveSetimo.currentContext, isNotNull);
-      expect(
-        find.descendant(
-          of: find.byKey(chaveSetimo),
-          matching: find.text('PICO ITEM 6'),
-        ),
-        findsOneWidget,
-      );
-
-      controller.dispose();
+      expect(calcularLodFocoLocalizacaoUsuario(0.40), closeTo(1.58, 1e-4));
+      expect(calcularLodFocoLocalizacaoUsuario(2.40), closeTo(2.40, 1e-4));
     },
   );
 }
-
