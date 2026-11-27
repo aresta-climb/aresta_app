@@ -167,7 +167,6 @@ jobs:
         run: |
           cp "$RUNNER_TEMP/Release.xcconfig.bak" ios/Flutter/Release.xcconfig
           flutter build ios --simulator \
-            --dart-define=HABILITAR_PERFIL=true \
             --target=lib/services/smoke_ci/main_smoke_ci.dart
 
           SIM_PLIST="build/ios/iphonesimulator/Runner.app/Info.plist"

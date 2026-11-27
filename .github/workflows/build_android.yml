@@ -146,7 +146,6 @@ jobs:
           STORE_FILE: upload-keystore.jks
         run: |
           ORG_GRADLE_PROJECT_arestaSmokeCi=true flutter build apk --release --obfuscate \
-            --dart-define=HABILITAR_PERFIL=true \
             --target-platform android-x64 \
             --target=lib/services/smoke_ci/main_smoke_ci.dart \
             --split-debug-info=build/smoke_symbols
