@@ -447,3 +447,96 @@ export async function coletarTempestadesAoVivoContornosOpenMeteo(
     }
   }
 
+  candidatosGlobais.sort((a, b) => b.relevancia - a.relevancia);
+  return candidatosGlobais.slice(0, 85).map((item, idx) => ({
+    id: `tempestade_${idx + 1}`,
+    ...item.bolha,
+  }));
+}
+
+/** Vincula eventos recentes de precipitação ao ID da tempestade ao vivo que cobre a coordenada do pico. */
+export function associarPicosAsTempestadesAtivas(
+  picos: PicoCoordenada[],
+  chuvaPorPico: Record<string, EventoChuvaJson[]>,
+  bolhas: BolhaChuvaJson[],
+): Record<string, EventoChuvaJson[]> {
+  if (bolhas.length === 0) return chuvaPorPico;
+  const mapaPicos = new Map<string, PicoCoordenada>();
+  for (const p of picos) mapaPicos.set(p.id, p);
+
+  const resultado: Record<string, EventoChuvaJson[]> = {};
+  for (const [idPico, eventos] of Object.entries(chuvaPorPico)) {
+    const coord = mapaPicos.get(idPico);
+    let bolhaAssociada: string | undefined;
+    if (coord) {
+      const encontrada = bolhas.find((b) =>
+        pontoEmPoligono(coord.longitude, coord.latitude, b.contorno_externo),
+      );
+      bolhaAssociada = encontrada?.id;
+    }
+    resultado[idPico] = bolhaAssociada
+      ? eventos.map((ev) => ({ ...ev, bolha_id: bolhaAssociada }))
+      : eventos;
+  }
+  return resultado;
+}
+
+function interpolarGradeMeteo(
+  grade: AmostraGradeClima[][],
+  minLat: number,
+  minLon: number,
+  passoLat: number,
+  passoLon: number,
+  lat: number,
+  lon: number,
+): AmostraGradeClima {
+  const rows = grade.length;
+  const cols = grade[0].length;
+  const rf = Math.max(0, Math.min(rows - 1.0001, (lat - minLat) / passoLat));
+  const cf = Math.max(0, Math.min(cols - 1.0001, (lon - minLon) / passoLon));
+  const r0 = Math.floor(rf);
+  const c0 = Math.floor(cf);
+  const r1 = Math.min(rows - 1, r0 + 1);
+  const c1 = Math.min(cols - 1, c0 + 1);
+  const tr = rf - r0;
+  const tc = cf - c0;
+
+  const a00 = grade[r0][c0];
+  const a01 = grade[r0][c1];
+  const a10 = grade[r1][c0];
+  const a11 = grade[r1][c1];
+  const bilerp = (
+    v00: number,
+    v01: number,
+    v10: number,
+    v11: number,
+  ): number => {
+    const topo = v00 + (v01 - v00) * tc;
+    const base = v10 + (v11 - v10) * tc;
+    return topo + (base - topo) * tr;
+  };
+
+  return {
+    mmHora: bilerp(a00.mmHora, a01.mmHora, a10.mmHora, a11.mmHora),
+    ventoWx: bilerp(a00.ventoWx, a01.ventoWx, a10.ventoWx, a11.ventoWx),
+    ventoWy: bilerp(a00.ventoWy, a01.ventoWy, a10.ventoWy, a11.ventoWy),
+  };
+}
+
+async function executarEmConcorrenciaLimitada<T>(
+  itens: T[],
+  limite: number,
+  tarefa: (item: T) => Promise<void>,
+): Promise<void> {
+  let proximoIndice = 0;
+  const trabalhadores = Array.from(
+    { length: Math.min(limite, itens.length) },
+    async () => {
+      while (proximoIndice < itens.length) {
+        const atual = itens[proximoIndice++];
+        await tarefa(atual);
+      }
+    },
+  );
+  await Promise.all(trabalhadores);
+}
