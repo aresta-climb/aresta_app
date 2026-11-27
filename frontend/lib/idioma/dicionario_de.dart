@@ -276,8 +276,61 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
   ChaveTexto.explorarBotaoClimaMapa: 'Regen & Feuer',
   ChaveTexto.explorarAvisoClimaTitulo: 'Nutzungshinweis',
   ChaveTexto.explorarAvisoClimaCorpo:
-      'Aresta nutzt 3 Wetter- und Radarquellen SOWIE 3 öffentliche Ressourcen aus NASA-Missionen, um eine Trefferquote von ~86% bei der Anzeige dieser Daten zu erreichen. Nutze dieses Werkzeug als Orientierungshilfe statt als absolute Wahrheit.',
+      'Aresta nutzt 3 Wetter- und Radarquellen (Open-Meteo, RainViewer, INPE BDQueimadas) SOWIE 3 öffentliche Ressourcen aus NASA-Missionen (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble), um eine Trefferquote von ~85% bei der Anzeige dieser Daten zu erreichen. Nutze dieses Werkzeug als Orientierungshilfe statt als absolute Wahrheit.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, auf Karte zeigen',
+  ChaveTexto.explorarBotaoVerEstatisticasClima: 'Statistik prüfen',
+  ChaveTexto.estatClimaTituloPagina: 'STATISTIK (~85%)',
+  ChaveTexto.estatClimaSubtituloHeroi:
+      '180-Tage-Hindcast (N = 5.133 Gebietstage über 29 Felsen), überprüft anhand der Standardnormalverteilung (Z-Tabelle).',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. HERLEITUNG DER ~85%-QUOTE',
+  ChaveTexto.estatClimaComposicaoChuvaMapa:
+      'Regionale Regenblasen (≥ 0,2 mm/Tag)',
+  ChaveTexto.estatClimaComposicaoUmidade4d:
+      'Konservatives 4-Tage-Nässefenster am Fels',
+  ChaveTexto.estatClimaComposicaoIncendioNasa:
+      'Aktive Waldbrandperimeter (NASA VIIRS 375m)',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. KONTINGENZTAFEL & FORMELN',
+  ChaveTexto.estatClimaMatrizExplicacao:
+      'Unabhängiger Hindcast (Jun–Nov 2024) von NOAA-GFS-Prognosen (0,25°) gegen ECMWF-ERA5-Reanalysen an allen 29 Felsen:',
+  ChaveTexto.estatClimaSecaoTabelaZTitulo:
+      '3. ABGLEICH MIT DER Z-TABELLE (NULLHYPOTHESE)',
+  ChaveTexto.estatClimaTabelaZExplicacao:
+      'Unter der Nullhypothese ohne Prognosegüte (H₀: p₀ = 0,50 Zufall bzw. Klimabasis p₀ = 0,5853) gilt Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. Prüfe direkt in der Z-Tabelle unten den einseitigen Test H₀: p ≤ 0,83 (Z = +2,57 → Φ = 0,9949, p = 0,0051) und das 95%-KI (Z = 1,96):',
+  ChaveTexto.estatClimaGraficoH0Rotulo: 'Nullverteilung (H₀)',
+  ChaveTexto.estatClimaGraficoCaudaRotulo: 'Rechter Rand (+27,7σ bis +49,0σ)',
+  ChaveTexto.estatClimaColunaZ: 'Z-Wert',
+  ChaveTexto.estatClimaColunaPhi: 'Φ(Z) Kumul.',
+  ChaveTexto.estatClimaColunaCauda: 'Rand 1−Φ',
+  ChaveTexto.estatClimaColunaNota: 'Z-Tabellenwert',
+  ChaveTexto.estatClimaZNotaMedia: 'Zentrum der Nullhypothese (50%)',
+  ChaveTexto.estatClimaZNota90: 'Einseitige 90%-Schwelle',
+  ChaveTexto.estatClimaZNota95: 'Einseitige Standardschwelle (α = 0,05)',
+  ChaveTexto.estatClimaZNotaIC95: 'Zweiseitiges 95%-KI ([83,7%, 87,2%])',
+  ChaveTexto.estatClimaZNota99: 'Einseitige 99%-Schwelle (α = 0,01)',
+  ChaveTexto.estatClimaZNotaTeste83:
+      'Aresta-Test p̂ = 85,5% vs H₀ ≤ 83% (p = 0,0051)',
+  ChaveTexto.estatClimaZNota999: '99,9%-Schwelle (α = 0,001)',
+  ChaveTexto.estatClimaZNotaFimTabela:
+      'Ende gedruckter Z-Tabellen (Aresta: Z = +27,7σ)',
+  ChaveTexto.estatClimaSecaoFontesTitulo: '4. VERWENDETE DATENQUELLEN',
+  ChaveTexto.estatClimaGrupoFontesMeteo:
+      '3 WETTER-, RADAR- & UMWELTQUELLEN',
+  ChaveTexto.estatClimaGrupoFontesNasa:
+      '3 ÖFFENTLICHE RESSOURCEN AUS NASA-MISSIONEN',
+  ChaveTexto.estatClimaFonteOpenMeteoDesc:
+      'Numerische Modelle NOAA GFS, DWD ICON und ECMWF IFS für 5-Tage-Niederschlag, Sturmfronten und 10-m-Wind.',
+  ChaveTexto.estatClimaFonteRainViewerDesc:
+      'Globales Live-Dopplerradar-Mosaik zur Ortung konvektiver Regenzellen und Starkregenkernen.',
+  ChaveTexto.estatClimaFonteInpeDesc:
+      'INPE-BDQueimadas-Programm zur täglichen Überwachung von Hitzepunkten in Brasilien.',
+  ChaveTexto.estatClimaFonteFirmsDesc:
+      'Orbitale Thermalsensoren VIIRS (375 m) und MODIS (1 km) der Missionen Suomi NPP, NOAA-20 und Aqua/Terra.',
+  ChaveTexto.estatClimaFonteSrtmDesc:
+      'Shuttle Radar Topography Mission (30 m über AWS Terrarium) für reale Geländehöhen und Höhenlinien.',
+  ChaveTexto.estatClimaFonteBlueMarbleDesc:
+      'NASA Blue Marble Next Generation Satellitenmosaik für die Globus-Basiskarte.',
+  ChaveTexto.estatClimaAvisoFinal:
+      'Mikroklima, Sickerwasser in Rissen, Sonnenausrichtung und lokaler Wind beeinflussen die Felstrocknung. Prüfe die Bedingungen immer vor Ort.',
   ChaveTexto.climaChuvaFraca: 'Leichter Regen',
   ChaveTexto.climaChuvaModerada: 'Mäßiger Regen',
   ChaveTexto.climaChuvaForte: 'Starkregen',
