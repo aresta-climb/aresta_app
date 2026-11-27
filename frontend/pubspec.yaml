@@ -30,8 +30,6 @@ dependencies:
   firebase_remote_config: ^7.0.1
   firebase_performance: ^0.12.1
   yaml: ^3.1.3
-  google_maps_flutter: ^2.19.0
-  google_maps_flutter_ios_sdk9: ^2.19.0
   feedback: ^3.2.0
   workmanager: ^0.10.0
   uuid: ^4.5.3
@@ -79,6 +77,9 @@ flutter:
     - assets/logo_app_trace.svg
     - assets/preload/
     - assets/preload/thumbnails/
+    - assets/geometria/malha_globo_brasil.json
+    - assets/geometria/textura_globo_nasa.jpg
+    - assets/dados/altimetria_picos_inicial.json
 
   fonts:
     - family: BebasNeue
