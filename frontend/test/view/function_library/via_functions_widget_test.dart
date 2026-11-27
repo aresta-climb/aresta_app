@@ -406,7 +406,80 @@ void main() {
           'Comentário revisado pela autora!',
         );
         await tester.tap(
-        expect(find.text('8a'), findsOneWidget);
+          find.byKey(const Key('btn_salvar_comentario_editado_via')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Comentário atualizado!'), findsOneWidget);
+        expect(find.text('Comentário revisado pela autora!'), findsOneWidget);
+        ScaffoldMessenger.of(tester.element(find.byType(CorpoDetalhesVia)))
+            .clearSnackBars();
+        await tester.pumpAndSettle();
+
+        final btnExcluirCom = find.byKey(Key('btn_excluir_comentario_$comUid'));
+        await tester.ensureVisible(btnExcluirCom);
+        await tester.tap(btnExcluirCom);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('btn_confirmar_exclusao_interacao_via')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Comentário excluído.'), findsOneWidget);
+        expect(find.text('Comentário revisado pela autora!'), findsNothing);
+        ScaffoldMessenger.of(tester.element(find.byType(CorpoDetalhesVia)))
+            .clearSnackBars();
+        await tester.pumpAndSettle();
+
+        // 2. Editar (com falha e sucesso) e excluir alerta do autor na ViaPage
+        final bolhaFauna = find.byKey(const Key('bolha_alerta_FAUNA'));
+        await tester.ensureVisible(bolhaFauna);
+        repoFake.erroSimulado = StateError('Erro simulado');
+        await tester.tap(bolhaFauna);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_editar_alerta_modal')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Não foi possível atualizar este alerta.'),
+          findsOneWidget,
+        );
+        ScaffoldMessenger.of(tester.element(find.byType(CorpoDetalhesVia)))
+            .clearSnackBars();
+        await tester.pumpAndSettle();
+
+        repoFake.erroSimulado = null;
+        await tester.tap(bolhaFauna);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_editar_alerta_modal')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('opcao_alerta_PROTECAO_PRECARIA')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+        await tester.pumpAndSettle();
+        expect(find.text('Alerta atualizado!'), findsOneWidget);
+        ScaffoldMessenger.of(tester.element(find.byType(CorpoDetalhesVia)))
+            .clearSnackBars();
+        await tester.pumpAndSettle();
+
+        final bolhaProt = find.byKey(
+          const Key('bolha_alerta_PROTECAO_PRECARIA'),
+        );
+        await tester.ensureVisible(bolhaProt);
+        await tester.tap(bolhaProt);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_excluir_alerta_modal')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('btn_confirmar_exclusao_interacao_via')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Alerta excluído.'), findsOneWidget);
+        expect(
+          find.byKey(const Key('bolha_alerta_PROTECAO_PRECARIA')),
+          findsNothing,
+        );
       },
     );
   });
