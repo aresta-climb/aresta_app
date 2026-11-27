@@ -84,46 +84,48 @@ class MeusCroquisPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListenableBuilder(
-                listenable: viewModel,
-                builder: (context, _) {
-                  final List<CardCroquiViewModel> croquis = viewModel.croquisSalvos;
+                ),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: viewModel,
+                    builder: (context, _) {
+                      final List<CardCroquiViewModel> croquis =
+                          viewModel.croquisSalvos;
 
-                  if (croquis.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Nenhum croqui salvo offline ainda.',
-                        style: TextStyle(color: context.colors.ashGrey),
-                      ),
-                    );
-                  }
+                      if (croquis.isEmpty) {
+                        return Center(
+                          child: Text(
+                            context.tr(ChaveTexto.meusCroquisVazio),
+                            style: TextStyle(color: context.colors.ashGrey),
+                          ),
+                        );
+                      }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: croquis.length,
-                    itemBuilder: (context, index) {
-                      final CardCroquiViewModel dados = croquis[index];
-                      return OfflineCragCard(
-                        dados: dados,
-                        onAbrir: () => viewModel.abrirCroqui(context, dados.id),
-                        onExcluir: () => viewModel.excluirCroqui(
-                          context,
-                          dados.id,
-                          dados.titulo,
-                        ),
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        itemCount: croquis.length,
+                        itemBuilder: (context, index) {
+                          final CardCroquiViewModel dados = croquis[index];
+                          return OfflineCragCard(
+                            dados: dados,
+                            onAbrir: () =>
+                                viewModel.abrirCroqui(context, dados.id),
+                            onExcluir: () => viewModel.excluirCroqui(
+                              context,
+                              dados.id,
+                              dados.titulo,
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
