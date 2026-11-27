@@ -182,3 +182,61 @@ void main() {
           dataReferencia: DateTime.utc(2026, 11, 25, 19, 30),
         );
 
+        expect(
+          bolhasAtivas.map((b) => b.bolha.id),
+          ['extrema', 'forte', 'moderada', 'leve'],
+        );
+        expect(
+          bolhasAtivas[0].nivelIntensidade,
+          equals(NivelIntensidadeChuva.extrema),
+        );
+        expect(
+          bolhasAtivas[1].nivelIntensidade,
+          equals(NivelIntensidadeChuva.forte),
+        );
+        expect(
+          bolhasAtivas[2].nivelIntensidade,
+          equals(NivelIntensidadeChuva.moderada),
+        );
+        expect(
+          bolhasAtivas[3].nivelIntensidade,
+          equals(NivelIntensidadeChuva.fraca),
+        );
+
+        final expiradas = CalculadoraUmidadePico.filtrarBolhasAtivas(
+          bolhas: listaBolhas,
+          geradoEm: geradoEm,
+          dataReferencia: DateTime.utc(2026, 11, 26, 2, 0),
+        );
+        expect(expiradas, isEmpty);
+
+        const incendio = BolhaIncendioRegional(
+          id: 'fogo_1',
+          latitude: -19.3,
+          longitude: -43.6,
+          potenciaFrpMw: 28.0,
+          totalFocos: 5,
+          ventoRumoGraus: 270.0,
+          ventoVelocidadeKmh: 14.0,
+          contornoExterno: contornoPadrao,
+        );
+        expect(
+          CalculadoraUmidadePico.filtrarIncendiosAtivos(
+            incendios: const [incendio],
+            geradoEm: geradoEm,
+            dataReferencia: DateTime.utc(2026, 11, 26, 12, 0),
+          ),
+          hasLength(1),
+        );
+        expect(
+          CalculadoraUmidadePico.filtrarIncendiosAtivos(
+            incendios: const [incendio],
+            geradoEm: geradoEm,
+            dataReferencia: DateTime.utc(2026, 11, 26, 20, 0),
+          ),
+          isEmpty,
+        );
+      },
+    );
+  });
+}
