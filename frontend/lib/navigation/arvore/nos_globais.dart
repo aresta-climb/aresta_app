@@ -173,3 +173,24 @@ class CadernetaNode extends NavNode {
   @override
   String toString() => 'CadernetaNode';
 }
+
+/// Nó que representa a página dedicada à demonstração estatística e Tabela Z do clima (~85%).
+class EstatisticasClimaNode extends NavNode {
+  const EstatisticasClimaNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(
+    covariant EstatisticasClimaNode matchingAncestor,
+  ) {
+    return EstatisticasClimaNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String get rotuloAmigavel => 'Estatísticas do Clima';
+
+  @override
+  String obterCaminhoCurto() => 'Início -> Explorar -> Estatísticas do Clima';
+
+  @override
+  String toString() => 'EstatisticasClimaNode';
+}
