@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/extrator_detalhes_tecnicos_via.dart';
 import '../../view/function_library/markdown_offline.dart';
+import 'secao_betas_expansivel_via.dart';
+
+export 'secao_betas_expansivel_via.dart';
 
 /// Faixa compacta declarativa (Dumb UI) de pílulas técnicas e parada da escalada,
 /// eliminando caixas largas semivazias em vias esparsas.
@@ -127,7 +131,10 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Ancoragem: $tipoAncoragem',
+                    context.tr(
+                      ChaveTexto.viaAncoragemPrefixo,
+                      {'tipo': tipoAncoragem},
+                    ),
                     style: TextStyle(color: cores.chalkWhite, fontSize: 12),
                   ),
                 ),
@@ -140,7 +147,8 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
   }
 }
 
-/// Seções textuais declarativas (Dumb UI) de descrição oficial, peças móveis, rack e acesso.
+/// Seções textuais declarativas (Dumb UI) de descrição oficial, peças móveis, rack e acesso,
+/// unificadas sob o mesmo padrão visual e tipográfico de cartão de `HISTÓRICO & CONQUISTA`.
 class SecaoTextosETecnicasVia extends StatelessWidget {
   /// Identificador do croqui para resolução de imagens locais no `OfflineMarkdown`.
   final String cragId;
@@ -155,32 +163,62 @@ class SecaoTextosETecnicasVia extends StatelessWidget {
     required this.secoes,
   });
 
+  static IconData _iconeParaSecao(String titulo) {
+    final minusculo = titulo.toLowerCase();
+    if (minusculo == tr(ChaveTexto.viaSecaoPecasMoveis).toLowerCase() ||
+        minusculo == tr(ChaveTexto.viaSecaoRackEquipamento).toLowerCase() ||
+        minusculo.contains('móveis') ||
+        minusculo.contains('rack')) {
+      return Icons.hardware_outlined;
+    }
+    if (minusculo == tr(ChaveTexto.viaSecaoDescricaoAcesso).toLowerCase() ||
+        minusculo.contains('acesso')) {
+      return Icons.hiking_rounded;
+    }
+    if (minusculo == tr(ChaveTexto.viaSecaoDescricaoAncoragem).toLowerCase() ||
+        minusculo.contains('ancoragem')) {
+      return Icons.anchor_rounded;
+    }
+    return Icons.notes_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (secoes.isEmpty) return const SizedBox.shrink();
     final cores = context.colors;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: secoes.map((secao) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _TituloSecaoVia(titulo: secao.titulo),
-              const SizedBox(height: 10),
-              secao.ehMarkdown
-                  ? OfflineMarkdown(data: secao.conteudo, cragId: cragId)
-                  : Text(
-                      secao.conteudo,
-                      style: TextStyle(
-                        color: cores.chalkWhite,
-                        fontSize: 14,
-                        height: 1.45,
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CabecalhoSecaoPadraoVia(
+                  icone: _iconeParaSecao(secao.titulo),
+                  tituloCaixaAlta: secao.titulo.toUpperCase(),
+                ),
+                const SizedBox(height: 12),
+                secao.ehMarkdown
+                    ? OfflineMarkdown(data: secao.conteudo, cragId: cragId)
+                    : Text(
+                        secao.conteudo,
+                        style: TextStyle(
+                          color: cores.chalkWhite,
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
                       ),
-                    ),
-            ],
+              ],
+            ),
           ),
         );
       }).toList(),
