@@ -176,3 +176,93 @@ export async function coletarTempestadesAoVivoContornosOpenMeteo(
         const lonsStr = lote.map((p) => p.lon.toFixed(3)).join(",");
         const url = `${URL_OPEN_METEO_FORECAST}?latitude=${latsStr}&longitude=${lonsStr}&current=precipitation,rain,showers,wind_speed_10m,wind_direction_10m&timezone=UTC`;
 
+        const resp = await fetch(url, {
+          headers: { "User-Agent": "ArestaSupabaseClimaSync/2.1" },
+        });
+        if (!resp.ok) {
+          throw new Error(
+            `Open-Meteo (malha ao vivo) retornou HTTP ${resp.status}`,
+          );
+        }
+        const json = await resp.json();
+        const entradas = Array.isArray(json) ? json : [json];
+        if (entradas.length !== lote.length) {
+          throw new Error(
+            `Contagem da malha Open-Meteo inesperada (${entradas.length} != ${lote.length}).`,
+          );
+        }
+
+        for (let k = 0; k < lote.length; k++) {
+          const cur = entradas[k]?.current ?? {};
+          const precip = Number(cur.precipitation ?? 0);
+          const chuva = Number(cur.rain ?? 0) + Number(cur.showers ?? 0);
+          const taxaMmH = Math.max(
+            0,
+            Number.isFinite(precip) ? precip : 0,
+            Number.isFinite(chuva) ? chuva : 0,
+          );
+          const velKmh = Math.max(0, Number(cur.wind_speed_10m ?? 12));
+          const dirDe = Number(cur.wind_direction_10m ?? 225);
+          const rumoParaRad = (((dirDe + 180) % 360) * Math.PI) / 180;
+
+          const pt = lote[k];
+          gradeMeteo[pt.r][pt.c] = {
+            mmHora: taxaMmH,
+            ventoWx: Math.sin(rumoParaRad) * velKmh,
+            ventoWy: Math.cos(rumoParaRad) * velKmh,
+          };
+        }
+      }),
+      mosaicoRadarPromessa,
+    ]);
+
+    // 2. Malha fina (~0,14° ≈ 15 km) para capturar todos os bolsões locais e recortes reais da frente
+    const rowsInt = Math.max(24, Math.min(88, Math.round(spanLat / 0.14) + 1));
+    const colsInt = Math.max(24, Math.min(88, Math.round(spanLon / 0.14) + 1));
+    const passoLat = spanLat / (rowsInt - 1);
+    const passoLon = spanLon / (colsInt - 1);
+
+    const R = rowsInt + 2;
+    const C = colsInt + 2;
+    const latsGrade: number[] = [];
+    const lonsGrade: number[] = [];
+    for (let r = 0; r < R; r++) latsGrade.push(regiao.minLat + (r - 1) * passoLat);
+    for (let c = 0; c < C; c++) lonsGrade.push(regiao.minLon + (c - 1) * passoLon);
+
+    const campoFino: AmostraGradeClima[][] = Array.from({ length: R }, () =>
+      Array.from({ length: C }, () => ({ mmHora: 0, ventoWx: 0, ventoWy: 0 })),
+    );
+
+    for (let r = 1; r <= rowsInt; r++) {
+      const lat = latsGrade[r];
+      for (let c = 1; c <= colsInt; c++) {
+        const lon = lonsGrade[c];
+        const interp = interpolarGradeMeteo(
+          gradeMeteo,
+          regiao.minLat,
+          regiao.minLon,
+          passoLatMeteo,
+          passoLonMeteo,
+          lat,
+          lon,
+        );
+        const radarMmH = mosaicoRadar
+          ? amostrarCelulaRadarMmHora(
+              mosaicoRadar,
+              lat,
+              lon,
+              passoLat * 0.5,
+              passoLon * 0.5,
+            )
+          : 0;
+        const mmCombinado = mosaicoRadar
+          ? Math.max(radarMmH, interp.mmHora * 0.82)
+          : interp.mmHora;
+        campoFino[r][c] = {
+          mmHora: mmCombinado,
+          ventoWx: interp.ventoWx,
+          ventoWy: interp.ventoWy,
+        };
+      }
+    }
+
