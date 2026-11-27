@@ -155,6 +155,17 @@ class DespachanteFilaInteracoes {
     await garantirCarregada();
     if (_filaPendente.isEmpty && _mutacoesPendentes.isEmpty) return;
 
+    var perfilAtual = await _prepararPerfilAutenticado();
+
+    if (_filaPendente.isNotEmpty) {
+      perfilAtual = await _drenarInsercoes(cliente, perfilAtual);
+    }
+    if (_mutacoesPendentes.isNotEmpty) {
+      await _drenarMutacoes(cliente, perfilAtual);
+    }
+  }
+
+  Future<PerfilEscalador> _prepararPerfilAutenticado() async {
     var perfilAtual = _repositorioCaderneta.obterPerfil();
     if (perfilAtual.estaAutenticado && perfilAtual.accessToken == null) {
       try {
@@ -168,7 +179,14 @@ class DespachanteFilaInteracoes {
         );
       }
     }
+    return perfilAtual;
+  }
 
+  Future<PerfilEscalador> _drenarInsercoes(
+    ClienteFilaInteracoes cliente,
+    PerfilEscalador perfilInicial,
+  ) async {
+    var perfilAtual = perfilInicial;
     final restantes = <ItemFilaInteracao>[];
     for (var i = 0; i < _filaPendente.length; i++) {
       var item = _filaPendente[i];
