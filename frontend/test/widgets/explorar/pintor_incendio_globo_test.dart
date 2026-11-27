@@ -167,3 +167,101 @@ void main() {
         );
         expect(qRelevo.any((b) => b > 0), isTrue);
 
+        ctrl.definirModo3D(false);
+        final q2d = await _renderizarIncendios(
+          ctrl: ctrl,
+          incendios: lista,
+          faseSegundos: 1.0,
+        );
+        expect(q2d.any((b) => b > 0), isTrue);
+
+        // No lado oposto do planeta em 3D (Japao), retorna 0 incendios desenhados
+        final ctrlOposto = ControladorCameraGlobo(
+          latitudeInicial: 35.0,
+          longitudeInicial: 139.0,
+          lodInicial: 0.3,
+        );
+        addTearDown(ctrlOposto.dispose);
+        final gravador = ui.PictureRecorder();
+        final desenhados = PintorIncendioGlobo.desenharIncendios(
+          canvas: ui.Canvas(gravador),
+          tamanhoTela: const ui.Size(220, 220),
+          controlador: ctrlOposto,
+          incendiosAtivos: lista,
+          picosReferencia: const [],
+          faseSegundos: 0.0,
+        );
+        gravador.endRecording().dispose();
+        expect(desenhados, equals(0));
+
+        // Jamais desenha fogo dentro de zona de chuva ativa (suprime centroide sob chuva e recorta bordas sobrepostas)
+        ctrl.definirModo3D(true);
+        ctrl.definirLod(1.25);
+        const chuvaSobreCipo = BolhaAtivaRenderizavel(
+          bolha: BolhaChuvaRegional(
+            id: 'chuva_total',
+            latitude: -19.35,
+            longitude: -43.60,
+            intensidadeMmHora: 5.0,
+            ventoRumoGraus: 90.0,
+            ventoVelocidadeKmh: 20.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -45.0, latitude: -20.5),
+              PontoContornoGeo(longitude: -42.5, latitude: -20.5),
+              PontoContornoGeo(longitude: -42.5, latitude: -18.2),
+              PontoContornoGeo(longitude: -45.0, latitude: -18.2),
+            ],
+          ),
+          nivelIntensidade: NivelIntensidadeChuva.forte,
+        );
+        final gravChuvaTotal = ui.PictureRecorder();
+        final qtdSobChuva = PintorIncendioGlobo.desenharIncendios(
+          canvas: ui.Canvas(gravChuvaTotal),
+          tamanhoTela: const ui.Size(220, 220),
+          controlador: ctrl,
+          incendiosAtivos: const [
+            BolhaIncendioAtivaRenderizavel(incendio: incendioCipo),
+          ],
+          bolhasChuvaAtivas: const [chuvaSobreCipo],
+          picosReferencia: const [],
+          faseSegundos: 0.5,
+        );
+        gravChuvaTotal.endRecording().dispose();
+        expect(qtdSobChuva, equals(0));
+
+        // Chuva cobrindo apenas a metade sul (-20.4..-19.55): recorta a parte chuvosa preservando o norte seco
+        const chuvaParcialSul = BolhaAtivaRenderizavel(
+          bolha: BolhaChuvaRegional(
+            id: 'chuva_sul',
+            latitude: -19.95,
+            longitude: -43.60,
+            intensidadeMmHora: 3.5,
+            ventoRumoGraus: 90.0,
+            ventoVelocidadeKmh: 18.0,
+            contornoExterno: [
+              PontoContornoGeo(longitude: -44.6, latitude: -20.4),
+              PontoContornoGeo(longitude: -42.6, latitude: -20.4),
+              PontoContornoGeo(longitude: -42.6, latitude: -19.55),
+              PontoContornoGeo(longitude: -44.6, latitude: -19.55),
+            ],
+          ),
+          nivelIntensidade: NivelIntensidadeChuva.moderada,
+        );
+        final qRecortado = await _renderizarIncendios(
+          ctrl: ctrl,
+          incendios: const [
+            BolhaIncendioAtivaRenderizavel(incendio: incendioCipo),
+          ],
+          bolhasChuva: const [chuvaParcialSul],
+          faseSegundos: 1.2,
+        );
+        final ptDentroChuva = ctrl.projetarCoordenada(
+          latitude: -19.82,
+          longitude: -43.60,
+          elevacaoMetros: 0.0,
+          tamanhoTela: const ui.Size(220, 220),
+        );
+        final idxDentroChuva =
+            (ptDentroChuva.y.round() * 220 + ptDentroChuva.x.round()) * 4;
+        expect(qRecortado[idxDentroChuva], equals(0));
+
