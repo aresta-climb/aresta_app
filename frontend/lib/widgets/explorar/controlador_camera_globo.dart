@@ -253,3 +253,93 @@ class ControladorCameraGlobo extends ChangeNotifier {
     _ultimoTamanhoTela = tamanhoTela;
     _interagindoManual = false;
 
+    final rapidez = velocidadePixelsPorSegundo.distance;
+    if (!_teveMultiToqueNoGesto &&
+        rapidez > 65.0 &&
+        !(_modo3D && _lod >= 2.35)) {
+      final escalaMax = rapidez > 2200.0 ? 2200.0 / rapidez : 1.0;
+      final vxFrame = velocidadePixelsPorSegundo.dx * escalaMax * 0.0166;
+      final vyFrame = velocidadePixelsPorSegundo.dy * escalaMax * 0.0166;
+      if (!_modo3D) {
+        final escala2D = calcularEscala2D(tamanhoTela);
+        _velLon = (-vxFrame / escala2D) / _grausParaRad;
+        _velLat = (vyFrame / escala2D) / _grausParaRad;
+      } else {
+        final grausPorPixel = (1.0 / raioAparentePx) / _grausParaRad;
+        final cosLat =
+            math.max(0.25, math.cos(_latitudeCentral * _grausParaRad));
+        _velLon = (-vxFrame * grausPorPixel) / cosLat;
+        _velLat = vyFrame * grausPorPixel;
+      }
+    } else {
+      _velLon = 0.0;
+      _velLat = 0.0;
+    }
+    _teveMultiToqueNoGesto = false;
+    notifyListeners();
+  }
+
+  /// Aplica fator multiplicativo de escala (`> 1` aproxima, `< 1` afasta) ancorando `pontoFocalTela` em 2D.
+  void aplicarZoomFocal({
+    required double fatorEscala,
+    required Offset pontoFocalTela,
+    required Size tamanhoTela,
+  }) {
+    _ultimoTamanhoTela = tamanhoTela;
+    _vooAtivo = null;
+    _velLon = 0.0;
+    _velLat = 0.0;
+
+    if (!_modo3D) {
+      final cy = calcularCentroVerticalOptico(tamanhoTela);
+      final escalaAntes = calcularEscala2D(tamanhoTela);
+      _latitudeCentral =
+          _limitarLatitude2D(_latitudeCentral, tamanhoTela, cy, escalaAntes);
+      final lonAncora = _longitudeCentral +
+          ((pontoFocalTela.dx - tamanhoTela.width * 0.5) / escalaAntes) /
+              _grausParaRad;
+      final latAncora = _latitudeCentral +
+          ((cy - pontoFocalTela.dy) / escalaAntes) / _grausParaRad;
+
+      final razaoTotal = _escalaMaxima2D / _escalaMinima2D(tamanhoTela);
+      final deltaLod =
+          lodMaximo * (math.log(fatorEscala) / math.log(razaoTotal));
+      _lod = (_lod + deltaLod).clamp(lodMinimo, lodMaximo);
+
+      final escalaDepois = calcularEscala2D(tamanhoTela);
+      _longitudeCentral = GeometriaGeoideGlobo.normalizarLongitude(
+        lonAncora -
+            ((pontoFocalTela.dx - tamanhoTela.width * 0.5) / escalaDepois) /
+                _grausParaRad,
+      );
+      _latitudeCentral = _limitarLatitude2D(
+        latAncora -
+            ((cy - pontoFocalTela.dy) / escalaDepois) / _grausParaRad,
+        tamanhoTela,
+        cy,
+        escalaDepois,
+      );
+    } else {
+      final deltaLod = math.log(fatorEscala) / math.log(7.6);
+      _lod = (_lod + deltaLod).clamp(lodMinimo, lodMaximo);
+    }
+    notifyListeners();
+  }
+
+  /// Aplica arrasto de ponteiro: rastreia 1:1 no plano 2D e move continuamente a superfície 3D.
+  void aplicarArrasto({
+    required double dxPx,
+    required double dyPx,
+    Size? tamanhoTela,
+  }) {
+    final tela = tamanhoTela ?? _ultimoTamanhoTela;
+    _ultimoTamanhoTela = tela;
+    _aplicarDeslocamentoPonteiro(
+      dxPx: dxPx,
+      dyPx: dyPx,
+      tamanhoTela: tela,
+      gravarVelocidade: !_interagindoManual,
+    );
+    notifyListeners();
+  }
+
