@@ -89,3 +89,93 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
   String? _picoComPulsoDestaque;
   Timer? _timerPulsoDestaque;
 
+  GlobalKey get _chaveSetimoEfetiva =>
+      widget.chaveSetimoPicoExterna ?? _chaveSetimoInterna;
+
+  @override
+  void initState() {
+    super.initState();
+    _encaixeAtual = widget.posicaoInicial;
+    _fracaoAtual = widget.posicaoInicial.fracaoAltura;
+    _fracaoInicioAnim = _fracaoAtual;
+    _fracaoAlvoAnim = _fracaoAtual;
+    _chaveSetimoInterna = GlobalKey();
+    _gerenciaScrollInterno = widget.scrollControllerExterno == null;
+    _scrollController = widget.scrollControllerExterno ?? ScrollController();
+
+    _animadorAltura = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    )..addListener(() {
+        final t = Curves.easeOutCubic.transform(_animadorAltura.value);
+        setState(() {
+          _fracaoAtual =
+              _fracaoInicioAnim + (_fracaoAlvoAnim - _fracaoInicioAnim) * t;
+        });
+        _publicarAlturaEmPixels();
+      });
+
+    _registrarOuvintes(widget.viewModel);
+    if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
+      _aoSolicitarScrollSetimoPico();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant GavetaDeslizanteExplorar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewModel != widget.viewModel) {
+      _removerOuvintes(oldWidget.viewModel);
+      _registrarOuvintes(widget.viewModel);
+      if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
+        _aoSolicitarScrollSetimoPico();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timerPulsoDestaque?.cancel();
+    _removerOuvintes(widget.viewModel);
+    _animadorAltura.dispose();
+    if (_gerenciaScrollInterno) {
+      _scrollController.dispose();
+    }
+    super.dispose();
+  }
+
+  void _registrarOuvintes(BrowseViewModel vm) {
+    vm.solicitacaoAutoScrollPicoSelecionado
+        .addListener(_aoSolicitarAutoScrollMapa);
+    vm.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
+  }
+
+  void _removerOuvintes(BrowseViewModel vm) {
+    vm.solicitacaoAutoScrollPicoSelecionado
+        .removeListener(_aoSolicitarAutoScrollMapa);
+    vm.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
+  }
+
+  void _publicarAlturaEmPixels() {
+    final px = (_alturaTotalDisponivel * _fracaoAtual)
+        .clamp(28.0, _alturaTotalDisponivel);
+    if ((widget.alturaGavetaPx.value - px).abs() > 0.2) {
+      widget.alturaGavetaPx.value = px;
+    }
+  }
+
+  void _animarParaEncaixe(PosicaoEncaixeGaveta destino) {
+    _encaixeAtual = destino;
+    _fracaoInicioAnim = _fracaoAtual;
+    _fracaoAlvoAnim = destino.fracaoAltura;
+    _animadorAltura.forward(from: 0.0);
+  }
+
+  void _aoSolicitarAutoScrollMapa() {
+    final idSelecionado = widget.viewModel.picoSelecionadoId;
+    if (idSelecionado == null) return;
+
+    if (_encaixeAtual == PosicaoEncaixeGaveta.mapa) {
+      _animarParaEncaixe(PosicaoEncaixeGaveta.dividir);
+    }
+
