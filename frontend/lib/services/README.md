@@ -11,7 +11,8 @@ Este diretório concentra os repositórios, clientes de rede, persistência loca
 | `repositorio_dataset.dart` e `dataset/` | Estado dos croquis baixados e online, armazenamento em disco, prioridade de acesso e normalização Protobuf v5 |
 | `editor_croqui.dart` e `editor_croqui/` | Alternância entre modo oficial e modo experimental (Editor Desktop via WebSocket) |
 | `http/` | `ClienteHttpAresta`, `SyncService`, `SyncIsolate`, `SyncNetwork`, `SyncStorage`, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano` e `UpdateDownloader` |
-| `catalogo/` | Banco SQLite local (`catalogo.db` / `RepositorioCatalogo`) com sincronização incremental e busca textual |
+| `catalogo/` | Banco SQLite local (`catalogo.db` / `RepositorioCatalogo`) com sincronização incremental, busca textual e agregação offline de perfis de grau por croqui (`PerfilGrauPico`) |
+| `clima/` | Estimativa conservadora de chuva próxima em janela de 4 dias reiniciada a cada precipitação regional (`CalculadoraUmidadePico`), tiles de elevação topográfica em tempo real via `AWS Open Data Terrarium` + grade regional SRTM offline (`ServicoTilesElevacaoTerrarium`), contornos reais de tempestade ao vivo com pegadas históricas (`-6h`/`-3h`, `RastroPassadoTempestade`) e vetor de vento (`BolhaChuvaRegional`), zonas ativas de incêndio florestal detectadas por satélite (`NASA FIRMS VIIRS 375m` / `INPE BDQueimadas NASA MODIS-VIIRS`, `BolhaIncendioRegional`), altimetria externa de picos (`NASA SRTM/NASADEM 30m`), sincronização com Supabase (`ServicoClimaAltimetria`), resolução e cache da localização GPS do usuário (`LocalizadorGpsUsuario`) e cache local com rotação de 1 cópia de segurança (`ArmazenamentoClimaLocal`) |
 | `autenticacao/` | Autenticação sem senha (`ServicoAutenticacaoLocal`), canal nativo (`AutenticadorNativoCanal`), cliente GoTrue (`ClienteSupabaseAutenticacao`), perfil/Storage (`SincronizadorPerfilSupabase`) e tradução de erros (`tradutor_erros_autenticacao.dart`) |
 | `midia/` | Seleção nativa de foto de perfil (`SeletorFotoPerfilNativo`), correção EXIF, corte `256x256` e compressão WebP |
 | `caderneta/` | Persistência local de ascensões (`RepositorioCadernetaLocal`), sincronização com `public.cadenas` (`ClienteCadenasSupabase`), estatísticas e hidratação de vias |
@@ -21,8 +22,6 @@ Este diretório concentra os repositórios, clientes de rede, persistência loca
 | `feedback/` | Coleta de diagnóstico, auditoria SHA-256 e fila local de envio para a Edge Function `app-feedback` |
 | `firebase/` | Isolamento de Firebase e Sentry (`AppLogger`, `TelemetryService`, `ServicoPerformance`, `RemoteConfigService`, `ValidadorApp`) |
 | `smoke_ci/` | Utilitários de validação pós-build em emuladores de CI (não importados por `lib/main.dart`) |
-| `controlador_interacoes_usuario.dart` | Preferência local (`interacoes_caderneta_ativas`) para exibir ou ocultar recursos de perfil e caderneta |
-| `configuracao_recursos.dart` | Leitura de flags `--dart-define` para ativação de recursos em desenvolvimento |
 | `gerenciador_filtros_croqui.dart` | Estado compartilhado de filtros e ordenação durante a navegação em um croqui |
 | `inicializacao_app.dart` | Configuração de memória, modo edge-to-edge, bootstrap de serviços locais, listeners de Live Reload e migração de termos |
 
@@ -45,9 +44,10 @@ Este diretório concentra os repositórios, clientes de rede, persistência loca
 
 ## Interações Comunitárias e Alertas (`comunidade/`)
 
-- **`RepositorioInteracoesViaMemoria`**: Mantém o cache em memória e em `SharedPreferences` dos dados comunitários por `escaladaUid` e dos alertas contribuídos pelo usuário (`obterMeusAlertasContribuidos`).
+- **`RepositorioInteracoesViaMemoria`**: Mantém o cache em memória e em `SharedPreferences` dos dados comunitários por `escaladaUid` e dos alertas contribuídos pelo usuário (`obterMeusAlertasContribuidos`), suportando criação, edição e exclusão de comentários e alertas de segurança pelo próprio autor (`editarComentario`, `excluirComentario`, `editarAlerta`, `excluirAlerta`).
+- **Coalescência Offline (`DespachanteFilaInteracoes` e `ArmazenamentoFilaInteracoes`)**: Se uma interação ainda estiver retida na fila offline (`_filaPendente`), edições e exclusões do autor são absorvidas localmente sem tráfego adicional de rede; caso já tenha sido enviada, registra `MutacaoFilaInteracao` persistente (`PATCH` / `DELETE` autenticados).
 - **Categorias de Alerta (`CategoriaAlertaSeguranca`)**: `FAUNA` (`🐝`), `ROCHA_AGARRA_INSTAVEL` (`🪨`), `PROTECAO_PRECARIA` (`🔩`) e `EXPOSICAO_E4_MAIS` (`⚠️`).
-- **Deduplicação e Recuperação de Sessão**: Impede auto-confirmação pelo criador e múltiplos `+1` do mesmo `autorIdPublico` no mesmo alerta. Em escritas autenticadas, renova o JWT em respostas `HTTP 401` (`refreshToken`) e ressincroniza `public.perfis` antes de repetir em `HTTP 403`.
+- **Deduplicação e Recuperação de Sessão**: Impede auto-confirmação pelo criador e múltiplos `+1` do mesmo `autorIdPublico` no mesmo alerta. Em escritas, edições e exclusões autenticadas, renova o JWT em respostas `HTTP 401` (`refreshToken`) e ressincroniza `public.perfis` antes de repetir em `HTTP 403`.
 
 ---
 
@@ -72,17 +72,3 @@ Permite testar croquis em edição a partir do Editor Desktop sem misturar arqui
 2. **Downloads Locais**: Lê `<downloads>/<picoId>/compilado.binarypb` (renomeando `<picoId>.binarypb` antigo se encontrado).
 3. **Cache Temporário**: Lê `/temp_cache/<picoId>/compilado.binarypb.<sha256>`.
 4. **Rede**: Baixa o arquivo via `ServicoCroquiOnline` com `?v=<sha256>`, valida o SHA-256 em memória, grava via `.tmp` em `/temp_cache` e remove versões anteriores divergentes.
-
----
-
-## Flags de Compilação (`ConfiguracaoRecursos` e `ControladorInteracoesUsuario`)
-
-Por padrão (`flutter run` / builds sem flag), `ConfiguracaoRecursos.perfilHabilitado` é `false`. Para habilitar os recursos de Perfil, Caderneta e Interações durante o desenvolvimento:
-
-```bash
-flutter run --dart-define=HABILITAR_PERFIL=true
-# ou
-flutter run --dart-define=CHAVE_ACESSO_PERFIL=aresta_segredo_perfil_2026
-```
-
-Em testes, use `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true)` e `redefinirParaTestes()`. Quando habilitado na compilação, o usuário ainda pode ocultar ou exibir os controles de perfil e caderneta nas Configurações via `ControladorInteracoesUsuario` sem apagar os dados salvos localmente.

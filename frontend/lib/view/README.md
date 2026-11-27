@@ -40,7 +40,8 @@ lib/view/
     ├── secao_caderneta_via_view_model.dart - Resumo pessoal de ascensões dentro da ViaPage
     ├── registro_cadena_view_model.dart   - Registro/edição de cadena, voto de grau e nota pública opcional
     ├── home_view_model.dart              - Estado da Home e picos próximos
-    ├── explorar_view_model.dart          - Busca, ordenação e downloads da aba Explorar
+    ├── explorar_view_model.dart          - Busca, ordenação, clima/incêndios e downloads da aba Explorar
+    ├── cena_globo_explorar_view_model.dart - Estado interativo do Globo/Mapa (hidratação de assets, memoização de instância da rede viária Aresta, luz viária bidirecional, sonar e foco de câmera)
     ├── meus_croquis_view_model.dart      - Listagem e exclusão de croquis locais
     ├── pico_view_model.dart              - Estado online/offline, polling ETag e ações do Pico
     ├── mapa_global_view_model.dart       - Marcadores e estado do Mapa Global

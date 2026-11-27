@@ -11,6 +11,7 @@ test/
 ├── caos/                 Testes exploratórios determinísticos (Robô Caótico), ddmin e regressão JSON
 ├── constants/            Constantes de rede e URLs
 ├── data/                 Modelos de domínio e serialização JSON
+├── idioma/               Motor multilíngue reativo e dicionários (PT, EN, ES, DE, NL)
 ├── integration/          Fluxos integrados de sincronização e persistência
 ├── legal/                Datas e versões dos documentos legais
 ├── navigation/           Árvore de navegação, AppNav, deep links e PageListenableBuilder
