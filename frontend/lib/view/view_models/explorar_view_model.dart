@@ -2,64 +2,104 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fuzzy/fuzzy.dart';
-import 'card_croqui_view_model.dart';
+
+import '../../data/modelos/modelos_clima_pico.dart';
+import '../../idioma/tradutor_app.dart';
+import '../../services/clima/localizador_gps_usuario.dart';
+import '../../services/clima/servico_clima_altimetria.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
-import '../../services/repositorio_dataset.dart';
-import '../../services/http/sync_service.dart';
-import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/firebase/telemetria.dart';
-import '../function_library/biblioteca_funcoes_comuns.dart';
-import '../function_library/funcoes_home.dart';
-import '../function_library/funcoes_configuracoes.dart';
+import '../../services/http/servico_download_segundo_plano.dart';
+import '../../services/http/sync_service.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../widgets/carrossel_picos_proximos.dart';
+import '../../widgets/explorar/componentes_marcador_globo.dart';
+import '../function_library/biblioteca_funcoes_comuns.dart';
+import '../function_library/funcoes_configuracoes.dart';
+import '../function_library/funcoes_explorar.dart';
+import '../function_library/funcoes_home.dart';
+import 'card_croqui_view_model.dart';
+import 'filtrador_catalogo_explorar.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
-enum OrdemOrdenacaoPico {
-  /// Ordem crescente pela distância geodésica até o usuário (padrão).
-  proximidade,
+enum OrdemOrdenacaoPico { proximidade, alfabetico, escaladas }
 
-  /// Ordem alfabética pelo nome do pico (A-Z).
-  alfabetico,
+/// Modalidades disponíveis para filtragem rápida no catálogo e no globo da aba `Explorar`.
+enum ModalidadeExploracaoPico {
+  esportiva,
+  boulder,
+  movel,
+  paredao,
+  highline;
 
-  /// Ordem decrescente por quantidade total de vias escaladas.
-  escaladas,
+  /// Rótulo localizado exibido nas pílulas rápidas e no modal de filtros.
+  String get rotulo => switch (this) {
+        ModalidadeExploracaoPico.esportiva => tr(ChaveTexto.modEsportiva),
+        ModalidadeExploracaoPico.boulder => tr(ChaveTexto.modBoulder),
+        ModalidadeExploracaoPico.movel => tr(ChaveTexto.modMovelTrad),
+        ModalidadeExploracaoPico.paredao => tr(ChaveTexto.modParedao),
+        ModalidadeExploracaoPico.highline => tr(ChaveTexto.modHighline),
+      };
 }
 
-/// Modelo de apresentação e gerenciador de estado para a tela [BrowsePage] (MVVM).
+/// Modelo de apresentação e gerenciador de estado para a aba unificada `Explorar` (MVVM).
 ///
-/// Encapsula a lógica de pesquisa difusa (fuzzy search), debounce de digitação,
-/// ordenação de picos (incluindo cálculo geodésico compartilhado com a Home) e acionamento
-/// de downloads em segundo plano, mantendo a árvore de widgets passiva (Dumb UI).
+/// Orquestra pesquisa difusa, filtros nacionais por faixa de graduação (`catalogo.db`),
+/// tags de modalidade, raio de distância, estado contextual de chuva e incêndios,
+/// altimetria externa e projeção declarativa dos marcadores e cards para a Dumb UI.
 class BrowseViewModel extends ChangeNotifier {
-  /// Repositório de dados com catálogo e croquis locais.
   final DatasetRepository datasetRepo;
-
-  /// Serviço de sincronização e download de arquivos binários.
   final SyncService syncService;
-
-  /// Serviço de telemetria opcional para testes ou injeção.
   final TelemetryService? telemetria;
+  final ServicoClimaAltimetria _servicoClima;
+  final LocalizadorGpsUsuario _localizadorGps;
 
   String _termoBusca = '';
   OrdemOrdenacaoPico _ordem = OrdemOrdenacaoPico.proximidade;
+  final Set<ModalidadeExploracaoPico> _modalidadesAtivas = {};
+  int? _minGrauVia;
+  int? _maxGrauVia;
+  int? _minGrauBoulder;
+  int? _maxGrauBoulder;
+  double? _raioMaximoKm;
+  bool _apenasSalvosOffline = false;
+  bool _radarClimaMapaAtivo = false;
+
+  String? _picoSelecionadoId;
   double? _userLat;
   double? _userLon;
+  bool _buscandoLocalizacao = false;
   Map<String, PicoProximo>? _cacheProximidadePorId;
+  Map<String, PerfilGrauPico> _perfisGrauPorPico = const {};
+
   final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
+  final ValueNotifier<int> _solicitacaoAutoScrollPicoSelecionado =
+      ValueNotifier<int>(0);
   Timer? _timerDebounce;
+  bool _descartado = false;
 
   BrowseViewModel({
     required this.datasetRepo,
     required this.syncService,
     this.telemetria,
-  }) {
+    ServicoClimaAltimetria? servicoClima,
+    LocalizadorGpsUsuario localizadorGps = const LocalizadorGpsUsuario(),
+  })  : _servicoClima = servicoClima ?? ServicoClimaAltimetria.instancia,
+        _localizadorGps = localizadorGps {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
     datasetRepo.calculadoraDistanciaEstrada.addListener(_aoAtualizarDataset);
-    datasetRepo.editorDeCroqui.isExperimentalMode.addListener(_aoAtualizarDataset);
+    datasetRepo.editorDeCroqui.isExperimentalMode
+        .addListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.editorUrl.addListener(_aoAtualizarDataset);
+    datasetRepo.repositorioCatalogo.versaoNotificador
+        .addListener(_aoMudarCatalogo);
+    ControladorIdiomaApp.instancia.notificadorIdioma
+        .addListener(_notificarSeAtivo);
+    _servicoClima.addListener(_notificarSeAtivo);
+    unawaited(_inicializarDadosAuxiliares());
   }
 
   void _aoAtualizarDataset() {
