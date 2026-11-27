@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../data/modelos/cadena.dart';
 import '../data/modelos/interacao_via.dart';
+import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_caderneta.dart';
@@ -12,6 +13,7 @@ import '../widgets/caderneta/card_estatistica.dart';
 import '../widgets/caderneta/grafico_piramide_graus.dart';
 import '../widgets/caderneta/modal_registro_cadena.dart';
 import '../widgets/caderneta/secao_meus_alertas_caderneta.dart';
+import '../widgets/via/modais_edicao_interacao_via.dart';
 import '../widgets/via/snackbar_flutuante_seguro.dart';
 
 /// Página dedicada à exibição da Caderneta Esportiva pessoal do atleta (Dumb UI).
@@ -85,7 +87,7 @@ class _CadernetaPageState extends State<CadernetaPage> {
       viewModel: vmEdicao,
       onSalvo: (_) {
         despachanteSnack.exibir(
-          texto: 'Ascensão atualizada na caderneta!',
+          texto: tr(ChaveTexto.cadAscensaoAtualizadaToast),
           duracao: const Duration(seconds: 2),
         );
       },
@@ -97,7 +99,7 @@ class _CadernetaPageState extends State<CadernetaPage> {
     if (!navegou && mounted) {
       exibirSnackBarFlutuanteSeguro(
         context,
-        texto: 'Via não disponível offline no momento.',
+        texto: tr(ChaveTexto.cadViaIndisponivelOffline),
       );
     }
   }
@@ -115,11 +117,49 @@ class _CadernetaPageState extends State<CadernetaPage> {
     _viewModel.iniciarResolucaoMeuAlertaComDesfazer(item.alerta);
     exibirSnackBarFlutuanteSeguro(
       context,
-      texto: 'Alerta marcado como resolvido.',
+      texto: tr(ChaveTexto.alertaResolvidoToast),
       duracao: const Duration(seconds: 4),
-      rotuloAcao: 'Desfazer',
+      rotuloAcao: tr(ChaveTexto.comumDesfazer),
       aoAcionar: () => _viewModel.desfazerResolucaoMeuAlerta(uidAlerta),
     );
+  }
+
+  void _aoEditarMeuAlerta(AlertaContribuidoCaderneta item) {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(context);
+    exibirModalFormularioAlertaVia(
+      context,
+      alertaInicial: item.alerta,
+      aoSubmeter: (novaCategoria, detalhe) async {
+        final ok = await _viewModel.editarMeuAlerta(
+          item.alerta,
+          novaCategoria,
+          detalhe: detalhe,
+        );
+        despachanteSnack.exibir(
+          texto: ok
+              ? tr(ChaveTexto.alertaAtualizadoToast)
+              : tr(ChaveTexto.alertaFalhaAtualizarToast),
+          duracao: const Duration(seconds: 2),
+        );
+      },
+    );
+  }
+
+  Future<void> _aoExcluirMeuAlerta(AlertaContribuidoCaderneta item) async {
+    final despachanteSnack = capturarDespachanteSnackBarSeguro(context);
+    final confirmado = await exibirDialogoConfirmarExclusaoInteracao(
+      context,
+      ehAlerta: true,
+    );
+    if (confirmado == true) {
+      final ok = await _viewModel.excluirMeuAlerta(item.alerta);
+      if (ok) {
+        despachanteSnack.exibir(
+          texto: tr(ChaveTexto.alertaExcluidoToast),
+          duracao: const Duration(seconds: 2),
+        );
+      }
+    }
   }
 
   @override
@@ -131,7 +171,7 @@ class _CadernetaPageState extends State<CadernetaPage> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: buildCommonAppBar(
             context,
-            'MINHA CADERNETA',
+            context.tr(ChaveTexto.cadTituloPagina),
             onBack: () => AppNav.back(context),
           ),
           body: SafeArea(
@@ -159,6 +199,8 @@ class _CadernetaPageState extends State<CadernetaPage> {
                     formatarData: _viewModel.formatarDataAscensao,
                     aoTocarVia: _navegarParaEscaladaUid,
                     aoResolverAlerta: _aoResolverMeuAlerta,
+                    aoEditarAlerta: _aoEditarMeuAlerta,
+                    aoExcluirAlerta: _aoExcluirMeuAlerta,
                   ),
                   SecaoHistoricoCadenas(
                     tituloSecao: _viewModel.tituloSecaoHistorico,
