@@ -90,3 +90,93 @@ class MalhaGeograficaGlobo {
     this.rodoviasProximas = const [],
   });
 
+  /// Carrega e decodifica a malha geográfica em `Isolate.run`, mantendo cache em RAM.
+  static Future<MalhaGeograficaGlobo> carregarDoAssetBundle({
+    AssetBundle? bundle,
+    bool usarCache = true,
+  }) async {
+    if (usarCache && _cacheMemoria != null) {
+      return _cacheMemoria!;
+    }
+    final textoJson =
+        await (bundle ?? rootBundle).loadString(caminhoAssetPadrao);
+    final decodificada = await Isolate.run(
+      () => _decodificarJsonEmIsolate(textoJson),
+    );
+    if (usarCache) {
+      _cacheMemoria = decodificada;
+    }
+    return decodificada;
+  }
+
+  static MalhaGeograficaGlobo _decodificarJsonEmIsolate(String textoJson) {
+    final raiz = jsonDecode(textoJson) as Map<String, dynamic>;
+    final listaCont = (raiz['continentes'] as List<dynamic>)
+        .map((c) {
+          final m = c as Map<String, dynamic>;
+          return PoligonoGeografico(
+            id: m['id'] as String,
+            verticesLonLat: _converterListaVertices(m['poligono'] as List<dynamic>),
+          );
+        })
+        .toList(growable: false);
+
+    final brasilVertices =
+        _converterListaVertices(raiz['brasil'] as List<dynamic>);
+
+    final listaEstados = (raiz['estados_br'] as List<dynamic>)
+        .map((e) {
+          final m = e as Map<String, dynamic>;
+          return PoligonoGeografico(
+            id: m['uf'] as String,
+            verticesLonLat: _converterListaVertices(m['poligono'] as List<dynamic>),
+          );
+        })
+        .toList(growable: false);
+
+    final listaLocalidades =
+        ((raiz['localidades_proximas'] as List<dynamic>?) ?? const [])
+            .map((item) {
+              final m = item as Map<String, dynamic>;
+              final nivelLido = ((m['nivel'] as num?)?.toInt() ?? 1).clamp(1, 3);
+              return LocalidadeRegionalMapa(
+                nome: (m['nome'] as String?) ?? '',
+                ehCidade: nivelLido == 1,
+                nivel: nivelLido,
+                longitude: (m['lon'] as num).toDouble(),
+                latitude: (m['lat'] as num).toDouble(),
+              );
+            })
+            .toList(growable: false);
+
+    final listaRodovias =
+        ((raiz['rodovias_proximas'] as List<dynamic>?) ?? const [])
+            .map((item) {
+              final m = item as Map<String, dynamic>;
+              return RodoviaRegionalMapa(
+                ehPrincipal: (m['classe'] as String?) == 'principal',
+                codigo: (m['codigo'] as String?) ?? '',
+                verticesLonLat:
+                    _converterListaVertices(m['poligono'] as List<dynamic>),
+              );
+            })
+            .toList(growable: false);
+
+    return MalhaGeograficaGlobo(
+      continentes: listaCont,
+      brasil: brasilVertices,
+      estados: listaEstados,
+      localidadesProximas: listaLocalidades,
+      rodoviasProximas: listaRodovias,
+    );
+  }
+
+  static List<Offset> _converterListaVertices(List<dynamic> bruto) {
+    return bruto
+        .map((par) {
+          final p = par as List<dynamic>;
+          return Offset((p[0] as num).toDouble(), (p[1] as num).toDouble());
+        })
+        .toList(growable: false);
+  }
+
