@@ -287,3 +287,93 @@ const Map<ChaveTexto, String> dicionarioPortugues = {
   ChaveTexto.climaIncendioAtivo: 'Incêndio ativo',
   ChaveTexto.climaIncendioSevero: 'Incêndio severo',
 
+  // Meus Croquis e Modais Offline
+  ChaveTexto.meusCroquisTitulo: 'MEUS CROQUIS',
+  ChaveTexto.meusCroquisSubtitulo: 'ARMAZENAMENTO OFFLINE',
+  ChaveTexto.meusCroquisVazio: 'Nenhum croqui salvo offline ainda.',
+  ChaveTexto.meusCroquisAbrirOffline: 'ABRIR OFFLINE',
+  ChaveTexto.meusCroquisErroAbrir: 'Erro ao abrir o guia offline.',
+  ChaveTexto.meusCroquisExcluirTitulo: 'Excluir?',
+  ChaveTexto.meusCroquisExcluirPergunta: 'Deseja excluir o guia de {nome}?',
+  ChaveTexto.meusCroquisExcluidoToast: 'Guia excluído.',
+  ChaveTexto.meusCroquisErroExcluirToast: 'Erro ao excluir guia.',
+  ChaveTexto.meusCroquisGuiaRemovidoToast:
+      'Guia removido do armazenamento offline.',
+  ChaveTexto.offlineSalvarComTamanho: 'Salvar Offline ({tamanho})',
+  ChaveTexto.offlineSalvarSemTamanho: 'Salvar Offline',
+  ChaveTexto.offlineModoOnlineTitulo: 'MODO ONLINE',
+  ChaveTexto.offlineModoOnlineDesc:
+      'Você está navegando via internet. Salve o guia completo para usar sem sinal na pedra.',
+  ChaveTexto.offlineBaixandoPct: 'BAIXANDO ({pct}%)...',
+  ChaveTexto.offlineSalvarParaPedraTitulo: 'SALVAR PARA A PEDRA?',
+  ChaveTexto.offlineSalvarParaPedraCorpo:
+      'Lembre-se: na rocha não há sinal de internet. Para consultar os croquis e graus de {nome} sem conexão, salve o guia offline.',
+  ChaveTexto.offlineSairSemSalvar: 'Sair sem Salvar',
+  ChaveTexto.offlineSemConexaoTitulo: 'VOCÊ ESTÁ SEM CONEXÃO',
+  ChaveTexto.offlineSemConexaoCorpo:
+      'Este conteúdo faz parte do croqui {nome}, que ainda não está salvo offline no seu aparelho. Quando voltar a ter conexão com a internet, tente novamente para abri-lo.',
+  ChaveTexto.offlineAindaSemConexao:
+      'Ainda sem conexão com a internet. Verifique sua rede e tente novamente.',
+  ChaveTexto.offlineTentandoConectar: 'Tentando conectar...',
+
+  // Página do Pico, Subpáginas, Setor, Grupo, Filtros de Índice e Croqui Interativo
+  ChaveTexto.picoCompartilharTooltip: 'Compartilhar pico',
+  ChaveTexto.picoExcluirGuiaTooltip: 'Excluir guia',
+  ChaveTexto.picoBuscarBoulderTooltip: 'Buscar boulder',
+  ChaveTexto.picoBuscarViaTooltip: 'Buscar via',
+  ChaveTexto.picoCardSetoresTitulo: 'Setores & Escaladas',
+  ChaveTexto.picoCardSetoresSubtitulo:
+      'Explore setores, vias e boulders com filtros e mapas integrados',
+  ChaveTexto.picoCardExplorarTitulo: 'Explorar Local',
+  ChaveTexto.picoCardExplorarSubtitulo:
+      'Como chegar, mapas gerais do croqui, clima e informações úteis.',
+  ChaveTexto.picoCardRegrasTitulo: 'Regras e recomendações',
+  ChaveTexto.picoCardRegrasSubtitulo:
+      'Normas de conduta ecológica, segurança básica, ética e boa convivência.',
+  ChaveTexto.picoCardComunidadeTitulo: 'Comunidade',
+  ChaveTexto.picoCardComunidadeSubtitulo:
+      'Redes sociais, canal de Whatsapp, patrocinadores e comércio local.',
+  ChaveTexto.picoCardCreditosSubtitulo:
+      'Conheça os autores, colaboradores e agradecimentos.',
+  ChaveTexto.picoVoltarMapaSetor: 'Voltar para o Mapa do Setor',
+  ChaveTexto.picoCroquiPor: 'Croqui por {autores}',
+  ChaveTexto.picoInfoLocal: 'Informações do Local',
+  ChaveTexto.picoCampoNome: 'Nome',
+  ChaveTexto.picoCampoEstado: 'Estado',
+  ChaveTexto.picoMaisInfoSecao: 'Mais Informações',
+  ChaveTexto.picoMapasGerais: 'Mapas Gerais',
+  ChaveTexto.picoNenhumElemento: 'Nenhum elemento disponível.',
+  ChaveTexto.picoBuscarBoulderHint: 'Buscar boulder (ex: V4) ou setor...',
+  ChaveTexto.picoBuscarEscaladaHint: 'Buscar escalada (ex: 7a) ou setor...',
+  ChaveTexto.picoDificuldadePrefixo: 'Dificuldade: {grau}',
+  ChaveTexto.picoUltimaAtualizacaoNaoInformada:
+      'Última atualização: Não informada',
+  ChaveTexto.picoUltimaAtualizacaoHoje: 'Última atualização: Hoje às {hora}',
+  ChaveTexto.picoUltimaAtualizacaoOntem: 'Última atualização: Ontem às {hora}',
+  ChaveTexto.picoUltimaAtualizacaoData:
+      'Última atualização: {data} às {hora}',
+  ChaveTexto.picoSubExplorarTitulo: 'EXPLORAR O LOCAL',
+  ChaveTexto.picoSubIntroSubtitulo:
+      'Apresentação geral e introdução ao local.',
+  ChaveTexto.picoSubSobreLocal: 'Sobre o local',
+  ChaveTexto.picoSubSobreLocalSubtitulo:
+      'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
+  ChaveTexto.picoSubComoChegar: 'Como chegar',
+  ChaveTexto.picoSubComoChegarSubtitulo:
+      'Instruções de acesso e navegação até a base da montanha.',
+  ChaveTexto.picoSubAbrirMaps: 'Abrir no Google Maps',
+  ChaveTexto.picoSubAbrirMapsSubtitulo:
+      'Ver localização e traçar rota até o pico.',
+  ChaveTexto.picoSubExtrasSubtitulo: 'Informações extras sobre o local.',
+  ChaveTexto.picoSubComunidadeTitulo: 'COMUNIDADE',
+  ChaveTexto.picoSubInformacoes: 'Informações',
+  ChaveTexto.picoSubAssociacaoLocal: 'Associação Local',
+  ChaveTexto.picoSubParceiros: 'Parceiros',
+  ChaveTexto.picoSubComercioLocal: 'Comércio local',
+  ChaveTexto.picoSubApoieTitulo: 'APOIE O PICO',
+  ChaveTexto.picoSubDoacaoPix: 'Doação via Pix',
+  ChaveTexto.picoSubDoacaoPixSubtitulo:
+      'Ajude a comprar chapeletas e correntes de inox.\nChave: {chave}',
+  ChaveTexto.picoSubPixCopiadoToast:
+      'Chave PIX copiada para a área de transferência!',
+  ChaveTexto.picoSubProdutos: 'Produtos do pico',
