@@ -12,8 +12,6 @@ import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/configuracao_recursos.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -198,13 +196,6 @@ void main() {
     });
 
     testWidgets('tocar em item do histórico navega para a ViaPage quando encontrada ou exibe snackbar quando indisponível', (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
-      addTearDown(() {
-        ConfiguracaoRecursos.redefinirParaTestes();
-        ControladorInteracoesUsuario.redefinirParaTestes();
-      });
-
       final cEncontrada = Cadena(
         id: 'cadena-nav-ok',
         escaladaUid: 'uidViaEncontrada',
@@ -477,6 +468,57 @@ void main() {
       await tester.tap(find.text('Desfazer'));
       await tester.pumpAndSettle();
       expect(find.byKey(Key('btn_resolver_meu_alerta_${criado.uid}')), findsOneWidget);
+
+      // Edição (com falha e sucesso) e exclusão (cancelar e confirmar) de alerta CRIADO POR VOCÊ
+      final btnEditarMeu = find.byKey(
+        Key('btn_editar_meu_alerta_${criado.uid}'),
+      );
+      repoAlertas.erroSimulado = StateError('Erro simulado');
+      await tester.ensureVisible(btnEditarMeu);
+      await tester.tap(btnEditarMeu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Não foi possível atualizar este alerta.'),
+        findsOneWidget,
+      );
+      ScaffoldMessenger.of(tester.element(find.byType(CadernetaPage)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      repoAlertas.erroSimulado = null;
+      await tester.tap(btnEditarMeu);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('opcao_alerta_PROTECAO_PRECARIA')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
+      await tester.pumpAndSettle();
+      expect(find.text('Alerta atualizado!'), findsOneWidget);
+      ScaffoldMessenger.of(tester.element(find.byType(CadernetaPage)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      final btnExcluirMeu = find.byKey(
+        Key('btn_excluir_meu_alerta_${criado.uid}'),
+      );
+      await tester.ensureVisible(btnExcluirMeu);
+      await tester.tap(btnExcluirMeu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(btnExcluirMeu, findsOneWidget);
+
+      await tester.tap(btnExcluirMeu);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('btn_confirmar_exclusao_interacao_via')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Alerta excluído.'), findsOneWidget);
+      expect(btnExcluirMeu, findsNothing);
     });
   });
 }
