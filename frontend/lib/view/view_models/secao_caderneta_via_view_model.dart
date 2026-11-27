@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
+import '../../idioma/tradutor_app.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
-import '../../services/controlador_interacoes_usuario.dart';
 import '../../utils/formatador_escalada.dart';
 import 'registro_cadena_view_model.dart';
 
@@ -26,24 +26,16 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
   /// Repositório comunitário encaminhado ao modal de registro de ascensão.
   final RepositorioInteracoesVia repositorioInteracoes;
 
-  /// Controlador reativo de visibilidade das interações de perfil e caderneta.
-  final ControladorInteracoesUsuario controladorInteracoes;
-
-  /// Inicializa o ViewModel conectando ouvintes reativos à caderneta e às preferências do usuário.
+  /// Inicializa o ViewModel conectando ouvintes reativos à caderneta e ao idioma.
   SecaoCadernetaViaViewModel({
     required this.escalada,
     RepositorioCaderneta? repositorio,
     RepositorioInteracoesVia? repositorioInteracoes,
-    ControladorInteracoesUsuario? controladorInteracoes,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
        repositorioInteracoes =
-           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
-       controladorInteracoes =
-           controladorInteracoes ?? ControladorInteracoesUsuario.instancia {
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizar);
-    this.controladorInteracoes.interacoesAtivasNotifier.addListener(
-      _aoAtualizar,
-    );
+    ControladorIdiomaApp.instancia.notificadorIdioma.addListener(_aoAtualizar);
   }
 
   void _aoAtualizar() => notifyListeners();
@@ -51,12 +43,11 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
   @override
   void dispose() {
     repositorio.cadenasNotifier.removeListener(_aoAtualizar);
-    controladorInteracoes.interacoesAtivasNotifier.removeListener(_aoAtualizar);
+    ControladorIdiomaApp.instancia.notificadorIdioma.removeListener(
+      _aoAtualizar,
+    );
     super.dispose();
   }
-
-  /// Indica se a seção de caderneta deve estar visível na tela da via.
-  bool get visivel => controladorInteracoes.exibirElementosInterativos;
 
   /// Melhor ascensão ou tentativa já registrada para esta escalada, se houver.
   Cadena? get melhorAscensao =>
@@ -78,9 +69,12 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
     final dia = ascensao.dataAscensao.day.toString().padLeft(2, '0');
     final mes = ascensao.dataAscensao.month.toString().padLeft(2, '0');
     if (ascensao.isCadena) {
-      return 'Encadenada em $dia/$mes (${ascensao.tipoAscensao.rotulo})';
+      return tr(ChaveTexto.cadEncadenadaEm, {
+        'data': '$dia/$mes',
+        'estilo': ascensao.tipoAscensao.rotulo,
+      });
     }
-    return 'Tentativa em $dia/$mes';
+    return tr(ChaveTexto.cadTentativaEm, {'data': '$dia/$mes'});
   }
 
   /// Notas privadas formatadas entre aspas tipográficas, ou `null` quando vazias.
@@ -92,8 +86,8 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
 
   /// Rótulo contextual do botão de ação principal.
   String get rotuloBotao => possuiAscensao
-      ? 'Nova Ascensão / Tentativa'
-      : 'Registrar Cadena / Tentativa';
+      ? tr(ChaveTexto.cadNovaAscensaoBtn)
+      : tr(ChaveTexto.cadRegistrarCadenaBtn);
 
   /// Constrói um [RegistroCadenaViewModel] pré-configurado com os metadados da [escalada].
   RegistroCadenaViewModel criarViewModelRegistro() {
