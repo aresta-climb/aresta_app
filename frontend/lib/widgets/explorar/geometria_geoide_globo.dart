@@ -277,6 +277,72 @@ abstract final class GeometriaGeoideGlobo {
     return normalizada - 180.0;
   }
 
+  /// Distância euclidiana 3D em quilômetros entre a câmera virtual e `(latitude, longitude)`.
+  static double calcularDistanciaCameraObjetoKm({
+    required double latitude,
+    required double longitude,
+    required double latitudeCentral,
+    required double longitudeCentral,
+    required double altitudeCameraKm,
+  }) {
+    final dLatKm = (latitude - latitudeCentral) * 111.32;
+    final dLonGraus = ((longitude - longitudeCentral + 540.0) % 360.0) - 180.0;
+    final dLonKm = dLonGraus * math.cos(latitude * grausParaRad) * 111.32;
+    return math.sqrt(
+      dLatKm * dLatKm + dLonKm * dLonKm + altitudeCameraKm * altitudeCameraKm,
+    );
+  }
+
+  /// Nível de detalhe progressivo (`0.0 .. 4.65`) individual por distância 3D à câmera.
+  static double calcularNivelDetalheObjeto({
+    required double distKm,
+  }) {
+    if (distKm < 12.0) return 3.8 + (12.0 - distKm) / 12.0 * 0.85;
+    if (distKm < 65.0) return 3.0 + (65.0 - distKm) / (65.0 - 12.0) * 0.8;
+    if (distKm < 280.0) return 2.0 + (280.0 - distKm) / (280.0 - 65.0);
+    if (distKm < 1800.0) return 1.0 + (1800.0 - distKm) / (1800.0 - 280.0);
+    return (1.0 - (distKm - 1800.0) / 4500.0).clamp(0.0, 0.99);
+  }
+
+  /// Estima iterativamente a coordenada `(lat, lon)` sobre o geoide 3D sob [pontoTela].
+  static ({double lat, double lon}) resolverCoordenadaAproximada3D({
+    required Offset pontoTela,
+    required Size tamanhoTela,
+    required double latitudeCentral,
+    required double longitudeCentral,
+    required double lod,
+    required double raioAparentePx,
+    required double centroVerticalOpticoPx,
+    required double elevacaoReferenciaCameraMetros,
+  }) {
+    var latEst = latitudeCentral;
+    var lonEst = longitudeCentral;
+    final grausPorPx = (1.0 / raioAparentePx) / grausParaRad;
+    final cosLat = math.max(0.25, math.cos(latitudeCentral * grausParaRad));
+    final tilt = smoothstep(1.50, 2.75, lod) * 0.66;
+    final cosTilt = math.max(0.50, math.cos(tilt));
+    for (var iter = 0; iter < 2; iter++) {
+      final proj = projetarCoordenada3D(
+        latitude: latEst,
+        longitude: lonEst,
+        elevacaoMetros: 0.0,
+        latitudeCentral: latitudeCentral,
+        longitudeCentral: longitudeCentral,
+        lod: lod,
+        raioAparentePx: raioAparentePx,
+        centroVerticalOpticoPx: centroVerticalOpticoPx,
+        elevacaoReferenciaCameraMetros: elevacaoReferenciaCameraMetros,
+        tamanhoTela: tamanhoTela,
+      );
+      if (!proj.visivel) break;
+      final dx = pontoTela.dx - proj.x;
+      final dy = pontoTela.dy - proj.y;
+      lonEst = normalizarLongitude(lonEst + (dx * grausPorPx) / cosLat);
+      latEst = (latEst - (dy / cosTilt) * grausPorPx).clamp(-68.0, 68.0);
+    }
+    return (lat: latEst, lon: lonEst);
+  }
+
   /// Projeta uma coordenada esférica `(latitude, longitude, elevacaoMetros)` sobre o Geoide 3D com inclinação perspectiva.
   static PontoProjetadoTela projetarCoordenada3D({
     required double latitude,
@@ -324,17 +390,11 @@ abstract final class GeometriaGeoideGlobo {
                 1.0) *
             pesoGeoide;
 
-    final exageroVertical = 6.0 - 4.55 * smoothstep(2.15, 3.85, lod);
-    final pesoRef = smoothstep(2.35, 3.35, lod);
-    final elevRelativa = math.max(0.0, elevacaoMetros) -
-        (elevacaoReferenciaCameraMetros * pesoRef);
-    final hNormBruto = (elevRelativa / 6371000.0) * exageroVertical;
-    final hNorm =
-        (hNormBruto * raioAparentePx).clamp(-150.0, 255.0) / raioAparentePx;
-    final rad = rBaseGeoide + hNorm;
-    final dx = xEsfera * rad;
-    final dy = yEsfera * rad;
-    final dz = zEsfera * rad - rBaseGeoide;
+    // Opção A (Surface Lock): projeta estritamente sobre a superfície real do Geoide (sem inflar/afundar
+    // montanhas ao mudar o zoom e sem deslocamento de paralaxe entre rodovias, curvas e pinos).
+    final dx = xEsfera * rBaseGeoide;
+    final dy = yEsfera * rBaseGeoide;
+    final dz = zEsfera * rBaseGeoide - rBaseGeoide;
 
     final tilt = smoothstep(1.50, 2.75, lod) * 0.66;
     final cosTilt = math.cos(tilt);
