@@ -179,3 +179,86 @@ export async function decodificarPngRadarParaMmHora(
     return resultadoVazio;
   }
 
+  const view = new DataView(
+    bytesPng.buffer,
+    bytesPng.byteOffset,
+    bytesPng.byteLength,
+  );
+  let offset = 8;
+  let largura = 0;
+  let altura = 0;
+  let bits = 8;
+  let tipoCor = 6;
+  let paletaRgb: Uint8Array | null = null;
+  let paletaAlfa: Uint8Array | null = null;
+  const pedacosIdat: Uint8Array[] = [];
+  let totalIdat = 0;
+
+  while (offset + 8 <= bytesPng.length) {
+    const tam = view.getUint32(offset, false);
+    const tipo = String.fromCharCode(
+      bytesPng[offset + 4],
+      bytesPng[offset + 5],
+      bytesPng[offset + 6],
+      bytesPng[offset + 7],
+    );
+    const dadosIni = offset + 8;
+    if (dadosIni + tam + 4 > bytesPng.length) break;
+
+    if (tipo === "IHDR") {
+      largura = view.getUint32(dadosIni, false);
+      altura = view.getUint32(dadosIni + 4, false);
+      bits = bytesPng[dadosIni + 8];
+      tipoCor = bytesPng[dadosIni + 9];
+    } else if (tipo === "PLTE") {
+      paletaRgb = bytesPng.subarray(dadosIni, dadosIni + tam);
+    } else if (tipo === "tRNS") {
+      paletaAlfa = bytesPng.subarray(dadosIni, dadosIni + tam);
+    } else if (tipo === "IDAT") {
+      const fatia = bytesPng.subarray(dadosIni, dadosIni + tam);
+      pedacosIdat.push(fatia);
+      totalIdat += fatia.length;
+    } else if (tipo === "IEND") {
+      break;
+    }
+    offset = dadosIni + tam + 4;
+  }
+
+  if (largura !== 256 || altura !== 256 || totalIdat === 0) {
+    return resultadoVazio;
+  }
+
+  const idatUnido = new Uint8Array(totalIdat);
+  let cursor = 0;
+  for (const p of pedacosIdat) {
+    idatUnido.set(p, cursor);
+    cursor += p.length;
+  }
+
+  const descomprimido = new Uint8Array(
+    await new Response(
+      new Blob([idatUnido])
+        .stream()
+        .pipeThrough(new DecompressionStream("deflate")),
+    ).arrayBuffer(),
+  );
+
+  const canaisPorPixel =
+    tipoCor === 6 ? 4 : tipoCor === 2 ? 3 : tipoCor === 4 ? 2 : 1;
+  const bitsPorPixel = canaisPorPixel * bits;
+  const bppFiltro = Math.max(1, Math.ceil(bitsPorPixel / 8));
+  const stride = Math.ceil((largura * bitsPorPixel) / 8);
+  const linhaAtual = new Uint8Array(stride);
+  const linhaAnterior = new Uint8Array(stride);
+  const gradeMm = new Float32Array(largura * altura);
+
+  const paeth = (a: number, b: number, c: number): number => {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
+  };
+
