@@ -733,6 +733,13 @@ void main() {
           marcadoresDesligado.map((m) => m.id).toSet(),
           equals({'p_igarape', 'p_sem_nome'}),
         );
+        final refsCatalogo = viewModel.referenciasRelevoCatalogo;
+        expect(refsCatalogo.map((r) => r.id).toSet(), equals({'p_igarape', 'p_sem_nome'}));
+        expect(identical(viewModel.referenciasRelevoCatalogo, refsCatalogo), isTrue);
+        viewModel.alterarTermoBusca('igarameca_sem_resultado');
+        expect(viewModel.marcadoresGlobo, isEmpty);
+        expect(identical(viewModel.referenciasRelevoCatalogo, refsCatalogo), isTrue);
+        viewModel.alterarTermoBusca('');
         expect(
           marcadoresDesligado.firstWhere((m) => m.id == 'p_igarape').umidade.nivel,
           equals(NivelUmidadePico.seco),

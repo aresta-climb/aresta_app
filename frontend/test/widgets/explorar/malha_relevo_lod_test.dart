@@ -17,7 +17,7 @@ void main() {
         expect(malha.estados.length, equals(27));
         expect(malha.localidadesProximas.length, inInclusiveRange(35, 110));
         expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(600));
-        expect(malha.versaoMalhaViaria, startsWith('osm-v'));
+        expect(malha.versaoMalhaViaria, startsWith('osm-bin-v'));
         expect(
           malha.rodoviasProximas.map((r) => r.nivelViario).toSet(),
           containsAll(<int>[1, 2, 3]),

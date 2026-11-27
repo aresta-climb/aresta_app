@@ -128,6 +128,28 @@ void main() {
       pintorFallbackMalha.paint(canvas, tela);
       expect(pintorComTextura3D.shouldRepaint(pintorFallbackMalha), isTrue);
 
+      final pintorIdentico3D = PintorPlanetaGlobo(
+        controlador: ctrl3D,
+        malha: malhaTeste,
+        texturaNasa: textura,
+        picosReferencia: const [],
+        sonarPico: null,
+        progressoSonar: 1.0,
+        progressoLuzViaria: 0.0,
+      );
+      expect(pintorIdentico3D.shouldRepaint(pintorComTextura3D), isFalse);
+      ctrl3D.definirLod(1.25);
+      final pintorAposZoom = PintorPlanetaGlobo(
+        controlador: ctrl3D,
+        malha: malhaTeste,
+        texturaNasa: textura,
+        picosReferencia: const [],
+        sonarPico: null,
+        progressoSonar: 1.0,
+        progressoLuzViaria: 0.0,
+      );
+      expect(pintorAposZoom.shouldRepaint(pintorIdentico3D), isTrue);
+
       gravador.endRecording().dispose();
     });
 
@@ -218,6 +240,28 @@ void main() {
         progressoLuzViaria: 1.0,
       );
       pintorLocal.paint(canvas, tela);
+      final pintorSonarAvancado = PintorPlanetaGlobo(
+        controlador: ctrlLocal,
+        malha: malhaTeste,
+        redeViaria: redeViaria,
+        texturaNasa: textura,
+        picosReferencia: referencias,
+        sonarPico: picoSonar,
+        progressoSonar: 0.65,
+        progressoLuzViaria: 1.0,
+      );
+      expect(pintorSonarAvancado.shouldRepaint(pintorLocal), isTrue);
+      final pintorLuzAvancada = PintorPlanetaGlobo(
+        controlador: ctrlLocal,
+        malha: malhaTeste,
+        redeViaria: redeViaria,
+        texturaNasa: textura,
+        picosReferencia: referencias,
+        sonarPico: picoSonar,
+        progressoSonar: 0.65,
+        progressoLuzViaria: 0.5,
+      );
+      expect(pintorLuzAvancada.shouldRepaint(pintorSonarAvancado), isTrue);
 
       final atmosferaVazia = PintorFenomenosAtmosfericosGlobo(
         controlador: ctrlOrbital,
