@@ -733,3 +733,97 @@ void main() {
         expect(ctrl.longitudeCentral, closeTo(alvoEsperado.longitude, 0.5));
         expect(ctrl.latitudeCentral, closeTo(alvoEsperado.latitude, 0.5));
 
+        // 4. Duplo-toque em 3D sobre oceano aberto (sem pico focado proximo) aproxima mantendo o centro atual
+        ctrl.definirModo3D(true);
+        ctrl.iniciarVooParabolico(
+          destinoLat: -20.0,
+          destinoLon: -10.0,
+          destinoLod: 0.8,
+        );
+        for (var i = 0; i < 32; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+        await tester.tapAt(const Offset(210, 360));
+        await tester.pump(const Duration(milliseconds: 60));
+        await tester.tapAt(const Offset(210, 360));
+        for (var i = 0; i < 32; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+        }
+        expect(ctrl.lod, greaterThan(1.5));
+        expect(ctrl.longitudeCentral, closeTo(-10.0, 0.5));
+      },
+    );
+
+    testWidgets(
+      'posiciona ícones Aresta abaixo da camada de chuva/incêndio e recolhe a animação das rodovias das pontas até BH ao dar zoom-out',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(420, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final ctrl = ControladorCameraGlobo(
+          latitudeInicial: -19.92,
+          longitudeInicial: -43.94,
+          lodInicial: 0.80,
+          modo3DInicial: false,
+        );
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: bolhasTeste,
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Verifica hierarquia de árvore: camada_atmosfera_clima_globo fica DEPOIS (acima) dos ícones ponto_aresta_* no Stack!
+        ctrl.definirLod(1.95);
+        await tester.pump();
+        final stackInterno = tester.widget<Stack>(
+          find
+              .ancestor(
+                of: find.byKey(const Key('camada_atmosfera_clima_globo')),
+                matching: find.byType(Stack),
+              )
+              .first,
+        );
+        final idxIconeAresta = stackInterno.children.indexWhere(
+          (w) => w is BolhaCompactaPicoGlobo,
+        );
+        final idxAtmosferaClima = stackInterno.children.indexWhere(
+          (w) =>
+              w is Positioned &&
+              w.child is IgnorePointer &&
+              (w.child as IgnorePointer).key ==
+                  const Key('camada_atmosfera_clima_globo'),
+        );
+        expect(idxIconeAresta, greaterThan(0));
+        expect(idxAtmosferaClima, greaterThan(idxIconeAresta));
+
+        // Sem fenômenos ao vivo, testa ciclo completo de ida (BH -> pontas) e volta reversa (pontas -> BH) até parar o Ticker
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SuperficieGloboExplorar(
+                controlador: ctrl,
+                picos: picosTeste,
+                bolhasAtivas: const [],
+                picoSelecionadoId: null,
+                aoSelecionarPicoNoMapa: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('cidade_aresta_Belo Horizonte')),
+          findsOneWidget,
+        );
+
