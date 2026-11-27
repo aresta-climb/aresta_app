@@ -16,8 +16,10 @@ import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
 import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:frontend/widgets/caderneta/modal_registro_cadena.dart';
+import 'package:frontend/widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../fakes/servico_compartilhamento_fake.dart';
 import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
@@ -202,13 +204,11 @@ void main() {
   });
 
   testWidgets('ViaPage abre modal de caderneta, exibe selo Flash, copia chave Pix, abre vídeo beta e compartilha via', (tester) async {
-    String? textoCompartilhado;
+    final fakeServico = ServicoCompartilhamentoFake();
     String? pixCopiado;
     Uri? betaAberto;
 
-    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
-      executorCompartilhamento: (texto) async => textoCompartilhado = texto,
-    );
+    ServicoCompartilhamento.instancia = fakeServico;
 
     final escalada = Escalada(
       uid: 'uidViaCompleta1',
@@ -241,6 +241,7 @@ void main() {
     );
     final viaVm = ViaViewModel(
       escalada: escalada,
+      servicoCompartilhamento: fakeServico,
       copiadorAreaTransferencia: (texto) async => pixCopiado = texto,
       lancadorUrlExterna: (uri) async {
         betaAberto = uri;
@@ -302,10 +303,102 @@ void main() {
     expect(pixCopiado, 'pix@manutencao.org');
     expect(find.text('Chave Pix copiada para a área de transferência!'), findsOneWidget);
 
-    // Compartilha via pelo AppBar
+    // Compartilha via pelo AppBar -> abre Modal omitindo notas privadas
     await tester.tap(find.byIcon(Icons.share_outlined));
     await tester.pumpAndSettle();
-    expect(textoCompartilhado, contains('https://aresta.cc/s/uidViaCompleta1'));
+    expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ModalCompartilhamentoEntidade),
+        matching: find.textContaining('Encadenada'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ModalCompartilhamentoEntidade),
+        matching: find.textContaining('Costurou leve e rápido'),
+      ),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('btn_compartilhar_link_rapido')));
+    await tester.pumpAndSettle();
+    expect(
+      fakeServico.textosCompartilhados.single,
+      contains('https://aresta.cc/s/uidViaCompleta1'),
+    );
+
+    // Gatilho rápido no selo de ascensão abre o mesmo modal e exporta imagem Stories
+    await tester.ensureVisible(find.byKey(const Key('btn_compartilhar_selo_ascensao')));
+    await tester.tap(find.byKey(const Key('btn_compartilhar_selo_ascensao')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+    await tester.tap(find.byKey(const Key('btn_compartilhar_imagem_stories')));
+    await tester.pumpAndSettle();
+    expect(fakeServico.imagensCompartilhadas, hasLength(1));
+    expect(
+      fakeServico.textosCopiadosClipboard,
+      equals(['https://aresta.cc/s/uidViaCompleta1']),
+    );
+  });
+
+  testWidgets('ViaPage exibe ação Compartilhar no toast após salvar cadena na caderneta', (tester) async {
+    final fakeServico = ServicoCompartilhamentoFake();
+    ServicoCompartilhamento.instancia = fakeServico;
+    final escalada = Escalada(
+      uid: 'uidToastCad01',
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via do Toast',
+        dificuldade: GrauVia_GrauVia.BR_6SUP,
+      ),
+    );
+    final repoCaderneta = RepositorioCadernetaLocal();
+    final cadernetaVm = SecaoCadernetaViaViewModel(
+      escalada: escalada,
+      repositorio: repoCaderneta,
+    );
+    final viaVm = ViaViewModel(
+      escalada: escalada,
+      servicoCompartilhamento: fakeServico,
+    );
+    addTearDown(() {
+      cadernetaVm.dispose();
+      viaVm.dispose();
+    });
+
+    await tester.pumpWidget(
+      envolver(
+        ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+          pico: Pico(nome: 'Pedra Grande'),
+          viewModel: viaVm,
+          cadernetaViewModel: cadernetaVm,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('btn_registrar_cadena')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('btn_salvar_cadena')));
+    await tester.tap(find.byKey(const Key('btn_salvar_cadena')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cadena salva na caderneta!'), findsOneWidget);
+    expect(find.text('Compartilhar'), findsOneWidget);
+
+    await tester.tap(find.text('Compartilhar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ModalCompartilhamentoEntidade),
+        matching: find.textContaining('Encadenada'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('ViaPage recria ViewModel interno ao receber nova escalada em didUpdateWidget e renderiza Highline mapeado sem overflow em 320x568 @ 1.5x', (tester) async {
@@ -460,6 +553,8 @@ void main() {
     final btnSalvar = find.byKey(const Key('btn_salvar_cadena'));
     await tester.ensureVisible(btnSalvar);
     await tester.tap(btnSalvar);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
     // ViaPage reflete consenso de grau (7b), gráfico de votos e beta da comunidade imediatamente

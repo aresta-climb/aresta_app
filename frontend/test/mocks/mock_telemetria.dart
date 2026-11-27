@@ -495,6 +495,7 @@ class MockTelemetryService implements TelemetryService {
     required String tipoEntidade,
     required String uid,
     bool abrirMapa = false,
+    String formato = 'link',
   }) async {
     recordedEvents.add('compartilhar_entidade');
     recordedParams['compartilhar_entidade'] = {
@@ -503,6 +504,7 @@ class MockTelemetryService implements TelemetryService {
       'uid': uid,
       'abrir_mapa': abrirMapa ? 'true' : 'false',
       'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
+      'formato': formato,
     };
   }
 

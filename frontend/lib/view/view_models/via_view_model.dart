@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/modelos/dados_cartao_compartilhamento.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../idioma/tradutor_app.dart';
 import '../../services/compartilhamento/servico_compartilhamento.dart';
@@ -286,6 +287,41 @@ class ViaViewModel extends ChangeNotifier {
     );
   }
 
+  /// Serviço de compartilhamento ativo (injetado em testes ou padrão global).
+  ServicoCompartilhamento get servicoCompartilhamento =>
+      _servicoCompartilhamento ?? ServicoCompartilhamento.instancia;
+
+  /// Constrói o modelo unificado de compartilhamento para a [escalada] atual.
+  DadosCartaoCompartilhamento construirDadosCompartilhamento({
+    required String cragId,
+    Pico? pico,
+    Setor? setor,
+    Grupo? grupo,
+    Croqui? croqui,
+    EstadoCroquiVia? estadoCroqui,
+    DatasetResolver? resolvedorExterno,
+    SeloPessoalCompartilhamento? seloPessoal,
+  }) {
+    final estado =
+        estadoCroqui ??
+        resolverEstadoCroqui(
+          pico: pico,
+          setor: setor,
+          grupo: grupo,
+          resolvedorExterno: resolvedorExterno,
+        );
+    return DadosCartaoCompartilhamento.deEscalada(
+      idCroqui: cragId,
+      escalada: escalada,
+      pico: pico,
+      setor: setor,
+      grupo: grupo,
+      croqui: croqui,
+      estadoCroqui: estado,
+      seloPessoal: seloPessoal,
+    );
+  }
+
   /// Compartilha o link profundo da escalada delegando ao [ServicoCompartilhamento].
   Future<void> compartilharEscalada({
     required String cragId,
@@ -293,8 +329,7 @@ class ViaViewModel extends ChangeNotifier {
     String? nomeSetor,
     String? nomeGrupo,
   }) {
-    final servico = _servicoCompartilhamento ?? ServicoCompartilhamento.instancia;
-    return servico.compartilharEscalada(
+    return servicoCompartilhamento.compartilharEscalada(
       idCroqui: cragId,
       uid: escalada.uid,
       nomeEscalada: nomeEscalada,

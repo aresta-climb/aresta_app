@@ -489,7 +489,7 @@ void main() {
       expect(fakeAnalytics.recordedParams['link_externo']!['detalhe'], 'https://aresta.app');
     });
 
-    test('logCompartilharEntidade registra página e mapa', () async {
+    test('logCompartilharEntidade registra página, mapa e formato escolhido', () async {
       await TelemetryService.instance.logCompartilharEntidade(
         idCroqui: 'br_mg_igarape_pedra_grande',
         tipoEntidade: 'setor',
@@ -503,16 +503,19 @@ void main() {
       expect(params['uid'], 'hv7YWgTBQGyWOX');
       expect(params['abrir_mapa'], 'false');
       expect(params['origem'], 'pagina_detalhe');
+      expect(params['formato'], 'link');
 
       await TelemetryService.instance.logCompartilharEntidade(
         idCroqui: 'br_mg_igarape_pedra_grande',
         tipoEntidade: 'via',
         uid: 'x8siJek3FiG3aB',
         abrirMapa: true,
+        formato: 'imagem_stories',
       );
       params = fakeAnalytics.recordedParams['compartilhar_entidade']!;
       expect(params['abrir_mapa'], 'true');
       expect(params['origem'], 'mapa_interativo');
+      expect(params['formato'], 'imagem_stories');
     });
 
     test('logBuscaCroquis e logBuscaEscaladas', () async {

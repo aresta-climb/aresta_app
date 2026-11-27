@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/modelos/dados_cartao_compartilhamento.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../idioma/tradutor_app.dart';
 import '../../navigation/construtor_reativo_pagina.dart';
@@ -10,6 +11,7 @@ import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/formatador_escalada.dart';
 import '../../widgets/caderneta/modal_registro_cadena.dart';
+import '../../widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import '../../widgets/via/barra_inferior_acoes_via.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../../widgets/via/cabecalho_e_heroi_via.dart';
@@ -253,6 +255,33 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
 
   static const double _recuoDockInferior = 72.0;
 
+  void _abrirCompartilhamentoEscalada(
+    BuildContext context, {
+    EstadoCroquiVia? estadoCroqui,
+  }) {
+    final resumo = _cadernetaViewModel.resumoAscensao;
+    final seloPessoal = _cadernetaViewModel.possuiAscensao && resumo != null
+        ? SeloPessoalCompartilhamento(
+            ehCadena: _cadernetaViewModel.isCadena,
+            textoResumo: resumo,
+          )
+        : null;
+    exibirModalCompartilhamentoEntidade(
+      context,
+      dados: _viewModel.construirDadosCompartilhamento(
+        cragId: widget.cragId,
+        pico: widget.pico,
+        setor: widget.setor,
+        grupo: widget.grupo,
+        estadoCroqui: estadoCroqui,
+        resolvedorExterno: PageListenableBuilder.resolverOf(context),
+        seloPessoal: seloPessoal,
+      ),
+      servicoCompartilhamento: _viewModel.servicoCompartilhamento,
+      recuoExtraSnackBar: _recuoDockInferior,
+    );
+  }
+
   void _abrirRegistroCadena(BuildContext context) {
     final despachanteSnack = capturarDespachanteSnackBarSeguro(
       context,
@@ -268,7 +297,19 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
             : tr(ChaveTexto.cadTentativaSalvaToast);
         despachanteSnack.exibir(
           texto: mensagem,
-          duracao: const Duration(seconds: 2),
+          duracao: _viewModel.possuiUid
+              ? const Duration(seconds: 4)
+              : const Duration(seconds: 2),
+          rotuloAcao: _viewModel.possuiUid
+              ? tr(ChaveTexto.shareAcaoToastCaderneta)
+              : null,
+          aoAcionar: _viewModel.possuiUid
+              ? () {
+                  if (mounted) {
+                    _abrirCompartilhamentoEscalada(this.context);
+                  }
+                }
+              : null,
         );
       },
     ).whenComplete(registroVm.dispose);
@@ -534,6 +575,34 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
                                             ),
                                           ),
                                         ),
+                                        if (_viewModel.possuiUid)
+                                          IconButton(
+                                            key: const Key(
+                                              'btn_compartilhar_selo_ascensao',
+                                            ),
+                                            icon: Icon(
+                                              Icons.ios_share_rounded,
+                                              size: 17,
+                                              color: cores.chalkWhite.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                            ),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                            visualDensity: VisualDensity.compact,
+                                            tooltip: context.tr(
+                                              ChaveTexto
+                                                  .shareSeloAscensaoTooltip,
+                                            ),
+                                            onPressed: () =>
+                                                _abrirCompartilhamentoEscalada(
+                                                  context,
+                                                  estadoCroqui: estadoCroqui,
+                                                ),
+                                          ),
                                       ],
                                     ),
                                     if (citacaoNotas != null) ...[

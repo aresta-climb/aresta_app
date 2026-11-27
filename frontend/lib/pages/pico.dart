@@ -9,10 +9,11 @@ import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/pico_functions.dart';
 import '../view/function_library/funcoes_explorar.dart';
 import '../view/function_library/via_functions.dart';
+import '../data/modelos/dados_cartao_compartilhamento.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../navigation/arvore_navegacao.dart';
-import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
+import '../widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import '../idioma/tradutor_app.dart';
 import '../theme/cores_app.dart';
 
@@ -424,11 +425,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             ),
                             tooltip: tr(ChaveTexto.picoCompartilharTooltip),
                             onPressed: () {
-                              ServicoCompartilhamento.instancia.compartilharPico(
-                                idCroqui: widget.cragId,
-                                uid: widget.croqui.uid,
-                                nomePico: widget.pico.nome,
-                                localizacao: widget.pico.estado,
+                              exibirModalCompartilhamentoEntidade(
+                                context,
+                                dados: DadosCartaoCompartilhamento.dePico(
+                                  idCroqui: widget.cragId,
+                                  croqui: widget.croqui,
+                                  pico: widget.pico,
+                                ),
                               );
                             },
                           ),

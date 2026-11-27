@@ -1,34 +1,104 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../data/modelos/dados_cartao_compartilhamento.dart';
 import '../../idioma/tradutor_app.dart';
 import '../firebase/telemetria.dart';
 import '../repositorio_dataset.dart';
+import 'capturador_imagem_cartao.dart';
 
-/// Assinatura de função responsável por disparar o menu nativo de compartilhamento.
+/// Assinatura de função responsável por disparar o menu nativo de compartilhamento de texto.
 typedef ExecutorCompartilhamento = Future<void> Function(String texto);
+
+/// Assinatura de função responsável por disparar o menu nativo de compartilhamento de imagem PNG.
+typedef ExecutorCompartilhamentoImagem = Future<void> Function(
+  Uint8List bytesPng,
+  String nomeArquivo,
+);
+
+/// Assinatura de função responsável por copiar o link curto para a área de transferência.
+typedef CopiadorTextoCompartilhamento = Future<void> Function(String texto);
 
 /// Serviço modular responsável por formatar mensagens amigáveis de compartilhamento,
 /// gerar URLs compactas (`https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>`),
-/// registrar telemetria e invocar o menu nativo do sistema operacional (`share_plus`).
+/// exportar cartões PNG para Stories com cópia automática do link, registrar telemetria
+/// por formato e invocar o menu nativo do sistema operacional (`share_plus`).
 class ServicoCompartilhamento {
   final ExecutorCompartilhamento _executor;
+  final ExecutorCompartilhamentoImagem? _executorImagemPersonalizado;
+  final CopiadorTextoCompartilhamento _copiadorAreaTransferencia;
+  final Future<Directory> Function() _provedorDiretorioTemporario;
+
+  /// Capturador opcional associado a esta instância (útil em Fakes determinísticos).
+  final CapturadorBytesCartao? capturadorCartao;
 
   ServicoCompartilhamento({
     ExecutorCompartilhamento? executorCompartilhamento,
-  }) : _executor = executorCompartilhamento ?? _executorPadrao;
+    ExecutorCompartilhamentoImagem? executorImagem,
+    CopiadorTextoCompartilhamento? copiadorAreaTransferencia,
+    Future<Directory> Function()? provedorDiretorioTemporario,
+    this.capturadorCartao,
+  }) : _executor = executorCompartilhamento ?? _executorPadrao,
+       _executorImagemPersonalizado = executorImagem,
+       _copiadorAreaTransferencia =
+           copiadorAreaTransferencia ?? _copiadorPadrao,
+       _provedorDiretorioTemporario =
+           provedorDiretorioTemporario ??
+           (() => Directory.systemTemp.createTemp('aresta_share_'));
 
   static Future<void> _executorPadrao(String texto) async {
     await SharePlus.instance.share(ShareParams(text: texto));
   }
 
+  static Future<void> _copiadorPadrao(String texto) async {
+    await Clipboard.setData(ClipboardData(text: texto));
+  }
+
+  Future<void> _executarCompartilhamentoImagem(
+    Uint8List bytesPng,
+    String nomeArquivo,
+  ) async {
+    if (_executorImagemPersonalizado != null) {
+      await _executorImagemPersonalizado(bytesPng, nomeArquivo);
+      return;
+    }
+
+    final diretorioTemp = await _provedorDiretorioTemporario();
+    final arquivo = File('${diretorioTemp.path}/$nomeArquivo');
+    try {
+      await arquivo.writeAsBytes(bytesPng, flush: true);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(
+              arquivo.path,
+              mimeType: 'image/png',
+              name: nomeArquivo,
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (await diretorioTemp.exists()) {
+        await diretorioTemp.delete(recursive: true);
+      }
+    }
+  }
+
   /// Instância global ativa (substituível em testes de widget/integração).
   static ServicoCompartilhamento instancia = ServicoCompartilhamento();
 
-  /// Restaura a instância padrão conectada ao `SharePlus.instance`.
+  /// Capturador ativo utilizado pelo modal de compartilhamento para rasterizar o cartão visual.
+  static CapturadorBytesCartao capturadorPadrao =
+      CapturadorImagemCartao.capturarPng;
+
+  /// Restaura a instância padrão e o capturador oficial de cartões.
   static void restaurarPadrao() {
     instancia = ServicoCompartilhamento();
+    capturadorPadrao = CapturadorImagemCartao.capturarPng;
   }
 
   /// Constrói a URL canônica de compartilhamento no domínio `aresta.cc`.
@@ -141,6 +211,74 @@ class ServicoCompartilhamento {
     return 'no setor $limpo';
   }
 
+  /// Compartilha o link curto canônico a partir de um modelo [DadosCartaoCompartilhamento].
+  Future<void> compartilharLinkPorDados(
+    DadosCartaoCompartilhamento dados, {
+    bool abrirMapa = false,
+  }) {
+    switch (dados.tipoEntidade) {
+      case TipoEntidadeCompartilhavel.pico:
+        return compartilharPico(
+          idCroqui: dados.idCroqui,
+          uid: dados.uid,
+          nomePico: dados.nomePico,
+          localizacao: dados.localizacaoPico,
+          abrirMapa: abrirMapa,
+        );
+      case TipoEntidadeCompartilhavel.grupo:
+        return compartilharGrupo(
+          idCroqui: dados.idCroqui,
+          uid: dados.uid,
+          nomeGrupo: dados.nomeGrupo ?? dados.titulo,
+          nomePico: dados.nomePico,
+          abrirMapa: abrirMapa,
+        );
+      case TipoEntidadeCompartilhavel.setor:
+        return compartilharSetor(
+          idCroqui: dados.idCroqui,
+          uid: dados.uid,
+          nomeSetor: dados.nomeSetor ?? dados.titulo,
+          nomePico: dados.nomePico,
+          abrirMapa: abrirMapa,
+        );
+      case TipoEntidadeCompartilhavel.via:
+        return compartilharEscalada(
+          idCroqui: dados.idCroqui,
+          uid: dados.uid,
+          nomeEscalada: dados.titulo,
+          grau: dados.grauDestaque,
+          nomeSetor: dados.nomeSetor ?? dados.nomeGrupo ?? 'Geral',
+          nomePico: dados.nomePico,
+          abrirMapa: abrirMapa,
+        );
+    }
+  }
+
+  /// Copia a URL canônica da entidade para a área de transferência, registra telemetria
+  /// com `formato: 'imagem_stories'` e compartilha exclusivamente os bytes PNG (`image/png`)
+  /// para habilitar o destino Instagram Stories no menu nativo.
+  Future<String> compartilharImagemStories({
+    required DadosCartaoCompartilhamento dados,
+    required Uint8List bytesPng,
+    bool abrirMapa = false,
+  }) async {
+    final url = construirUrlCompartilhamento(dados.uid, abrirMapa: abrirMapa);
+    await _copiadorAreaTransferencia(url);
+
+    await TelemetryService.instance.logCompartilharEntidade(
+      idCroqui: dados.idCroqui,
+      tipoEntidade: dados.tipoEntidade.codigoTelemetria,
+      uid: dados.uid,
+      abrirMapa: abrirMapa,
+      formato: 'imagem_stories',
+    );
+
+    final nomeArquivo =
+        'aresta_${dados.tipoEntidade.codigoTelemetria}_${dados.uid}.png';
+    await _executarCompartilhamentoImagem(bytesPng, nomeArquivo);
+    return url;
+  }
+
   /// Compartilha a página ou mapa de um Pico/Croqui.
   Future<void> compartilharPico({
     required String idCroqui,
@@ -165,6 +303,7 @@ class ServicoCompartilhamento {
       tipoEntidade: 'pico',
       uid: uid,
       abrirMapa: abrirMapa,
+      formato: 'link',
     );
     await _executor(mensagem);
   }
@@ -196,6 +335,7 @@ class ServicoCompartilhamento {
       tipoEntidade: 'grupo',
       uid: uid,
       abrirMapa: abrirMapa,
+      formato: 'link',
     );
     await _executor(mensagem);
   }
@@ -227,6 +367,7 @@ class ServicoCompartilhamento {
       tipoEntidade: 'setor',
       uid: uid,
       abrirMapa: abrirMapa,
+      formato: 'link',
     );
     await _executor(mensagem);
   }
@@ -269,6 +410,7 @@ class ServicoCompartilhamento {
       tipoEntidade: 'via',
       uid: uid,
       abrirMapa: abrirMapa,
+      formato: 'link',
     );
     await _executor(mensagem);
   }

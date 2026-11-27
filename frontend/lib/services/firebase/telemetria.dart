@@ -593,11 +593,13 @@ class TelemetryService {
   /// - [tipoEntidade]: Tipo da entidade compartilhada (`'pico'`, `'grupo'`, `'setor'`, `'via'`).
   /// - [uid]: Identificador universal (NanoID 14c) da entidade compartilhada.
   /// - [abrirMapa]: `true` quando compartilhado a partir do mapa interativo (`/sm/<uid>`), `false` quando da página (`/s/<uid>`).
+  /// - [formato]: Formato escolhido no compartilhamento (`'link'` ou `'imagem_stories'`).
   Future<void> logCompartilharEntidade({
     required String idCroqui,
     required String tipoEntidade,
     required String uid,
     bool abrirMapa = false,
+    String formato = 'link',
   }) {
     return _logEvent('compartilhar_entidade', {
       'id_croqui': idCroqui,
@@ -605,6 +607,7 @@ class TelemetryService {
       'uid': uid,
       'abrir_mapa': abrirMapa ? 'true' : 'false',
       'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
+      'formato': formato,
     });
   }
 

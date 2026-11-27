@@ -3,10 +3,11 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../data/modelos/dados_cartao_compartilhamento.dart';
 import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
-import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/app_logger.dart';
+import '../widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/gerenciador_filtros_croqui.dart';
 import '../theme/cores_app.dart';
@@ -330,11 +331,13 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
                   ),
                   tooltip: context.tr(ChaveTexto.setorCompartilharTooltip),
                   onPressed: () {
-                    ServicoCompartilhamento.instancia.compartilharSetor(
-                      idCroqui: widget.cragId,
-                      uid: widget.setor.uid,
-                      nomeSetor: widget.setor.nome,
-                      nomePico: widget.cragId,
+                    exibirModalCompartilhamentoEntidade(
+                      context,
+                      dados: DadosCartaoCompartilhamento.deSetor(
+                        idCroqui: widget.cragId,
+                        setor: widget.setor,
+                        grupoContext: widget.grupoContext,
+                      ),
                     );
                   },
                 ),

@@ -3,10 +3,11 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../data/modelos/dados_cartao_compartilhamento.dart';
 import '../idioma/tradutor_app.dart';
 import '../navigation/funcoes_navegacao.dart';
-import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
+import '../widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import '../services/gerenciador_filtros_croqui.dart';
 import '../theme/cores_app.dart';
 import '../utils/extrator_detalhes_tecnicos_via.dart';
@@ -352,15 +353,13 @@ class _GrupoPageState extends State<GrupoPage>
                   ),
                   tooltip: context.tr(ChaveTexto.setorCompartilharGrupoTooltip),
                   onPressed: () {
-                    final nomePico = (widget.croqui != null &&
-                            widget.croqui!.picos.isNotEmpty)
-                        ? widget.croqui!.picos.first.nome
-                        : widget.cragId;
-                    ServicoCompartilhamento.instancia.compartilharGrupo(
-                      idCroqui: widget.cragId,
-                      uid: widget.grupo.uid,
-                      nomeGrupo: widget.grupo.nome,
-                      nomePico: nomePico,
+                    exibirModalCompartilhamentoEntidade(
+                      context,
+                      dados: DadosCartaoCompartilhamento.deGrupo(
+                        idCroqui: widget.cragId,
+                        grupo: widget.grupo,
+                        croqui: widget.croqui,
+                      ),
                     );
                   },
                 ),

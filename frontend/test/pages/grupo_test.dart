@@ -10,9 +10,11 @@ import 'package:frontend/widgets/painel_filtros_indice.dart';
 import 'package:frontend/widgets/barra_ordenacao_exploracao.dart';
 import 'package:frontend/widgets/card_indice_escalada.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
+import 'package:frontend/widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import 'package:frontend/services/gerenciador_filtros_croqui.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import '../fakes/servico_compartilhamento_fake.dart';
 import '../mocks/mock_telemetria.dart';
 
 void main() {
@@ -334,13 +336,9 @@ void main() {
     });
   });
 
-  testWidgets('GrupoPage exibe botão de compartilhamento quando grupo possui uid e dispara ServicoCompartilhamento', (tester) async {
-    String? textoCompartilhado;
-    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
-      executorCompartilhamento: (texto) async {
-        textoCompartilhado = texto;
-      },
-    );
+  testWidgets('GrupoPage exibe botão de compartilhamento quando grupo possui uid, abre modal e dispara link ou imagem Stories', (tester) async {
+    final fakeServico = ServicoCompartilhamentoFake();
+    ServicoCompartilhamento.instancia = fakeServico;
 
     final grupoComUid = Grupo()
       ..uid = 'uidGrupoShare55'
@@ -365,10 +363,36 @@ void main() {
     await tester.tap(botaoShare);
     await tester.pumpAndSettle();
 
-    expect(textoCompartilhado, isNotNull);
-    expect(textoCompartilhado, contains('Grupo Sherpa'));
-    expect(textoCompartilhado, contains('Pedra Grande'));
-    expect(textoCompartilhado, contains('https://aresta.cc/s/uidGrupoShare55'));
+    expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ModalCompartilhamentoEntidade),
+        matching: find.textContaining('arestaclimb.com'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('btn_compartilhar_link_rapido')));
+    await tester.pumpAndSettle();
+
+    expect(fakeServico.textosCompartilhados, hasLength(1));
+    expect(fakeServico.textosCompartilhados.single, contains('Grupo Sherpa'));
+    expect(fakeServico.textosCompartilhados.single, contains('Pedra Grande'));
+    expect(
+      fakeServico.textosCompartilhados.single,
+      contains('https://aresta.cc/s/uidGrupoShare55'),
+    );
+
+    await tester.tap(botaoShare);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('btn_compartilhar_imagem_stories')));
+    await tester.pumpAndSettle();
+
+    expect(fakeServico.imagensCompartilhadas, hasLength(1));
+    expect(
+      fakeServico.textosCopiadosClipboard,
+      equals(['https://aresta.cc/s/uidGrupoShare55']),
+    );
   });
 
   testWidgets('GrupoPage renderiza imagem de capa e gradientes sem erro de argumentos LinearGradient', (tester) async {

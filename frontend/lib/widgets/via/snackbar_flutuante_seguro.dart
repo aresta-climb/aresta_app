@@ -52,6 +52,7 @@ class DespachanteSnackBarSeguro {
             ),
           ),
           duration: duracao,
+          persist: false,
           action: rotuloAcao != null && aoAcionar != null
               ? SnackBarAction(
                   label: rotuloAcao,

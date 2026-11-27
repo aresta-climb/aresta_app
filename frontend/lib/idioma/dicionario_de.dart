@@ -853,6 +853,23 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
       'Schau dir {setor} ({pico}) in Aresta an:\n{url}',
   ChaveTexto.shareConfiraEscalada:
       'Schau dir {via}{grau}{setor} ({pico}) in Aresta an:\n{url}',
+  ChaveTexto.shareModalTitulo: 'Teilen',
+  ChaveTexto.shareModalSubtitulo:
+      'Wähle zwischen visueller Story-Karte oder klickbarem Link',
+  ChaveTexto.shareBtnImagemStories: 'Bild teilen (Stories)',
+  ChaveTexto.shareBtnLinkRapido: 'Link teilen (WhatsApp)',
+  ChaveTexto.shareLinkCopiadoParaStoriesToast:
+      'Link kopiert! Füge ihn bei Bedarf in den Link-Sticker in den Stories ein.',
+  ChaveTexto.shareAcaoToastCaderneta: 'Teilen',
+  ChaveTexto.shareSeloAscensaoTooltip: 'Begehung teilen',
+  ChaveTexto.shareCardTipoPico: 'KLETTERGEBIET',
+  ChaveTexto.shareCardTipoGrupo: 'SEKTORENGRUPPE',
+  ChaveTexto.shareCardTipoSetor: 'KLETTERSEKTOR',
+  ChaveTexto.shareCardContagemSetores: '{n} Sektoren',
+  ChaveTexto.shareCardContagemUmSetor: '1 Sektor',
+  ChaveTexto.shareCardContagemEscaladas: '{n} Routen',
+  ChaveTexto.shareCardContagemUmaEscalada: '1 Route',
+  ChaveTexto.shareCardFaixaGraus: 'Grade {faixa}',
   ChaveTexto.gpsDesligadoUltimaConhecida:
       'GPS ausgeschaltet; zentriere auf letzten bekannten Standort.',
   ChaveTexto.gpsAtiveAparelho:

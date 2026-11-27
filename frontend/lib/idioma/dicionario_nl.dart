@@ -849,6 +849,23 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
   ChaveTexto.shareConfiraSetor: 'Bekijk {setor} bij {pico} op Aresta:\n{url}',
   ChaveTexto.shareConfiraEscalada:
       'Bekijk {via}{grau}{setor} bij {pico} op Aresta:\n{url}',
+  ChaveTexto.shareModalTitulo: 'Delen',
+  ChaveTexto.shareModalSubtitulo:
+      'Kies tussen een visuele kaart voor Stories of een klikbare link',
+  ChaveTexto.shareBtnImagemStories: 'Afbeelding delen (Stories)',
+  ChaveTexto.shareBtnLinkRapido: 'Link delen (WhatsApp)',
+  ChaveTexto.shareLinkCopiadoParaStoriesToast:
+      'Link gekopieerd! Plak hem indien gewenst in de Link-sticker in Stories.',
+  ChaveTexto.shareAcaoToastCaderneta: 'Delen',
+  ChaveTexto.shareSeloAscensaoTooltip: 'Beklimming delen',
+  ChaveTexto.shareCardTipoPico: 'KLIMGEBIED',
+  ChaveTexto.shareCardTipoGrupo: 'SECTORGROEP',
+  ChaveTexto.shareCardTipoSetor: 'KLIMSECTOR',
+  ChaveTexto.shareCardContagemSetores: '{n} sectoren',
+  ChaveTexto.shareCardContagemUmSetor: '1 sector',
+  ChaveTexto.shareCardContagemEscaladas: '{n} beklimmingen',
+  ChaveTexto.shareCardContagemUmaEscalada: '1 beklimming',
+  ChaveTexto.shareCardFaixaGraus: 'Graden {faixa}',
   ChaveTexto.gpsDesligadoUltimaConhecida:
       'GPS uitgeschakeld; centreren op laatst bekende locatie.',
   ChaveTexto.gpsAtiveAparelho:

@@ -481,6 +481,12 @@ void main() {
     vmComServicos.registrarVisualizacaoCroqui(cragId: 'crag1');
     await vmComServicos.compartilharEscalada(cragId: 'crag1');
     expect(linkCompartilhado, contains(uidVia));
+    final dadosCartao = vmComServicos.construirDadosCompartilhamento(
+      cragId: 'crag1',
+      pico: Pico(nome: 'Serra do Cipó'),
+    );
+    expect(dadosCartao.titulo, 'Via Comunitária');
+    expect(dadosCartao.caminhoImagemHeroi, 'mapas/proprio.webp');
     expect(
       vmComServicos.resolverEstadoCroqui().aspectRatioMiniatura,
       2.0,

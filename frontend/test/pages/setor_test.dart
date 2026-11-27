@@ -9,11 +9,13 @@ import 'package:frontend/pages/setor.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
+import 'package:frontend/widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/gerenciador_filtros_croqui.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
+import '../fakes/servico_compartilhamento_fake.dart';
 
 void main() {
   setUp(() {
@@ -297,13 +299,9 @@ void main() {
     expect(find.text('Boulder Alvo'), findsOneWidget);
   });
 
-  testWidgets('SetorPage exibe botão de compartilhamento quando setor possui uid e usa nome do croqui em vez do slug', (tester) async {
-    String? textoCompartilhado;
-    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
-      executorCompartilhamento: (texto) async {
-        textoCompartilhado = texto;
-      },
-    );
+  testWidgets('SetorPage exibe botão de compartilhamento quando setor possui uid, abre modal e usa nome do croqui em vez do slug', (tester) async {
+    final fakeServico = ServicoCompartilhamentoFake();
+    ServicoCompartilhamento.instancia = fakeServico;
     DatasetRepository.instance?.indiceData.value = Indice(
       croquis: [
         ResumoCroqui(
@@ -336,10 +334,38 @@ void main() {
     await tester.tap(botaoShare);
     await tester.pumpAndSettle();
 
-    expect(textoCompartilhado, isNotNull);
-    expect(textoCompartilhado, contains('Confira o Setor Estacionamento, em Pedra Grande, no Aresta:'));
-    expect(textoCompartilhado, isNot(contains('br_mg_igarape_pedra_grande')));
-    expect(textoCompartilhado, contains('https://aresta.cc/s/uidSetorShare99'));
+    expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ModalCompartilhamentoEntidade),
+        matching: find.textContaining('@arestaclimb'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('btn_compartilhar_link_rapido')));
+    await tester.pumpAndSettle();
+
+    expect(fakeServico.textosCompartilhados, hasLength(1));
+    expect(
+      fakeServico.textosCompartilhados.single,
+      contains('Confira o Setor Estacionamento, em Pedra Grande, no Aresta:'),
+    );
+    expect(
+      fakeServico.textosCompartilhados.single,
+      isNot(contains('br_mg_igarape_pedra_grande')),
+    );
+    expect(
+      fakeServico.textosCompartilhados.single,
+      contains('https://aresta.cc/s/uidSetorShare99'),
+    );
+
+    await tester.tap(botaoShare);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('btn_compartilhar_imagem_stories')));
+    await tester.pumpAndSettle();
+
+    expect(fakeServico.imagensCompartilhadas, hasLength(1));
   });
 
   testWidgets('SetorPage renderiza imagem de capa e gradientes sem erro de argumentos LinearGradient', (tester) async {

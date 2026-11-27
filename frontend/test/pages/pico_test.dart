@@ -30,9 +30,11 @@ import 'package:frontend/widgets/modal_confirmacao_saida.dart';
 import 'package:frontend/widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
+import 'package:frontend/widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/idioma/tradutor_app.dart';
+import '../fakes/servico_compartilhamento_fake.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 import '../fakes/cliente_clima_altimetria_fake.dart';
@@ -1168,14 +1170,10 @@ void main() {
   );
 
   testWidgets(
-    'PicoDetailsPage exibe botão de compartilhamento quando croqui possui uid e dispara ServicoCompartilhamento',
+    'PicoDetailsPage exibe botão de compartilhamento quando croqui possui uid, abre modal com preview e dispara link ou imagem Stories',
     (tester) async {
-      String? textoCompartilhado;
-      ServicoCompartilhamento.instancia = ServicoCompartilhamento(
-        executorCompartilhamento: (texto) async {
-          textoCompartilhado = texto;
-        },
-      );
+      final fakeServico = ServicoCompartilhamentoFake();
+      ServicoCompartilhamento.instancia = fakeServico;
 
       final datasetRepo = _FakeDatasetRepository();
       final croqui = Croqui()..uid = 'uidPicoShare77';
@@ -1202,9 +1200,36 @@ void main() {
       await tester.tap(botaoShare);
       await tester.pumpAndSettle();
 
-      expect(textoCompartilhado, isNotNull);
-      expect(textoCompartilhado, contains('Serra do Cipó'));
-      expect(textoCompartilhado, contains('https://aresta.cc/s/uidPicoShare77'));
+      expect(find.byType(ModalCompartilhamentoEntidade), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ModalCompartilhamentoEntidade),
+          matching: find.textContaining('@arestaclimb'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('btn_compartilhar_link_rapido')));
+      await tester.pumpAndSettle();
+
+      expect(fakeServico.textosCompartilhados, hasLength(1));
+      expect(fakeServico.textosCompartilhados.single, contains('Serra do Cipó'));
+      expect(
+        fakeServico.textosCompartilhados.single,
+        contains('https://aresta.cc/s/uidPicoShare77'),
+      );
+
+      // Reabre e compartilha imagem para Stories
+      await tester.tap(botaoShare);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_compartilhar_imagem_stories')));
+      await tester.pumpAndSettle();
+
+      expect(fakeServico.imagensCompartilhadas, hasLength(1));
+      expect(
+        fakeServico.textosCopiadosClipboard,
+        equals(['https://aresta.cc/s/uidPicoShare77']),
+      );
     },
   );
 

@@ -1,16 +1,19 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/data/modelos/dados_cartao_compartilhamento.dart';
 import 'package:frontend/idioma/tradutor_app.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../fakes/servico_compartilhamento_fake.dart';
 import '../../mocks/mock_telemetria.dart';
 
 void main() {
@@ -55,6 +58,7 @@ void main() {
         'uid': 'cUidPedra12345',
         'abrir_mapa': 'false',
         'origem': 'pagina_detalhe',
+        'formato': 'link',
       });
 
       textosCompartilhados.clear();
@@ -391,6 +395,145 @@ void main() {
         textosCompartilhados.single,
         'Check out Diedro (7a) (Fenda) at Serra do Cipó on Aresta:\nhttps://aresta.cc/s/uidVia12345678',
       );
+    });
+
+    test('compartilharLinkPorDados roteia Pico, Grupo, Setor e Via mantendo formato link', () async {
+      await ServicoCompartilhamento.instancia.compartilharLinkPorDados(
+        const DadosCartaoCompartilhamento(
+          tipoEntidade: TipoEntidadeCompartilhavel.pico,
+          idCroqui: 'crag1',
+          uid: 'uidP1',
+          titulo: 'Pedra Grande',
+          subtituloLocalizacao: 'MG',
+          etiquetaCategoria: 'PICO',
+          nomePico: 'Pedra Grande',
+          localizacaoPico: 'MG',
+        ),
+      );
+      await ServicoCompartilhamento.instancia.compartilharLinkPorDados(
+        const DadosCartaoCompartilhamento(
+          tipoEntidade: TipoEntidadeCompartilhavel.grupo,
+          idCroqui: 'crag1',
+          uid: 'uidG1',
+          titulo: 'Grupo Sherpa',
+          subtituloLocalizacao: 'Pedra Grande',
+          etiquetaCategoria: 'GRUPO',
+          nomePico: 'Pedra Grande',
+          nomeGrupo: 'Grupo Sherpa',
+        ),
+      );
+      await ServicoCompartilhamento.instancia.compartilharLinkPorDados(
+        const DadosCartaoCompartilhamento(
+          tipoEntidade: TipoEntidadeCompartilhavel.setor,
+          idCroqui: 'crag1',
+          uid: 'uidS1',
+          titulo: 'Setor Principal',
+          subtituloLocalizacao: 'Pedra Grande',
+          etiquetaCategoria: 'SETOR',
+          nomePico: 'Pedra Grande',
+          nomeSetor: 'Setor Principal',
+        ),
+      );
+      await ServicoCompartilhamento.instancia.compartilharLinkPorDados(
+        const DadosCartaoCompartilhamento(
+          tipoEntidade: TipoEntidadeCompartilhavel.via,
+          idCroqui: 'crag1',
+          uid: 'uidV1',
+          titulo: 'Aresta Clássica',
+          subtituloLocalizacao: 'Pedra Grande • Setor Principal',
+          etiquetaCategoria: 'ESPORTIVA',
+          nomePico: 'Pedra Grande',
+          nomeSetor: 'Setor Principal',
+          grauDestaque: '6ºsup',
+        ),
+      );
+
+      expect(textosCompartilhados, hasLength(4));
+      expect(textosCompartilhados[0], contains('https://aresta.cc/s/uidP1'));
+      expect(textosCompartilhados[1], contains('https://aresta.cc/s/uidG1'));
+      expect(textosCompartilhados[2], contains('https://aresta.cc/s/uidS1'));
+      expect(textosCompartilhados[3], contains('https://aresta.cc/s/uidV1'));
+    });
+
+    test('compartilharImagemStories copia link para clipboard, registra telemetria imagem_stories, envia PNG puro via share_plus e limpa pasta temporária', () async {
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      MethodCall? chamadaCapturada;
+      String? textoClipboard;
+      late Directory dirTempCriado;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+        chamadaCapturada = call;
+        return 'dev.fluttercommunity.plus/share/success';
+      });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (MethodCall call) async {
+        if (call.method == 'Clipboard.setData') {
+          final args = call.arguments as Map<dynamic, dynamic>;
+          textoClipboard = args['text'] as String?;
+        }
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final servico = ServicoCompartilhamento(
+        provedorDiretorioTemporario: () async {
+          dirTempCriado = await Directory.systemTemp.createTemp(
+            'aresta_share_test_',
+          );
+          return dirTempCriado;
+        },
+      );
+
+      const dados = DadosCartaoCompartilhamento(
+        tipoEntidade: TipoEntidadeCompartilhavel.via,
+        idCroqui: 'br_mg_igarape_pedra_grande',
+        uid: 'x8siJek3FiG3aB',
+        titulo: 'Aresta Clássica',
+        subtituloLocalizacao: 'Pedra Grande',
+        etiquetaCategoria: 'ESPORTIVA',
+        nomePico: 'Pedra Grande',
+      );
+
+      final url = await servico.compartilharImagemStories(
+        dados: dados,
+        bytesPng: ServicoCompartilhamentoFake.pngMinimoValido,
+      );
+
+      expect(url, 'https://aresta.cc/s/x8siJek3FiG3aB');
+      expect(textoClipboard, 'https://aresta.cc/s/x8siJek3FiG3aB');
+      expect(mockTelemetry.recordedParams['compartilhar_entidade'], {
+        'id_croqui': 'br_mg_igarape_pedra_grande',
+        'tipo_entidade': 'via',
+        'uid': 'x8siJek3FiG3aB',
+        'abrir_mapa': 'false',
+        'origem': 'pagina_detalhe',
+        'formato': 'imagem_stories',
+      });
+      expect(chamadaCapturada, isNotNull);
+      expect(chamadaCapturada!.method, 'share');
+      final args = Map<String, dynamic>.from(
+        chamadaCapturada!.arguments as Map,
+      );
+      expect(args['text'], isNull);
+      expect(args['mimeTypes'], equals(['image/png']));
+      expect(
+        (args['paths'] as List).single.toString(),
+        endsWith('aresta_via_x8siJek3FiG3aB.png'),
+      );
+      expect(await dirTempCriado.exists(), isFalse);
+
+      // Também exercita o provedor padrão de diretório temporário do sistema
+      await ServicoCompartilhamento().compartilharImagemStories(
+        dados: dados,
+        bytesPng: ServicoCompartilhamentoFake.pngMinimoValido,
+      );
+      expect(chamadaCapturada!.method, 'share');
     });
   });
 }

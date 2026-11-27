@@ -834,6 +834,23 @@ const Map<ChaveTexto, String> dicionarioIngles = {
   ChaveTexto.shareConfiraSetor: 'Check out {setor} at {pico} on Aresta:\n{url}',
   ChaveTexto.shareConfiraEscalada:
       'Check out {via}{grau}{setor} at {pico} on Aresta:\n{url}',
+  ChaveTexto.shareModalTitulo: 'Share',
+  ChaveTexto.shareModalSubtitulo:
+      'Choose between a visual card for Stories or a clickable link',
+  ChaveTexto.shareBtnImagemStories: 'Share Image (Stories)',
+  ChaveTexto.shareBtnLinkRapido: 'Share Link (WhatsApp)',
+  ChaveTexto.shareLinkCopiadoParaStoriesToast:
+      'Link copied! Paste it into the Link sticker on Stories if you like.',
+  ChaveTexto.shareAcaoToastCaderneta: 'Share',
+  ChaveTexto.shareSeloAscensaoTooltip: 'Share ascent',
+  ChaveTexto.shareCardTipoPico: 'CLIMBING CRAG',
+  ChaveTexto.shareCardTipoGrupo: 'SECTOR GROUP',
+  ChaveTexto.shareCardTipoSetor: 'CLIMBING SECTOR',
+  ChaveTexto.shareCardContagemSetores: '{n} sectors',
+  ChaveTexto.shareCardContagemUmSetor: '1 sector',
+  ChaveTexto.shareCardContagemEscaladas: '{n} climbs',
+  ChaveTexto.shareCardContagemUmaEscalada: '1 climb',
+  ChaveTexto.shareCardFaixaGraus: 'Grades {faixa}',
   ChaveTexto.gpsDesligadoUltimaConhecida:
       'GPS is off; centering on your last known location.',
   ChaveTexto.gpsAtiveAparelho:

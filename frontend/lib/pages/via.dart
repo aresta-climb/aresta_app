@@ -3,12 +3,15 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../data/modelos/dados_cartao_compartilhamento.dart';
 import '../idioma/tradutor_app.dart';
+import '../navigation/construtor_reativo_pagina.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
+import '../widgets/compartilhamento/modal_compartilhamento_entidade.dart';
 import '../widgets/navegacao/botao_voltar_com_retorno_inicio.dart';
 import '../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../widgets/via/snackbar_flutuante_seguro.dart';
@@ -64,7 +67,9 @@ class ViaPage extends StatefulWidget {
 
 class _ViaPageState extends State<ViaPage> {
   late ViaViewModel _viewModel;
+  late SecaoCadernetaViaViewModel _cadernetaViewModel;
   bool _gerenciaCicloVida = false;
+  bool _gerenciaCadernetaVm = false;
 
   @override
   void initState() {
@@ -76,10 +81,10 @@ class _ViaPageState extends State<ViaPage> {
   void didUpdateWidget(covariant ViaPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.viewModel != oldWidget.viewModel ||
-        (_gerenciaCicloVida && widget.escalada != oldWidget.escalada)) {
-      if (_gerenciaCicloVida) {
-        _viewModel.dispose();
-      }
+        widget.cadernetaViewModel != oldWidget.cadernetaViewModel ||
+        ((_gerenciaCicloVida || _gerenciaCadernetaVm) &&
+            widget.escalada != oldWidget.escalada)) {
+      _descartarViewModels();
       _inicializarViewModel();
     }
   }
@@ -92,13 +97,31 @@ class _ViaPageState extends State<ViaPage> {
       _viewModel = ViaViewModel(escalada: widget.escalada);
       _gerenciaCicloVida = true;
     }
+
+    if (widget.cadernetaViewModel != null) {
+      _cadernetaViewModel = widget.cadernetaViewModel!;
+      _gerenciaCadernetaVm = false;
+    } else {
+      _cadernetaViewModel = SecaoCadernetaViaViewModel(
+        escalada: widget.escalada,
+        repositorioInteracoes: _viewModel.repositorioInteracoes,
+      );
+      _gerenciaCadernetaVm = true;
+    }
+  }
+
+  void _descartarViewModels() {
+    if (_gerenciaCicloVida) {
+      _viewModel.dispose();
+    }
+    if (_gerenciaCadernetaVm) {
+      _cadernetaViewModel.dispose();
+    }
   }
 
   @override
   void dispose() {
-    if (_gerenciaCicloVida) {
-      _viewModel.dispose();
-    }
+    _descartarViewModels();
     super.dispose();
   }
 
@@ -188,11 +211,28 @@ class _ViaPageState extends State<ViaPage> {
                   ),
                   tooltip: context.tr(ChaveTexto.viaCompartilharTooltip),
                   onPressed: () {
-                    _viewModel.compartilharEscalada(
-                      cragId: widget.cragId,
-                      nomePico: widget.pico?.nome,
-                      nomeSetor: widget.setor?.nome,
-                      nomeGrupo: widget.grupo?.nome,
+                    final resumo = _cadernetaViewModel.resumoAscensao;
+                    final seloPessoal =
+                        _cadernetaViewModel.possuiAscensao && resumo != null
+                        ? SeloPessoalCompartilhamento(
+                            ehCadena: _cadernetaViewModel.isCadena,
+                            textoResumo: resumo,
+                          )
+                        : null;
+                    exibirModalCompartilhamentoEntidade(
+                      context,
+                      dados: _viewModel.construirDadosCompartilhamento(
+                        cragId: widget.cragId,
+                        pico: widget.pico,
+                        setor: widget.setor,
+                        grupo: widget.grupo,
+                        resolvedorExterno: PageListenableBuilder.resolverOf(
+                          context,
+                        ),
+                        seloPessoal: seloPessoal,
+                      ),
+                      servicoCompartilhamento: _viewModel.servicoCompartilhamento,
+                      recuoExtraSnackBar: !_viewModel.ehHighline ? 72 : 0,
                     );
                   },
                 ),
@@ -208,7 +248,7 @@ class _ViaPageState extends State<ViaPage> {
               grupo: widget.grupo,
               fromMapaPage: widget.fromMapaPage,
               viewModel: _viewModel,
-              cadernetaViewModel: widget.cadernetaViewModel,
+              cadernetaViewModel: _cadernetaViewModel,
             ),
           ),
         );
