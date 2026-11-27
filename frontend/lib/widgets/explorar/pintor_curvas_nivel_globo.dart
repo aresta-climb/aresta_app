@@ -209,10 +209,26 @@ abstract final class PintorCurvasNivelGlobo {
           ..strokeJoin = StrokeJoin.round
           ..strokeWidth = 1.30
           ..color = Color.fromRGBO(
-            226,
-            234,
+            202,
+            214,
+            230,
+            (0.55 * alfaGeracao1 * ganhoMono).clamp(0.0, 1.0),
+          ),
+      );
+    }
+    if (temGeracao[0]) {
+      canvas.drawPath(
+        caminhosGeracao[0],
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = 1.65
+          ..color = Color.fromRGBO(
+            228,
+            236,
             246,
-            (0.72 * pesoCurvas * ganhoMono).clamp(0.0, 1.0),
+            (0.74 * alfaGeracao0 * ganhoMono).clamp(0.0, 1.0),
           ),
       );
     }
@@ -223,9 +239,9 @@ abstract final class PintorCurvasNivelGlobo {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = lod >= 3.4 ? 1.80 : 1.50
+          ..strokeWidth = 1.75
           ..color = _corCobreEscarpasAresta.withValues(
-            alpha: (0.82 * pesoCurvas).clamp(0.0, 1.0),
+            alpha: (0.82 * alfaGeracao0).clamp(0.0, 1.0),
           ),
       );
     }
@@ -235,7 +251,7 @@ abstract final class PintorCurvasNivelGlobo {
         canvas: canvas,
         rotulos: rotulosCotas,
         opacidade:
-            (pesoCurvas * ControladorCameraGlobo.smoothstep(2.72, 3.25, lod))
+            (alfaGeracao0 * ControladorCameraGlobo.smoothstep(2.55, 3.10, lod))
                 .clamp(0.0, 1.0),
       );
     }
