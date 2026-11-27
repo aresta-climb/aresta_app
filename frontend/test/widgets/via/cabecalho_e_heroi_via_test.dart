@@ -42,7 +42,7 @@ void main() {
                   setor: Setor(nome: 'Principal'),
                   grupo: Grupo(nome: 'Norte'),
                 ),
-                const CartaoGrauVia(
+                CartaoGrauVia(
                   rotuloGrauOficial: 'GRAU OFICIAL',
                   grauOficial: null,
                   complementoGrauOficial: 'Guia Oficial / Conquistador',
@@ -189,7 +189,7 @@ void main() {
       // Em largura móvel padrão (360px), valor oficial e Sem votos permanecem alinhados horizontalmente
       await tester.pumpWidget(
         envolver(
-          const SizedBox(
+          SizedBox(
             width: 360,
             child: CartaoGrauVia(
               rotuloGrauOficial: 'GRAU OFICIAL',

@@ -15,20 +15,8 @@ void main() {
   }
 
   testWidgets(
-    'BarraInferiorAcoesVia oculta quando invisível e aciona callback em largura total antes e após cadena',
+    'BarraInferiorAcoesVia renderiza em largura total e aciona callback antes e após cadena',
     (tester) async {
-      await tester.pumpWidget(
-        envolver(
-          BarraInferiorAcoesVia(
-            exibirBotaoCaderneta: false,
-            possuiCadena: false,
-            rotuloBotaoCaderneta: '',
-            aoRegistrarCadena: () {},
-          ),
-        ),
-      );
-      expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
-
       var clicouCadena = false;
 
       await tester.pumpWidget(
@@ -36,13 +24,11 @@ void main() {
           Column(
             children: [
               BarraInferiorAcoesVia(
-                exibirBotaoCaderneta: true,
                 possuiCadena: false,
                 rotuloBotaoCaderneta: 'Registrar Cadena / Tentativa',
                 aoRegistrarCadena: () => clicouCadena = true,
               ),
               BarraInferiorAcoesVia(
-                exibirBotaoCaderneta: true,
                 possuiCadena: true,
                 rotuloBotaoCaderneta: 'Nova Ascensão / Tentativa',
                 aoRegistrarCadena: () {},

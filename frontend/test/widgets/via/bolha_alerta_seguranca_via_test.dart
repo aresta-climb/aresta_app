@@ -62,6 +62,19 @@ void main() {
 
     await tester.tap(find.byKey(const Key('bolha_alerta_FAUNA')));
     expect(selecionado?.uid, 'alertaAbelha01');
+
+    // A silhueta da bolha de alerta é um contorno único contínuo (sem costura interna cilindro+triângulo)
+    // mantendo a ponta da cauda ancorada exatamente em (0.24 * largura, altura).
+    const tamanhoBolha = Size(54, 40);
+    final caminhoSilhueta = construirCaminhoBolhaAlerta(tamanhoBolha);
+    final metricas = caminhoSilhueta.computeMetrics().toList();
+    expect(metricas, hasLength(1));
+    final limites = caminhoSilhueta.getBounds();
+    expect(limites.bottom, closeTo(tamanhoBolha.height, 0.5));
+    expect(
+      caminhoSilhueta.contains(Offset(tamanhoBolha.width * 0.24, tamanhoBolha.height - 1.5)),
+      isTrue,
+    );
   });
 
   testWidgets('exibirModalConfirmacaoAlertaVia exibe detalhes e dispara confirmação positiva ou resolução', (tester) async {
@@ -175,6 +188,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('aviso_login_alerta_via')), findsOneWidget);
     expect(find.byKey(const Key('btn_confirmar_alerta_ativo')), findsNothing);
+    Navigator.of(
+      tester.element(find.byKey(const Key('aviso_login_alerta_via'))),
+    ).pop();
+    await tester.pumpAndSettle();
+
+    // Quando criado pelo próprio autor com callbacks de edição/exclusão, exibe ações dedicadas e fecha o modal ao acioná-las
+    var solicitouEdicao = false;
+    var solicitouExclusao = false;
+    await tester.pumpWidget(
+      envolverComTema(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              exibirModalConfirmacaoAlertaVia(
+                context,
+                alerta: alerta,
+                estadoUsuario: EstadoInteracaoAlertaUsuario.criadoPorMim,
+                aoResponder: (_) async {},
+                aoSolicitarEdicao: () => solicitouEdicao = true,
+                aoSolicitarExclusao: () => solicitouExclusao = true,
+              );
+            },
+            child: const Text('Abrir Meu Alerta'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir Meu Alerta'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('btn_editar_alerta_modal')), findsOneWidget);
+    expect(find.byKey(const Key('btn_excluir_alerta_modal')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('btn_editar_alerta_modal')));
+    await tester.pumpAndSettle();
+    expect(solicitouEdicao, isTrue);
+
+    await tester.tap(find.text('Abrir Meu Alerta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('btn_excluir_alerta_modal')));
+    await tester.pumpAndSettle();
+    expect(solicitouExclusao, isTrue);
   });
 
   testWidgets('exibirModalReportarAlertaVia permite escolher categoria emoji e enviar detalhe opcional', (tester) async {
