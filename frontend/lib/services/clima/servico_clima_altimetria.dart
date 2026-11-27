@@ -88,3 +88,95 @@ class ClienteClimaAltimetriaSupabase implements FonteRemotaClimaAltimetria {
     throw HttpException('Nenhum registro encontrado em $tabela (atual/copia_seguranca).');
   }
 
+  Future<Map<String, dynamic>?> _consultarSlot(String tabela, String slot) async {
+    final uri = Uri.parse('$urlBaseSupabase/rest/v1/$tabela?slot=eq.$slot&limit=1');
+    final resp = await _clienteHttp.get(uri, headers: _cabecalhos).timeout(timeoutRequisicao);
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw HttpException(
+        'Erro HTTP ${resp.statusCode} ao consultar $tabela ($slot).',
+        uri: uri,
+      );
+    }
+    final lista = jsonDecode(resp.body);
+    if (lista is List && lista.isNotEmpty && lista.first is Map) {
+      return Map<String, dynamic>.from(lista.first as Map);
+    }
+    return null;
+  }
+}
+
+/// Serviço reativo que coordena a semente offline de altimetria, o cache rotativo local
+/// e a avaliação instantânea da curva de secagem de 5 dias para a aba `Explorar` e `PicoDetailsPage`.
+class ServicoClimaAltimetria extends ChangeNotifier {
+  static const Duration ttlSincronizacao = Duration(minutes: 30);
+  static const String caminhoAssetSementeAltimetria =
+      'assets/dados/altimetria_picos_inicial.json';
+
+  static ServicoClimaAltimetria? _instanciaCompartilhada;
+
+  /// Instância compartilhada entre `Explorar` e `PicoDetailsPage` para leitura imediata em memória.
+  static ServicoClimaAltimetria get instancia =>
+      _instanciaCompartilhada ??= ServicoClimaAltimetria();
+
+  /// Restaura a instância compartilhada entre testes.
+  @visibleForTesting
+  static void redefinirParaTestes() {
+    _instanciaCompartilhada?.dispose();
+    _instanciaCompartilhada = null;
+  }
+
+  final ArmazenamentoClimaLocal _armazenamento;
+  final FonteRemotaClimaAltimetria _fonteRemota;
+  final DateTime Function() _relogioUtc;
+  final DateTime Function() _relogioLocal;
+  final AssetBundle _assetBundle;
+
+  final Map<String, CotaAltimetricaPico> _altimetriaPorPico = {};
+  final Map<String, List<EventoChuvaPico>> _chuvaPorPico = {};
+  List<BolhaChuvaRegional> _bolhasBrutas = const [];
+  List<BolhaIncendioRegional> _incendiosBrutos = const [];
+  DateTime? _geradoEmClimaUtc;
+  DateTime? _ultimaSincronizacaoUtc;
+  Future<bool>? _sincronizacaoEmAndamento;
+  bool _inicializado = false;
+  bool _descartado = false;
+
+  ServicoClimaAltimetria({
+    ArmazenamentoClimaLocal? armazenamento,
+    FonteRemotaClimaAltimetria? fonteRemota,
+    DateTime Function()? relogioUtc,
+    DateTime Function()? relogioLocal,
+    AssetBundle? assetBundle,
+  })  : _armazenamento = armazenamento ?? ArmazenamentoClimaLocal(),
+        _fonteRemota = fonteRemota ?? ClienteClimaAltimetriaSupabase(),
+        _relogioUtc = relogioUtc ?? (() => DateTime.now().toUtc()),
+        _relogioLocal = relogioLocal ?? (relogioUtc ?? DateTime.now),
+        _assetBundle = assetBundle ?? rootBundle;
+
+  /// Verdadeiro após carregar a semente embutida e o cache em disco.
+  bool get inicializado => _inicializado;
+
+  /// Verdadeiro quando já há um snapshot meteorológico carregado do disco ou da rede.
+  bool get temSnapshotClima => _geradoEmClimaUtc != null;
+
+  /// Carrega a altimetria estática embarcada no APK/IPA e hidrata o cache local em disco.
+  Future<void> inicializar() async {
+    if (_inicializado || _descartado) return;
+    await _carregarSementeAltimetriaAsset();
+    if (_descartado) return;
+
+    final cacheDisco = await _armazenamento.lerSnapshot();
+    if (_descartado) return;
+    if (cacheDisco != null) {
+      _aplicarSnapshotEmMemoria(cacheDisco);
+    }
+    _inicializado = true;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    super.dispose();
+  }
+
