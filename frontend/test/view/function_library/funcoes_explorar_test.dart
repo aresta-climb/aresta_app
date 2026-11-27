@@ -188,12 +188,86 @@ void main() {
     });
   });
 
-  testWidgets(
-    'buildBrowseBody associa chaveSetimoPico ao 7º item (índice 6) e vincula scrollController',
-    (WidgetTester tester) async {
-      final chaveSetimo = GlobalKey();
-      final controller = ScrollController();
-      final picos = List.generate(
+  test(
+    'extrairSiglaUfPico resolve sigla pelo id, caminhoRelativo e faixas geograficas',
+    () {
+      expect(
+        extrairSiglaUfPico(
+          id: 'br_mg_serra_cipo',
+          caminhoRelativo: '',
+          latitude: 0,
+          longitude: 0,
+        ),
+        equals('MG'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'custom_1',
+          caminhoRelativo: 'croquis/br_rj_urca/compilado.binarypb',
+          latitude: 0,
+          longitude: 0,
+        ),
+        equals('RJ'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c1',
+          caminhoRelativo: '',
+          latitude: -22.9,
+          longitude: -43.2,
+        ),
+        equals('RJ'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c2',
+          caminhoRelativo: '',
+          latitude: -20.3,
+          longitude: -40.3,
+        ),
+        equals('ES'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c3',
+          caminhoRelativo: '',
+          latitude: -23.5,
+          longitude: -46.6,
+        ),
+        equals('SP'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c4',
+          caminhoRelativo: '',
+          latitude: -19.5,
+          longitude: -44.0,
+        ),
+        equals('MG'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c5',
+          caminhoRelativo: '',
+          latitude: -29.0,
+          longitude: -51.0,
+        ),
+        equals('RS'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c6',
+          caminhoRelativo: '',
+          latitude: -12.5,
+          longitude: -41.5,
+        ),
+        equals('BA'),
+      );
+      expect(
+        extrairSiglaUfPico(
+          id: 'c7',
+          caminhoRelativo: '',
+          latitude: -16.0,
         8,
         (i) => {
           'id': 'pico_$i',
