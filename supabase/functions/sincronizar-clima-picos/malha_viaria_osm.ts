@@ -15,6 +15,20 @@ const ENDPOINTS_OVERPASS = [
   "https://lz4.overpass-api.de/api/interpreter",
 ];
 
+const METROPOLES_CENTROS: [number, number, number][] = [
+  [-19.9191, -43.9386, 0.17], // Belo Horizonte
+  [-22.9068, -43.1729, 0.20], // Rio de Janeiro
+  [-23.5505, -46.6333, 0.25], // São Paulo
+  [-20.3155, -40.3128, 0.12], // Vitória
+  [-18.9186, -48.2772, 0.10], // Uberlândia
+];
+
+function dentroMetropole(lat: number, lon: number, fator = 1.0): boolean {
+  return METROPOLES_CENTROS.some(
+    ([mlat, mlon, r]) => Math.hypot(lon - mlon, lat - mlat) <= r * fator,
+  );
+}
+
 /** Calcula hash determinístico leve do catálogo de picos para atualização incremental da malha viária. */
 export function calcularHashCatalogoViario(picos: PicoCoordenada[]): string {
   const ordenado = [...picos]
@@ -26,7 +40,7 @@ export function calcularHashCatalogoViario(picos: PicoCoordenada[]): string {
     h ^= ordenado.charCodeAt(i);
     h = Math.imul(h, 16777619) >>> 0;
   }
-  return `osm-h-${picos.length}-${h.toString(16)}`;
+  return `osm-v2-art-${picos.length}-${h.toString(16)}`;
 }
 
 function normalizarCodigoRodovia(bruto: string): string {
@@ -69,14 +83,16 @@ function simplificarRdp(
   return [pts[0], pts[pts.length - 1]];
 }
 
-async function consultarOverpass(query: string): Promise<Record<string, unknown>[]> {
+async function consultarOverpass(
+  query: string,
+): Promise<Record<string, unknown>[]> {
   const corpo = new URLSearchParams({ data: query }).toString();
   for (const url of ENDPOINTS_OVERPASS) {
     const resp = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "ArestaClimbSupabaseSync/2.0",
+        "User-Agent": "ArestaClimbSupabaseSync/2.1",
       },
       body: corpo,
     });
@@ -88,12 +104,12 @@ async function consultarOverpass(query: string): Promise<Record<string, unknown>
   throw new Error("Falha ao consultar endpoints Overpass para malha viária.");
 }
 
-/** Extrai rodovias reais OpenStreetMap classificadas em 3 níveis (`motorway/trunk`, `primary`, `secondary/tertiary`). */
+/** Extrai exclusivamente artérias rodoviárias principais nas cidades e acessos pavimentados rurais aos picos. */
 export async function coletarMalhaViariaHierarquicaOsm(
   picos: PicoCoordenada[],
 ): Promise<RodoviaHierarquicaOsm[]> {
   let minLat = -20.5,
-    maxLat = -19.0,
+    maxLat = -14.85,
     minLon = -44.6,
     maxLon = -43.2;
   for (const p of picos) {
@@ -103,18 +119,19 @@ export async function coletarMalhaViariaHierarquicaOsm(
     maxLon = Math.max(maxLon, p.longitude + 0.6);
   }
 
-  const caixasSecundarias = picos
+  const caixasSecundariasRurais = picos
+    .filter((p) => !dentroMetropole(p.latitude, p.longitude, 0.75))
     .map(
       (p) =>
-        `way["highway"~"^(secondary|tertiary)$"]["surface"!~"^(unpaved|dirt|gravel|ground|sand|earth)$"](${(p.latitude - 0.16).toFixed(4)},${(p.longitude - 0.16).toFixed(4)},${(p.latitude + 0.16).toFixed(4)},${(p.longitude + 0.16).toFixed(4)});`,
+        `way["highway"~"^(secondary|tertiary)$"]["surface"!~"^(unpaved|dirt|gravel|ground|sand|earth)$"](${(p.latitude - 0.12).toFixed(4)},${(p.longitude - 0.12).toFixed(4)},${(p.latitude + 0.12).toFixed(4)},${(p.longitude + 0.12).toFixed(4)});`,
     )
     .join("\n");
 
   const query = `
-    [out:json][timeout:60];
+    [out:json][timeout:75];
     (
       way["highway"~"^(motorway|trunk|primary)$"](${minLat.toFixed(3)},${minLon.toFixed(3)},${maxLat.toFixed(3)},${maxLon.toFixed(3)});
-      ${caixasSecundarias}
+      ${caixasSecundariasRurais}
     );
     out geom;
   `;
@@ -123,18 +140,49 @@ export async function coletarMalhaViariaHierarquicaOsm(
   const saida: RodoviaHierarquicaOsm[] = [];
 
   for (const el of elementos) {
-    if (el.type !== "way" || !Array.isArray(el.geometry) || el.geometry.length < 2) {
+    if (
+      el.type !== "way" ||
+      !Array.isArray(el.geometry) ||
+      el.geometry.length < 2
+    ) {
       continue;
     }
     const tags = (el.tags ?? {}) as Record<string, string>;
     const hw = tags.highway ?? "";
+    if (hw.endsWith("_link")) continue;
     const nivel: 1 | 2 | 3 =
       hw === "motorway" || hw === "trunk" ? 1 : hw === "primary" ? 2 : 3;
     const codigo = normalizarCodigoRodovia(tags.ref ?? "");
     const bruto: [number, number][] = el.geometry.map(
       (pt: { lon: number; lat: number }) => [Number(pt.lon), Number(pt.lat)],
     );
-    const eps = nivel === 1 ? 0.0009 : nivel === 2 ? 0.0006 : 0.00035;
+    const [meioLon, meioLat] = bruto[Math.floor(bruto.length / 2)];
+    if (nivel === 3 && dentroMetropole(meioLat, meioLon, 1.05) && !codigo) {
+      continue;
+    }
+    if (nivel === 2 && dentroMetropole(meioLat, meioLon, 0.85) && !codigo) {
+      const nome = (tags.name ?? "").toLowerCase();
+      const arteriasPrincipais = [
+        "cristiano machado",
+        "antônio carlos",
+        "antonio carlos",
+        "amazonas",
+        "via expressa",
+        "raja gabaglia",
+        "andradas",
+        "contorno",
+        "afonso pena",
+        "dom pedro i",
+        "carlos luz",
+        "teresa cristina",
+        "nossa senhora do carmo",
+      ];
+      if (!arteriasPrincipais.some((chave) => nome.includes(chave))) {
+        continue;
+      }
+    }
+
+    const eps = nivel === 1 ? 0.00042 : nivel === 2 ? 0.00038 : 0.00032;
     const simp = simplificarRdp(bruto, eps);
     if (simp.length >= 2) {
       saida.push({
