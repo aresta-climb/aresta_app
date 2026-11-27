@@ -181,3 +181,103 @@ class EstadoUmidadePico {
         milimetrosEvento = 0.0,
         bolhaIdAssociada = null;
 
+  /// Formata a data da chuva em `DD/MM` quando houver janela conservadora ativa.
+  String? get dataChuvaFormatadaCurta {
+    final dt = dataUltimaChuva;
+    if (dt == null || !nivel.estaUmido) return null;
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    return '$d/$m';
+  }
+}
+
+/// Estado consolidado de clima regional, incêndios florestais e altimetria persistido localmente com cópia de segurança.
+class SnapshotClimaAltimetria {
+  final DateTime geradoEm;
+  final List<BolhaChuvaRegional> bolhasChuva;
+  final List<BolhaIncendioRegional> bolhasIncendio;
+  final Map<String, List<EventoChuvaPico>> chuvaPorPico;
+  final Map<String, CotaAltimetricaPico> altimetriaPorPico;
+
+  const SnapshotClimaAltimetria({
+    required this.geradoEm,
+    required this.bolhasChuva,
+    this.bolhasIncendio = const [],
+    required this.chuvaPorPico,
+    required this.altimetriaPorPico,
+  });
+
+  factory SnapshotClimaAltimetria.deMapa(Map<String, dynamic> mapa) {
+    final geradoTxt = mapa['gerado_em'];
+    final gerado = geradoTxt is String ? DateTime.tryParse(geradoTxt) : null;
+    if (gerado == null) {
+      throw const FormatException('Timestamp gerado_em inválido no snapshot.');
+    }
+
+    final bolhasBrutas = mapa['bolhas_chuva'] as List<dynamic>? ?? const [];
+    final bolhas = bolhasBrutas
+        .map(
+          (e) => BolhaChuvaRegional.deMapa(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+
+    final incendiosBrutos =
+        mapa['bolhas_incendio'] as List<dynamic>? ?? const [];
+    final incendios = incendiosBrutos
+        .map(
+          (e) =>
+              BolhaIncendioRegional.deMapa(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+
+    final chuvaBruta =
+        mapa['chuva_por_pico'] as Map<String, dynamic>? ?? const {};
+    final chuvaMap = <String, List<EventoChuvaPico>>{};
+    for (final entry in chuvaBruta.entries) {
+      final lista = entry.value as List<dynamic>;
+      chuvaMap[entry.key] = lista
+          .map(
+            (item) =>
+                EventoChuvaPico.deMapa(Map<String, dynamic>.from(item as Map)),
+          )
+          .toList();
+    }
+
+    final altBruta =
+        mapa['altimetria_por_pico'] as Map<String, dynamic>? ?? const {};
+    final altMap = <String, CotaAltimetricaPico>{};
+    for (final entry in altBruta.entries) {
+      altMap[entry.key] = CotaAltimetricaPico.deMapa(
+        Map<String, dynamic>.from(entry.value as Map),
+      );
+    }
+
+    return SnapshotClimaAltimetria(
+      geradoEm: gerado.toUtc(),
+      bolhasChuva: bolhas,
+      bolhasIncendio: incendios,
+      chuvaPorPico: chuvaMap,
+      altimetriaPorPico: altMap,
+    );
+  }
+
+  Map<String, dynamic> paraMapa() => <String, dynamic>{
+        'gerado_em': geradoEm.toUtc().toIso8601String(),
+        'bolhas_chuva': bolhasChuva.map((b) => b.paraMapa()).toList(),
+        if (bolhasIncendio.isNotEmpty)
+          'bolhas_incendio': bolhasIncendio.map((f) => f.paraMapa()).toList(),
+        'chuva_por_pico': chuvaPorPico.map(
+          (k, v) => MapEntry(k, v.map((ev) => ev.paraMapa()).toList()),
+        ),
+        'altimetria_por_pico': altimetriaPorPico.map(
+          (k, v) => MapEntry(k, v.paraMapa()),
+        ),
+      };
+}
+
+String _formatarDataIsoCurta(DateTime dt) {
+  final y = dt.year.toString().padLeft(4, '0');
+  final m = dt.month.toString().padLeft(2, '0');
+  final d = dt.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
