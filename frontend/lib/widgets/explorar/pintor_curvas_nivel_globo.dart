@@ -233,112 +233,34 @@ abstract final class PintorCurvasNivelGlobo {
         (atual.dx + prox.dx) * 0.5,
         (atual.dy + prox.dy) * 0.5,
       );
-    final pincelCardeal = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.05
-      ..color = const Color(0xFFE2E8F0).withValues(
-        alpha: (0.40 * alfaAnel).clamp(0.0, 1.0),
-      );
-
-    for (final p in picosReferencia) {
-      if ((p.latitude - controlador.latitudeCentral).abs() > 0.35 ||
-          (p.longitude - controlador.longitudeCentral).abs() > 0.42) {
-        continue;
-      }
-      final cosLat = math.max(0.35, math.cos(p.latitude * (math.pi / 180.0)));
-      final caminhoArcos = Path();
-
-      for (var q = 0; q < 4; q++) {
-        final angIni = q * (math.pi * 0.5) + 0.18;
-        final angFim = (q + 1) * (math.pi * 0.5) - 0.18;
-        var iniciado = false;
-        for (var s = 0; s <= 8; s++) {
-          final a = angIni + (angFim - angIni) * (s / 8.0);
-          final lat = p.latitude + math.sin(a) * raioGraus;
-          final lon = p.longitude + (math.cos(a) * raioGraus) / cosLat;
-          final elev = math.max(
-                0.0,
-                GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
-                  latitude: lat,
-                  longitude: lon,
-                  picosReferencia: picosReferencia,
-                  ehTerraConfirmada: true,
-                  amostradorElevacaoReal: amostradorElevacaoReal,
-                ),
-              ) *
-              opacidadeTerreno;
-          final pt = controlador.projetarCoordenada(
-            latitude: lat,
-            longitude: lon,
-            elevacaoMetros: elev + 4.0,
-            tamanhoTela: size,
-          );
-          if (!pt.visivel) {
-            iniciado = false;
-            continue;
-          }
-          if (!iniciado) {
-            caminhoArcos.moveTo(pt.x, pt.y);
-            iniciado = true;
-          } else {
-            caminhoArcos.lineTo(pt.x, pt.y);
-          }
-        }
-      }
-      canvas.drawPath(caminhoArcos, pincelAnel);
-
-      for (var c = 0; c < 4; c++) {
-        final a = c * (math.pi * 0.5);
-        final rInt = raioGraus * 0.86;
-        final rExt = raioGraus * 1.14;
-        final elevBase = p.altitudeBaseMetros.toDouble() * opacidadeTerreno;
-        final pInt = controlador.projetarCoordenada(
-          latitude: p.latitude + math.sin(a) * rInt,
-          longitude: p.longitude + (math.cos(a) * rInt) / cosLat,
-          elevacaoMetros: elevBase + 4.0,
-          tamanhoTela: size,
-        );
-        final pExt = controlador.projetarCoordenada(
-          latitude: p.latitude + math.sin(a) * rExt,
-          longitude: p.longitude + (math.cos(a) * rExt) / cosLat,
-          elevacaoMetros: elevBase + 4.0,
-          tamanhoTela: size,
-        );
-        if (pInt.visivel && pExt.visivel) {
-          canvas.drawLine(
-            Offset(pInt.x, pInt.y),
-            Offset(pExt.x, pExt.y),
-            pincelCardeal,
-          );
-        }
-      }
     }
+    path.lineTo(pts.last.dx, pts.last.dy);
   }
 
   static void _desenharEtiquetasCotaMestra({
     required Canvas canvas,
-    required List<({Offset pos, int metros})> rotulos,
+    required List<({Offset pos, int metros, bool escarpa})> rotulos,
     required double opacidade,
   }) {
     if (opacidade <= 0.04) return;
     final pincelFundo = Paint()
-      ..color = Color.fromRGBO(11, 15, 22, (0.82 * opacidade).clamp(0.0, 1.0));
-    final pincelBorda = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.75
-      ..color =
-          Color.fromRGBO(148, 163, 184, (0.36 * opacidade).clamp(0.0, 1.0));
+      ..color = Color.fromRGBO(12, 16, 23, (0.90 * opacidade).clamp(0.0, 1.0));
 
     for (final item in rotulos) {
+      final corBorda = item.escarpa
+          ? _corCobreEscarpasAresta.withValues(
+              alpha: (0.62 * opacidade).clamp(0.0, 1.0),
+            )
+          : Color.fromRGBO(168, 184, 204, (0.52 * opacidade).clamp(0.0, 1.0));
       final tp = TextPainter(
         text: TextSpan(
           text: '${item.metros} m',
           style: TextStyle(
             color: Color.fromRGBO(
-              226,
-              232,
-              240,
-              (0.88 * opacidade).clamp(0.0, 1.0),
+              236,
+              242,
+              249,
+              (0.94 * opacidade).clamp(0.0, 1.0),
             ),
             fontSize: 8.6,
             fontWeight: FontWeight.w600,
