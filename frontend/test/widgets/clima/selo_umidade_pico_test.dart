@@ -94,3 +94,80 @@ void main() {
       );
       expect(find.byIcon(Icons.water_drop_rounded), findsOneWidget);
 
+      await tester.pumpWidget(
+        envolver(
+          TarjaUmidadePico(
+            umidade: EstadoUmidadePico(
+              nivel: NivelUmidadePico.possivelmenteUmido,
+              diasParaSecar: 3,
+              diasDesdeChuva: 1,
+              dataUltimaChuva: DateTime.utc(2026, 11, 24),
+              milimetrosEvento: 4.0,
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Possivelmente úmido (3 dias) - chuva próxima há 1 dia (24/11)',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(
+        envolver(
+          CartaoCondicaoHidricaPico(
+            umidade: EstadoUmidadePico(
+              nivel: NivelUmidadePico.possivelmenteUmido,
+              diasParaSecar: 1,
+              diasDesdeChuva: 3,
+              dataUltimaChuva: DateTime.utc(2026, 11, 22),
+              milimetrosEvento: 2.0,
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Possivelmente úmido (1 dia) - chuva próxima há 3 dias (22/11)',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('1d / 4d'), findsOneWidget);
+      expect(
+        find.byKey(const Key('barra_janela_secagem_pico')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Janela conservadora de 4 dias'), findsOneWidget);
+
+      await tester.pumpWidget(
+        envolver(
+          const CartaoCondicaoHidricaPico(
+            umidade: EstadoUmidadePico.seco(),
+          ),
+        ),
+      );
+      expect(
+        find.text('Provavelmente seco · Sem chuva próxima (4 dias)'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('barra_janela_secagem_pico')), findsNothing);
+      expect(
+        find.textContaining('Estimativa regional por satélite'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(
+        envolver(
+          const TarjaUmidadePico(
+            umidade: EstadoUmidadePico(
+              nivel: NivelUmidadePico.possivelmenteUmido,
+              diasParaSecar: 2,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Possivelmente úmido (2 dias)'), findsOneWidget);
+    },
+  );
+}
