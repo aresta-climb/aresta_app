@@ -87,66 +87,73 @@ abstract final class ExtratorCurvasNivelMundo {
       (janela.maxLat / tam).floor(),
     );
 
-    final chave = Object.hash(nivelDetalhe, multPasso, iMin, iMax, jMin, jMax);
-    return (
-      chaveBloco: chave,
-      iMin: iMin,
-      iMax: iMax,
-      jMin: jMin,
-      jMax: jMax,
-      passoGraus: passo,
-    );
+    final tiles = <({int tx, int ty})>[];
+    for (var ty = tyMin; ty <= tyMax; ty++) {
+      for (var tx = txMin; tx <= txMax; tx++) {
+        tiles.add((tx: tx, ty: ty));
+      }
+    }
+    return tiles;
   }
 
-  /// Extrai polilinhas topográficas aditivas em coordenadas fixas do mundo usando [amostrarElevacaoMetros].
-  static ConjuntoCurvasNivelMundo extrairCurvasBloco({
-    required JanelaGeograficaVisivel janela,
-    required int nivelDetalhe,
+  /// Calcula chave inteira determinística de um tile canônico fixo do mundo.
+  static int calcularChaveTileMundo({
+    required bool camadaFina,
+    required int tx,
+    required int ty,
     required int versaoDadosElevacao,
+    required int assinaturaPicos,
+  }) =>
+      Object.hash(camadaFina, tx, ty, versaoDadosElevacao, assinaturaPicos);
+
+  /// Extrai todas as curvas de um único tile canônico fixo `(tx, ty)` em coordenadas imutáveis do mundo:
+  /// - `camadaFina == false`: extrai exclusivamente as gerações `0` (`400 m`) e `1` (`200 m`).
+  /// - `camadaFina == true`: extrai exclusivamente as gerações `2` (`100 m`) e `3` (`50 m`).
+  static List<CurvaNivelMundo> extrairTileCanonicoMundo({
+    required int tx,
+    required int ty,
+    required bool camadaFina,
     required double Function(double latitude, double longitude)
         amostrarElevacaoMetros,
     required List<PicoRelevoReferencia> picosReferencia,
   }) {
-    final bloco = calcularGradeBlocoMundo(
-      janela: janela,
-      nivelDetalhe: nivelDetalhe,
-    );
-    final cols = bloco.iMax - bloco.iMin;
-    final rows = bloco.jMax - bloco.jMin;
-    final passo = bloco.passoGraus;
-    final cotaPasso = intervaloCotaMenorPorNivel(nivelDetalhe);
+    final tam = camadaFina ? tamanhoTileFinoGraus : tamanhoTileMacroGraus;
+    final passo = camadaFina ? passoFinoGraus : passoMacroGraus;
+    const celulas = 50;
+    const nVertsX = celulas + 1;
 
-    final nVertsX = cols + 1;
-    final elevs = List<double>.filled((rows + 1) * nVertsX, 0.0);
-    var zGlobalMin = double.infinity;
-    var zGlobalMax = double.negativeInfinity;
+    final lonBase = tx * tam;
+    final latBase = ty * tam;
+    final elevs = List<double>.filled((celulas + 1) * nVertsX, 0.0);
+    var zMin = double.infinity;
+    var zMax = double.negativeInfinity;
 
-    // Núcleo físico fixo (0,0040° em coordenadas do mundo — INVARIANTE ao nível de zoom!)
-    const dFis = _raioSuavizacaoFisicaGraus;
-    for (var r = 0; r <= rows; r++) {
-      final lat = (bloco.jMin + r) * passo;
-      for (var c = 0; c <= cols; c++) {
-        final lon = (bloco.iMin + c) * passo;
+    // Filtro Gaussiano isotrópico 3x3 em raio físico fixo (0,0065° no mundo — 100% invariante ao zoom!)
+    const r = _raioKernelGaussianoGraus;
+    for (var j = 0; j <= celulas; j++) {
+      final lat = latBase + j * passo;
+      for (var i = 0; i <= celulas; i++) {
+        final lon = lonBase + i * passo;
         final zC = amostrarElevacaoMetros(lat, lon);
-        final zN = amostrarElevacaoMetros(lat + dFis, lon);
-        final zS = amostrarElevacaoMetros(lat - dFis, lon);
-        final zL = amostrarElevacaoMetros(lat, lon + dFis);
-        final zO = amostrarElevacaoMetros(lat, lon - dFis);
-        final z = (4.0 * zC + zN + zS + zL + zO) * 0.125;
-        elevs[r * nVertsX + c] = z;
-        if (z < zGlobalMin) zGlobalMin = z;
-        if (z > zGlobalMax) zGlobalMax = z;
+        final zN = amostrarElevacaoMetros(lat + r, lon);
+        final zS = amostrarElevacaoMetros(lat - r, lon);
+        final zL = amostrarElevacaoMetros(lat, lon + r);
+        final zO = amostrarElevacaoMetros(lat, lon - r);
+        final zNE = amostrarElevacaoMetros(lat + r, lon + r);
+        final zNO = amostrarElevacaoMetros(lat + r, lon - r);
+        final zSE = amostrarElevacaoMetros(lat - r, lon + r);
+        final zSO = amostrarElevacaoMetros(lat - r, lon - r);
+        final z = (4.0 * zC +
+                2.0 * (zN + zS + zL + zO) +
+                (zNE + zNO + zSE + zSO)) *
+            0.0625;
+        elevs[j * nVertsX + i] = z;
+        if (z < zMin) zMin = z;
+        if (z > zMax) zMax = z;
       }
     }
 
-    if (!zGlobalMax.isFinite || zGlobalMax < 25.0) {
-      return ConjuntoCurvasNivelMundo(
-        chaveBloco: bloco.chaveBloco,
-        nivelDetalhe: nivelDetalhe,
-        versaoDadosElevacao: versaoDadosElevacao,
-        curvas: const [],
-      );
-    }
+    if (!zMax.isFinite || zMax < 25.0) return const [];
 
     final kIni = math.max(1, (zGlobalMin / cotaPasso).ceil());
     final kFim = (zGlobalMax / cotaPasso).floor();
