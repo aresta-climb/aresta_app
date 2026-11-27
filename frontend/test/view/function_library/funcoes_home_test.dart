@@ -108,9 +108,9 @@ void main() {
       await tester.pumpWidget(buildTestableWidget());
       await tester.pump();
 
-      // Verify Header buttons exist when perfilHabilitado is false by default (Settings shown, Profile hidden)
-      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      // No modo de desenvolvimento, perfilHabilitado é true por padrão (exibe botão de Perfil e oculta Settings direto)
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
       expect(find.byIcon(Icons.sync), findsOneWidget);
       expect(find.byIcon(Icons.search), findsNWidgets(2));
       expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
@@ -128,15 +128,17 @@ void main() {
       // Verify NearbyCragsCarousel exists
       expect(find.byType(NearbyCragsCarousel), findsOneWidget);
 
-      // Verify Guia Rápido em Dark Mode com 4 passos
+      // Verify Guia Rápido em Dark Mode atualizado com as novas ferramentas e atalho de voltar ao início
       expect(find.text('GUIA RÁPIDO DO ARESTA'), findsOneWidget);
       expect(
-        find.text('Quatro passos pra você sair do app direto pro paredão.'),
+        find.text('Tudo o que você precisa pra sair do app direto pro paredão.'),
         findsOneWidget,
       );
       expect(find.text('ENCONTRE O PICO'), findsOneWidget);
       expect(find.text('SALVE OFFLINE'), findsOneWidget);
       expect(find.text('CROQUI INTERATIVO'), findsOneWidget);
+      expect(find.text('CADERNETA & COMUNIDADE'), findsOneWidget);
+      expect(find.text('ATALHO PARA O INÍCIO'), findsOneWidget);
       expect(find.text('COMPARTILHE'), findsOneWidget);
       expect(find.byIcon(Icons.share_outlined), findsOneWidget);
 
@@ -180,7 +182,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(SingleChildScrollView),
-          matching: find.byIcon(Icons.settings),
+          matching: find.byKey(const Key('btn_home_perfil')),
         ),
         findsNothing,
       );
@@ -204,8 +206,8 @@ void main() {
       await tester.pump();
 
       // A AppBar continua visível na tela
-      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
       expect(find.byIcon(Icons.sync), findsOneWidget);
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
     },
