@@ -2,19 +2,25 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+
+import '../idioma/tradutor_app.dart';
+import '../theme/cores_app.dart';
 import '../view/function_library/funcoes_explorar.dart';
 import '../view/view_models/explorar_view_model.dart';
-import '../view/view_models/card_croqui_view_model.dart';
-import '../theme/cores_app.dart';
+import '../widgets/explorar/barra_busca_filtros_explorar.dart';
+import '../widgets/explorar/controlador_camera_globo.dart';
+import '../widgets/explorar/gaveta_deslizante_explorar.dart';
+import '../widgets/explorar/superficie_globo_explorar.dart';
 
 /// Re-exportação de [OrdemOrdenacaoPico] para compatibilidade de tipos.
 typedef SortOrder = OrdemOrdenacaoPico;
 
-/// Uma página que permite aos usuários explorar e pesquisar picos disponíveis (Dumb UI).
+/// Página unificada da aba `Explorar` integrando Globo 3D/2D em 4 LODs,
+/// busca com seletor rápido de grau e gaveta deslizante sincronizada (Dumb UI).
 ///
-/// Renderiza visualmente o catálogo e delega buscas, filtros, ordenação e foco no 7º pico ao [BrowseViewModel].
+/// Toda a resolução de filtros, marcadores geográficos, alvos de voo e downloads
+/// fica concentrada em [BrowseViewModel], mantendo esta página puramente declarativa.
 class BrowsePage extends StatefulWidget {
-  /// ViewModel de apresentação e negócios da tela de catálogo.
   final BrowseViewModel viewModel;
 
   const BrowsePage({
@@ -22,39 +28,34 @@ class BrowsePage extends StatefulWidget {
     required this.viewModel,
   });
 
-  /// Aciona o download dos dados binários de um pico (.binarypb) com feedback visual.
+  /// Aciona o download dos dados binários de um pico (`.binarypb`) com feedback visual.
   @visibleForTesting
   Future<void> handleDownload(BuildContext context, dynamic crag) async {
-    final String id;
-    final String name;
-
-    if (crag is CardCroquiViewModel) {
-      id = crag.id;
-      name = crag.titulo.isEmpty ? 'Pico' : crag.titulo;
-    } else if (crag is Map) {
-      id = crag['id']?.toString() ?? '';
-      name = crag['nome']?.toString() ?? 'Pico';
-    } else {
-      id = crag.toString();
-      name = 'Pico';
-    }
+    final alvo = viewModel.resolverAlvoDownload(crag);
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text('Baixando $name...')));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(tr(ChaveTexto.comumBaixando, {'nome': alvo.nome})),
+        ),
+      );
 
-    final success = await viewModel.baixarPicoPorId(id);
+    final sucesso = await viewModel.baixarPicoPorId(alvo.id);
+    if (!context.mounted) return;
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
-            backgroundColor: success ? Colors.green : Colors.red,
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            sucesso
+                ? tr(ChaveTexto.comumBaixadoSucesso, {'nome': alvo.nome})
+                : tr(ChaveTexto.comumFalhaBaixar, {'nome': alvo.nome}),
           ),
-        );
-    }
+          backgroundColor: sucesso ? Colors.green : Colors.red,
+        ),
+      );
   }
 
   @override
@@ -62,15 +63,32 @@ class BrowsePage extends StatefulWidget {
 }
 
 class _BrowsePageState extends State<BrowsePage> {
-  final ScrollController _scrollController = ScrollController();
-  final GlobalKey _chaveSetimoPico = GlobalKey();
+  final ControladorCameraGlobo _controladorCamera = ControladorCameraGlobo();
+  final ValueNotifier<double> _alturaGavetaPx = ValueNotifier<double>(340.0);
 
   @override
-  void initState() {
-    super.initState();
-    widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
-    if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
-      _aoSolicitarScrollSetimoPico();
+  void dispose() {
+    _controladorCamera.dispose();
+    _alturaGavetaPx.dispose();
+    super.dispose();
+  }
+
+  Future<void> _centralizarNaLocalizacaoUsuario() async {
+    final resultado = await widget.viewModel.obterLocalizacaoTempoReal();
+    if (!mounted) return;
+    final coord = resultado.coordenada;
+    if (coord != null) {
+      _controladorCamera.iniciarVooParabolico(
+        destinoLat: coord.latitude,
+        destinoLon: coord.longitude,
+        destinoLod: calcularLodFocoLocalizacaoUsuario(_controladorCamera.lod),
+      );
+    }
+    final aviso = resultado.aviso;
+    if (aviso != null) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(aviso)));
     }
   }
 
