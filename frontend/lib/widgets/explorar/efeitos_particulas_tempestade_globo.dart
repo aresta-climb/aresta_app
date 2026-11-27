@@ -540,3 +540,67 @@ abstract final class EfeitosParticulasTempestadeGlobo {
         ),
       );
 
+    canvas.drawPath(
+      nuvem,
+      Paint()
+        ..color = corBorda.withValues(
+          alpha: (corBorda.a * 0.94).clamp(0.0, 1.0),
+        ),
+    );
+
+    final pincelPingo = Paint()..style = PaintingStyle.fill;
+    if (nivel == NivelIntensidadeChuva.extrema) {
+      for (final sinal in const <double>[-1.0, 1.0]) {
+        final pulso = 0.45 +
+            0.55 * (0.5 + 0.5 * math.sin(faseSegundos * 5.0 + sinal));
+        pincelPingo.color = corBorda.withValues(
+          alpha: (corBorda.a * pulso).clamp(0.0, 1.0),
+        );
+        canvas.drawCircle(
+          c.translate(sinal * r * 0.76, r * 1.20),
+          1.45,
+          pincelPingo,
+        );
+      }
+      final pulsoRaio =
+          0.62 + 0.38 * (0.5 + 0.5 * math.sin(faseSegundos * 6.8));
+      final raioEmblema = Path()
+        ..moveTo(c.dx + r * 0.14, c.dy + r * 0.70)
+        ..lineTo(c.dx - r * 0.28, c.dy + r * 1.30)
+        ..lineTo(c.dx + r * 0.12, c.dy + r * 1.30)
+        ..lineTo(c.dx - r * 0.20, c.dy + r * 1.96);
+      canvas.drawPath(
+        raioEmblema,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.65
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = Color.fromRGBO(
+            253,
+            224,
+            71,
+            (corBorda.a * pulsoRaio).clamp(0.0, 1.0),
+          ),
+      );
+      return;
+    }
+
+    final qtdGotas = nivel.peso;
+    for (var g = 0; g < qtdGotas; g++) {
+      final deslocIndice = g - (qtdGotas - 1) * 0.5;
+      final pulso = 0.35 +
+          0.65 * (0.5 + 0.5 * math.sin(faseSegundos * 4.2 + g * 2.1));
+      final dx = deslocIndice * (r * 0.66);
+      final dy = r * 1.16 + (g.isOdd ? r * 0.22 : 0.0);
+      pincelPingo.color = corBorda.withValues(
+        alpha: (corBorda.a * pulso).clamp(0.0, 1.0),
+      );
+      canvas.drawCircle(
+        c.translate(dx, dy),
+        1.05 + 0.14 * nivel.peso,
+        pincelPingo,
+      );
+    }
+  }
+}
