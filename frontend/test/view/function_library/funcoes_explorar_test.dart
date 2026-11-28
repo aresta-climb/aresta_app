@@ -352,6 +352,23 @@ void main() {
 
       expect(calcularLodFocoLocalizacaoUsuario(0.40), closeTo(1.58, 1e-4));
       expect(calcularLodFocoLocalizacaoUsuario(2.40), closeTo(2.40, 1e-4));
+
+      final enqCurto = calcularEnquadramentoRotaUsuarioPico(
+        usuarioLat: -19.92,
+        usuarioLon: -43.94,
+        picoLat: -20.07,
+        picoLon: -44.32,
+      );
+      expect(enqCurto.destinoLat, closeTo(-19.995, 1e-3));
+      expect(enqCurto.destinoLod, inInclusiveRange(1.74, 2.52));
+
+      final enqLongo = calcularEnquadramentoRotaUsuarioPico(
+        usuarioLat: -19.92,
+        usuarioLon: -43.94,
+        picoLat: -15.47,
+        picoLon: -44.44,
+      );
+      expect(enqLongo.destinoLod, equals(1.74));
     },
   );
 }
