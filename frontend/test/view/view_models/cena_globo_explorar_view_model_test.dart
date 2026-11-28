@@ -442,5 +442,81 @@ void main() {
       vm.resetarVisaoGlobo(ctrl);
       expect(ctrl.temAnimacaoAtiva, isTrue);
     });
+
+    test('retrai rapidamente todas as linhas para o ponto 0 e acende rota única Usuário -> Pico quando próximo às rodovias', () async {
+      final ctrl = ControladorCameraGlobo(
+        latitudeInicial: -19.92,
+        longitudeInicial: -43.94,
+        lodInicial: 2.10,
+      );
+      addTearDown(ctrl.dispose);
+
+      final vm = CenaGloboExplorarViewModel(
+        lodInicialCamera: ctrl.lod,
+        carregarMalha: () async => malhaSintetica,
+        carregarTextura: _criarImagem1x1,
+      );
+      addTearDown(vm.dispose);
+
+      // Sem malha hidratada retorna false
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-43.9386, -19.9191),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isFalse,
+      );
+
+      await vm.inicializarAssetsSeNecessario();
+      final redeRegional = vm.obterRedeViaria(picosReferencia)!;
+      expect(vm.progressoLuzViaria, equals(1.0));
+
+      // Etapa A: retração rápida (0.28s) mantendo a rede regional até chegar em 0.0
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-43.9386, -19.9191),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isTrue,
+      );
+      expect(vm.retraindoRapidoParaRotaUsuario, isTrue);
+      expect(vm.modoRotaUsuarioAtivo, isFalse);
+      expect(vm.obterRedeViaria(picosReferencia), same(redeRegional));
+      expect(
+        vm.precisaAnimarQuadro(controlador: ctrl, temFenomenoAoVivo: false),
+        isTrue,
+      );
+
+      vm.avancarQuadro(
+        dtSegundos: 0.14,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoLuzViaria, closeTo(0.50, 0.05));
+      expect(vm.retraindoRapidoParaRotaUsuario, isTrue);
+
+      // Conclui Etapa A -> comuta para Etapa B (rota única Usuário -> Pico)
+      vm.avancarQuadro(
+        dtSegundos: 0.16,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.retraindoRapidoParaRotaUsuario, isFalse);
+      expect(vm.modoRotaUsuarioAtivo, isTrue);
+      expect(vm.progressoLuzViaria, equals(0.0));
+      final redeRotaUnica = vm.obterRedeViaria(picosReferencia)!;
+      expect(redeRotaUnica, isNot(same(redeRegional)));
+
+      vm.avancarQuadro(
+        dtSegundos: 1.00,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoLuzViaria, equals(1.0));
+
   });
 }
