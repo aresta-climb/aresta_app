@@ -216,6 +216,23 @@ void main() {
         ).map((m) => m.id),
         equals(['c', 'b', 'a']),
       );
+
+      expect(
+        FiltradorCatalogoExplorar.sugerirCroquisPorBuscaProximidade(
+          todos: todos,
+          termoBusca: '   ',
+          proximidadePorId: proximidades,
+        ),
+        isEmpty,
+      );
+      expect(
+        FiltradorCatalogoExplorar.sugerirCroquisPorBuscaProximidade(
+          todos: todos,
+          termoBusca: 'ouro_preto',
+          proximidadePorId: proximidades,
+        ).map((m) => m.id),
+        equals(['c']),
+      );
     });
   });
 }

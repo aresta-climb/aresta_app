@@ -790,6 +790,29 @@ void main() {
           ModalidadeExploracaoPico.values.map((m) => m.rotulo).toList(),
           everyElement(isNotEmpty),
         );
+
+        // Sem GPS ativo, sugestões rápidas de busca ficam vazias e seleção rápida é no-op
+        expect(viewModel.sugestoesBuscaComLocalizacao, isEmpty);
+        viewModel.selecionarCroquiNaBuscaComLocalizacao('p_igarape');
+        expect(viewModel.solicitacaoRotaBuscaUsuario.value, isNull);
+
+        // Com GPS ativo, sugere croquis por proximidade e força modo dividido + rota ao selecionar
+        viewModel.atualizarLocalizacaoUsuario(-19.92, -43.94);
+        viewModel.definirApenasSalvosOffline(true);
+        viewModel.alterarTermoBusca('Pedra');
+        expect(
+          viewModel.sugestoesBuscaComLocalizacao.map((m) => m.id),
+          contains('p_igarape'),
+        );
+        viewModel.selecionarCroquiNaBuscaComLocalizacao('p_igarape');
+        expect(viewModel.termoBusca, isEmpty);
+        expect(viewModel.apenasSalvosOffline, isFalse);
+        expect(viewModel.picoSelecionadoId, equals('p_igarape'));
+        expect(viewModel.solicitacaoModoDivididoAutoScroll.value, equals(1));
+        expect(
+          viewModel.solicitacaoRotaBuscaUsuario.value?.picoId,
+          equals('p_igarape'),
+        );
       },
     );
   });

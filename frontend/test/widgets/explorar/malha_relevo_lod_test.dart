@@ -16,11 +16,16 @@ void main() {
         expect(malha.brasil.length, greaterThan(10));
         expect(malha.estados.length, equals(27));
         expect(malha.localidadesProximas.length, inInclusiveRange(35, 110));
-        expect(malha.rodoviasProximas.length, greaterThanOrEqualTo(600));
-        expect(malha.versaoMalhaViaria, startsWith('osm-bin-v'));
+        expect(malha.rodoviasProximas.length, inInclusiveRange(90, 220));
+        expect(malha.versaoMalhaViaria, startsWith('osm-br-v'));
         expect(
-          malha.rodoviasProximas.map((r) => r.nivelViario).toSet(),
-          containsAll(<int>[1, 2, 3]),
+          malha.rodoviasProximas.every(
+            (r) =>
+                r.nivelViario == 1 &&
+                r.ehPrincipal &&
+                r.codigo.startsWith('BR-'),
+          ),
+          isTrue,
         );
         final malhaAtualizada = malha.comRodoviasAtualizadas(
           malha.rodoviasProximas.take(5).toList(),

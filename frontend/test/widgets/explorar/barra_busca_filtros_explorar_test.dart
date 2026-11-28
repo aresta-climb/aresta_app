@@ -166,7 +166,21 @@ void main() {
           findsNothing,
         );
 
-        // Busca textual + botao limpar
+        // Busca textual + sugestoes clicaveis quando compartilhando localizacao + botao limpar
+        await tester.enterText(find.byType(TextField), 'Ouro');
+        await tester.pump();
+        expect(
+          find.byKey(const Key('lista_sugestoes_busca_explorar')),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.byKey(const Key('sugestao_busca_croqui_ouro_preto')),
+        );
+        await tester.pump();
+        expect(viewModel.termoBusca, isEmpty);
+        expect(viewModel.picoSelecionadoId, equals('ouro_preto'));
+        expect(viewModel.solicitacaoModoDivididoAutoScroll.value, equals(1));
+
         await tester.enterText(find.byType(TextField), 'Cipó');
         await tester.pump();
         expect(viewModel.termoBusca, equals('Cipó'));
