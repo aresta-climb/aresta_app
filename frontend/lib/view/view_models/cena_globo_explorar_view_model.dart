@@ -187,6 +187,99 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     return construida;
   }
 
+  /// Obtém em `O(1)` a [RedeViariaArestaGlobo] ativa (malha regional completa, rede em retração
+  /// rápida para o ponto 0 ou linha única Usuário -> Pico).
+  RedeViariaArestaGlobo? obterRedeViaria(List<PicoRelevoReferencia> picos) {
+    final base = _obterRedeViariaBase(picos);
+    if (base == null) return null;
+    if (_retraindoRapidoParaRotaUsuario &&
+        _redeDuranteRetracaoRapida != null) {
+      return _redeDuranteRetracaoRapida;
+    }
+    if (_modoRotaUsuarioAtivo && _redeRotaUsuarioAtiva != null) {
+      return _redeRotaUsuarioAtiva;
+    }
+    return base;
+  }
+
+  /// Aciona a animação em duas etapas ao selecionar um croqui pela barra de busca com GPS ativo:
+  /// 1. Retração rápida (`0,28s`) de todas as linhas acesas até o ponto `0`;
+  /// 2. Disparo de uma linha contínua única pela malha `BR-xxx` entre [origemUsuarioLonLat] e [destinoPicoLonLat].
+  ///
+  /// Retorna `false` sem alterar a animação caso o usuário esteja muito distante de qualquer rodovia do sistema.
+  bool acionarRotaViariaUsuarioAtePico({
+    required ui.Offset origemUsuarioLonLat,
+    required String picoId,
+    required ui.Offset destinoPicoLonLat,
+    required List<PicoRelevoReferencia> picosCatalogo,
+  }) {
+    final base = _obterRedeViariaBase(picosCatalogo);
+    if (base == null) return false;
+
+    final trechosRota = ConstrutorRedeViariaAresta.construirRotaUsuarioNaRede(
+      redeBase: base,
+      origemUsuarioLonLat: origemUsuarioLonLat,
+      destinoPicoLonLat: destinoPicoLonLat,
+    );
+    if (trechosRota == null || trechosRota.isEmpty) {
+      _limparModoRotaUsuarioInterno();
+      notifyListeners();
+      return false;
+    }
+
+    final redeAnteriorAtiva =
+        _modoRotaUsuarioAtivo && _redeRotaUsuarioAtiva != null
+            ? _redeRotaUsuarioAtiva!
+            : base;
+
+    _picoRotaUsuarioId = picoId;
+    _redeRotaUsuarioAtiva = RedeViariaArestaGlobo(
+      rodoviasFundo: base.rodoviasFundo,
+      trechosCorredorAresta: trechosRota,
+      cidadesClassificadas: base.cidadesClassificadas,
+    );
+    _sonarPicoId = picoId;
+    _sonarBolhaId = null;
+    _progressoSonar = 0.0;
+
+    if (!_animacoesAmbienteAtivas) {
+      _retraindoRapidoParaRotaUsuario = false;
+      _redeDuranteRetracaoRapida = null;
+      _modoRotaUsuarioAtivo = true;
+      _alvoLuzViaria = 1.0;
+      _progressoLuzViaria = 1.0;
+    } else if (_progressoLuzViaria > 0.02) {
+      _redeDuranteRetracaoRapida = redeAnteriorAtiva;
+      _retraindoRapidoParaRotaUsuario = true;
+      _modoRotaUsuarioAtivo = false;
+      _alvoLuzViaria = 0.0;
+    } else {
+      _retraindoRapidoParaRotaUsuario = false;
+      _redeDuranteRetracaoRapida = null;
+      _modoRotaUsuarioAtivo = true;
+      _progressoLuzViaria = 0.0;
+      _alvoLuzViaria = 1.0;
+    }
+
+    notifyListeners();
+    return true;
+  }
+
+  /// Restaura a malha regional padrão quando o usuário desmarca ou troca manualmente o pico selecionado.
+  void sincronizarSelecaoPicoAtivo(String? picoSelecionadoId) {
+    if (_picoRotaUsuarioId != null && picoSelecionadoId != _picoRotaUsuarioId) {
+      _limparModoRotaUsuarioInterno();
+    }
+  }
+
+  void _limparModoRotaUsuarioInterno() {
+    _picoRotaUsuarioId = null;
+    _redeRotaUsuarioAtiva = null;
+    _redeDuranteRetracaoRapida = null;
+    _retraindoRapidoParaRotaUsuario = false;
+    _modoRotaUsuarioAtivo = false;
+  }
+
   /// Obtém as curvas de nível ancoradas em coordenadas fixas do mundo para a região visível,
   /// solicitando tiles Terrarium sob demanda e reutilizando o cache `O(1)` durante o movimento da câmera.
   ConjuntoCurvasNivelMundo? obterCurvasNivelVisiveis({
@@ -195,8 +288,6 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     required List<PicoRelevoReferencia> picosReferencia,
   }) {
     final lod = controlador.lod;
-    // Curvas topográficas só entram quando a câmera realmente aproxima da serra/maciço (LOD >= 2.70),
-    // mantendo a visão rodoviária regional limpa e evitando extração pesada durante a animação viária!
     if (lod < 2.70 || tamanhoTela.isEmpty) return null;
 
     final janela = GeometriaClippingMapa.calcularJanelaVisivelCamera(
@@ -251,7 +342,6 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
       return existente;
     }
 
-    // Cotas de curvas são >= 100 m (acima do nível do mar), dispensando raycasting poligonal por amostra!
     double amostrarTerrenoFixo(double lat, double lon) =>
         GeradorRelevoLod.amostrarTerrenoRegionalContinuo(
           latitude: lat,
@@ -318,7 +408,8 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     required bool temFenomenoAoVivo,
   }) {
     final precisaSonar = _progressoSonar < 1.0;
-    final precisaLuzViaria = (_progressoLuzViaria - _alvoLuzViaria).abs() > 1e-4;
+    final precisaLuzViaria = _retraindoRapidoParaRotaUsuario ||
+        (_progressoLuzViaria - _alvoLuzViaria).abs() > 1e-4;
     final precisaFenomenos = _animacoesAmbienteAtivas && temFenomenoAoVivo;
     return controlador.temAnimacaoAtiva ||
         precisaSonar ||
