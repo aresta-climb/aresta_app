@@ -283,10 +283,15 @@ abstract final class EfeitosParticulasIncendioGlobo {
     final latFim = math.min(incendio.maxLat, janela.maxLat);
     if (lonFim < lonIni || latFim < latIni) return;
 
-    final ixIni = (lonIni / passoGraus).floor();
-    final iyIni = (latIni / passoGraus).floor();
-    final ixFim = math.min(ixIni + 12, (lonFim / passoGraus).ceil());
-    final iyFim = math.min(iyIni + 12, (latFim / passoGraus).ceil());
+    const maxRaioFagulhas = 28;
+    final ixCentro =
+        (controlador.longitudeCentral.clamp(lonIni, lonFim) / passoGraus).round();
+    final iyCentro =
+        (controlador.latitudeCentral.clamp(latIni, latFim) / passoGraus).round();
+    final ixIni = math.max((lonIni / passoGraus).floor(), ixCentro - maxRaioFagulhas);
+    final iyIni = math.max((latIni / passoGraus).floor(), iyCentro - maxRaioFagulhas);
+    final ixFim = math.min((lonFim / passoGraus).ceil(), ixCentro + maxRaioFagulhas);
+    final iyFim = math.min((latFim / passoGraus).ceil(), iyCentro + maxRaioFagulhas);
     final semente = incendio.id.codeUnits.fold<int>(23, (a, b) => a * 31 + b);
 
     final pincelBrasa = Paint()..style = PaintingStyle.fill;
@@ -304,7 +309,13 @@ abstract final class EfeitosParticulasIncendioGlobo {
           continue;
         }
         final posSolo = projetarPontoFogo(lon, lat);
-        if (posSolo == null) continue;
+        if (posSolo == null ||
+            posSolo.dx < -18.0 ||
+            posSolo.dx > tamanhoTela.width + 18.0 ||
+            posSolo.dy < -18.0 ||
+            posSolo.dy > tamanhoTela.height + 18.0) {
+          continue;
+        }
 
         final desvio = ((h >> 8) & 0xff) / 255.0;
         final ciclo = ((faseSegundos *

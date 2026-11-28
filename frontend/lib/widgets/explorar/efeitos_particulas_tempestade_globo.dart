@@ -306,10 +306,10 @@ abstract final class EfeitosParticulasTempestadeGlobo {
     required Color corGota,
   }) {
     final espacamentoAlvoPx = switch (nivel) {
-      NivelIntensidadeChuva.fraca => 40.0,
-      NivelIntensidadeChuva.moderada => 29.0,
-      NivelIntensidadeChuva.forte => 22.5,
-      NivelIntensidadeChuva.extrema => 18.0,
+      NivelIntensidadeChuva.fraca => 56.0,
+      NivelIntensidadeChuva.moderada => 44.0,
+      NivelIntensidadeChuva.forte => 35.0,
+      NivelIntensidadeChuva.extrema => 28.0,
     };
 
     final passoIdealGraus = espacamentoAlvoPx / math.max(1.0, pxPorGrau);
@@ -317,7 +317,7 @@ abstract final class EfeitosParticulasTempestadeGlobo {
         (math.log(2.0 / passoIdealGraus) / math.ln2).clamp(0.0, 14.0);
     final octavaBase = octavaCont.floor();
     final alfaSub = ControladorCameraGlobo.smoothstep(
-      0.18,
+      0.24,
       0.94,
       octavaCont - octavaBase,
     );
@@ -342,10 +342,17 @@ abstract final class EfeitosParticulasTempestadeGlobo {
     final latFim = math.min(bolha.maxLat, janela.maxLat);
     if (lonFim < lonIni || latFim < latIni) return;
 
-    final ixIni = (lonIni / passoFino).floor();
-    final iyIni = (latIni / passoFino).floor();
-    final ixFim = math.min(ixIni + 15, (lonFim / passoFino).ceil());
-    final iyFim = math.min(iyIni + 15, (latFim / passoFino).ceil());
+    // Centraliza a janela de amostragem no foco da câmera dentro da bolha (em vez de cortar a partir
+    // do canto sudoeste minLon/minLat), cobrindo 100% da área visível na tela em qualquer zoom 3D/2D.
+    const maxRaioCelulas = 34;
+    final ixCentro =
+        (controlador.longitudeCentral.clamp(lonIni, lonFim) / passoFino).round();
+    final iyCentro =
+        (controlador.latitudeCentral.clamp(latIni, latFim) / passoFino).round();
+    final ixIni = math.max((lonIni / passoFino).floor(), ixCentro - maxRaioCelulas);
+    final iyIni = math.max((latIni / passoFino).floor(), iyCentro - maxRaioCelulas);
+    final ixFim = math.min((lonFim / passoFino).ceil(), ixCentro + maxRaioCelulas);
+    final iyFim = math.min((latFim / passoFino).ceil(), iyCentro + maxRaioCelulas);
 
     final raioMaxAnel =
         (menorLadoMundoPx * (0.07 + 0.022 * nivel.peso)).clamp(2.6, 10.4);
@@ -382,7 +389,13 @@ abstract final class EfeitosParticulasTempestadeGlobo {
         elevacaoMetros: elev,
         tamanhoTela: tamanhoTela,
       );
-      if (!pt.visivel) return;
+      if (!pt.visivel ||
+          pt.x < -18.0 ||
+          pt.x > tamanhoTela.width + 18.0 ||
+          pt.y < -18.0 ||
+          pt.y > tamanhoTela.height + 18.0) {
+        return;
+      }
       gotasDesenhadas++;
 
       final cadencia = 0.75 + (hash % 4) * 0.20 + nivel.peso * 0.24;
