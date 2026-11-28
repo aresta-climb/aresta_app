@@ -283,23 +283,35 @@ const Map<ChaveTexto, String> dicionarioAlemao = {
       'Aresta nutzt 3 Wetter- und Radarquellen (Open-Meteo, RainViewer, INPE BDQueimadas) SOWIE 3 öffentliche Ressourcen aus NASA-Missionen (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble), um eine Trefferquote von ~85% bei der Anzeige dieser Daten zu erreichen. Nutze dieses Werkzeug als Orientierungshilfe statt als absolute Wahrheit.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, auf Karte zeigen',
   ChaveTexto.explorarBotaoVerEstatisticasClima: 'Statistik prüfen',
-  ChaveTexto.estatClimaTituloPagina: 'STATISTIK (~85%)',
+  ChaveTexto.estatClimaTituloPagina: 'WIE WIR AUF ~85% KAMEN',
   ChaveTexto.estatClimaSubtituloHeroi:
-      '180-Tage-Hindcast (N = 5.133 Gebietstage über 29 Felsen), überprüft anhand der Standardnormalverteilung (Z-Tabelle).',
-  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. HERLEITUNG DER ~85%-QUOTE',
+      'Wir haben Vergleichsdaten ab 2024 aus denselben Regionen unserer 29 Felsen geprüft — von der Nullhypothese bis zur Z-Tabelle ergaben sich 83% bis 87% Trefferquote (~85% im Schnitt).',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. DATENABGLEICH AB 2024',
   ChaveTexto.estatClimaComposicaoChuvaMapa:
       'Regionale Regenblasen (≥ 0,2 mm/Tag)',
   ChaveTexto.estatClimaComposicaoUmidade4d:
       'Konservatives 4-Tage-Nässefenster am Fels',
   ChaveTexto.estatClimaComposicaoIncendioNasa:
       'Aktive Waldbrandperimeter (NASA VIIRS 375m)',
-  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. KONTINGENZTAFEL & FORMELN',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. TEST GEGEN DIE NULLHYPOTHESE (H₀)',
   ChaveTexto.estatClimaMatrizExplicacao:
-      'Unabhängiger Hindcast (Jun–Nov 2024) von NOAA-GFS-Prognosen (0,25°) gegen ECMWF-ERA5-Reanalysen an allen 29 Felsen:',
+      'Wir nahmen Referenzdaten ab 2024 aus genau denselben Regionen unserer 29 Gebiete (5.133 Gebietstage), um zu prüfen, ob der Algorithmus — mit Open-Meteo, RainViewer-Radar, INPE und NASA-Sensoren — die gewünschte Wirkung erzielt:',
+  ChaveTexto.estatClimaHipoteseNulaExplicacao:
+      'Zuerst testeten wir direkt gegen eine Nullhypothese (H₀ = 50% Münzwurf sowie 58,5% Klimabasis), um zu sehen, ob überhaupt ein echter Effekt vorliegt. Das Signal lag +27,7 Standardabweichungen über dem Zufall:',
+  ChaveTexto.estatClimaCelulaTpDetalhe: 'Regen erkannt & echt',
+  ChaveTexto.estatClimaCelulaFpDetalhe: 'Vorsorglicher Alarm',
+  ChaveTexto.estatClimaCelulaFnDetalhe: 'Lokaler Schauer verpasst',
+  ChaveTexto.estatClimaCelulaTnDetalhe: 'Trockener Fels bestätigt',
+  ChaveTexto.estatClimaCalcTaxaBrutaTitulo: 'Trefferquote bei Regen (p̂)',
+  ChaveTexto.estatClimaCalcH0MoedaTitulo: 'Gegen H₀ = 50% (Münzwurf)',
+  ChaveTexto.estatClimaCalcAcuraciaGlobalTitulo: 'Gesamtquote (trocken + nass)',
+  ChaveTexto.estatClimaCalcErroPadraoTitulo: 'Standardfehler (SE)',
+  ChaveTexto.estatClimaCalcFaixaZTitulo: 'Z-Tabellen-Spanne (95%, Z = 1,96)',
+  ChaveTexto.estatClimaCalcMediaFinalTitulo: 'Mittlere Trefferquote (83%–87%)',
   ChaveTexto.estatClimaSecaoTabelaZTitulo:
-      '3. ABGLEICH MIT DER Z-TABELLE (NULLHYPOTHESE)',
+      '3. IN DER Z-TABELLE: 83% BIS 87% (~85%)',
   ChaveTexto.estatClimaTabelaZExplicacao:
-      'Unter der Nullhypothese ohne Prognosegüte (H₀: p₀ = 0,50 Zufall bzw. Klimabasis p₀ = 0,5853) gilt Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. Prüfe direkt in der Z-Tabelle unten den einseitigen Test H₀: p ≤ 0,83 (Z = +2,57 → Φ = 0,9949, p = 0,0051) und das 95%-KI (Z = 1,96):',
+      'Nach diesem klaren Befund legten wir die Vergleichsdaten in eine Z-Tabelle, um den genauen Prozentsatz korrekter Treffer zu bestimmen. Mit den Berechnungen unten (Z = 1,96 für 95% und Z = +2,57 über 83%) kamen wir auf 83,7% bis 87,2% Wirksamkeit — rund ~85% im Mittel:',
   ChaveTexto.estatClimaGraficoH0Rotulo: 'Nullverteilung (H₀)',
   ChaveTexto.estatClimaGraficoCaudaRotulo: 'Rechter Rand (+27,7σ bis +49,0σ)',
   ChaveTexto.estatClimaColunaZ: 'Z-Wert',

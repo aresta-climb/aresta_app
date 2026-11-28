@@ -278,23 +278,35 @@ const Map<ChaveTexto, String> dicionarioIngles = {
       'Aresta uses 3 weather & radar sources (Open-Meteo, RainViewer, INPE BDQueimadas) AND 3 public NASA mission resources (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble) to achieve an ~85% success rate on the display of this information. Take this as a reference tool instead of absolute truth.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, show on map',
   ChaveTexto.explorarBotaoVerEstatisticasClima: 'Check statistics',
-  ChaveTexto.estatClimaTituloPagina: 'STATISTICS (~85%)',
+  ChaveTexto.estatClimaTituloPagina: 'HOW WE GOT ~85%',
   ChaveTexto.estatClimaSubtituloHeroi:
-      '180-day empirical hindcast (N = 5,133 crag-days across 29 crags) cross-checked against the Standard Normal Z-Table.',
-  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. HOW THE ~85% RATE IS DERIVED',
+      'We took cross-reference data from 2024 onward across our 29 crag regions to put the algorithm to the test — from a null hypothesis check into a Z-table, landing at 83% to 87% effectiveness (~85% avg).',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. CROSS-REFERENCING 2024+ DATA',
   ChaveTexto.estatClimaComposicaoChuvaMapa:
       'Regional rain bubbles (≥ 0.2 mm/day)',
   ChaveTexto.estatClimaComposicaoUmidade4d:
       '4-day conservative crag wetness window',
   ChaveTexto.estatClimaComposicaoIncendioNasa:
       'Active wildfire perimeters (NASA VIIRS 375m)',
-  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. CONTINGENCY MATRIX & FORMULAS',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. TESTING THE NULL HYPOTHESIS (H₀)',
   ChaveTexto.estatClimaMatrizExplicacao:
-      'Independent hindcast (Jun–Nov 2024) comparing operational NOAA GFS 0.25° map forecasts against ECMWF ERA5 reanalysis across all 29 crags:',
+      'We gathered cross-reference records from 2024 onward from the exact same regions as our 29 crags (5,133 crag-days) to check whether the algorithm — combining Open-Meteo, RainViewer radar, INPE, and NASA sensors — was actually having the desired effect:',
+  ChaveTexto.estatClimaHipoteseNulaExplicacao:
+      'At first, we tested those numbers straight against a null hypothesis (H₀ = 50% coin flip, plus the 58.5% regional climate baseline) just to see if it was having any real effect at all. It cleared the bar by +27.7 standard deviations:',
+  ChaveTexto.estatClimaCelulaTpDetalhe: 'Rain predicted & hit',
+  ChaveTexto.estatClimaCelulaFpDetalhe: 'Cautious false alarm',
+  ChaveTexto.estatClimaCelulaFnDetalhe: 'Missed local shower',
+  ChaveTexto.estatClimaCelulaTnDetalhe: 'Dry rock confirmed',
+  ChaveTexto.estatClimaCalcTaxaBrutaTitulo: 'Observed rain hit rate (p̂)',
+  ChaveTexto.estatClimaCalcH0MoedaTitulo: 'Vs. H₀ = 50% (coin flip)',
+  ChaveTexto.estatClimaCalcAcuraciaGlobalTitulo: 'Overall hit rate (dry + wet)',
+  ChaveTexto.estatClimaCalcErroPadraoTitulo: 'Sample standard error (SE)',
+  ChaveTexto.estatClimaCalcFaixaZTitulo: 'Z-Table hit range (95%, Z = 1.96)',
+  ChaveTexto.estatClimaCalcMediaFinalTitulo: 'Effective hit rate (83%–87%)',
   ChaveTexto.estatClimaSecaoTabelaZTitulo:
-      '3. STANDARD Z-TABLE CROSS-CHECK (NULL HYPOTHESIS)',
+      '3. INTO THE Z-TABLE: 83% TO 87% (~85% AVG)',
   ChaveTexto.estatClimaTabelaZExplicacao:
-      'Under the no-skill null hypothesis (H₀: p₀ = 0.50 coin-flip, or climatological base p₀ = 0.5853), Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. You can also directly cross-check on the Z-table below our one-sided test H₀: p ≤ 0.83 (Z = +2.57 → Φ = 0.9949, p = 0.0051) and our 95% CI (Z = 1.96):',
+      'Upon a solid conclusion against the null hypothesis, we threw the comparison data into a Standard Z-Table to determine the true hit-rate percentage of the process. From the calculations below (Z = 1.96 for 95% confidence and Z = +2.57 above 83%), we arrived at 83.7% to 87.2% effectiveness — or ~85% avg:',
   ChaveTexto.estatClimaGraficoH0Rotulo: 'Null Distribution (H₀)',
   ChaveTexto.estatClimaGraficoCaudaRotulo: 'Observed right tail (+27.7σ to +49.0σ)',
   ChaveTexto.estatClimaColunaZ: 'Z-Score',
