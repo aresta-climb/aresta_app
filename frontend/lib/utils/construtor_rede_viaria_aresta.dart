@@ -55,85 +55,22 @@ abstract final class ConstrutorRedeViariaAresta {
       );
     }
 
-    // Ponte virtual O(1) via vizinhança espacial 3x3 (<= 1,80 km) para conectar trevos desnivelados
-    // do OpenStreetMap sem jamais desenhar retas aéreas fora das rodovias reais
-    for (final u in pontasPolilinhas) {
-      final pu = nos[u];
-      final cx0 = (pu.dx / _passoCelulaEspacial).floor();
-      final cy0 = (pu.dy / _passoCelulaEspacial).floor();
-      for (var dy = -1; dy <= 1; dy++) {
-        for (var dx = -1; dx <= 1; dx++) {
-          final candidatos = gradeEspacial[chaveCelula(cx0 + dx, cy0 + dy)];
-          if (candidatos == null) continue;
-          for (final v in candidatos) {
-            if (u == v) continue;
-            final pv = nos[v];
-            if ((pu.dx - pv.dx).abs() > 0.017 ||
-                (pu.dy - pv.dy).abs() > 0.017) {
-              continue;
-            }
-            final d = _distanciaKm(pu, pv);
-            if (d <= 1.80) {
-              final custoVirtual = d * 1.38;
-              adj[u].add((
-                vizinho: v,
-                custoPondKm: custoVirtual,
-                distRealKm: d,
-                virtual: true,
-              ));
-              adj[v].add((
-                vizinho: u,
-                custoPondKm: custoVirtual,
-                distRealKm: d,
-                virtual: true,
-              ));
-            }
-          }
-        }
-      }
-    }
-
+    final nos = grafo.nos;
     const centroBh = Offset(
       RedeViariaArestaGlobo.longitudeCentroBeloHorizonte,
       RedeViariaArestaGlobo.latitudeCentroBeloHorizonte,
     );
-    final cosBh = math.cos(centroBh.dy * _grausParaRad);
-    var origemBh = 0;
-    var menorDist2Bh = double.infinity;
-    for (var i = 0; i < nos.length; i++) {
-      final dx = (nos[i].dx - centroBh.dx) * cosBh;
-      final dy = nos[i].dy - centroBh.dy;
-      final d2 = dx * dx + dy * dy;
-      if (d2 < menorDist2Bh) {
-        menorDist2Bh = d2;
-        origemBh = i;
-      }
-    }
+    final origemBh = _encontrarNoMaisProximo(nos: nos, alvoLonLat: centroBh).indice;
+    final caminhos = _executarDijkstra(
+      totalNos: nos.length,
+      adj: grafo.adj,
+      noOrigem: origemBh,
+    );
 
     final totalNos = nos.length;
-    final custoMin = List<double>.filled(totalNos, double.infinity);
-    final distKm = List<double>.filled(totalNos, double.infinity);
-    final pai = List<int>.filled(totalNos, -1);
-    final arestaPaiVirtual = List<bool>.filled(totalNos, false);
-    custoMin[origemBh] = 0.0;
-    distKm[origemBh] = 0.0;
-
-    final fila = _FilaPrioridadeMinima()..inserir(origemBh, 0.0);
-    while (!fila.estaVazia) {
-      final atual = fila.removerMinimo();
-      if (atual.custo > custoMin[atual.no] + 1e-6) continue;
-      final distBase = distKm[atual.no];
-      for (final ar in adj[atual.no]) {
-        final novoCusto = atual.custo + ar.custoPondKm;
-        if (novoCusto + 1e-6 < custoMin[ar.vizinho]) {
-          custoMin[ar.vizinho] = novoCusto;
-          distKm[ar.vizinho] = distBase + ar.distRealKm;
-          pai[ar.vizinho] = atual.no;
-          arestaPaiVirtual[ar.vizinho] = ar.virtual;
-          fila.inserir(ar.vizinho, novoCusto);
-        }
-      }
-    }
+    final distKm = caminhos.distKm;
+    final pai = caminhos.pai;
+    final arestaPaiVirtual = caminhos.arestaPaiVirtual;
 
     final arestasAtivas = <int, ({int u, int v})>{};
     final nosCorredor = <int>{origemBh};
@@ -213,7 +150,6 @@ abstract final class ConstrutorRedeViariaAresta {
 
     final cidades = _classificarCidades(
       localidades: localidades,
-      rodovias: rodoviasNormalizadas,
       nos: nos,
       distKm: distKm,
       nosCorredor: nosCorredor,
