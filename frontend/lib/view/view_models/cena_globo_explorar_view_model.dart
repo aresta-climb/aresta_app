@@ -463,10 +463,27 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     if (_progressoSonar < 1.0) {
       _progressoSonar = (_progressoSonar + dtSegundos * 2.2).clamp(0.0, 1.0);
     }
+
+    if (_retraindoRapidoParaRotaUsuario) {
+      _progressoLuzViaria =
+          (_progressoLuzViaria - dtSegundos / duracaoRetracaoRapidaSegundos)
+              .clamp(0.0, 1.0);
+      if (_progressoLuzViaria <= 1e-4) {
+        _progressoLuzViaria = 0.0;
+        _retraindoRapidoParaRotaUsuario = false;
+        _redeDuranteRetracaoRapida = null;
+        _modoRotaUsuarioAtivo = true;
+        _alvoLuzViaria = 1.0;
+      }
+      return;
+    }
+
+    final duracaoIda = _modoRotaUsuarioAtivo
+        ? duracaoIdaRotaUsuarioSegundos
+        : duracaoIdaLuzViariaSegundos;
     if (_progressoLuzViaria < _alvoLuzViaria) {
       _progressoLuzViaria =
-          (_progressoLuzViaria + dtSegundos / duracaoIdaLuzViariaSegundos)
-              .clamp(0.0, _alvoLuzViaria);
+          (_progressoLuzViaria + dtSegundos / duracaoIda).clamp(0.0, _alvoLuzViaria);
     } else if (_progressoLuzViaria > _alvoLuzViaria) {
       _progressoLuzViaria =
           (_progressoLuzViaria - dtSegundos / duracaoVoltaLuzViariaSegundos)
@@ -475,6 +492,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   }
 
   void _atualizarGatilhoLuzViaria(double lodAtual) {
+    if (_retraindoRapidoParaRotaUsuario) return;
     if (_alvoLuzViaria < 0.5 &&
         lodAtual >= ControladorCameraGlobo.limiarAtivacaoLuzViaria) {
       _alvoLuzViaria = 1.0;
@@ -482,6 +500,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     } else if (_alvoLuzViaria > 0.5 &&
         lodAtual < ControladorCameraGlobo.limiarDesativacaoLuzViaria) {
       _alvoLuzViaria = 0.0;
+      _limparModoRotaUsuarioInterno();
       if (!_animacoesAmbienteAtivas) _progressoLuzViaria = 0.0;
     }
   }
@@ -521,6 +540,9 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
     required ControladorCameraGlobo controlador,
     double? lodExplicito,
   }) {
+    if (_picoRotaUsuarioId != pico.id) {
+      _limparModoRotaUsuarioInterno();
+    }
     _sonarPicoId = pico.id;
     _sonarBolhaId = pico.umidade.bolhaIdAssociada;
     _progressoSonar = 0.0;
