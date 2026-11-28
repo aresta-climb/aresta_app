@@ -315,7 +315,39 @@ class PaginaEstatisticasClima extends StatelessWidget {
         children: [
           Text(
             context.tr(ChaveTexto.estatClimaTabelaZExplicacao),
-            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.44),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.8, height: 1.48),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cores.deepBasalt,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Column(
+              children: [
+                LinhaFormulaEstatisticaClima(
+                  titulo: context.tr(ChaveTexto.estatClimaCalcErroPadraoTitulo),
+                  equacao: 'SE = √[0.8547 × (1 − 0.8547) ÷ 1.528]',
+                  resultado: '$sePct%',
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: context.tr(ChaveTexto.estatClimaCalcFaixaZTitulo),
+                  equacao: '$pHat% ± (1.96 × $sePct%)',
+                  resultado: '$infPct% – $supPct%',
+                  destaque: true,
+                ),
+                Divider(height: 14, color: cores.graniteEdge),
+                LinhaFormulaEstatisticaClima(
+                  titulo: context.tr(ChaveTexto.estatClimaCalcMediaFinalTitulo),
+                  equacao: 'Z(>83%) = +${zContra83.toStringAsFixed(2)} → Φ = 0.9949 (83%–87%)',
+                  resultado: '~${EstudoEstatisticoClimaAresta.taxaReferenciaExibidaPercentual}%',
+                  destaque: true,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           GraficoDistribuicaoZClima(
