@@ -164,6 +164,110 @@ abstract final class ConstrutorRedeViariaAresta {
     );
   }
 
+  /// Extrai a linha contínua de caminho mínimo pelas rodovias principais entre a posição GPS
+  /// [origemUsuarioLonLat] e o pico desejado [destinoPicoLonLat].
+  ///
+  /// Retorna `null` caso o usuário esteja muito distante da malha rodoviária do sistema
+  /// (`> distanciaMaximaAcessoRodoviaKm`, ex.: em outro estado fora da cobertura regional).
+  static List<TrechoPropagacaoViaria>? construirRotaUsuarioNaRede({
+    required RedeViariaArestaGlobo redeBase,
+    required Offset origemUsuarioLonLat,
+    required Offset destinoPicoLonLat,
+    double distanciaMaximaAcessoRodoviaKm = 45.0,
+  }) {
+    final grafo = _construirGrafoTopologico(redeBase.rodoviasFundo);
+    if (grafo == null) return null;
+
+    final nos = grafo.nos;
+    final entradaUsuario = _encontrarNoMaisProximo(
+      nos: nos,
+      alvoLonLat: origemUsuarioLonLat,
+    );
+    if (entradaUsuario.distanciaKm > distanciaMaximaAcessoRodoviaKm) {
+      return null;
+    }
+
+    final caminhos = _executarDijkstra(
+      totalNos: nos.length,
+      adj: grafo.adj,
+      noOrigem: entradaUsuario.indice,
+    );
+
+    final cosPico = math.cos(destinoPicoLonLat.dy * _grausParaRad);
+    var melhorNoPico = -1;
+    var menorDist2Pico = double.infinity;
+    for (var i = 0; i < nos.length; i++) {
+      if (!caminhos.distKm[i].isFinite) continue;
+      final dx = (nos[i].dx - destinoPicoLonLat.dx) * cosPico;
+      final dy = nos[i].dy - destinoPicoLonLat.dy;
+      final d2 = dx * dx + dy * dy;
+      if (d2 < menorDist2Pico) {
+        menorDist2Pico = d2;
+        melhorNoPico = i;
+      }
+    }
+    if (melhorNoPico < 0) return null;
+
+    final sequenciaNos = <int>[];
+    var cursor = melhorNoPico;
+    while (cursor >= 0) {
+      sequenciaNos.add(cursor);
+      cursor = caminhos.pai[cursor];
+    }
+    final nosOrdenados = sequenciaNos.reversed.toList(growable: false);
+
+    final cadeias = <({List<Offset> vertices, double iniKm, double fimKm})>[];
+    final acessoInicialKm = entradaUsuario.distanciaKm;
+    var acumIni = 0.0;
+    var cadeiaAtual = <Offset>[
+      if (acessoInicialKm >= 0.05) origemUsuarioLonLat,
+      nos[nosOrdenados.first],
+    ];
+    final offsetBaseKm = acessoInicialKm >= 0.05 ? acessoInicialKm : 0.0;
+
+    for (var i = 1; i < nosOrdenados.length; i++) {
+      final noAtual = nosOrdenados[i];
+      final dNo = offsetBaseKm + caminhos.distKm[noAtual];
+      if (caminhos.arestaPaiVirtual[noAtual]) {
+        if (cadeiaAtual.length >= 2) {
+          final noAnt = nosOrdenados[i - 1];
+          cadeias.add((
+            vertices: cadeiaAtual,
+            iniKm: acumIni,
+            fimKm: offsetBaseKm + caminhos.distKm[noAnt],
+          ));
+        }
+        acumIni = dNo;
+        cadeiaAtual = <Offset>[nos[noAtual]];
+      } else {
+        cadeiaAtual.add(nos[noAtual]);
+      }
+    }
+    final distFinalKm = math.max(
+      0.2,
+      offsetBaseKm + caminhos.distKm[nosOrdenados.last],
+    );
+    if (cadeiaAtual.length >= 2) {
+      cadeias.add((
+        vertices: cadeiaAtual,
+        iniKm: acumIni,
+        fimKm: distFinalKm,
+      ));
+    }
+    if (cadeias.isEmpty) return null;
+
+    return List<TrechoPropagacaoViaria>.unmodifiable([
+      for (final c in cadeias)
+        TrechoPropagacaoViaria(
+          verticesLonLat: List<Offset>.unmodifiable(c.vertices),
+          tempoInicio: (c.iniKm / distFinalKm).clamp(0.0, 0.96),
+          tempoFim: math
+              .max((c.iniKm / distFinalKm) + 0.03, c.fimKm / distFinalKm)
+              .clamp(0.03, 1.0),
+        ),
+    ]);
+  }
+
   /// Calcula uma assinatura inteira leve para memoização de instância em ViewModels.
   static int calcularAssinaturaPicos(List<PicoRelevoReferencia> picos) {
     var h = picos.length;
