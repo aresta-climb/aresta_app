@@ -518,5 +518,80 @@ void main() {
       );
       expect(vm.progressoLuzViaria, equals(1.0));
 
+      // Segunda busca consecutiva retrai a rota anterior antes de disparar a nova
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-43.9386, -19.9191),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isTrue,
+      );
+      expect(vm.obterRedeViaria(picosReferencia), same(redeRotaUnica));
+
+      // Usuário em outro estado distante (> 45 km de qualquer BR do sistema): não executa a animação
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-38.5014, -12.9714),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isFalse,
+      );
+      expect(vm.modoRotaUsuarioAtivo, isFalse);
+
+      // Partindo de progressoLuzViaria == 0.0 entra direto na Etapa B; zoom-out e deseleção restauram malha
+      ctrl.definirLod(0.90);
+      vm.avancarQuadro(
+        dtSegundos: 2.0,
+        controlador: ctrl,
+        temFenomenoAoVivo: false,
+      );
+      expect(vm.progressoLuzViaria, equals(0.0));
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-43.9386, -19.9191),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isTrue,
+      );
+      expect(vm.retraindoRapidoParaRotaUsuario, isFalse);
+      expect(vm.modoRotaUsuarioAtivo, isTrue);
+
+      vm.sincronizarSelecaoPicoAtivo(null);
+      expect(vm.modoRotaUsuarioAtivo, isFalse);
+
+      // Modo acessibilidade (disableAnimations) aplica rota instantaneamente, e selecionar outro pino limpa rota
+      vm.atualizarPreferenciaAnimacoesAmbiente(false);
+      expect(
+        vm.acionarRotaViariaUsuarioAtePico(
+          origemUsuarioLonLat: const ui.Offset(-43.9386, -19.9191),
+          picoId: 'cipo',
+          destinoPicoLonLat: const ui.Offset(-43.6135, -19.3156),
+          picosCatalogo: picosReferencia,
+        ),
+        isTrue,
+      );
+      expect(vm.modoRotaUsuarioAtivo, isTrue);
+      expect(vm.progressoLuzViaria, equals(1.0));
+      vm.selecionarPicoNoMapa(
+        pico: const MarcadorPicoGlobo(
+          id: 'outro',
+          nome: 'Outro',
+          uf: 'MG',
+          latitude: -20.0,
+          longitude: -44.0,
+          altitudeBaseMetros: 800,
+          altitudePicoMetros: 1200,
+        ),
+        picoSelecionadoAtualId: 'cipo',
+        controlador: ctrl,
+      );
+      expect(vm.modoRotaUsuarioAtivo, isFalse);
+    });
   });
 }
