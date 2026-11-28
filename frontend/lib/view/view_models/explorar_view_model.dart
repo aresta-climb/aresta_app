@@ -80,6 +80,12 @@ class BrowseViewModel extends ChangeNotifier {
   final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
   final ValueNotifier<int> _solicitacaoAutoScrollPicoSelecionado =
       ValueNotifier<int>(0);
+  final ValueNotifier<int> _solicitacaoModoDivididoAutoScroll =
+      ValueNotifier<int>(0);
+  final ValueNotifier<({String picoId, int sequencia})?>
+      _solicitacaoRotaBuscaUsuario =
+      ValueNotifier<({String picoId, int sequencia})?>(null);
+  int _sequenciaRotaBusca = 0;
   Timer? _timerDebounce;
   bool _descartado = false;
 
@@ -184,6 +190,8 @@ class BrowseViewModel extends ChangeNotifier {
     _timerDebounce?.cancel();
     _solicitacaoScrollSetimoPico.dispose();
     _solicitacaoAutoScrollPicoSelecionado.dispose();
+    _solicitacaoModoDivididoAutoScroll.dispose();
+    _solicitacaoRotaBuscaUsuario.dispose();
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
     datasetRepo.calculadoraDistanciaEstrada.removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.isExperimentalMode
@@ -215,6 +223,14 @@ class BrowseViewModel extends ChangeNotifier {
   /// Notificador incrementado quando um toque no mapa exige auto-scroll animado na lista da gaveta.
   ValueListenable<int> get solicitacaoAutoScrollPicoSelecionado =>
       _solicitacaoAutoScrollPicoSelecionado;
+
+  /// Notificador incrementado ao clicar em uma sugestão da busca com GPS ativo (força modo dividido + auto-scroll).
+  ValueListenable<int> get solicitacaoModoDivididoAutoScroll =>
+      _solicitacaoModoDivididoAutoScroll;
+
+  /// Evento reativo disparado ao selecionar um croqui específico na busca enquanto compartilha localização.
+  ValueListenable<({String picoId, int sequencia})?>
+      get solicitacaoRotaBuscaUsuario => _solicitacaoRotaBuscaUsuario;
 
   String? get picoSelecionadoId => _picoSelecionadoId;
   double? get latitudeUsuario => _userLat;
@@ -529,6 +545,36 @@ class BrowseViewModel extends ChangeNotifier {
         distanciaRotaKm: distanciaRotaKm,
       );
     }).toList();
+  }
+
+  /// Sugestões rápidas clicáveis na barra de pesquisa (exibidas apenas quando o usuário compartilha localização).
+  List<MetadadosIndice> get sugestoesBuscaComLocalizacao {
+    final dataset = datasetRepo.activeDataset.value;
+    if (localizacaoUsuarioAtiva == null || dataset == null) return const [];
+    return FiltradorCatalogoExplorar.sugerirCroquisPorBuscaProximidade(
+      todos: dataset.metadadosDisponiveis,
+      termoBusca: _termoBusca,
+      proximidadePorId: _obterProximidadePorId(dataset.metadadosDisponiveis),
+    );
+  }
+
+  /// Seleciona um croqui clicado nas sugestões da busca (com GPS ativo), forçando o modo dividido,
+  /// rolando a lista inferior até o cartão correspondente e solicitando a rota rodoviária até o pico.
+  void selecionarCroquiNaBuscaComLocalizacao(String picoId) {
+    if (localizacaoUsuarioAtiva == null) return;
+    _timerDebounce?.cancel();
+    _termoBusca = '';
+    if (!picosFiltrados.any((m) => m.id == picoId)) {
+      _limparFiltrosInterno();
+    }
+    _picoSelecionadoId = picoId;
+    notifyListeners();
+    _solicitacaoModoDivididoAutoScroll.value++;
+    _sequenciaRotaBusca++;
+    _solicitacaoRotaBuscaUsuario.value = (
+      picoId: picoId,
+      sequencia: _sequenciaRotaBusca,
+    );
   }
 
   void alterarTermoBusca(String novoTermo) {

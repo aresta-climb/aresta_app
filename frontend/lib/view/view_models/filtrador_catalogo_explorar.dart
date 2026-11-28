@@ -134,4 +134,22 @@ abstract final class FiltradorCatalogoExplorar {
           });
     }
   }
+
+  /// Retorna até [limite] sugestões rápidas de croquis para autocompletar na barra de busca,
+  /// ordenadas por proximidade quando o usuário compartilha sua localização.
+  static List<MetadadosIndice> sugerirCroquisPorBuscaProximidade({
+    required List<MetadadosIndice> todos,
+    required String termoBusca,
+    required Map<String, PicoProximo> proximidadePorId,
+    int limite = 5,
+  }) {
+    if (termoBusca.trim().isEmpty || todos.isEmpty) return const [];
+    final encontrados = filtrarPorBuscaDifusa(todos, termoBusca);
+    final ordenados = ordenarPicosFiltrados(
+      itens: encontrados,
+      ordem: OrdemOrdenacaoPico.proximidade,
+      proximidadePorId: proximidadePorId,
+    );
+    return ordenados.take(limite).toList(growable: false);
+  }
 }
