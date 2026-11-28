@@ -108,7 +108,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
   }
 
   void _aoNotificarCena() {
-    if (mounted) setState(() {});
+    if (mounted) _sincronizarCena();
   }
 
   @override
@@ -170,6 +170,7 @@ class _SuperficieGloboExplorarState extends State<SuperficieGloboExplorar>
       widget.bolhasAtivas.isNotEmpty || widget.incendiosAtivos.isNotEmpty;
 
   void _sincronizarCena({bool agendarRebuild = true}) {
+    _cena.sincronizarSelecaoPicoAtivo(widget.picoSelecionadoId);
     _cena.sincronizarEstadoCena(
       controlador: widget.controlador,
       tickerAtivo: _ticker.isActive,
