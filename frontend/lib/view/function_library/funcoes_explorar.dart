@@ -141,3 +141,28 @@ double calcularOpacidadeFundoBarraTopo({
 /// Calcula o nível mínimo de zoom ao centralizar na coordenada GPS do usuário.
 double calcularLodFocoLocalizacaoUsuario(double lodAtual) =>
     math.max(1.58, lodAtual);
+
+/// Calcula o centro óptico e o LOD ideal no modo dividido para enquadrar simultaneamente
+/// a localização GPS do usuário e o pico selecionado na barra de busca, mantendo as rodovias visíveis.
+({double destinoLat, double destinoLon, double destinoLod})
+    calcularEnquadramentoRotaUsuarioPico({
+  required double usuarioLat,
+  required double usuarioLon,
+  required double picoLat,
+  required double picoLon,
+}) {
+  final centroLat = (usuarioLat + picoLat) * 0.5;
+  final centroLon = (usuarioLon + picoLon) * 0.5;
+  final cosLat = math.cos(centroLat * math.pi / 180.0);
+  final spanEfetivoGraus = math.max(
+    (usuarioLat - picoLat).abs() * 1.65,
+    (usuarioLon - picoLon).abs() * cosLat * 1.45,
+  );
+  final lodCalculado =
+      2.48 - 0.36 * (math.log(math.max(0.18, spanEfetivoGraus)) / math.ln2);
+  return (
+    destinoLat: centroLat,
+    destinoLon: centroLon,
+    destinoLod: lodCalculado.clamp(1.74, 2.52),
+  );
+}
