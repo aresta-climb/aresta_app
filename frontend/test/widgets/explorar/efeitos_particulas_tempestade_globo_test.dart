@@ -195,5 +195,78 @@ void main() {
       expect(picture, isNotNull);
       picture.dispose();
     });
+
+    test('distribui gotas nos 4 quadrantes da tela ao dar zoom 3D dentro de uma frente ampla (sem prender no canto sudoeste)', () async {
+      final ctrlZoom3D = ControladorCameraGlobo(
+        latitudeInicial: -20.5,
+        longitudeInicial: -43.8,
+        lodInicial: 2.35,
+        modo3DInicial: true,
+      );
+      addTearDown(ctrlZoom3D.dispose);
+
+      const frenteAmpla = BolhaChuvaRegional(
+        id: 'frente_ampla_zoom',
+        latitude: -20.5,
+        longitude: -43.8,
+        intensidadeMmHora: 7.5,
+        ventoRumoGraus: 55.0,
+        ventoVelocidadeKmh: 25.0,
+        contornoExterno: [
+          PontoContornoGeo(longitude: -46.2, latitude: -22.6),
+          PontoContornoGeo(longitude: -41.6, latitude: -22.2),
+          PontoContornoGeo(longitude: -41.8, latitude: -18.4),
+          PontoContornoGeo(longitude: -46.0, latitude: -18.8),
+        ],
+      );
+
+      const tela = Size(320, 480);
+      final pxPorGrau = ctrlZoom3D.raioAparentePx * (math.pi / 180.0);
+      final gravador = PictureRecorder();
+      final canvas = Canvas(gravador);
+      EfeitosParticulasTempestadeGlobo.desenharPingoPatterChuva(
+        canvas: canvas,
+        bolha: frenteAmpla,
+        nivel: NivelIntensidadeChuva.extrema,
+        pxPorGrau: pxPorGrau,
+        menorLadoMundoPx: 600.0,
+        tamanhoTela: tela,
+        controlador: ctrlZoom3D,
+        picosReferencia: const [],
+        sobreRelevo: false,
+        faseSegundos: 0.35,
+        corGota: const Color(0xFFF0F9FF),
+      );
+      final pic = gravador.endRecording();
+      final img = await pic.toImage(320, 480);
+      final bytes = (await img.toByteData(format: ImageByteFormat.rawRgba))!;
+      pic.dispose();
+      img.dispose();
+
+      var qSupEsq = 0, qSupDir = 0, qInfEsq = 0, qInfDir = 0;
+      for (var y = 0; y < 480; y += 2) {
+        for (var x = 0; x < 320; x += 2) {
+          final alfa = bytes.getUint8((y * 320 + x) * 4 + 3);
+          if (alfa == 0) continue;
+          if (y < 240) {
+            if (x < 160) {
+              qSupEsq++;
+            } else {
+              qSupDir++;
+            }
+          } else {
+            if (x < 160) {
+              qInfEsq++;
+            } else {
+              qInfDir++;
+            }
+          }
+        }
+      }
+      expect(qSupEsq, greaterThan(20));
+      expect(qSupDir, greaterThan(20));
+      expect(qInfEsq, greaterThan(20));
+      expect(qInfDir, greaterThan(20));
+    });
   });
 }

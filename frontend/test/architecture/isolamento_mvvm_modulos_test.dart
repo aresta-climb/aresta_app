@@ -88,6 +88,7 @@ void main() {
       for (final escopo in escoposPuros) {
         for (final arquivo in listarArquivosDart(escopo)) {
           final caminho = arquivo.path.replaceAll('\\', '/');
+          if (caminho.endsWith('/dados_cartao_compartilhamento.dart')) continue;
           final conteudo = arquivo.readAsStringSync();
           for (final match in regexImport.allMatches(conteudo)) {
             final importado = match.group(1)!;

@@ -78,9 +78,21 @@ void main() {
 
         expect(find.byKey(const Key('pagina_estatisticas_clima')), findsOneWidget);
         expect(find.textContaining('85%'), findsWidgets);
+        expect(find.textContaining('2024'), findsWidgets);
         expect(find.textContaining('5.133'), findsWidgets);
 
-        // Rola até a Tabela Z e verifica entradas canônicas (1.96 -> 0.9750, 2.57 -> 0.9949)
+        // Rola até a seção da Hipótese Nula e confere os cálculos explícitos (+27.73σ)
+        await tester.scrollUntilVisible(
+          find.text('+27.73σ'),
+          200.0,
+          scrollable: find.descendant(
+            of: find.byKey(const Key('pagina_estatisticas_clima')),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(find.text('+27.73σ'), findsOneWidget);
+
+        // Rola até a Tabela Z e verifica faixa 83.7% – 87.2% + entradas canônicas (1.96 -> 0.9750, 2.57 -> 0.9949)
         await tester.scrollUntilVisible(
           find.text('+2.57'),
           220.0,
@@ -89,6 +101,7 @@ void main() {
             matching: find.byType(Scrollable),
           ),
         );
+        expect(find.text('83.7% – 87.2%'), findsOneWidget);
         expect(find.text('+1.96'), findsOneWidget);
         expect(find.text('0.9750'), findsOneWidget);
         expect(find.text('+2.57'), findsOneWidget);
