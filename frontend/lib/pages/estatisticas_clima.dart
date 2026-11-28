@@ -43,19 +43,23 @@ class PaginaEstatisticasClima extends StatelessWidget {
           children: [
             _construirCartaoHeroi85(context, cores, ic95),
             const SizedBox(height: 16),
-            _construirSecaoComposicao(context, matriz),
+            _construirSecaoCruzamento2024(context, cores, matriz),
             const SizedBox(height: 16),
-            _construirSecaoMatrizEFormulas(
+            _construirSecaoHipoteseNula(
+              context,
+              cores,
+              matriz,
+              zContra50,
+              zHeidke,
+            ),
+            const SizedBox(height: 16),
+            _construirSecaoTabelaZ(
               context,
               cores,
               matriz,
               ic95,
-              zContra50,
               zContra83,
-              zHeidke,
             ),
-            const SizedBox(height: 16),
-            _construirSecaoTabelaZ(context, cores),
             const SizedBox(height: 16),
             _construirSecaoFontesEspecificas(context, cores),
             const SizedBox(height: 16),
@@ -110,7 +114,7 @@ class PaginaEstatisticasClima extends StatelessWidget {
               border: Border.all(color: cores.rustIron.withValues(alpha: 0.38)),
             ),
             child: Text(
-              'N = 5.133  •  95% Z-CI [$infPct% – $supPct%]',
+              '2024+  •  N = 5.133  •  83.7% – 87.2%',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Montserrat',
@@ -133,39 +137,95 @@ class PaginaEstatisticasClima extends StatelessWidget {
               height: 1.05,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            '$infPct% – $supPct% (95% Z-CI)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              color: cores.chalkWhite.withValues(alpha: 0.86),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 10),
           Text(
             context.tr(ChaveTexto.estatClimaSubtituloHeroi),
             textAlign: TextAlign.center,
-            style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.45),
+            style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.48),
           ),
         ],
       ),
     );
   }
 
-  Widget _construirSecaoComposicao(
+  Widget _construirSecaoCruzamento2024(
     BuildContext context,
+    AppColors cores,
     MatrizContingenciaClima matriz,
   ) {
     return CartaoSecaoEstatisticaClima(
-      icone: Icons.layers_outlined,
+      icone: Icons.explore_outlined,
       titulo: context.tr(ChaveTexto.estatClimaSecaoComposicaoTitulo),
       filho: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            context.tr(ChaveTexto.estatClimaMatrizExplicacao),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.8, height: 1.48),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: CelulaMatrizClima(
+                  sigla: 'TP = ${matriz.verdadeirosPositivos}',
+                  detalhe: context.tr(ChaveTexto.estatClimaCelulaTpDetalhe),
+                  destaque: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CelulaMatrizClima(
+                  sigla: 'FP = ${matriz.falsosPositivos}',
+                  detalhe: context.tr(ChaveTexto.estatClimaCelulaFpDetalhe),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: CelulaMatrizClima(
+                  sigla: 'FN = ${matriz.falsosNegativos}',
+                  detalhe: context.tr(ChaveTexto.estatClimaCelulaFnDetalhe),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CelulaMatrizClima(
+                  sigla: 'TN = ${matriz.verdadeirosNegativos}',
+                  detalhe: context.tr(ChaveTexto.estatClimaCelulaTnDetalhe),
+                  destaque: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoChuvaMapa),
             valorFormatado: '${(matriz.taxaDeteccaoPod * 100).toStringAsFixed(1)}%',
             fator: matriz.taxaDeteccaoPod,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoUmidade4d),
             valorFormatado:
                 '${(EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias * 100).toStringAsFixed(1)}%',
             fator: EstudoEstatisticoClimaAresta.taxaDeteccaoJanelaQuatroDias,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           LinhaBarraMetricaClima(
             rotulo: context.tr(ChaveTexto.estatClimaComposicaoIncendioNasa),
             valorFormatado:
@@ -177,24 +237,19 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
-  Widget _construirSecaoMatrizEFormulas(
+  Widget _construirSecaoHipoteseNula(
     BuildContext context,
     AppColors cores,
     MatrizContingenciaClima matriz,
-    ({double inferior, double superior}) ic95,
     double zContra50,
-    double zContra83,
     double zHeidke,
   ) {
     final pHat = (matriz.taxaDeteccaoPod * 100).toStringAsFixed(2);
-    final sePct = (matriz.erroPadraoDeteccao * 100).toStringAsFixed(2);
-    final infPct = (ic95.inferior * 100).toStringAsFixed(2);
-    final supPct = (ic95.superior * 100).toStringAsFixed(2);
     final accPct = (matriz.acuraciaGlobal * 100).toStringAsFixed(2);
-    final csiPct = (matriz.indiceSucessoCriticoCsi * 100).toStringAsFixed(2);
+    final csiPct = (matriz.indiceSucessoCriticoCsi * 100).toStringAsFixed(1);
 
     return CartaoSecaoEstatisticaClima(
-      icone: Icons.grid_view_rounded,
+      icone: Icons.science_outlined,
       titulo: context.tr(ChaveTexto.estatClimaSecaoMatrizTitulo),
       filho: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
