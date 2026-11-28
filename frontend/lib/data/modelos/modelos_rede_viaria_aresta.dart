@@ -232,19 +232,17 @@ class TrechoPropagacaoViaria {
   });
 }
 
-/// Cidade classificada no mapa viário entre relevante para escalada Aresta (contorno viário iluminado)
-/// ou cidade puramente de referência geográfica (ponto branco limpo).
+/// Cidade classificada no mapa viário entre relevante para escalada Aresta (ativada pelo pulso
+/// das rodovias federais `BR-xxx`) ou cidade puramente de referência geográfica.
 class CidadeClassificadaMapa {
   final LocalidadeRegionalMapa localidade;
   final bool ehRelevanteAresta;
   final double tempoAtivacao;
-  final List<List<Offset>> viasUrbanasLonLat;
 
   const CidadeClassificadaMapa({
     required this.localidade,
     required this.ehRelevanteAresta,
     required this.tempoAtivacao,
-    required this.viasUrbanasLonLat,
   });
 }
 
