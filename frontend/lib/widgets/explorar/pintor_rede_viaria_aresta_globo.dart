@@ -341,77 +341,11 @@ abstract final class PintorRedeViariaArestaGlobo {
     }
   }
 
-      for (final viaUrbana in cidade.viasUrbanasLonLat) {
-        if (_adicionarPolilinhaSuaveAoPath(
-          destino: caminhoContornosCidades,
-          verticesLonLat: viaUrbana,
-          janelaVisivel: janelaVisivel,
-          passoSubdivisaoGraus: passoSubdivisaoGraus,
-          size: size,
-          controlador: controlador,
-        )) {
-          temContornoCidade = true;
-        }
-      }
-
-      final deltaTempo = (progressoLuz - cidade.tempoAtivacao).clamp(0.0, 1.0);
-      final pulsoChegada =
-          progressoLuz < 1.0 ? math.max(0.0, 1.0 - deltaTempo * 4.2) : 0.0;
-      final raioNoUrbano = (loc.nivel == 1 ? 3.4 : 2.5) + pulsoChegada * 3.6;
-
-      if (pulsoChegada > 0.04) {
-        canvas.drawCircle(
-          pos,
-          raioNoUrbano * 2.1,
-          Paint()
-            ..color = corBrilhoViasAresta.withValues(
-              alpha:
-                  (0.24 * pulsoChegada * opacidadeLuzLaranja).clamp(0.0, 1.0),
-            ),
-        );
-      }
-      canvas.drawCircle(
-        pos,
-        raioNoUrbano,
-        Paint()
-          ..color = corFilamentoQuente.withValues(
-            alpha: (0.86 * opacidadeLuzLaranja).clamp(0.0, 1.0),
-          ),
-      );
-    }
-
-    if (temContornoCidade) {
-      canvas.drawPath(
-        caminhoContornosCidades,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.35
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = corLaranjaAresta.withValues(
-            alpha: (0.18 * opacidadeLuzLaranja).clamp(0.0, 1.0),
-          ),
-      );
-      canvas.drawPath(
-        caminhoContornosCidades,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.05
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = corLaranjaAresta.withValues(
-            alpha: (0.64 * opacidadeLuzLaranja).clamp(0.0, 1.0),
-          ),
-      );
-    }
-  }
-
   static void _desenharEscudosCodigoRodovia({
     required Canvas canvas,
     required List<({Offset pos, String codigo})> escudos,
     required double opacidade,
   }) {
-    if (opacidade <= 0.04) return;
     final pincelFundo = Paint()
       ..color = Color.fromRGBO(12, 16, 23, (0.86 * opacidade).clamp(0.0, 1.0));
     final pincelBorda = Paint()
