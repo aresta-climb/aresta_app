@@ -257,10 +257,7 @@ void main() {
         expect(vm.picosProximos.first.id, equals('pico_BR'));
         expect(vm.picosProximos.first.distanciaKm, closeTo(48.14, 0.2));
         expect(vm.picosProximos.first.distanciaFormatada, equals('~35 min'));
-        expect(
-          vm.picosProximos.first.tooltipDistancia,
-          contains('Estimativa sem trânsito: ~35 min'),
-        );
+        expect(vm.picosProximos.first.distanciaRotaKm, equals('48.1 km'));
         expect(vm.picosProximos.last.id, equals('pico_serra'));
         expect(vm.picosProximos.last.distanciaKm, closeTo(35.14, 0.2));
         expect(vm.picosProximos.last.distanciaFormatada, equals('~1h 10min'));
