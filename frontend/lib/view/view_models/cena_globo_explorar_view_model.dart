@@ -21,10 +21,13 @@ import '../../widgets/explorar/malha_relevo_lod.dart';
 ///
 /// Concentra hidratação assíncrona dos assets geográficos, busca sob demanda de tiles SRTM
 /// (`AWS Open Data Terrarium`), memoização em coordenadas fixas do mundo de [ConjuntoCurvasNivelMundo]
-/// e [RedeViariaArestaGlobo], máquina de estados da luz viária Aresta, onda sonar e regras de câmera.
+/// e [RedeViariaArestaGlobo], máquina de estados da luz viária Aresta (incluindo retração rápida e
+/// rota dedicada Usuário -> Pico), onda sonar e regras de câmera.
 class CenaGloboExplorarViewModel extends ChangeNotifier {
   static const double duracaoIdaLuzViariaSegundos = 1.60;
   static const double duracaoVoltaLuzViariaSegundos = 1.35;
+  static const double duracaoRetracaoRapidaSegundos = 0.28;
+  static const double duracaoIdaRotaUsuarioSegundos = 0.95;
   static const int limiteCacheTilesCurvas = 32;
 
   final Future<MalhaGeograficaGlobo> Function() _carregarMalha;
@@ -37,6 +40,12 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   MalhaGeograficaGlobo? _malhaMemoizada;
   int _assinaturaPicosMemoizada = -1;
   RedeViariaArestaGlobo? _redeViariaMemoizada;
+
+  String? _picoRotaUsuarioId;
+  RedeViariaArestaGlobo? _redeRotaUsuarioAtiva;
+  RedeViariaArestaGlobo? _redeDuranteRetracaoRapida;
+  bool _retraindoRapidoParaRotaUsuario = false;
+  bool _modoRotaUsuarioAtivo = false;
 
   final LinkedHashMap<int, List<CurvaNivelMundo>> _cacheTilesCurvas =
       LinkedHashMap<int, List<CurvaNivelMundo>>();
@@ -112,6 +121,8 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
   double get alvoLuzViaria => _alvoLuzViaria;
   double get progressoLuzViaria => _progressoLuzViaria;
   bool get animacoesAmbienteAtivas => _animacoesAmbienteAtivas;
+  bool get modoRotaUsuarioAtivo => _modoRotaUsuarioAtivo;
+  bool get retraindoRapidoParaRotaUsuario => _retraindoRapidoParaRotaUsuario;
 
   /// Hidrata assincronamente a malha vetorial, a textura NASA, a grade regional SRTM offline
   /// e a cópia offline da malha viária OSM (disparando sincronização em segundo plano se online).
@@ -156,8 +167,7 @@ class CenaGloboExplorarViewModel extends ChangeNotifier {
         longitude: longitude,
       );
 
-  /// Obtém em `O(1)` a [RedeViariaArestaGlobo] memoizada nesta instância para a malha e picos atuais.
-  RedeViariaArestaGlobo? obterRedeViaria(List<PicoRelevoReferencia> picos) {
+  RedeViariaArestaGlobo? _obterRedeViariaBase(List<PicoRelevoReferencia> picos) {
     final malhaAtual = _malha;
     if (malhaAtual == null) return null;
     final assinatura = ConstrutorRedeViariaAresta.calcularAssinaturaPicos(picos);
