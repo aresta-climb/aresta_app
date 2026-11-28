@@ -468,4 +468,91 @@ void main() {
       expect(find.text('Trocar serving'), findsWidgets);
     },
   );
+
+  testWidgets(
+    'BrowsePage forca modo Dividir, faz auto-scroll ate o croqui clicado na busca e anima rota BR (ignorando rota se usuario estiver em outro estado distante)',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 820));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.runAsync(() => MalhaGeograficaGlobo.carregarDoAssetBundle());
+
+      final picos = List.generate(8, (i) {
+        return ResumoCroqui(
+          id: i == 6 ? 'br_mg_igarape' : 'br_mg_rota_$i',
+          nome: i == 6 ? 'Serra do Cipó Alvo' : 'Pico Regional $i',
+          localizacao: Coordenada(
+            latitude: ((i == 6 ? -19.3156 : -20.05 - i * 0.12) * 1e7).round(),
+            longitude: ((i == 6 ? -43.6135 : -44.10) * 1e7).round(),
+          ),
+          precomputados: PrecomputadosResumoCroqui(totalEscaladas: 15),
+        );
+      });
+      mockRepo.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: picos,
+        croquisBaixados: const [],
+      );
+
+      final vmPerto = (await criarVmAssincrono(tester))
+        ..atualizarLocalizacaoUsuario(-19.9191, -43.9386);
+
+      await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vmPerto)));
+      await tester.pumpAndSettle();
+
+      // Entra no modo Lista (tela cheia) antes de pesquisar
+      await tester.tap(find.byKey(const Key('encaixe_gaveta_lista')));
+      await tester.pumpAndSettle();
+
+      // Digita o nome do croqui na barra de busca e clica na sugestão
+      await tester.enterText(find.byType(TextField), 'Cipó Alvo');
+      await tester.pump();
+      expect(
+        find.byKey(const Key('sugestao_busca_croqui_br_mg_igarape')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('sugestao_busca_croqui_br_mg_igarape')),
+      );
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 45));
+      }
+      await tester.pumpAndSettle();
+
+      // 1. Forçou modo Dividir e rolou a lista inferior até o card selecionado
+      expect(vmPerto.picoSelecionadoId, equals('br_mg_igarape'));
+      expect(find.text('SERRA DO CIPÓ ALVO'), findsOneWidget);
+      final scrollable = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(GavetaDeslizanteExplorar),
+              matching: find.byType(Scrollable),
+            )
+            .last,
+      );
+      expect(scrollable.position.pixels, greaterThan(200.0));
+
+      // Seleção repetida já estando no modo Dividir também rola/destaca sem reanimar altura
+      await tester.enterText(find.byType(TextField), 'Cipó Alvo');
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('sugestao_busca_croqui_br_mg_igarape')),
+      );
+      await tester.pumpAndSettle();
+
+      // 2. Troca ViewModel para usuário em outro estado distante (Salvador/BA): força Dividir + scroll sem quebrar
+      final vmLonge = (await criarVmAssincrono(tester))
+        ..atualizarLocalizacaoUsuario(-12.9714, -38.5014);
+      await tester.pumpWidget(MaterialApp(home: BrowsePage(viewModel: vmLonge)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('encaixe_gaveta_mapa')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Cipó Alvo');
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('sugestao_busca_croqui_br_mg_igarape')),
+      );
+      await tester.pumpAndSettle();
+      expect(vmLonge.picoSelecionadoId, equals('br_mg_igarape'));
+    },
+  );
 }

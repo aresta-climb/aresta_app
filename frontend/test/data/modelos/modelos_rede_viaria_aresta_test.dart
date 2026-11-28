@@ -160,9 +160,6 @@ void main() {
         localidade: localidade,
         ehRelevanteAresta: true,
         tempoAtivacao: 0.0,
-        viasUrbanasLonLat: [
-          [Offset(-43.95, -19.92), Offset(-43.92, -19.91)],
-        ],
       );
       expect(cidade.ehRelevanteAresta, isTrue);
 
