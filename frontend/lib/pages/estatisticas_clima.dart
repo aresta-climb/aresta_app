@@ -255,46 +255,8 @@ class PaginaEstatisticasClima extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            context.tr(ChaveTexto.estatClimaMatrizExplicacao),
-            style: TextStyle(color: cores.ashGrey, fontSize: 12.5, height: 1.44),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: CelulaMatrizClima(
-                  sigla: 'TP = ${matriz.verdadeirosPositivos}',
-                  detalhe: 'ERA5 + GFS (Hit)',
-                  destaque: true,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CelulaMatrizClima(
-                  sigla: 'FP = ${matriz.falsosPositivos}',
-                  detalhe: 'GFS > ERA5',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CelulaMatrizClima(
-                  sigla: 'FN = ${matriz.falsosNegativos}',
-                  detalhe: 'ERA5 > GFS',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CelulaMatrizClima(
-                  sigla: 'TN = ${matriz.verdadeirosNegativos}',
-                  detalhe: 'Seco (0 mm)',
-                  destaque: true,
-                ),
-              ),
-            ],
+            context.tr(ChaveTexto.estatClimaHipoteseNulaExplicacao),
+            style: TextStyle(color: cores.ashGrey, fontSize: 12.8, height: 1.48),
           ),
           const SizedBox(height: 14),
           Container(
@@ -307,35 +269,23 @@ class PaginaEstatisticasClima extends StatelessWidget {
             child: Column(
               children: [
                 LinhaFormulaEstatisticaClima(
-                  titulo: 'POD (p̂)',
-                  equacao: 'TP / (TP + FN) = 1.306 / 1.528',
+                  titulo: context.tr(ChaveTexto.estatClimaCalcTaxaBrutaTitulo),
+                  equacao: 'p̂ = 1.306 ÷ (1.306 + 222) = 1.306 ÷ 1.528',
                   resultado: '$pHat%',
                   destaque: true,
                 ),
                 Divider(height: 14, color: cores.graniteEdge),
                 LinhaFormulaEstatisticaClima(
-                  titulo: 'SE & 95% Z-CI',
-                  equacao: 'SE = $sePct%  •  p̂ ± 1.96 × SE',
-                  resultado: '[$infPct%, $supPct%]',
-                ),
-                Divider(height: 14, color: cores.graniteEdge),
-                LinhaFormulaEstatisticaClima(
-                  titulo: 'ACC & CSI',
-                  equacao: '(TP + TN) / 5.133  •  CSI = $csiPct%',
-                  resultado: '$accPct%',
-                ),
-                Divider(height: 14, color: cores.graniteEdge),
-                LinhaFormulaEstatisticaClima(
-                  titulo: 'Z (H₀ = 0.50)',
-                  equacao: 'Heidke global = +${zHeidke.toStringAsFixed(2)}σ',
+                  titulo: context.tr(ChaveTexto.estatClimaCalcH0MoedaTitulo),
+                  equacao: 'Z = (0.8547 − 0.50) ÷ √(0.25 ÷ 1.528)',
                   resultado: '+${zContra50.toStringAsFixed(2)}σ',
+                  destaque: true,
                 ),
                 Divider(height: 14, color: cores.graniteEdge),
                 LinhaFormulaEstatisticaClima(
-                  titulo: 'Z (H₀ ≤ 0.83)',
-                  equacao: 'Φ(+2.57) = 0.9949  (p = 0.0051)',
-                  resultado: '+${zContra83.toStringAsFixed(2)}σ',
-                  destaque: true,
+                  titulo: context.tr(ChaveTexto.estatClimaCalcAcuraciaGlobalTitulo),
+                  equacao: '(1.306 + 3.426) ÷ 5.133  •  CSI $csiPct% (+${zHeidke.toStringAsFixed(1)}σ)',
+                  resultado: '$accPct%',
                 ),
               ],
             ),
@@ -345,7 +295,18 @@ class PaginaEstatisticasClima extends StatelessWidget {
     );
   }
 
-  Widget _construirSecaoTabelaZ(BuildContext context, AppColors cores) {
+  Widget _construirSecaoTabelaZ(
+    BuildContext context,
+    AppColors cores,
+    MatrizContingenciaClima matriz,
+    ({double inferior, double superior}) ic95,
+    double zContra83,
+  ) {
+    final pHat = (matriz.taxaDeteccaoPod * 100).toStringAsFixed(2);
+    final sePct = (matriz.erroPadraoDeteccao * 100).toStringAsFixed(2);
+    final infPct = (ic95.inferior * 100).toStringAsFixed(1);
+    final supPct = (ic95.superior * 100).toStringAsFixed(1);
+
     return CartaoSecaoEstatisticaClima(
       icone: Icons.functions_rounded,
       titulo: context.tr(ChaveTexto.estatClimaSecaoTabelaZTitulo),
