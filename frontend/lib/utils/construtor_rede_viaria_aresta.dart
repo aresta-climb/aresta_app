@@ -520,67 +520,6 @@ abstract final class ConstrutorRedeViariaAresta {
     return resultado;
   }
 
-  /// Extrai exclusivamente as **artérias principais** que cruzam o perímetro urbano de [loc]
-  /// (`motorway/trunk` em metrópoles; ou rodovia numerada em cidades-base menores), evitando
-  /// iluminar malhas densas de avenidas secundárias e bairros residenciais.
-  static List<List<Offset>> _extrairViasUrbanasReaisDaCidade({
-    required LocalidadeRegionalMapa loc,
-    required bool ehBh,
-    required List<RodoviaRegionalMapa> rodovias,
-  }) {
-    final raioGraus = ehBh
-        ? 0.078
-        : (loc.nivel == 1 ? 0.038 : (loc.nivel == 2 ? 0.026 : 0.025));
-    final cosLat = math.max(0.35, math.cos(loc.latitude * _grausParaRad));
-    final raioLon = raioGraus / cosLat;
-    final r2 = raioGraus * raioGraus;
-
-    List<List<Offset>> coletar({required int maxNivel, required bool exigirCodigoNoNivel2}) {
-      final encontradas = <List<Offset>>[];
-      for (final via in rodovias) {
-        if (via.nivelViario > maxNivel) continue;
-        if (via.nivelViario == 2 && exigirCodigoNoNivel2 && via.codigo.isEmpty) {
-          continue;
-        }
-        if (!via.interceptaJanela(
-          janelaMinLon: loc.longitude - raioLon,
-          janelaMaxLon: loc.longitude + raioLon,
-          janelaMinLat: loc.latitude - raioGraus,
-          janelaMaxLat: loc.latitude + raioGraus,
-        )) {
-          continue;
-        }
-        var sub = <Offset>[];
-        for (final v in via.verticesLonLat) {
-          final dx = (v.dx - loc.longitude) * cosLat;
-          final dy = v.dy - loc.latitude;
-          if (dx * dx + dy * dy <= r2) {
-            sub.add(v);
-          } else {
-            if (sub.length >= 2) encontradas.add(sub);
-            sub = <Offset>[];
-          }
-        }
-        if (sub.length >= 2) encontradas.add(sub);
-      }
-      return encontradas;
-    }
-
-    // Em BH e polos regionais (nível 1), ilumina estritamente artérias principais (nível 1);
-    // em pequenas cidades-base sem BR/trunk, permite a rodovia estadual principal que corta a cidade.
-    final arteriasN1 = coletar(maxNivel: 1, exigirCodigoNoNivel2: true);
-    if (ehBh || arteriasN1.isNotEmpty) {
-      return List<List<Offset>>.unmodifiable(arteriasN1);
-    }
-    final arteriasN2 = coletar(maxNivel: 2, exigirCodigoNoNivel2: loc.nivel <= 2);
-    if (arteriasN2.isNotEmpty || loc.nivel <= 2) {
-      return List<List<Offset>>.unmodifiable(arteriasN2);
-    }
-    return List<List<Offset>>.unmodifiable(
-      coletar(maxNivel: 3, exigirCodigoNoNivel2: false),
-    );
-  }
-
   static double _distanciaKm(Offset a, Offset b) {
     final cosLat = math.cos(((a.dy + b.dy) * 0.5) * _grausParaRad);
     final dxKm = (a.dx - b.dx) * cosLat * 111.32;
