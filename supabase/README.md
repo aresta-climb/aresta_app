@@ -21,7 +21,7 @@ Coletor modular servidor-a-servidor acionado periodicamente a cada **3 horas** (
 | `radar_chuva_rainviewer.ts` | Mosaico composto global de radares meteorológicos + satélite infravermelho em tempo real (`RainViewer z=6`, `~2,2 km/px`) decodificado nativamente via `DecompressionStream("deflate")`. |
 | `tempestades_open_meteo.ts` | Precipitação horária observada de 5 dias no fuso civil local (`timezone=auto`, sem previsão futura) e fusão radar + vento mesoescala (`Open-Meteo` sobre malha `~15 km`) preservando bolsões locais de chuva e extraindo isoietas internas aninhadas (`1,8 mm/h` e `5,5 mm/h`). |
 | `incendios_satelite.ts` | Coleta orbital de focos termais (`NASA FIRMS VIIRS 375m` $\rightarrow$ `INPE BDQueimadas`), filtragem contra áreas industriais e chuva ativa, e extração de perímetros e núcleos termais aninhados (`20 MW` e `48 MW`). |
-| `malha_viaria_osm.ts` | Extração incremental via Overpass API da malha rodoviária pavimentada hierárquica (`motorway/trunk` $\rightarrow$ `primary` $\rightarrow$ `secondary/tertiary` próxima aos picos) sempre que o hash do catálogo de picos mudar. |
+| `malha_viaria_osm.ts` | Extração incremental via Overpass API exclusivamente das rodovias federais principais (`BR-xxx`) na região de escalada sempre que o hash do catálogo de picos mudar. |
 | `cliente_supabase_slots.ts` | Leitura de snapshots existentes e invocação das RPCs PostgREST que rotacionam `atual` $\rightarrow$ `copia_seguranca` nas tabelas de clima, altimetria e malha viária. |
 
 #### Variáveis de Ambiente Exigidas
