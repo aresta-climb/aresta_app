@@ -88,6 +88,7 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
   double _ultimaAlturaLayoutPublicada = -1.0;
 
   String? _picoComPulsoDestaque;
+  String? _picoScrollPendentePosEncaixe;
   Timer? _timerPulsoDestaque;
 
   GlobalKey get _chaveSetimoEfetiva =>
@@ -118,6 +119,11 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _publicarAlturaEmPixels();
+          final pendente = _picoScrollPendentePosEncaixe;
+          if (pendente != null) {
+            _picoScrollPendentePosEncaixe = null;
+            _rolarAteCardId(pendente);
+          }
         }
       });
 
@@ -153,12 +159,16 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
   void _registrarOuvintes(BrowseViewModel vm) {
     vm.solicitacaoAutoScrollPicoSelecionado
         .addListener(_aoSolicitarAutoScrollMapa);
+    vm.solicitacaoModoDivididoAutoScroll
+        .addListener(_aoSolicitarModoDivididoAutoScroll);
     vm.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
   }
 
   void _removerOuvintes(BrowseViewModel vm) {
     vm.solicitacaoAutoScrollPicoSelecionado
         .removeListener(_aoSolicitarAutoScrollMapa);
+    vm.solicitacaoModoDivididoAutoScroll
+        .removeListener(_aoSolicitarModoDivididoAutoScroll);
     vm.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
   }
 
@@ -182,9 +192,24 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
     if (idSelecionado == null) return;
 
     if (_encaixeAtual == PosicaoEncaixeGaveta.mapa) {
+      _picoScrollPendentePosEncaixe = idSelecionado;
       _animarParaEncaixe(PosicaoEncaixeGaveta.dividir);
     }
+    _destacarERolarAtePico(idSelecionado);
+  }
 
+  void _aoSolicitarModoDivididoAutoScroll() {
+    final idSelecionado = widget.viewModel.picoSelecionadoId;
+    if (idSelecionado == null) return;
+
+    if (_encaixeAtual != PosicaoEncaixeGaveta.dividir) {
+      _picoScrollPendentePosEncaixe = idSelecionado;
+      _animarParaEncaixe(PosicaoEncaixeGaveta.dividir);
+    }
+    _destacarERolarAtePico(idSelecionado);
+  }
+
+  void _destacarERolarAtePico(String idSelecionado) {
     _timerPulsoDestaque?.cancel();
     setState(() => _picoComPulsoDestaque = idSelecionado);
     _timerPulsoDestaque = Timer(const Duration(milliseconds: 1100), () {
@@ -194,18 +219,21 @@ class _GavetaDeslizanteExplorarState extends State<GavetaDeslizanteExplorar>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final chave = _chavesCardsPorId[idSelecionado];
-      final ctx = chave?.currentContext;
-      if (ctx != null) {
-        Scrollable.ensureVisible(
-          ctx,
-          duration: const Duration(milliseconds: 340),
-          curve: Curves.easeOutCubic,
-          alignment: 0.06,
-        );
-      }
+      if (mounted) _rolarAteCardId(idSelecionado);
     });
+  }
+
+  void _rolarAteCardId(String idSelecionado) {
+    final chave = _chavesCardsPorId[idSelecionado];
+    final ctx = chave?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 340),
+        curve: Curves.easeOutCubic,
+        alignment: 0.06,
+      );
+    }
   }
 
   void _aoSolicitarScrollSetimoPico() {
