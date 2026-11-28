@@ -284,23 +284,35 @@ const Map<ChaveTexto, String> dicionarioHolandes = {
       'Aresta gebruikt 3 weer- en radarbronnen (Open-Meteo, RainViewer, INPE BDQueimadas) EN 3 openbare bronnen van NASA-missies (FIRMS VIIRS/MODIS, SRTM 30m, Blue Marble) om een slagingskans van ~85% te behalen bij het tonen van deze informatie. Gebruik dit hulpmiddel als referentie in plaats van absolute waarheid.',
   ChaveTexto.explorarAvisoClimaConfirmar: 'OK, toon op kaart',
   ChaveTexto.explorarBotaoVerEstatisticasClima: 'Statistieken bekijken',
-  ChaveTexto.estatClimaTituloPagina: 'STATISTIEK (~85%)',
+  ChaveTexto.estatClimaTituloPagina: 'HOE WE OP ~85% KWAMEN',
   ChaveTexto.estatClimaSubtituloHeroi:
-      '180-daagse empirische hindcast (N = 5.133 rotsdagen over 29 gebieden), getoetst met de Standaardnormale Z-tabel.',
-  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. OPBOUW VAN DE ~85%-SCORE',
+      'We vergeleken referentiedata vanaf 2024 in dezelfde regio’s als onze 29 gebieden — van nulhypothese tot Z-tabel kwamen we uit op 83% tot 87% effectiviteit (~85% gemiddeld).',
+  ChaveTexto.estatClimaSecaoComposicaoTitulo: '1. DATAVERGELEIJKING VANAF 2024',
   ChaveTexto.estatClimaComposicaoChuvaMapa:
       'Regionale regenbubbels (≥ 0,2 mm/dag)',
   ChaveTexto.estatClimaComposicaoUmidade4d:
       'Conservatief 4-daags vochtvenster op de rots',
   ChaveTexto.estatClimaComposicaoIncendioNasa:
       'Actieve natuurbrandzones (NASA VIIRS 375m)',
-  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. CONTINGENTIEMATRIX & FORMULES',
+  ChaveTexto.estatClimaSecaoMatrizTitulo: '2. TOETS TEGEN DE NULHYPOTHESE (H₀)',
   ChaveTexto.estatClimaMatrizExplicacao:
-      'Onafhankelijke hindcast (jun–nov 2024) van NOAA GFS-verwachtingen (0,25°) tegenover ECMWF ERA5-heranalyse op alle 29 gebieden:',
+      'We namen kruisreferentiedata vanaf 2024 uit precies dezelfde regio’s als onze 29 gebieden (5.133 rotsdagen) om te zien of het algoritme — met Open-Meteo, RainViewer-radar, INPE en NASA-sensoren — het gewenste effect had:',
+  ChaveTexto.estatClimaHipoteseNulaExplicacao:
+      'Eerst toetsten we rechtstreeks tegen een nulhypothese (H₀ = 50% kop-of-munt en 58,5% klimaatbasis) om te zien of er überhaupt echt effect was. Het resultaat lag +27,7 standaardafwijkingen boven toeval:',
+  ChaveTexto.estatClimaCelulaTpDetalhe: 'Regen voorspeld & raak',
+  ChaveTexto.estatClimaCelulaFpDetalhe: 'Voorzorgsmelding',
+  ChaveTexto.estatClimaCelulaFnDetalhe: 'Lokale bui gemist',
+  ChaveTexto.estatClimaCelulaTnDetalhe: 'Droge rots bevestigd',
+  ChaveTexto.estatClimaCalcTaxaBrutaTitulo: 'Treffers bij regen (p̂)',
+  ChaveTexto.estatClimaCalcH0MoedaTitulo: 'Tegen H₀ = 50% (toeval)',
+  ChaveTexto.estatClimaCalcAcuraciaGlobalTitulo: 'Totale score (droog + nat)',
+  ChaveTexto.estatClimaCalcErroPadraoTitulo: 'Standaardfout (SE)',
+  ChaveTexto.estatClimaCalcFaixaZTitulo: 'Bereik in Z-tabel (95%, Z = 1,96)',
+  ChaveTexto.estatClimaCalcMediaFinalTitulo: 'Gemiddelde effectiviteit (83%–87%)',
   ChaveTexto.estatClimaSecaoTabelaZTitulo:
-      '3. CONTROLE MET DE Z-TABEL (NULHYPOTHESE)',
+      '3. IN DE Z-TABEL: 83% TOT 87% (~85% GEM.)',
   ChaveTexto.estatClimaTabelaZExplicacao:
-      'Onder de nulhypothese zonder voorspelkracht (H₀: p₀ = 0,50 toeval of klimaatbasis p₀ = 0,5853) geldt Z = (p̂ − p₀) / √[p₀(1 − p₀)/n]. Controleer direct in de Z-tabel hieronder de eenzijdige toets H₀: p ≤ 0,83 (Z = +2,57 → Φ = 0,9949, p = 0,0051) en het 95%-BI (Z = 1,96):',
+      'Na die positieve conclusie legden we de vergelijkingsdata in een Z-tabel om het percentage juiste treffers vast te stellen. Met de berekeningen hieronder (Z = 1,96 voor 95% en Z = +2,57 boven 83%) kwamen we op 83,7% tot 87,2% effectiviteit — ofwel ~85% gemiddeld:',
   ChaveTexto.estatClimaGraficoH0Rotulo: 'Nulverdeling (H₀)',
   ChaveTexto.estatClimaGraficoCaudaRotulo: 'Rechterstaart (+27,7σ tot +49,0σ)',
   ChaveTexto.estatClimaColunaZ: 'Z-score',
