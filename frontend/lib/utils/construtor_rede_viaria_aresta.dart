@@ -353,9 +353,85 @@ abstract final class ConstrutorRedeViariaAresta {
             final d = _distanciaKm(pu, pv);
             if (d <= 1.80) {
               final custoVirtual = d * 1.38;
+              adj[u].add((
+                vizinho: v,
+                custoPondKm: custoVirtual,
+                distRealKm: d,
+                virtual: true,
+              ));
+              adj[v].add((
+                vizinho: u,
+                custoPondKm: custoVirtual,
+                distRealKm: d,
+                virtual: true,
+              ));
+            }
+          }
+        }
+      }
+    }
+    return (nos: nos, adj: adj);
+  }
+
+  static ({int indice, double distanciaKm}) _encontrarNoMaisProximo({
+    required List<Offset> nos,
+    required Offset alvoLonLat,
+  }) {
+    final cosAlvo = math.cos(alvoLonLat.dy * _grausParaRad);
+    var melhorIndice = 0;
+    var menorDist2 = double.infinity;
+    for (var i = 0; i < nos.length; i++) {
+      final dx = (nos[i].dx - alvoLonLat.dx) * cosAlvo;
+      final dy = nos[i].dy - alvoLonLat.dy;
+      final d2 = dx * dx + dy * dy;
+      if (d2 < menorDist2) {
+        menorDist2 = d2;
+        melhorIndice = i;
+      }
+    }
+    return (
+      indice: melhorIndice,
+      distanciaKm: _distanciaKm(alvoLonLat, nos[melhorIndice]),
+    );
+  }
+
+  static ({
+    List<double> distKm,
+    List<int> pai,
+    List<bool> arestaPaiVirtual,
+  }) _executarDijkstra({
+    required int totalNos,
+    required List<List<_ArestaGrafoViario>> adj,
+    required int noOrigem,
+  }) {
+    final custoMin = List<double>.filled(totalNos, double.infinity);
+    final distKm = List<double>.filled(totalNos, double.infinity);
+    final pai = List<int>.filled(totalNos, -1);
+    final arestaPaiVirtual = List<bool>.filled(totalNos, false);
+    custoMin[noOrigem] = 0.0;
+    distKm[noOrigem] = 0.0;
+
+    final fila = _FilaPrioridadeMinima()..inserir(noOrigem, 0.0);
+    while (!fila.estaVazia) {
+      final atual = fila.removerMinimo();
+      if (atual.custo > custoMin[atual.no] + 1e-6) continue;
+      final distBase = distKm[atual.no];
+      for (final ar in adj[atual.no]) {
+        final novoCusto = atual.custo + ar.custoPondKm;
+        if (novoCusto + 1e-6 < custoMin[ar.vizinho]) {
+          custoMin[ar.vizinho] = novoCusto;
+          distKm[ar.vizinho] = distBase + ar.distRealKm;
+          pai[ar.vizinho] = atual.no;
+          arestaPaiVirtual[ar.vizinho] = ar.virtual;
+          fila.inserir(ar.vizinho, novoCusto);
+        }
+      }
+    }
+    return (distKm: distKm, pai: pai, arestaPaiVirtual: arestaPaiVirtual);
+  }
+
   static String _limparCodigoEscudoRodovia(String bruto) {
     final limpo = bruto.trim().toUpperCase();
-    // Ignora siglas genéricas sem número (ex.: 'MG', 'BR') vindas de bases antigas
     if (!limpo.contains('-') || limpo.length < 4) return '';
     return limpo;
   }
@@ -370,7 +446,6 @@ abstract final class ConstrutorRedeViariaAresta {
             localidade: loc,
             ehRelevanteAresta: false,
             tempoAtivacao: double.infinity,
-            viasUrbanasLonLat: const [],
           ),
         )
         .toList(growable: false);
@@ -383,7 +458,6 @@ abstract final class ConstrutorRedeViariaAresta {
 
   static List<CidadeClassificadaMapa> _classificarCidades({
     required List<LocalidadeRegionalMapa> localidades,
-    required List<RodoviaRegionalMapa> rodovias,
     required List<Offset> nos,
     required List<double> distKm,
     required Set<int> nosCorredor,
@@ -426,7 +500,6 @@ abstract final class ConstrutorRedeViariaAresta {
             localidade: loc,
             ehRelevanteAresta: false,
             tempoAtivacao: double.infinity,
-            viasUrbanasLonLat: const [],
           ),
         );
         continue;
@@ -440,11 +513,6 @@ abstract final class ConstrutorRedeViariaAresta {
           localidade: loc,
           ehRelevanteAresta: true,
           tempoAtivacao: tAtivacao,
-          viasUrbanasLonLat: _extrairViasUrbanasReaisDaCidade(
-            loc: loc,
-            ehBh: ehBh,
-            rodovias: rodovias,
-          ),
         ),
       );
     }
