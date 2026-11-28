@@ -8,6 +8,7 @@ import '../../theme/cores_app.dart';
 import '../../utils/filtro_grau_escalada.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../view/view_models/explorar_view_model.dart';
+import 'componentes_marcador_globo.dart';
 import 'modal_filtros_ordenacao_explorar.dart';
 
 export 'modal_filtros_ordenacao_explorar.dart';
@@ -81,6 +82,7 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
       builder: (context, _) {
         final totalAtivos = vm.totalFiltrosAtivos;
         final chipsAtivos = _construirChipsAtivos(context, vm);
+        final sugestoes = vm.sugestoesBuscaComLocalizacao;
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -268,6 +270,93 @@ class _BarraBuscaFiltrosExplorarState extends State<BarraBuscaFiltrosExplorar> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(children: chipsAtivos),
+                  ),
+                ),
+              if (sugestoes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    key: const Key('lista_sugestoes_busca_explorar'),
+                    decoration: BoxDecoration(
+                      color: const Color(0xF2141920),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colors.rustIron.withValues(alpha: 0.45),
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x77000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < sugestoes.length; i++) ...[
+                          if (i > 0)
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Colors.white10,
+                            ),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              key: Key(
+                                'sugestao_busca_croqui_${sugestoes[i].id}',
+                              ),
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(i == 0 ? 16 : 0),
+                                bottom: Radius.circular(
+                                  i == sugestoes.length - 1 ? 16 : 0,
+                                ),
+                              ),
+                              onTap: () {
+                                FocusScope.of(context).unfocus();
+                                _controladorTexto.clear();
+                                vm.selecionarCroquiNaBuscaComLocalizacao(
+                                  sugestoes[i].id,
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconeMarcaAresta(
+                                      largura: 14,
+                                      cor: colors.rustIron,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        sugestoes[i].nome,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: colors.chalkWhite,
+                                          fontSize: 13.2,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.alt_route_rounded,
+                                      size: 16,
+                                      color: colors.rustIron,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
             ],
