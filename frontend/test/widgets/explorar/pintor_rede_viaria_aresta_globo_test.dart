@@ -52,31 +52,17 @@ void main() {
         latitude: -19.9191,
       ),
       LocalidadeRegionalMapa(
-        nome: 'Lagoa Santa',
+        nome: 'Sete Lagoas',
         ehCidade: true,
         nivel: 2,
-        longitude: -43.8932,
-        latitude: -19.6397,
-      ),
-      LocalidadeRegionalMapa(
-        nome: 'Vila Local Corredor',
-        ehCidade: false,
-        nivel: 3,
-        longitude: -43.7500,
-        latitude: -19.4800,
-      ),
-      LocalidadeRegionalMapa(
-        nome: 'Cidade Referência Isolada',
-        ehCidade: true,
-        nivel: 1,
-        longitude: -44.6500,
-        latitude: -19.9000,
+        longitude: -44.2467,
+        latitude: -19.4658,
       ),
     ],
     rodoviasProximas: [
       RodoviaRegionalMapa(
         ehPrincipal: true,
-        codigo: 'MG-010',
+        codigo: 'BR-040',
         verticesLonLat: [
           ui.Offset(-43.9386, -19.9191),
           ui.Offset(-43.9100, -19.7800),
@@ -88,19 +74,27 @@ void main() {
       RodoviaRegionalMapa(
         ehPrincipal: false,
         nivelViario: 2,
-        codigo: 'SEC-REF',
+        codigo: 'BR-262',
         verticesLonLat: [
-          ui.Offset(-44.6500, -19.9000),
-          ui.Offset(-44.5000, -19.8500),
+          ui.Offset(-43.9800, -19.9400),
+          ui.Offset(-43.9100, -19.9000),
         ],
       ),
       RodoviaRegionalMapa(
         ehPrincipal: false,
         nivelViario: 3,
-        codigo: 'TERC-ACESSO',
+        codigo: 'ACESSO-PICO',
         verticesLonLat: [
           ui.Offset(-43.9300, -19.9100),
           ui.Offset(-43.8900, -19.8700),
+        ],
+      ),
+      RodoviaRegionalMapa(
+        ehPrincipal: true,
+        codigo: 'BR-101',
+        verticesLonLat: [
+          ui.Offset(45.0, 0.0),
+          ui.Offset(135.0, 0.0),
         ],
       ),
       RodoviaRegionalMapa(
@@ -136,10 +130,10 @@ void main() {
   );
 
   group('PintorRedeViariaArestaGlobo', () {
-    test('propaga luz laranja de Belo Horizonte até o pico, ilumina contornos das cidades Aresta e desenha pontos brancos nas cidades de referência', () async {
+    test('propaga luz laranja pelas rodovias principais desde Belo Horizonte até o pico, renderiza escudos BR-xxx e evita bolinhas órfãs', () async {
       final ctrl = ControladorCameraGlobo(
-        latitudeInicial: -19.72,
-        longitudeInicial: -44.10,
+        latitudeInicial: -19.86,
+        longitudeInicial: -43.93,
         lodInicial: 1.85,
       );
       addTearDown(ctrl.dispose);
@@ -164,7 +158,7 @@ void main() {
       expect(vazio.every((b) => b == 0), isTrue);
 
       // Durante zoom-out (fatorModoViario já retornou a 0.0, mas progressoLuz=0.55 ainda recolhe até BH),
-      // os corredores laranjas em retração permanecem visíveis apagando das pontas até Belo Horizonte!
+      // os corredores laranjas em retração permanecem visíveis apagando das pontas até Belo Horizonte
       final qRetraindoNoZoomOut = await _renderizarCamadaViaria(
         ctrl: ctrl,
         redeViaria: redePrecomputada,
@@ -174,7 +168,7 @@ void main() {
       );
       expect(qRetraindoNoZoomOut.any((b) => b > 0), isTrue);
 
-      // Progresso 0.0 -> apenas malha P&B e pontos brancos; Progresso 0.45 -> onda em trânsito; Progresso 1.0 -> corredor completo
+      // Progresso 0.0 -> malha P&B sem luz; Progresso 0.45 -> onda com ponta quente; Progresso 1.0 -> corredor + escudos BR-xxx
       final qInicio = await _renderizarCamadaViaria(
         ctrl: ctrl,
         redeViaria: redePrecomputada,
@@ -189,7 +183,7 @@ void main() {
         fatorModoViario: 1.0,
         progressoLuz: 0.45,
       );
-      ctrl.definirLod(2.95);
+      ctrl.definirLod(3.25);
       final qCompleto = await _renderizarCamadaViaria(
         ctrl: ctrl,
         redeViaria: redePrecomputada,
@@ -202,21 +196,36 @@ void main() {
       expect(qMeio, isNot(equals(qInicio)));
       expect(qCompleto, isNot(equals(qMeio)));
 
-      // Verifica brilho quente laranja (R > B + 25) sobre Belo Horizonte no estado completo
-      final ptBh = ctrl.projetarCoordenada(
-        latitude: -19.9191,
-        longitude: -43.9386,
-        elevacaoMetros: 825.0,
-        tamanhoTela: const ui.Size(240, 240),
-      );
-      if (ptBh.visivel &&
-          ptBh.x >= 2 &&
-          ptBh.x < 238 &&
-          ptBh.y >= 2 &&
-          ptBh.y < 238) {
-        final idx = (ptBh.y.round() * 240 + ptBh.x.round()) * 4;
-        expect(qCompleto[idx], greaterThan(qCompleto[idx + 2]));
+      // Verifica pixels quentes laranja (R > B + 25) presentes no corredor aceso e ausentes quando progressoLuz == 0
+      int contarPixelsQuentes(Uint8List rgba) {
+        var total = 0;
+        for (var i = 0; i < rgba.length; i += 4) {
+          if (rgba[i] > 120 && rgba[i] > rgba[i + 2] + 25) {
+            total++;
+          }
+        }
+        return total;
       }
+
+      expect(contarPixelsQuentes(qInicio), equals(0));
+      expect(contarPixelsQuentes(qCompleto), greaterThan(15));
+
+      // Horizonte esférico 3D descarta vértices ocultos atrás do limbo sem artefato
+      final ctrlLimbo3D = ControladorCameraGlobo(
+        latitudeInicial: 0.0,
+        longitudeInicial: 0.0,
+        lodInicial: 0.35,
+        modo3DInicial: true,
+      );
+      addTearDown(ctrlLimbo3D.dispose);
+      final qLimbo3D = await _renderizarCamadaViaria(
+        ctrl: ctrlLimbo3D,
+        redeViaria: redePrecomputada,
+        picos: picos,
+        fatorModoViario: 1.0,
+        progressoLuz: 0.5,
+      );
+      expect(qLimbo3D, isNotNull);
 
       // Modo 2D cruzando o antimeridiano descarta saltos horizontais abruptos sem artefato
       final ctrl2D = ControladorCameraGlobo(
@@ -236,7 +245,7 @@ void main() {
       expect(q2D, isNotNull);
 
       // No zoom máximo (LOD 4.35), uma rodovia cujos vértices originais estão muito fora da tela
-      // permanece contínua cruzando o centro da tela sem desaparecer!
+      // permanece contínua cruzando o centro da tela sem desaparecer
       final ctrlZoomMaximo = ControladorCameraGlobo(
         latitudeInicial: -19.84955,
         longitudeInicial: -43.9243,
