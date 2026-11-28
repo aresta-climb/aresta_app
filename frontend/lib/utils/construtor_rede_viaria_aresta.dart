@@ -277,6 +277,82 @@ abstract final class ConstrutorRedeViariaAresta {
     return h;
   }
 
+  static ({List<Offset> nos, List<List<_ArestaGrafoViario>> adj})?
+      _construirGrafoTopologico(List<RodoviaRegionalMapa> rodovias) {
+    final nos = <Offset>[];
+    final indicePorChave = <int, int>{};
+    final gradeEspacial = <int, List<int>>{};
+    final pontasPolilinhas = <int>{};
+
+    int chaveCelula(int cx, int cy) => (cx + 500000) * 1000003 + (cy + 500000);
+
+    int obterOuCriarNo(Offset pt) {
+      final qLon = (pt.dx * 10000.0).round() + 2000000;
+      final qLat = (pt.dy * 10000.0).round() + 2000000;
+      final chave = qLon * 4000037 + qLat;
+      final existente = indicePorChave[chave];
+      if (existente != null) return existente;
+      final novo = nos.length;
+      nos.add(pt);
+      indicePorChave[chave] = novo;
+      final cx = (pt.dx / _passoCelulaEspacial).floor();
+      final cy = (pt.dy / _passoCelulaEspacial).floor();
+      (gradeEspacial[chaveCelula(cx, cy)] ??= <int>[]).add(novo);
+      return novo;
+    }
+
+    final adj = <List<_ArestaGrafoViario>>[];
+    void garantirAdj(int n) {
+      while (adj.length <= n) {
+        adj.add(<_ArestaGrafoViario>[]);
+      }
+    }
+
+    for (final via in rodovias) {
+      if (via.nivelViario > 2) continue;
+      final verts = via.verticesLonLat;
+      if (verts.length < 2) continue;
+      final penalidadeNivel = via.nivelViario == 1 ? 1.00 : 1.15;
+      final ids = verts.map(obterOuCriarNo).toList(growable: false);
+      garantirAdj(nos.length - 1);
+      pontasPolilinhas
+        ..add(ids.first)
+        ..add(ids.last);
+      for (var i = 0; i < ids.length - 1; i++) {
+        final u = ids[i];
+        final v = ids[i + 1];
+        if (u == v) continue;
+        final dKm = math.max(0.015, _distanciaKm(nos[u], nos[v]));
+        final custo = dKm * penalidadeNivel;
+        adj[u].add(
+          (vizinho: v, custoPondKm: custo, distRealKm: dKm, virtual: false),
+        );
+        adj[v].add(
+          (vizinho: u, custoPondKm: custo, distRealKm: dKm, virtual: false),
+        );
+      }
+    }
+
+    if (nos.length < 2) return null;
+
+    for (final u in pontasPolilinhas) {
+      final pu = nos[u];
+      final cx0 = (pu.dx / _passoCelulaEspacial).floor();
+      final cy0 = (pu.dy / _passoCelulaEspacial).floor();
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          final candidatos = gradeEspacial[chaveCelula(cx0 + dx, cy0 + dy)];
+          if (candidatos == null) continue;
+          for (final v in candidatos) {
+            if (u == v) continue;
+            final pv = nos[v];
+            if ((pu.dx - pv.dx).abs() > 0.017 ||
+                (pu.dy - pv.dy).abs() > 0.017) {
+              continue;
+            }
+            final d = _distanciaKm(pu, pv);
+            if (d <= 1.80) {
+              final custoVirtual = d * 1.38;
   static String _limparCodigoEscudoRodovia(String bruto) {
     final limpo = bruto.trim().toUpperCase();
     // Ignora siglas genéricas sem número (ex.: 'MG', 'BR') vindas de bases antigas
