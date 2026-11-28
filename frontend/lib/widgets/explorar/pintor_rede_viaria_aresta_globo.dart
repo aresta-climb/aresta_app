@@ -8,16 +8,18 @@ import '../../utils/geometria_clipping_mapa.dart';
 import 'controlador_camera_globo.dart';
 import 'malha_relevo_lod.dart';
 
-/// Renderizador cartográfico puramente declarativo (Dumb UI) da malha viária hierárquica
-/// (`OpenStreetMap` em 3 níveis progressivos de zoom) e do pulso luminoso laranja Aresta,
-/// projetado diretamente na superfície do geoide (`elevacaoMetros = 0`) sem paralaxe.
+/// Renderizador cartográfico puramente declarativo (Dumb UI) das rodovias principais (`BR-xxx`)
+/// e do pulso luminoso laranja Aresta, projetado diretamente na superfície do geoide
+/// (`elevacaoMetros = 0`) sem paralaxe e sem artefatos urbanos avulsos.
+///
+/// Os pontos indicadores e rótulos de cidades são renderizados com detecção de colisão em
+/// `CamadaMarcadoresGloboExplorar`, evitando bolinhas órfãs sem texto sobre as rodovias.
 abstract final class PintorRedeViariaArestaGlobo {
   static const Color corLaranjaAresta = Color(0xFFE27D60);
   static const Color corBrilhoViasAresta = Color(0xFFFF9248);
   static const Color corFilamentoQuente = Color(0xFFFFE3B8);
 
-  /// Desenha a malha rodoviária P&B hierárquica (`motorway/trunk`, `primary`, `secondary/tertiary`),
-  /// as cidades de referência, os corredores laranjas Aresta e os escudos de rodovia.
+  /// Desenha a malha de rodovias principais, os corredores laranjas Aresta e os escudos `BR-xxx`.
   static void desenharRedeViariaECidades({
     required Canvas canvas,
     required Size size,
@@ -43,6 +45,9 @@ abstract final class PintorRedeViariaArestaGlobo {
         fatorModoViario * ControladorCameraGlobo.smoothstep(2.05, 2.65, lod);
     final alfaNivel3 =
         fatorModoViario * ControladorCameraGlobo.smoothstep(2.85, 3.40, lod);
+    final opacidadeEscudos = (fatorModoViario *
+            ControladorCameraGlobo.smoothstep(2.50, 3.10, lod))
+        .clamp(0.0, 1.0);
     final janelaVisivel = GeometriaClippingMapa.calcularJanelaVisivelCamera(
       modo3D: controlador.modo3D,
       latitudeCentral: controlador.latitudeCentral,
@@ -53,10 +58,10 @@ abstract final class PintorRedeViariaArestaGlobo {
       tamanhoTela: size,
       fatorMargem: 1.08,
     );
-    // Subdivisão leve (0,020°) apenas para curvatura esférica e recorte nas bordas — zero alocação extra!
+    // Subdivisão leve (0,020°) apenas para curvatura esférica e recorte nas bordas
     const passoSubdivisaoGraus = 0.020;
 
-    // 1. Malha rodoviária hierárquica em 3 níveis progressivos sem pop abrupto
+    // 1. Malha rodoviária de fundo (rodovias federais BR-xxx e eventuais níveis secundários)
     final escudosRodovia = <({Offset pos, String codigo})>[];
     if (fatorModoViario > 0.02) {
       final caminhoNivel1 = Path();
@@ -91,7 +96,7 @@ abstract final class PintorRedeViariaArestaGlobo {
           size: size,
           controlador: controlador,
           aoAmostrarPontoCentral:
-              lod >= 2.35 && nivel <= 2 && via.codigo.isNotEmpty
+              opacidadeEscudos > 0.04 && nivel <= 2 && via.codigo.isNotEmpty
                   ? (pt) => pontoMeioVia ??= pt
                   : null,
         )) {
@@ -157,7 +162,7 @@ abstract final class PintorRedeViariaArestaGlobo {
       }
     }
 
-    // 2. Corredores laranja Aresta (ida: BH -> picos; retração no zoom-out: picos -> BH)
+    // 2. Corredores laranjas Aresta (ida: BH -> picos; retração no zoom-out: picos -> BH)
     if (progressoLuzViaria > 0.0 && rede.trechosCorredorAresta.isNotEmpty) {
       _desenharCorredoresIluminados(
         canvas: canvas,
@@ -171,26 +176,12 @@ abstract final class PintorRedeViariaArestaGlobo {
       );
     }
 
-    // 3. Cidades de referência (pontos brancos) vs cidades Aresta (vias arteriais iluminadas)
-    _desenharCidadesClassificadas(
-      canvas: canvas,
-      size: size,
-      controlador: controlador,
-      rede: rede,
-      janelaVisivel: janelaVisivel,
-      passoSubdivisaoGraus: passoSubdivisaoGraus,
-      fatorModoViario: fatorModoViario,
-      opacidadeLuzLaranja: opacidadeLuzLaranja,
-      progressoLuz: progressoLuzViaria,
-    );
-
-    if (escudosRodovia.isNotEmpty && fatorModoViario > 0.25) {
+    // 3. Escudos identificadores das rodovias principais (ex.: BR-040, BR-381, BR-262)
+    if (escudosRodovia.isNotEmpty) {
       _desenharEscudosCodigoRodovia(
         canvas: canvas,
         escudos: escudosRodovia,
-        opacidade: (fatorModoViario *
-                ControladorCameraGlobo.smoothstep(2.55, 3.15, lod))
-            .clamp(0.0, 1.0),
+        opacidade: opacidadeEscudos,
       );
     }
   }
